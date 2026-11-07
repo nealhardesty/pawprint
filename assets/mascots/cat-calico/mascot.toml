@@ -1,0 +1,231 @@
+# Calico cat on cat-sit. A round apple head on a white cat with bold
+# tricolor patches: an orange left ear and crown, a black right ear and eye
+# patch, an orange splash on the left cheek, an orange left flank and a
+# black right shoulder, and a tail banded orange and black. Gold eyes.
+# `paws.knead-a` and `paws.knead-b` are the two halves of the knead.
+id = "cat-calico"
+name = "Calico Cat"
+category = "cats-dogs"
+aliases = ["calico"]
+accent = "rose"
+extends = "cat-sit"
+
+[palette]
+"l" = "white"       # fur light
+"f" = "white"       # fur
+"F" = "grey-1"      # fur shadow
+"w" = "white"       # muzzle and chest
+"M" = "grey-2"      # mouth lines and paw outlines
+"o" = "orange-1"    # NEW: orange patch, light
+"O" = "orange-2"    # NEW: orange patch
+"d" = "grey-4"      # NEW: black patch, light
+"D" = "fur-black"   # NEW: black patch
+"e" = "yellow-2"    # iris
+"n" = "pink-2"      # nose
+"p" = "pink-1"      # inner ear
+
+[layers.tail]
+at = [26, 10]
+grid = """
+.kk.
+koOk
+kOOk
+kdDk
+kDDk
+kOOk
+kOOk
+kdDk
+kDDk
+kOOk
+kOOk
+"""
+
+[layers."tail.flick"]
+at = [26, 9]
+grid = """
+..kk.
+.koOk
+.kOOk
+kdDDk
+kDDk.
+kOOk.
+kOOk.
+kdDk.
+kDDk.
+kOOk.
+kOOk.
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...kooOOOfffffDDDDk...
+..koOOOOffffffDDDDDk..
+.koOOOOOffffffdDDDDDk.
+koOOOOOfwwwwwwffdDDDDk
+koOOOOffwwwwwwffdDDDDk
+koOOOOffwwwwwwfffdDDDk
+koOOOffffwwwwffffdDDDk
+koOOOfffffffffffffDDDk
+klOOfffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# A round apple head, 22 px wide.
+[layers.head]
+at = [5, 4]
+grid = """
+......kkkkkkkkkk......
+....kkooOOlldDDDkk....
+..kkoOOOOOffdDDDDDkk..
+.koOOOOOOfffdDDDDDDDk.
+koOOOOOfffffdDDDDDDDDk
+koOOOffffffffdDDDDDDDk
+klOOfffffffffdDDDDDDDk
+klffffffffffffffdDDDDk
+klfffffwwwwwwwwffdDDDk
+klOOffwwwwMMwwwwffFFFk
+.kOOOfwwwMwwMwwwffFFk.
+..kOfffwwwwwwwwffFFk..
+...kkFFFFFFFFFFFFkk...
+"""
+
+# Medium ears: the left one orange, the right one black.
+[layers.ears]
+at = [6, 1]
+grid = """
+.kk..............kk.
+koOk............kdDk
+kopOk..........kdpDk
+koppOk........kdppDk
+koppOOO......DDdppDk
+koo..............DDk
+"""
+
+[layers."ears.flick"]
+at = [5, 1]
+grid = """
+.kk...............kk.
+koOk.............kdDk
+kopOk...........kdpDk
+koppOk.........kdppDk
+koppOOO.......DDdppDk
+kooo..............DDk
+"""
+
+# Gold eyes; the right one sits on the black patch, so its closed and happy
+# lines are light.
+[layers.eyes]
+at = [11, 9]
+grid = """
+he......he
+ek......ek
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+grid = """
+kk......FF
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+grid = """
+eh......eh
+ke......ke
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+grid = """
+he......he
+ek......ek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.kk......FF.
+k..k....F..F
+"""
+
+# Kneading: one paw lifted while the other presses into the rim.
+# White paws, outlined in grey so they separate from the white chin.
+[layers.paws]
+at = [9, 17]
+grid = """
+.MMMM....MMMM.
+MllllM..MllllM
+kFlFlk..kFlFlk
+"""
+
+[layers."paws.knead-a"]
+at = [9, 16]
+grid = """
+.MMMM.........
+MllllM...MMMM.
+kFlFlk..MllllM
+........kFlFlk
+"""
+
+[layers."paws.knead-b"]
+at = [9, 16]
+grid = """
+.........MMMM.
+.MMMM...MllllM
+MllllM..kFlFlk
+kFlFlk........
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: an ear twitch, then it kneads the crate edge, eyes squeezed
+# happy.
+[[actions]]
+name = "knead"
+weight = 4
+frames = [
+  { ops = ["ears=flick"], ms = 140 },
+  { ops = [], ms = 300 },
+  { ops = ["paws=knead-a", "eyes=happy"], ms = 280 },
+  { ops = ["paws=knead-b", "eyes=happy"], ms = 280 },
+  { ops = ["paws=knead-a", "eyes=happy"], ms = 280 },
+  { ops = ["paws=knead-b", "eyes=happy"], ms = 280 },
+  { ops = ["eyes=closed"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the hiccups. Each hic bounces it 2 px and lets a bubble float up.
+[[actions]]
+name = "hiccups"
+weight = 1
+frames = [
+  { ops = ["all+0,-2", "eyes=closed", "prop:bubble@24,6"], ms = 120 },
+  { ops = ["prop:bubble@25,3"], ms = 500 },
+  { ops = ["eyes=left", "prop:bubble@25,0"], ms = 500 },
+  { ops = ["all+0,-2", "eyes=closed", "prop:bubble@24,6"], ms = 120 },
+  { ops = ["eyes=happy", "prop:bubble@25,3"], ms = 500 },
+  { ops = ["eyes=happy", "prop:bubble@25,0"], ms = 400 },
+  { ops = [], ms = 300 },
+]

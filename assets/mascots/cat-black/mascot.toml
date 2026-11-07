@@ -1,0 +1,267 @@
+# Black cat on cat-sit: the sleek little void. A glossy shorthair, nothing
+# like the fluffy Maine Coon: a narrow oval head, very tall pointed ears
+# pinched in at the base, a slim neck and body, a violet sheen on the crown,
+# shoulders, and tail, and a long tail that leans out with a crooked tip.
+# Big glowing yellow eyes with slit pupils. Nocturnal: livelier after dark.
+# `eyes.slit` is the glowing line of a blink in the dark; `eyes.wide` is
+# the night hunter's stare.
+id = "cat-black"
+name = "Black Cat"
+category = "cats-dogs"
+aliases = ["blackcat", "void"]
+accent = "violet"
+nocturnal = true
+extends = "cat-sit"
+
+[palette]
+"l" = "grey-4"      # fur light
+"f" = "fur-black"   # fur
+"F" = "fur-black"   # fur shadow
+"P" = "purple-2"    # NEW: violet sheen
+"g" = "grey-3"      # NEW: closed-eye and happy-eye lines
+"M" = "grey-4"      # mouth lines
+"e" = "yellow-1"    # iris
+"Y" = "yellow-2"    # NEW: the glowing slit of a blink in the dark
+"h" = "white"       # eye glint
+"n" = "grey-3"      # nose
+"p" = "grey-3"      # inner ear
+
+[layers.tail]
+at = [25, 3]
+grid = """
+...kk.
+..klfk
+..kPFk
+..klFk
+.klfk.
+.kPFk.
+klfk..
+klFk..
+klFk..
+klFk..
+klPk..
+klFk..
+klFk..
+klFk..
+klFk..
+klFk..
+klFk..
+"""
+
+[layers."tail.flick"]
+at = [25, 2]
+grid = """
+.kk...
+klfk..
+.kPFk.
+..klFk
+..klFk
+.klfk.
+.kPFk.
+klfk..
+klFk..
+klFk..
+klFk..
+klPk..
+klFk..
+klFk..
+klFk..
+klFk..
+klFk..
+klFk..
+"""
+
+# Slim, with a narrow neck.
+[layers.body]
+at = [7, 14]
+grid = """
+...klffffffffFk...
+..klPffffffffFFk..
+.klPPfffffffffFFk.
+klfPffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+"""
+
+# A narrow oval, 18 px wide, with a sheen on the crown.
+[layers.head]
+at = [7, 4]
+grid = """
+.....kkkkkkkk.....
+...kklPPPlllkk....
+..klPPffffffFFk...
+.klfffffffffffFk..
+klffffffffffffFFk.
+klffffffffffffFFk.
+klffffffffffffFFk.
+klffffffffffffFFk.
+.klfffffffffffFk..
+.kffffffMMffffFk..
+..kffffMffMfffk...
+...kffffffffFk....
+....kkFFFFFFkk....
+"""
+
+# Very tall, pointed ears, pinched in where they meet the head.
+[layers.ears]
+at = [6, 0]
+grid = """
+.k................k.
+klk..............kFk
+klpk............kpFk
+klpfk..........kfpFk
+.klpfk........kfpFk.
+.klpff........ffpFk.
+..kl............Fk..
+"""
+
+[layers."ears.flick"]
+at = [5, 0]
+grid = """
+...................k.
+.k................kFk
+klk..............kpFk
+klpk............kfpFk
+klpfk..........kfpFk.
+.klpfk.........ffpFk.
+.klpff...........Fk..
+..kl.................
+"""
+
+# Big yellow eyes with slit pupils.
+[layers.eyes]
+at = [10, 9]
+grid = """
+hke......hke
+eke......eke
+"""
+
+[layers."eyes.closed"]
+at = [10, 10]
+grid = """
+ggg......ggg
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+grid = """
+khe......khe
+kee......kee
+"""
+
+[layers."eyes.right"]
+at = [10, 9]
+grid = """
+hek......hek
+eek......eek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.g........g.
+g.g......g.g
+"""
+
+[layers."eyes.slit"]
+at = [10, 10]
+grid = """
+YYY......YYY
+"""
+
+# The night hunter's stare: taller eyes, wide awake.
+[layers."eyes.wide"]
+at = [10, 8]
+grid = """
+hee......hee
+eke......eke
+eee......eee
+"""
+
+[layers.paws]
+at = [10, 17]
+grid = """
+.lll....lll.
+lfffl..lfffl
+kflfk..kflfk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+# Nocturnal, so it naps by day instead.
+[[actions]]
+use = "doze"
+name = "catnap"
+when = "day"
+weight = 3
+
+# Signature: the cat fades into the dark until only its eyes are left,
+# floating over the crate. The eyes blink twice, slowly, and it's back.
+[[actions]]
+name = "eyes-in-the-dark"
+weight = 4
+frames = [
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = ["-tail", "-body", "-head", "-ears", "-nose", "-paws"], ms = 900 },
+  { ops = ["-tail", "-body", "-head", "-ears", "-nose", "-paws", "eyes=slit"], ms = 180 },
+  { ops = ["-tail", "-body", "-head", "-ears", "-nose", "-paws"], ms = 700 },
+  { ops = ["-tail", "-body", "-head", "-ears", "-nose", "-paws", "eyes=slit"], ms = 180 },
+  { ops = ["-tail", "-body", "-head", "-ears", "-nose", "-paws"], ms = 500 },
+  { ops = [], ms = 300 },
+]
+
+# Night: hunting something only it can see. Wide eyes dart about, an ear
+# swivels, the tail twitches.
+[[actions]]
+name = "night-hunt"
+weight = 3
+when = "night"
+frames = [
+  { ops = ["eyes=wide"], ms = 500 },
+  { ops = ["eyes=left"], ms = 300 },
+  { ops = ["eyes=right"], ms = 300 },
+  { ops = ["eyes=wide", "tail=flick"], ms = 200 },
+  { ops = ["eyes=wide", "ears=flick"], ms = 160 },
+  { ops = ["eyes=wide"], ms = 600 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a black cat crosses your path. It strolls off the right edge of the
+# crate and back in from the left.
+[[actions]]
+name = "crosses-your-path"
+weight = 1
+frames = [
+  { ops = ["eyes=right", "all+3,0"], ms = 160 },
+  { ops = ["eyes=right", "all+8,1"], ms = 160 },
+  { ops = ["eyes=right", "all+14,0"], ms = 160 },
+  { ops = ["eyes=right", "all+21,1"], ms = 160 },
+  { ops = ["all+32,0"], ms = 600 },
+  { ops = ["eyes=right", "all+-20,1"], ms = 160 },
+  { ops = ["eyes=right", "all+-13,0"], ms = 160 },
+  { ops = ["eyes=right", "all+-7,1"], ms = 160 },
+  { ops = ["eyes=right", "all+-2,0"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 500 },
+]

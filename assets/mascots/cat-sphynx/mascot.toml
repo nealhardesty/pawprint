@@ -1,0 +1,304 @@
+# Sphynx cat on cat-sit: hairless, wrinkly, and all ears. Pink skin with
+# deep-pink wrinkles across the brow and neck, enormous round-tipped ears
+# set wide, angular cheekbones over a narrow chin, huge lemon eyes with slit
+# pupils, a skinny body, long toes, and a thin whip of a tail. `head.tilt` and
+# `eyes.tilt` (with `ears.flick`) make the signature tilt; `body.sweater` is
+# the rare knitted jumper.
+id = "cat-sphynx"
+name = "Sphynx Cat"
+category = "cats-dogs"
+aliases = ["sphynx"]
+accent = "rose"
+extends = "cat-sit"
+
+[palette]
+"l" = "cream"       # skin light
+"f" = "pink-1"      # skin
+"F" = "blush"       # skin shadow
+"W" = "pink-2"      # NEW: wrinkles
+"w" = "cream"       # whisker pads
+"M" = "pink-2"      # mouth lines
+"e" = "green-1"     # iris
+"h" = "white"       # eye glint
+"n" = "pink-2"      # nose
+"p" = "blush"       # inner ear
+"r" = "red-1"       # NEW: sweater
+"R" = "red-2"       # NEW: sweater shadow and ribbing
+
+# A thin, bare whip of a tail.
+[layers.tail]
+at = [25, 5]
+grid = """
+...k.
+..kfk
+..kfk
+..kfk
+..kfk
+.kfk.
+.kfk.
+.kfk.
+.kFk.
+kfk..
+kfk..
+kFk..
+kfk..
+kfk..
+kfk..
+"""
+
+[layers."tail.flick"]
+at = [25, 4]
+grid = """
+....k.
+...kfk
+...kfk
+..kfk.
+..kfk.
+..kfk.
+.kfk..
+.kfk..
+.kfk..
+.kFk..
+kfk...
+kfk...
+kFk...
+kfk...
+kfk...
+kfk...
+"""
+
+# Skinny, with folds of skin at the neck.
+[layers.body]
+at = [7, 14]
+grid = """
+..klfffffffffFFk..
+.klfWWffffffWWFFk.
+klffffWWWWWWffFFFk
+klffffffffffffFFFk
+klfffWWffffWWfFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+"""
+
+# A turtleneck in rose-red knit, for the rare cold snap.
+[layers."body.sweater"]
+at = [7, 14]
+grid = """
+..kRrRrRrRrRrRRk..
+.kRrRrRrRrRrRrRRk.
+krrrrrrrrrrrrrRRRk
+klllllllllllllRRRk
+krrrrrrrrrrrrrRRRk
+krrrrrrrrrrrrrRRRk
+kRRRRRRRRRRRRRRRRk
+krlrlrlrlrlrlrlrRk
+kRRRRRRRRRRRRRRRRk
+krrrrrrrrrrrrrRRRk
+krrrrrrrrrrrrrRRRk
+krrrrrrrrrrrrrRRRk
+krrrrrrrrrrrrrRRRk
+krrrrrrrrrrrrrRRRk
+krrrrrrrrrrrrrRRRk
+krrrrrrrrrrrrrRRRk
+krrrrrrrrrrrrrRRRk
+krrrrrrrrrrrrrRRRk
+"""
+
+# Wide at the cheekbones, tapering to a small chin; wrinkles on the brow.
+[layers.head]
+at = [5, 4]
+grid = """
+.....kkkkkkkkkkkk.....
+...kklllWWllWWlffkk...
+..kllffffWWWWffffFFk..
+.klfffWWffffffWWffFFk.
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+.klffffffffffffffffFk.
+..kffffwwwwwwwwffffk..
+...kffwwwwMMwwwwFFk...
+....kfwwwMwwMwwwFk....
+.....kFwwwwwwwwFk.....
+......kkFFFFFFkk......
+"""
+
+# The tilt: the brow wrinkles bunch up on one side.
+[layers."head.tilt"]
+at = [5, 4]
+grid = """
+.....kkkkkkkkkkkk.....
+...kkllWWllWWWWffkk...
+..kllfffWWWffWWWfFFk..
+.klffWWffffffffWWfFFk.
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+.klffffffffffffffffFk.
+..kffffwwwwwwwwffffk..
+...kffwwwwMMwwwwFFk...
+....kfwwwMwwMwwwFk....
+.....kFwwwwwwwwFk.....
+......kkFFFFFFkk......
+"""
+
+# Enormous round-tipped ears, nearly as wide as they are tall.
+[layers.ears]
+at = [2, 0]
+grid = """
+..kk................kk..
+.kllk..............kfFk.
+klppfk............kfppFk
+klpppfk..........kfpppFk
+klppppfk........kfppppFk
+klppppff........ffppppFk
+.klppff..........ffppFk.
+..klf..............fFk..
+"""
+
+[layers."ears.flick"]
+at = [2, 0]
+grid = """
+..kk.....................
+.kllk................kk..
+klppfk..............kfFk.
+klpppfk............kfppFk
+klppppfk..........kfpppFk
+klppppff.........kfppppFk
+.klppff..........ffppppFk
+..klf.............ffppFk.
+....................fFk..
+"""
+
+# Huge lemon eyes with slit pupils.
+[layers.eyes]
+at = [10, 8]
+grid = """
+.ee......ee.
+hke......hke
+eke......eke
+"""
+
+[layers."eyes.closed"]
+at = [10, 10]
+grid = """
+WWW......WWW
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+grid = """
+.ee......ee.
+khe......khe
+kee......kee
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+grid = """
+.ee......ee.
+hek......hek
+eek......eek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.W........W.
+W.W......W.W
+"""
+
+# The tilted eyes: the right one sits a pixel lower.
+[layers."eyes.tilt"]
+at = [10, 8]
+grid = """
+.ee.........
+hke.......ee
+eke......hke
+.........eke
+"""
+
+[layers.nose]
+at = [15, 12]
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [15, 11]
+grid = """
+nn
+"""
+
+# Long, bony toes.
+[layers.paws]
+at = [10, 17]
+grid = """
+.FFF....FFF.
+FlllF..FlllF
+kFlFk..kFlFk
+"""
+
+# Paws poking out of the sweater's sleeves.
+[layers."paws.sleeve"]
+at = [10, 17]
+grid = """
+.RRR....RRR.
+RrrrR..RrrrR
+kFlFk..kFlFk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a slow, wrinkly head tilt, held, then back.
+[[actions]]
+name = "wrinkly-tilt"
+weight = 4
+frames = [
+  { ops = ["head+1,0"], ms = 200 },
+  { ops = ["head=tilt", "ears=flick", "eyes=tilt", "head+1,0"], ms = 1300 },
+  { ops = ["head=tilt", "ears=flick", "eyes=closed", "head+1,0"], ms = 150 },
+  { ops = ["head=tilt", "ears=flick", "eyes=tilt", "head+1,0"], ms = 600 },
+  { ops = ["head+1,0"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a cold snap. It shivers, ducks into the crate, and comes back up in
+# a knitted turtleneck, delighted with itself.
+[[actions]]
+name = "sweater"
+weight = 1
+frames = [
+  { ops = ["all+1,0", "eyes=closed"], ms = 90 },
+  { ops = ["all+-1,0", "eyes=closed"], ms = 90 },
+  { ops = ["all+1,0", "eyes=closed"], ms = 90 },
+  { ops = ["all+0,12"], ms = 500 },
+  { ops = ["body=sweater", "paws=sleeve", "all+0,4"], ms = 120 },
+  { ops = ["body=sweater", "paws=sleeve", "eyes=happy", "prop:heart@22,3"], ms = 900 },
+  { ops = ["body=sweater", "paws=sleeve", "eyes=happy", "prop:heart@22,1"], ms = 700 },
+  { ops = ["body=sweater", "paws=sleeve"], ms = 500 },
+]
