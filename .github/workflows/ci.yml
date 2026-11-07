@@ -56,3 +56,24 @@ jobs:
 
       - name: make test-linux-display
         run: make test-linux-display
+
+  # The macOS backend in the runner's logged-in desktop session: window
+  # level, placement, accessory policy, IPC, and (where the runner permits
+  # capture and synthetic input) pixels, drag, and keys.
+  macos-display:
+    name: make test-macos-display (macos)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: make test-macos-display
+        run: make test-macos-display
+
+      - name: pawprint doctor
+        if: always()
+        run: make doctor

@@ -30,6 +30,19 @@ wayland-protocols-plasma = { version = "0.3", features = ["client"] }
 x11rb = { version = "0.14", features = ["shape", "xfixes", "randr"] }
 zbus = { version = "5", default-features = false, features = ["async-io", "blocking-api"] }
 
+# macOS backend (SPEC §11.2). Each framework crate is trimmed to the
+# features the backend uses.
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6"
+dispatch2 = { version = "0.3", default-features = false, features = ["std", "objc2"] }
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "objc2-core-foundation", "objc2-quartz-core", "block2", "objc2-core-graphics", "NSApplication", "NSColor", "NSColorSpace", "NSEvent", "NSGraphics", "NSGraphicsContext", "NSPanel", "NSResponder", "NSRunningApplication", "NSScreen", "NSView", "NSWindow"] }
+objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFString", "CFData", "CFCGTypes"] }
+objc2-core-graphics = { version = "0.3", default-features = false, features = ["std", "objc2", "CGColorSpace", "CGDataProvider", "CGImage"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "block2", "NSArray", "NSDate", "NSEnumerator", "NSGeometry", "NSNotification", "NSObjCRuntime", "NSOperation", "NSProcessInfo", "NSRunLoop", "NSString", "NSThread"] }
+objc2-quartz-core = { version = "0.3", default-features = false, features = ["std", "objc2-core-foundation", "CALayer", "CATransaction"] }
+objc2-system-configuration = { version = "0.3", default-features = false, features = ["std", "SCDynamicStore", "SCDynamicStoreCopySpecific", "SCPreferences", "SCPreferencesPath"] }
+
 [target.'cfg(windows)'.dependencies]
 windows-sys = { workspace = true, features = ["Win32_System_SystemInformation", "Win32_Foundation"] }
 
@@ -40,3 +53,12 @@ png.workspace = true
 wayland-client = "0.31"
 wayland-protocols-wlr = { version = "0.3", features = ["client"] }
 x11rb = { version = "0.14", features = ["randr", "xtest"] }
+
+# The macOS GUI-session test (`make test-macos-display`) asks the window
+# server about the badge's window and posts synthetic input.
+[target.'cfg(target_os = "macos")'.dev-dependencies]
+png.workspace = true
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "libc", "NSRunningApplication", "NSWorkspace"] }
+objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFArray", "CFCGTypes"] }
+objc2-core-graphics = { version = "0.3", default-features = false, features = ["std", "objc2", "CGEvent", "CGEventTypes", "CGRemoteOperation", "CGWindow"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSArray", "NSDictionary", "NSEnumerator", "NSString", "NSValue"] }

@@ -22,18 +22,29 @@ fn platform() -> Option<String> {
 
 #[cfg(target_os = "macos")]
 fn platform() -> Option<String> {
-    // SystemConfiguration's HostName if set, else LocalHostName. Never
-    // gethostname(), which can follow the network (F13).
-    let get = |key: &str| {
-        std::process::Command::new("/usr/sbin/scutil")
-            .args(["--get", key])
-            .output()
-            .ok()
-            .filter(|o| o.status.success())
-            .and_then(|o| String::from_utf8(o.stdout).ok())
-            .filter(|s| !s.trim().is_empty())
+    // SystemConfiguration's HostName if set, else LocalHostName, the two
+    // values `scutil --get` prints. Never gethostname(), which can follow the
+    // network (F13).
+    use objc2_core_foundation::{CFString, CFType};
+    use objc2_system_configuration::{SCDynamicStore, SCPreferences};
+    let host_name = || {
+        let prefs = SCPreferences::new(None, &CFString::from_static_str("pawprint"), None)?;
+        let system = prefs.path_get_value(&CFString::from_static_str("/System/System"))?;
+        let key = CFString::from_static_str("HostName");
+        // SAFETY: the key is a live CFString; a value, if any, is a CF object
+        // owned by `system`, which outlives the borrow.
+        let value = unsafe {
+            system
+                .value((&raw const *key).cast())
+                .cast::<CFType>()
+                .as_ref()
+        }?;
+        value.downcast_ref::<CFString>().map(ToString::to_string)
     };
-    get("HostName").or_else(|| get("LocalHostName"))
+    let local_host_name = || SCDynamicStore::local_host_name(None).map(|s| s.to_string());
+    host_name()
+        .filter(|s| !s.trim().is_empty())
+        .or_else(local_host_name)
 }
 
 #[cfg(windows)]

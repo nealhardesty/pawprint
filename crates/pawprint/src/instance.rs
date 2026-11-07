@@ -56,14 +56,55 @@ fn x11_display_id(display: &str) -> String {
     .replace('/', "_")
 }
 
-/// macOS: the GUI security session (`SessionGetInfo`).
-///
-/// Hook for the macOS backend: call `SessionGetInfo(callerSecuritySession,
-/// ...)` from the Security framework and return the audit session id, so
-/// each GUI login (console or Screen Sharing) gets its own badge.
+/// macOS: the audit session of the GUI login this process belongs to
+/// (`SessionGetInfo`), so the console and each Screen Sharing login get their
+/// own badge. A terminal inherits its login's session, so `pawprint move`
+/// finds the badge; an SSH login is a separate session without the window
+/// server.
 #[cfg(target_os = "macos")]
 pub fn session_key() -> Result<String, NoSession> {
-    Err("the macOS session key (SessionGetInfo) is not implemented yet (M1)".into())
+    match security_session() {
+        Some(s) if s.graphic => Ok(format!("asid-{}", s.id)),
+        Some(s) => Err(format!(
+            "no graphical session: audit session {} has no window server access \
+             (an SSH login?). Run PAWPRINT from a Terminal on the desktop; \
+             `pawprint doctor` explains more.",
+            s.id
+        )),
+        None => Err("cannot read the security session (SessionGetInfo failed)".into()),
+    }
+}
+
+/// This process's security session, as `SessionGetInfo` reports it.
+#[cfg(target_os = "macos")]
+#[derive(Debug, Clone, Copy)]
+pub struct SecuritySession {
+    /// The audit session id.
+    pub id: u32,
+    /// The session reaches the window server (a GUI login).
+    pub graphic: bool,
+    /// A remote login (Screen Sharing).
+    pub remote: bool,
+}
+
+#[cfg(target_os = "macos")]
+pub fn security_session() -> Option<SecuritySession> {
+    // Security.framework's AuthSession.h, which no binding crate covers.
+    #[link(name = "Security", kind = "framework")]
+    unsafe extern "C" {
+        fn SessionGetInfo(session: u32, session_id: *mut u32, attributes: *mut u32) -> i32;
+    }
+    const CALLER_SECURITY_SESSION: u32 = u32::MAX;
+    const HAS_GRAPHIC_ACCESS: u32 = 0x0010;
+    const IS_REMOTE: u32 = 0x1000;
+    let (mut id, mut attributes) = (0, 0);
+    // SAFETY: both out-pointers are valid for writes.
+    let status = unsafe { SessionGetInfo(CALLER_SECURITY_SESSION, &mut id, &mut attributes) };
+    (status == 0).then_some(SecuritySession {
+        id,
+        graphic: attributes & HAS_GRAPHIC_ACCESS != 0,
+        remote: attributes & IS_REMOTE != 0,
+    })
 }
 
 /// Windows: the logon session (`ProcessIdToSessionId`), so each RDP session
@@ -94,9 +135,37 @@ fn endpoint_dir() -> PathBuf {
     match std::env::var_os("XDG_RUNTIME_DIR").filter(|d| !d.is_empty() && cfg!(target_os = "linux"))
     {
         Some(dir) => PathBuf::from(dir).join("pawprint"),
-        None if cfg!(target_os = "macos") => std::env::temp_dir().join("pawprint"),
+        None if cfg!(target_os = "macos") => user_temp_dir().join("pawprint"),
         // SAFETY: getuid has no preconditions.
         None => std::env::temp_dir().join(format!("pawprint-{}", unsafe { libc::getuid() })),
+    }
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn user_temp_dir() -> PathBuf {
+    std::env::temp_dir()
+}
+
+/// macOS: `$TMPDIR`, else the per-user temporary directory it normally names,
+/// so a badge started by launchd without `TMPDIR` and a terminal agree.
+#[cfg(target_os = "macos")]
+fn user_temp_dir() -> PathBuf {
+    use std::os::unix::ffi::OsStrExt;
+    if std::env::var_os("TMPDIR").is_some_and(|d| !d.is_empty()) {
+        return std::env::temp_dir();
+    }
+    let mut buf = [0u8; 1024];
+    // SAFETY: buf is valid for buf.len() bytes; confstr NUL-terminates it.
+    let n = unsafe {
+        libc::confstr(
+            libc::_CS_DARWIN_USER_TEMP_DIR,
+            buf.as_mut_ptr().cast(),
+            buf.len(),
+        )
+    };
+    match n {
+        1..=1024 => PathBuf::from(std::ffi::OsStr::from_bytes(&buf[..n - 1])),
+        _ => std::env::temp_dir(),
     }
 }
 
