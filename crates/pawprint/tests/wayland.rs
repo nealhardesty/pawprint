@@ -35,6 +35,7 @@ impl Sway {
             &config,
             format!(
                 "output * mode 1280x720 bg #336699 solid_color\nfocus_follows_mouse no\n\
+                 # No XWayland: nothing here needs it, and it would take an X display.\nxwayland disable\n\
                  # Keep the cursor out of screenshots.\nseat * hide_cursor 100\n{extra_config}\n"
             ),
         )
@@ -202,11 +203,54 @@ fn badge_session(tag: &str, extra_config: &str) -> (Env, Sway, Pointer, Proc) {
     (env, sway, pointer, badge)
 }
 
+/// The layer-shell protocol makes a first commit with a zero size on an
+/// axis that isn't anchored to both edges an error (KWin enforces it, sway
+/// doesn't), so the badge's surface gets its anchor and size first.
+fn assert_sized_before_first_commit(log: &str) {
+    let lines: Vec<&str> = log.lines().filter(|l| l.contains(" -> ")).collect();
+    let (at, create) = lines
+        .iter()
+        .enumerate()
+        .find(|(_, l)| l.contains(".get_layer_surface(") && l.contains("\"pawprint\")"))
+        .unwrap_or_else(|| panic!("no badge layer surface in the protocol log:\n{log}"));
+    // get_layer_surface(zwlr_layer_surface_v1@L, wl_surface@S, ...)
+    let id = |prefix: &str| {
+        let start = create.find(prefix).expect(prefix) + prefix.len();
+        let digits: String = create[start..]
+            .chars()
+            .take_while(char::is_ascii_digit)
+            .collect();
+        format!("{prefix}{digits}.")
+    };
+    let (layer, surface) = (id("zwlr_layer_surface_v1@"), id("wl_surface@"));
+    let first = |call: &str| {
+        lines[at..]
+            .iter()
+            .position(|l| l.contains(&format!("{call}(")))
+            .unwrap_or_else(|| panic!("no {call} in:\n{}", lines[at..].join("\n")))
+    };
+    let commit = first(&format!("{surface}commit"));
+    for call in ["set_anchor", "set_size"] {
+        assert!(
+            first(&format!("{layer}{call}")) < commit,
+            "{call} must come before the first commit:\n{}",
+            lines[at..=at + commit].join("\n")
+        );
+    }
+}
+
 #[test]
 #[ignore = "needs sway, swaybg, grim, foot; run `make test-wayland`"]
 fn layer_surface_draws_top_right_and_passes_clicks() {
-    let (env, sway, mut pointer, _badge) = badge_session("wl-place", "");
+    let mut env = Env::new("wl-place");
+    let sway = Sway::start(&mut env, "");
+    let mut pointer = Pointer::new(&sway);
+    // The badge's protocol log, for the first-commit check below.
+    env.set("WAYLAND_DEBUG", "client");
+    let _badge = env.run_badge();
+    env.vars.retain(|(k, _)| k != "WAYLAND_DEBUG");
     env.wait_rect([1200, 16, 64, 64]);
+    assert_sized_before_first_commit(&env.log());
     let expected = env.expected(64);
     wait_for("the badge on screen", || {
         (sway.grab(&env).px(1232, 60) != [0x33, 0x66, 0x99, 255]).then_some(())

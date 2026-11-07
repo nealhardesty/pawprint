@@ -231,6 +231,14 @@ impl Shell {
         incoming.reply(response);
     }
 
+    /// The display the core put the badge on (SPEC §6.2), for a backend
+    /// whose surfaces are tied to an output (Wayland), so it never picks
+    /// one itself.
+    #[cfg(target_os = "linux")]
+    pub fn target(&self) -> Option<&DisplayInfo> {
+        self.badge.target()
+    }
+
     /// The core's next deadline, if any.
     pub fn deadline(&self) -> Option<Instant> {
         self.badge.next_deadline()

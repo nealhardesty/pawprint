@@ -896,6 +896,7 @@ in `pawprint::shell::Shell`:
 | `Shell::set_tray(Box<dyn Tray>)` | Once, to attach the platform's tray; the shell calls `Tray::show(&TrayState)` with every `SetTray` (also at once, if the core already described it) |
 | `Shell::menu(&mut surface, command)` | For each tray menu choice. Size and Animation are saved first (8.6), then everything is the same `Command` IPC sends |
 | `Shell::is_preview()` | When creating the surface: true for `pawprint preview` (a normal window) |
+| `Shell::target()` | Wayland, before committing: the core's target display, which fixes the output its layer surfaces go on |
 
 The shell runs the surface effects through `surface::apply`, writes
 `SaveState` atomically, re-reads the config on `ReloadConfig` (and when its
@@ -1415,15 +1416,20 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   core's own 3 × 3 rule (`layout::snap`), with margins measured from those
   edges (centered axes anchor left or top). The compositor applies margins
   from the real usable area, so the badge lands right even though its
-  position inside the output isn't known.
+  position inside the output isn't known. Anchor, margins, and size are
+  set before the surface's first commit: a zero size on an axis not
+  anchored to both edges is a protocol error (KWin enforces it; sway
+  doesn't). `make test-wayland` checks the order in the `WAYLAND_DEBUG`
+  log.
 - Primary output: Wayland has no core concept of a primary output. On
   Plasma, `kde_output_order_v1` lists outputs in priority order, and the
   first is the primary. Elsewhere: the configured `display` name, a single
   output, or else the first output by position (not the null output, which
   would leave the core without a usable area to lay out in).
-- The output of a layer surface is fixed at creation (F5). The badge is
-  recreated when its rectangle moves to another output, when its output
-  goes away, and when the compositor closes it.
+- The output of a layer surface is fixed at creation (F5). It is the core's
+  target display (`Shell::target`, [6.2](#62-target-display)); the backend
+  never picks one. The badge is recreated when the target changes, when
+  its output goes away, and when the compositor closes it.
 - Scaling: the scale is the output's physical mode over its xdg-output
   logical size, rounded to 1/120, which equals the compositor's fractional
   scale, so `wp_fractional_scale_v1` adds nothing. With `wp_viewporter`, the

@@ -268,16 +268,7 @@ impl Wl {
         });
     }
 
-    /// The display the badge rect is on.
-    fn display_for(&self, rect: PhysicalRect) -> Option<&DisplayInfo> {
-        let c = rect.center();
-        self.displays
-            .iter()
-            .find(|d| d.bounds.contains(c))
-            .or(self.displays.first())
-    }
-
-    fn create_badge(&mut self, display: &DisplayInfo) {
+    fn create_badge(&mut self, display: &DisplayInfo, rect: PhysicalRect) {
         if self.preview {
             let Some(xdg) = &self.xdg_shell else {
                 log::error!("wayland: the compositor has no xdg_wm_base for a preview window");
@@ -320,7 +311,10 @@ impl Wl {
         );
         layer.set_exclusive_zone(0);
         layer.set_keyboard_interactivity(KeyboardInteractivity::None);
-        // A first commit without a buffer asks for the initial configure.
+        // A first commit without a buffer asks for the initial configure. It
+        // must carry a size and anchor already: a zero size on an axis not
+        // anchored to both edges is a protocol error.
+        Geometry::new(rect, display).apply(&layer);
         layer.commit();
         log::info!("wayland: badge surface on {}", display.name);
         self.badge = Some(Badge {
@@ -334,12 +328,10 @@ impl Wl {
     }
 
     /// Bring the compositor up to date with the last place, present, and
-    /// interactive state, in a single commit.
-    fn sync(&mut self) {
-        let (Some(rect), true) = (self.rect, self.frame.is_some()) else {
-            return;
-        };
-        let Some(display) = self.display_for(rect).cloned() else {
+    /// interactive state, in a single commit. `target` is the core's target
+    /// display (SPEC §6.2), which the badge's rectangle is on.
+    fn sync(&mut self, target: Option<DisplayInfo>) {
+        let (Some(rect), true, Some(display)) = (self.rect, self.frame.is_some(), target) else {
             return;
         };
         if self
@@ -350,7 +342,7 @@ impl Wl {
             self.badge = None; // its output is fixed, so make a new one
         }
         if self.badge.is_none() {
-            self.create_badge(&display);
+            self.create_badge(&display, rect);
             self.dirty = true;
             return;
         }
@@ -358,36 +350,12 @@ impl Wl {
         let Some(badge) = self.badge.as_mut().filter(|b| b.configured && self.dirty) else {
             return;
         };
-        let (s, work) = (display.scale, display.work_area);
-        let logical = |p: i32| (f64::from(p) / s).round() as i32;
-        // Anchor to the edges nearest the badge (the core's own 3 x 3 rule)
-        // and measure margins from them.
-        let (h, v) = layout::snap(rect, work, s).anchor.axes();
-        let (mut anchor, mut m) = (Anchor::empty(), [0; 4]); // top, right, bottom, left
-        match h {
-            Axis::End => {
-                (anchor, m[1]) = (anchor | Anchor::RIGHT, logical(work.right() - rect.right()))
-            }
-            _ => (anchor, m[3]) = (anchor | Anchor::LEFT, logical(rect.x - work.x)),
-        }
-        match v {
-            Axis::End => {
-                (anchor, m[2]) = (
-                    anchor | Anchor::BOTTOM,
-                    logical(work.bottom() - rect.bottom()),
-                )
-            }
-            _ => (anchor, m[0]) = (anchor | Anchor::TOP, logical(rect.y - work.y)),
-        }
-        let (w, hgt) = (
-            logical(rect.width as i32).max(1),
-            logical(rect.height as i32).max(1),
-        );
+        let s = display.scale;
+        let geometry = Geometry::new(rect, &display);
+        let (w, hgt) = geometry.size;
         let surface = match (&badge.layer, &badge.window) {
             (Some(layer), _) => {
-                layer.set_anchor(anchor);
-                layer.set_margin(m[0], m[1], m[2], m[3]);
-                layer.set_size(w as u32, hgt as u32);
+                geometry.apply(layer);
                 layer.wl_surface().clone()
             }
             (None, Some(window)) => {
@@ -496,6 +464,62 @@ impl Wl {
             c.buffer = Some(buffer);
         }
         c.layer.commit();
+    }
+}
+
+/// Where the badge's layer surface goes, in logical pixels: anchored to the
+/// edges nearest it (the core's own 3 × 3 rule, centered axes anchor left
+/// or top), with margins measured from those edges, which the compositor
+/// applies from the real usable area (F3).
+struct Geometry {
+    anchor: Anchor,
+    /// Top, right, bottom, left.
+    margin: [i32; 4],
+    size: (i32, i32),
+}
+
+impl Geometry {
+    fn new(rect: PhysicalRect, display: &DisplayInfo) -> Geometry {
+        let (s, work) = (display.scale, display.work_area);
+        let logical = |p: i32| (f64::from(p) / s).round() as i32;
+        let (h, v) = layout::snap(rect, work, s).anchor.axes();
+        let (mut anchor, mut margin) = (Anchor::empty(), [0; 4]);
+        match h {
+            Axis::End => {
+                anchor |= Anchor::RIGHT;
+                margin[1] = logical(work.right() - rect.right());
+            }
+            _ => {
+                anchor |= Anchor::LEFT;
+                margin[3] = logical(rect.x - work.x);
+            }
+        }
+        match v {
+            Axis::End => {
+                anchor |= Anchor::BOTTOM;
+                margin[2] = logical(work.bottom() - rect.bottom());
+            }
+            _ => {
+                anchor |= Anchor::TOP;
+                margin[0] = logical(rect.y - work.y);
+            }
+        }
+        let size = (
+            logical(rect.width as i32).max(1),
+            logical(rect.height as i32).max(1),
+        );
+        Geometry {
+            anchor,
+            margin,
+            size,
+        }
+    }
+
+    fn apply(&self, layer: &LayerSurface) {
+        let [top, right, bottom, left] = self.margin;
+        layer.set_anchor(self.anchor);
+        layer.set_margin(top, right, bottom, left);
+        layer.set_size(self.size.0 as u32, self.size.1 as u32);
     }
 }
 
@@ -621,7 +645,8 @@ impl App for WlApp {
     }
 
     fn flush(&mut self) -> Result<(), String> {
-        self.wl.sync();
+        self.wl
+            .sync(self.shell.as_ref().and_then(Shell::target).cloned());
         self.wl
             .conn
             .flush()
