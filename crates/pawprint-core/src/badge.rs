@@ -4,14 +4,14 @@
 
 use std::time::Instant;
 
-use pawprint_sprite::{Bundle, Mascot, RgbaImage};
+use pawprint_sprite::{Bundle, Mascot, Rgb, RgbaImage};
 
 use crate::anim::Scheduler;
 use crate::catalog::Catalog;
 use crate::config::{Animation, Config, Layer};
 use crate::geom::{PhysicalRect, Point};
 use crate::identity::{self, Resolved};
-use crate::layout;
+use crate::layout::{self, Anchor, LabelSize};
 use crate::menu::{self, TrayState};
 use crate::movemode::{self, Key, MoveMode, Outcome};
 use crate::render::{self, BadgeSpec, Frame};
@@ -84,6 +84,21 @@ pub struct Inputs {
     pub preview: bool,
 }
 
+/// Everything the presented image depends on: when it matches, the badge is
+/// not recomposed (SPEC §4.5).
+#[derive(Debug, Clone, PartialEq)]
+struct RenderKey {
+    mascot: String,
+    frame: usize,
+    label: Option<String>,
+    accent: Rgb,
+    size: u32,
+    label_size: LabelSize,
+    anchor: Anchor,
+    scale: f64,
+    moving: bool,
+}
+
 pub struct Badge<'c> {
     catalog: &'c Catalog,
     assets: &'c Bundle,
@@ -96,8 +111,12 @@ pub struct Badge<'c> {
     anim: Scheduler,
     moving: Option<MoveMode>,
     placed: Option<PhysicalRect>,
-    presented: Option<RgbaImage>,
+    presented: Option<(RenderKey, RgbaImage)>,
     tray: Option<TrayState>,
+    /// The tray icon's mascot and accent, so it is composed only on change.
+    tray_icon: Option<(String, Rgb)>,
+    /// How many times the badge image was composed (for tests).
+    compositions: u32,
 }
 
 impl<'c> Badge<'c> {
@@ -142,6 +161,8 @@ impl<'c> Badge<'c> {
             placed: None,
             presented: None,
             tray: None,
+            tray_icon: None,
+            compositions: 0,
         }
     }
 
@@ -320,8 +341,14 @@ impl<'c> Badge<'c> {
     /// Emit Place / Present / SetTray only for what actually changed.
     fn refresh(&mut self, out: &mut Vec<Effect>) {
         let mascot = self.mascot();
+        let icon_key = (self.resolved.mascot.clone(), self.resolved.accent.rgb);
+        let icon = match &self.tray {
+            Some(t) if self.tray_icon.as_ref() == Some(&icon_key) => t.icon.clone(),
+            _ => render::compose_1x(&self.assets.crate_art, mascot, 0, icon_key.1),
+        };
+        self.tray_icon = Some(icon_key);
         let tray = TrayState {
-            icon: render::compose_1x(&self.assets.crate_art, mascot, 0, self.resolved.accent.rgb),
+            icon,
             visible: self.resolved.settings.tray.value,
             tooltip: format!(
                 "PAWPRINT: {} ({})",
@@ -342,45 +369,70 @@ impl<'c> Badge<'c> {
             out.push(Effect::SetTray(tray));
         }
 
-        let Some(display) = self.target() else { return };
+        let Some((work_area, scale)) = self.target().map(|d| (d.work_area, d.scale)) else {
+            return;
+        };
         let s = &self.resolved.settings;
-        let spec = BadgeSpec {
-            mascot,
+        let key = RenderKey {
+            mascot: self.resolved.mascot.clone(),
             frame: self.anim.frame(mascot),
-            label: self.resolved.label.as_deref(),
+            label: self.resolved.label.clone(),
             accent: self.resolved.accent.rgb,
             size: s.size.value,
             label_size: s.label_size.value,
             anchor: self.resolved.position.value.anchor,
-            display_scale: display.scale,
+            scale,
+            moving: self.moving.is_some(),
         };
-        let mut img = render::render_badge(&spec, &self.assets.crate_art, &self.assets.font);
-        if self.moving.is_some() {
-            let p = layout::art_scale(s.size.value, display.scale);
-            movemode::draw_outline(&mut img, self.resolved.accent.rgb, p);
-        }
+        let changed = self.presented.as_ref().map(|(k, _)| k) != Some(&key);
+        let mut present = None;
+        let (width, height) = match &self.presented {
+            Some((_, img)) if !changed => (img.width, img.height),
+            _ => {
+                let spec = BadgeSpec {
+                    mascot,
+                    frame: key.frame,
+                    label: key.label.as_deref(),
+                    accent: key.accent,
+                    size: key.size,
+                    label_size: key.label_size,
+                    anchor: key.anchor,
+                    display_scale: key.scale,
+                };
+                let mut img =
+                    render::render_badge(&spec, &self.assets.crate_art, &self.assets.font);
+                if key.moving {
+                    let p = layout::art_scale(key.size, key.scale);
+                    movemode::draw_outline(&mut img, key.accent, p);
+                }
+                self.compositions += 1;
+                let size = (img.width, img.height);
+                if self.presented.as_ref().is_none_or(|(_, old)| *old != img) {
+                    present = Some(Frame::from_rgba(&img));
+                }
+                self.presented = Some((key, img));
+                size
+            }
+        };
         let rect = match &self.moving {
             Some(m) => PhysicalRect {
-                width: img.width,
-                height: img.height,
+                width,
+                height,
                 ..m.rect()
             },
             None => layout::place(
                 self.resolved.position.value,
-                img.width,
-                img.height,
-                display.work_area,
-                display.scale,
+                width,
+                height,
+                work_area,
+                scale,
             ),
         };
         if self.placed != Some(rect) {
             self.placed = Some(rect);
             out.push(Effect::Place(rect));
         }
-        if self.presented.as_ref() != Some(&img) {
-            out.push(Effect::Present(Frame::from_rgba(&img)));
-            self.presented = Some(img);
-        }
+        out.extend(present.map(Effect::Present));
     }
 }
 
@@ -500,6 +552,22 @@ mod tests {
     fn static_mode_sleeps_until_an_event() {
         let rig = Rig::new("owl", "animation = \"static\"");
         assert_eq!(rig.badge.next_deadline(), None);
+    }
+
+    #[test]
+    fn unchanged_badge_is_not_recomposed() {
+        let mut rig = Rig::new("owl", "animation = \"static\"");
+        assert_eq!(rig.badge.compositions, 1);
+        rig.send(Event::Deadline);
+        rig.send(Event::Command(Command::Reload));
+        assert_eq!(rig.badge.compositions, 1, "nothing changed");
+        assert_eq!(rig.surface.frames.len(), 1);
+
+        rig.send(Event::Command(Command::Move));
+        assert_eq!(rig.badge.compositions, 2, "the move outline is drawn");
+        rig.send(Event::Command(Command::SetSize(128)));
+        assert_eq!(rig.badge.compositions, 3, "a new size is drawn");
+        assert_eq!(rig.surface.frames.len(), 3);
     }
 
     #[test]

@@ -346,7 +346,11 @@ stamp. `"as-is"` keeps the configured or detected case. `"lower"` lowercases.
   premultiplied alpha trivial, which Windows and Wayland require.
 - The renderer composes the badge into a small RGBA buffer at 1×, then
   scales it by `P` into the backend's buffer. A redraw happens only when the
-  frame, label, size, or scale changes.
+  frame, label, size, or scale changes. `Badge` keys the composed image on
+  everything it depends on (mascot, frame, label, label size, accent, size,
+  anchor, scale, move-mode outline) and skips composition when the key
+  matches; the tray icon is likewise composed only when the mascot or
+  accent changes.
 
 ---
 

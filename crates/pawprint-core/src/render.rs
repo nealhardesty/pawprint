@@ -2,7 +2,7 @@
 //! receives (SPEC §4.5, §10.6).
 
 use pawprint_sprite::{
-    CrateArt, CrateColor, Font, IndexedLayer, Mascot, Rgb, RgbaImage, Shade, ramp,
+    CrateArt, CrateColor, Font, IndexedLayer, Mascot, Ramp, Rgb, RgbaImage, Shade, ramp,
 };
 
 use crate::geom::Point;
@@ -84,8 +84,7 @@ fn blit(dst: &mut RgbaImage, src: &RgbaImage, at: Point) {
     }
 }
 
-fn crate_color(c: CrateColor, accent: Rgb) -> Rgb {
-    let r = ramp(accent);
+fn crate_color(c: CrateColor, r: &Ramp) -> Rgb {
     match c {
         CrateColor::Fixed(rgb) => rgb,
         CrateColor::Accent(Shade::Shadow) => r.shadow,
@@ -104,11 +103,14 @@ fn draw_layer(
     offset: Point,
     unit: u32,
 ) {
+    // The ramp once per layer, not per pixel.
+    let r = ramp(accent);
+    let colors: Vec<Rgb> = art.colors.iter().map(|&c| crate_color(c, &r)).collect();
     for (i, &p) in layer.pixels.iter().enumerate() {
         if p == 0 {
             continue;
         }
-        let c = crate_color(art.colors[usize::from(p) - 1], accent);
+        let c = colors[usize::from(p) - 1];
         let lx = layer.x + (i as u32 % layer.width) as i32;
         let ly = layer.y + (i as u32 / layer.width) as i32;
         fill(
