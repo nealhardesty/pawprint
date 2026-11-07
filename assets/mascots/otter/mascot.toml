@@ -1,0 +1,244 @@
+# Otter, on small-quadruped. Sleek and brown, with a flat round head, tiny
+# ears, a broad cream muzzle and chest, a big black nose, whiskers, a thick
+# tapering tail, and its favourite pebble held to its chest at all times.
+# `eyes.up` follows the pebble when it juggles; `clam` is the shellfish it
+# cracks open in the rare action.
+id = "otter"
+name = "Otter"
+category = "mammals"
+aliases = []
+accent = "sky"
+extends = "small-quadruped"
+
+[palette]
+"l" = "brown-1"     # fur light
+"f" = "brown-2"     # fur
+"F" = "brown-3"     # fur shadow, whiskers
+"w" = "cream"       # muzzle and chest
+"M" = "brown-1"     # shadow on the cream
+"s" = "brown-2"     # paws light
+"S" = "brown-3"     # paws
+"n" = "fur-black"   # nose
+"p" = "pink-2"      # mouth
+"g" = "grey-1"      # NEW: pebble light
+"G" = "grey-2"      # NEW: pebble
+"q" = "grey-3"      # NEW: pebble shadow
+"c" = "blue-2"      # NEW: clam shell
+"C" = "blue-3"      # NEW: clam shell shadow
+
+[layers.tail]
+at = [24, 10]
+grid = """
+...kk.
+..klfk
+..kfFk
+.klfFk
+.kffFk
+klffFk
+kfffFk
+kffFFk
+kfFFk.
+kFFk..
+"""
+
+[layers."tail.flick"]
+at = [24, 9]
+grid = """
+....kk
+...klk
+..klFk
+..kfFk
+.klfFk
+.kffFk
+klffFk
+kfffFk
+kffFFk
+kfFFk.
+kFFk..
+"""
+
+# A long sleek neck into a cream chest.
+[layers.body]
+at = [7, 14]
+grid = """
+..klfwwwwwwwwfFk..
+.klffwwwwwwwwffFk.
+klfffwwwwwwwwfffFk
+klffwwwwwwwwwwffFk
+klffwwwwwwwwwwffFk
+klffwwwwwwwwwwffFk
+klffwwwwwwwwwwffFk
+klffwwwwwwwwwwffFk
+klffwwwwwwwwwwffFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+"""
+
+# A flat, round head with a broad muzzle.
+[layers.head]
+at = [5, 4]
+grid = """
+......kkkkkkkkkk......
+....kkllllllllffkk....
+...kllfffffffffffFk...
+..klfffffffffffffFFk..
+..klfffffffffffffFFk..
+.klffffffffffffffffFk.
+.klffffffffffffffffFk.
+klffwwwwwwwwwwwwwwfFFk
+klfwwwwwwwwwwwwwwwwfFk
+.kwwwwwwwwwwwwwwwwwMk.
+..kwwwwwwwwwwwwwwwMk..
+...kkwwwwwwwwwwwMkk...
+.....kkkkkkkkkkkk.....
+"""
+
+[layers.ears]
+at = [5, 5]
+follows = "head"
+grid = """
+.kk................kk.
+kfFk..............kfFk
+"""
+
+[layers."ears.flick"]
+at = [5, 4]
+follows = "head"
+grid = """
+...................kk.
+.kk...............kfFk
+kfFk..................
+"""
+
+[layers."eyes.up"]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers.nose]
+at = [14, 11]
+follows = "head"
+grid = """
+knnk
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 10]
+follows = "head"
+grid = """
+knnk
+.nn.
+"""
+
+[layers."mouth.open"]
+at = [14, 13]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+[layers.whiskers]
+at = [1, 12]
+follows = "head"
+grid = """
+FFF......F.F......F.F......FFF
+...FF....F.F......F.F....FF...
+"""
+
+[layers.paws]
+at = [10, 16]
+grid = """
+.SSS....SSS.
+SsssS..SsssS
+kSsSk..kSsSk
+"""
+
+# The pebble, always held close.
+[layers.pebble]
+at = [13, 15]
+grid = """
+.kkkk.
+kkgGkk
+kgGGqk
+kGqqqk
+kkkkkk
+"""
+
+[layers."clam.shut"]
+at = [12, 14]
+grid = """
+.kkkkkk.
+kccccccC
+kCCCCCCk
+.kkkkkk.
+"""
+
+[layers."clam.open"]
+at = [12, 12]
+grid = """
+.kkkkkk.
+kccccccC
+.kkkkkk.
+..khhk..
+.kkkkkk.
+kCCCCCCk
+.kkkkkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: tosses its pebble up, watches it, and catches it again.
+[[actions]]
+name = "juggle"
+weight = 5
+frames = [
+  { ops = ["paws+0,-1", "pebble+0,-1"], ms = 140 },
+  { ops = ["-pebble", "eyes=up", "prop:pebble@13,8"], ms = 110 },
+  { ops = ["-pebble", "eyes=up", "head+0,-1", "prop:pebble@13,2"], ms = 160 },
+  { ops = ["-pebble", "eyes=up", "head+0,-1", "prop:pebble@13,0"], ms = 260 },
+  { ops = ["-pebble", "eyes=up", "prop:pebble@13,6"], ms = 110 },
+  { ops = ["pebble+0,1", "paws+0,1", "eyes=happy"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it swaps the pebble for a clam, bangs the two together, and the
+# clam pops open on a pearl.
+[[actions]]
+name = "clam-crack"
+weight = 1
+frames = [
+  { ops = ["-pebble", "clam=shut", "eyes=left"], ms = 500 },
+  { ops = ["-pebble", "clam=shut", "prop:pebble@13,7"], ms = 160 },
+  { ops = ["-pebble", "clam=shut", "eyes=closed", "prop:pebble@13,10", "all+0,1"], ms = 120 },
+  { ops = ["-pebble", "clam=shut", "prop:pebble@13,7"], ms = 160 },
+  { ops = ["-pebble", "clam=shut", "eyes=closed", "prop:pebble@13,10", "all+0,1"], ms = 120 },
+  { ops = ["-pebble", "clam=open", "eyes=up", "prop:sparkle@19,6"], ms = 900 },
+  { ops = ["-pebble", "clam=open", "eyes=happy", "prop:sparkle@20,5"], ms = 700 },
+  { ops = [], ms = 200 },
+]
