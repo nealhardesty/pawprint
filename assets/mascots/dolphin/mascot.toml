@@ -10,6 +10,8 @@ category = "aquatic"
 aliases = ["porpoise"]
 accent = "teal"
 extends = "sea-creature"
+# Template props go top-left, clear of the head on the right.
+prop_offset = [-19, 0]
 
 [palette]
 "l" = "grey-1"      # skin light

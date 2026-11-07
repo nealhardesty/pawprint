@@ -1,8 +1,9 @@
 # Llama on ungulate-head. Tall and narrow where its siblings are broad: a
-# small head held high on a long woolly neck, tall banana ears curving in at
-# the tips (with pink yarn tassels), a fluffy cream topknot, heavy-lidded
-# eyes, and a soft split-lipped muzzle. No antlers. The signature chews,
-# side-eyes you, and twitches an ear; the rare one spits.
+# small head held high on a long, lumpy woolly neck, tall banana ears that
+# curve in at the tips, a wool topknot between them, and a long tan snout
+# with a split lip. One warm wool color and no light muzzle patch, so it
+# never reads as a cow. No antlers. The signature chews, side-eyes you, and
+# twitches an ear; the rare one spits.
 id = "llama"
 name = "Llama"
 category = "mammals"
@@ -10,179 +11,154 @@ aliases = ["alpaca"]
 accent = "rose"
 extends = "ungulate-head"
 
-rest = ["body", "ears", "head", "eyes", "nose", "tassels", "topknot"]
+rest = ["body", "ears", "head", "eyes", "nose", "topknot"]
 
 [palette]
-"l" = "cream"       # wool light
-"f" = "brown-1"     # wool
-"F" = "brown-2"     # wool shadow
-"u" = "white"       # NEW: topknot highlight
-"w" = "cream"       # muzzle
-"M" = "brown-2"     # split lip
+"l" = "brown-1"     # wool light
+"f" = "brown-2"     # wool
+"F" = "brown-3"     # wool shadow
 "n" = "brown-3"     # nostrils
-"p" = "brown-2"     # inner ear, mouth
-"r" = "pink-1"      # NEW: tassel light
-"R" = "pink-2"      # NEW: tassel
+"p" = "brown-3"     # inner ear, mouth
 
 # A long woolly neck that widens into the body behind the crate.
 [layers.body]
-at = [4, 13]
+at = [4, 12]
 grid = """
-.......klffffFFk........
-.......klffffFFk........
-.......klffffFFk........
-......kllffffFFFk.......
-......klfffffFFFk.......
-......klfffffFFFk.......
-.....kllffffffFFFk......
-...kklfffffffffFFFkk....
-.kklffffffffffffffFFkk..
-klfffffffffffffffffFFFk.
-klfffffffffffffffffFFFk.
-klfffffffffffffffffFFFk.
-klfffffffffffffffffFFFk.
-klfffffffffffffffffFFFk.
-klfffffffffffffffffFFFk.
-klfffffffffffffffffFFFk.
-klfffffffffffffffffFFFk.
-klfffffffffffffffffFFFk.
-klfffffffffffffffffFFFk.
+........klffffFk........
+........kllfffFk........
+.......kllffffFFk.......
+.......klflfffFFk.......
+........klffffFk........
+........kllfffFk........
+......kllfflffffFk......
+.....kllffffflfffFk.....
+....kklfffffffffFFkk....
+..kklfffffffffffffFFkk..
+.klfffffffffffffffffFFk.
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
 """
 
 # Tall banana ears, curving in at the tips.
 [layers.ears]
-at = [8, 0]
+at = [9, 0]
 follows = "head"
 grid = """
-..kk........kk..
-.kpk........kpk.
-kppk........kppk
-kplk........kpFk
-kplk........kpFk
-kflk........kfFk
-.kfk.........kFk
+...kk....kk...
+..kfpk..kpFk..
+..kfpk..kpFk..
+..kfpk..kpFk..
 """
 
 [layers."ears.flick"]
-at = [8, 0]
+at = [9, 0]
 follows = "head"
 grid = """
-..kk........kpk.
-.kpk........kppk
-kppk........kpFk
-kplk........kpFk
-kplk........kfFk
-kflk.........kFk
-.kfk............
+...kk.....kk..
+..kfpk...kpFk.
+..kfpk..kpFk..
+..kfpk..kpFk..
 """
 
 [layers.head]
-at = [10, 4]
+at = [10, 3]
 grid = """
-..kkkkkkkk..
-.klllllllfk.
-kllfffffffFk
+....kkkk....
+.klllllllFk.
 klffffffffFk
 klffffffffFk
-klffffffffFk
-kfffffffffFk
-kfffffffffFk
-.kfwwwwwwFk.
-.kwwwMMwwwk.
-..kwwMMwwk..
-...kkkkkk...
+.klfffffFFk.
+.klffffffFk.
+.klllllllFk.
+.klllFFlllk.
+..klFllFlk..
+...kFFFFk...
 """
 
 [layers.eyes]
-at = [11, 8]
+at = [12, 5]
 follows = "head"
 grid = """
-hkk....hkk
-kkk....kkk
+hk....hk
+kk....kk
 """
 
 [layers."eyes.closed"]
-at = [11, 9]
+at = [12, 6]
 follows = "head"
 grid = """
-kkk....kkk
+kk....kk
 """
 
 [layers."eyes.left"]
-at = [10, 8]
+at = [11, 5]
 follows = "head"
 grid = """
-hkk....hkk
-kkk....kkk
+hk....hk
+kk....kk
 """
 
 [layers."eyes.right"]
-at = [12, 8]
+at = [13, 5]
 follows = "head"
 grid = """
-hkk....hkk
-kkk....kkk
+hk....hk
+kk....kk
 """
 
 [layers."eyes.happy"]
-at = [11, 8]
+at = [11, 5]
 follows = "head"
 grid = """
-.k......k.
-k.k....k.k
+.kk....kk.
+k..k..k..k
 """
 
 # The side-eye: heavy lids, pupils slid to one side.
 [layers."eyes.side"]
-at = [11, 8]
+at = [12, 5]
 follows = "head"
 grid = """
-FFF....FFF
-kkF....kkF
+FF....FF
+kF....kF
 """
 
 [layers.nose]
-at = [13, 12]
+at = [13, 9]
 follows = "head"
 grid = """
 n....n
 """
 
 [layers."nose.sniff"]
-at = [12, 12]
+at = [12, 9]
 follows = "head"
 grid = """
 nn....nn
 """
 
 [layers."mouth.open"]
-at = [14, 13]
+at = [14, 11]
 follows = "head"
 grid = """
 kppk
 .kk.
 """
 
-# Pink yarn tassels hanging from the ears.
-[layers.tassels]
-at = [6, 6]
-follows = "head"
-grid = """
-.kk..............kk.
-krRk............krRk
-kRRk............kRRk
-.kk..............kk.
-"""
-
 [layers.topknot]
-at = [12, 2]
+at = [13, 2]
 follows = "head"
 grid = """
-.kk..kk.
-kuukkulk
-kuuuulfk
-kuulllfk
-.kllllk.
+.kkkk.
+kllllk
+.FllF.
 """
 
 [[actions]]

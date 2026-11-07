@@ -11,6 +11,7 @@ accent = "ochre"
 extends = "dog-sit"
 
 [palette]
+"h" = "grey-3"      # catchlight: white would vanish into the light fur at 1x
 "l" = "brown-1"     # tan light
 "f" = "brown-2"     # tan
 "F" = "brown-3"     # tan shadow

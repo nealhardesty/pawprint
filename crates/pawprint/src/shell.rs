@@ -12,7 +12,7 @@
 use std::time::{Duration, Instant, SystemTime};
 
 use pawprint_core::badge::{Badge, Command, Effect, Event, Inputs};
-use pawprint_core::catalog::{Catalog, bundle};
+use pawprint_core::catalog::bundle;
 use pawprint_core::config::{Animation, Layer};
 use pawprint_core::config_edit;
 use pawprint_core::geom::PhysicalRect;
@@ -99,7 +99,9 @@ impl Shell {
             seed: clock::seed(),
             preview,
         };
-        let badge = Badge::new(Catalog::bundled(), bundle(), inputs, Instant::now());
+        let catalog = commands::catalog(&paths);
+        catalog.warnings().iter().for_each(|w| log::warn!("{w}"));
+        let badge = Badge::new(catalog, bundle(), inputs, Instant::now());
         let r = badge.resolved();
         log::info!(
             "mascot {} ({}), label {:?}",

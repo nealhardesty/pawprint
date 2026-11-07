@@ -5,7 +5,8 @@
 # Role glyphs (map them in the mascot's [palette]):
 #   k ink (outline, pupils)    l f F  hide light / base / shadow
 #   w M    muzzle and chest light / its shadow (whisker spots, mouth)
-#   v whiskers   e iris (unused by the default eyes)
+#   v whiskers (mid grey: they stick out unoutlined, so white would vanish
+#     on a light desktop)   e iris (unused by the default eyes)
 #   h eye highlight   n nose   p tongue
 #
 # Slots, in drawing order: body, head, eyes (+closed, left, right, happy),
@@ -21,7 +22,7 @@
 "F" = "grey-3"
 "w" = "cream"
 "M" = "grey-2"
-"v" = "white"
+"v" = "grey-2"
 "e" = "brown-3"
 "h" = "white"
 "n" = "fur-black"

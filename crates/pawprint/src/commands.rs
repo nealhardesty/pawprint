@@ -1,14 +1,15 @@
 //! Commands that work without a running badge or any window backend.
 
 use std::path::Path;
+use std::sync::OnceLock;
 
-use pawprint_core::catalog::{Catalog, bundle};
+use pawprint_core::catalog::{Catalog, bundle, library};
 use pawprint_core::config::{Config, Layer, Settings};
 use pawprint_core::config_edit;
 use pawprint_core::host::{self, LabelSetting};
 use pawprint_core::identity::{self, Resolved, Rule};
 use pawprint_core::render::{self, BadgeSpec};
-use pawprint_core::sprite::CATEGORIES;
+use pawprint_core::sprite::{CATEGORIES, Origin, compile_dir, export_png};
 use pawprint_core::state::State;
 
 use crate::paths::Paths;
@@ -35,6 +36,20 @@ pub fn load_config(paths: &Paths) -> (Config, String) {
     }
 }
 
+/// Bundled plus user mascots, loaded once per process and shared by the
+/// badge and every command (SPEC §12.7). Invalid user mascots are left out
+/// and described in [`Catalog::warnings`].
+pub fn catalog(paths: &Paths) -> &'static Catalog {
+    static CATALOG: OnceLock<Catalog> = OnceLock::new();
+    CATALOG.get_or_init(|| Catalog::load(&paths.user_mascots))
+}
+
+fn print_warnings(warnings: &[String]) {
+    for w in warnings {
+        eprintln!("warning: {w}");
+    }
+}
+
 /// Resolve this host (or `host`) the way the badge would, without writing
 /// anything.
 fn resolve(
@@ -49,8 +64,10 @@ fn resolve(
     };
     let (config, config_note) = load_config(&paths);
     let (state, warning) = State::load(&paths.state_file);
-    let mut resolved = resolve_with(&hostname, &config, &state, flags, recompute);
+    let catalog = catalog(&paths);
+    let mut resolved = resolve_with(&hostname, &config, &state, flags, catalog, recompute);
     resolved.warnings.extend(warning);
+    resolved.warnings.extend_from_slice(catalog.warnings());
     Ok((
         resolved,
         config_note,
@@ -63,6 +80,7 @@ fn resolve_with(
     config: &Config,
     state: &State,
     flags: &Layer,
+    catalog: &Catalog,
     recompute: bool,
 ) -> Resolved {
     identity::resolve(
@@ -70,7 +88,7 @@ fn resolve_with(
         config,
         state,
         flags,
-        Catalog::bundled(),
+        catalog,
         &bundle().accents,
         recompute,
     )
@@ -182,21 +200,22 @@ pub fn list(category: Option<String>, accents: bool) -> CmdResult {
             ),
         ));
     }
+    let catalog = catalog(&paths_or_err()?);
+    print_warnings(catalog.warnings());
     println!(
-        "{:<24}{:<20}{:<11}{:<9}ALIASES",
+        "{:<24}{:<20}{:<11}{:<10}ALIASES",
         "ID", "NAME", "CATEGORY", "SOURCE"
     );
-    for m in Catalog::bundled()
-        .mascots()
-        .iter()
-        .filter(|m| category.as_ref().is_none_or(|c| *c == m.category))
+    for (m, source) in catalog
+        .entries()
+        .filter(|(m, _)| category.as_ref().is_none_or(|c| *c == m.category))
     {
         println!(
-            "{:<24}{:<20}{:<11}{:<9}{}",
+            "{:<24}{:<20}{:<11}{:<10}{}",
             m.id,
             m.name,
             m.category,
-            "bundled",
+            source,
             m.aliases.join(", ")
         );
     }
@@ -204,7 +223,8 @@ pub fn list(category: Option<String>, accents: bool) -> CmdResult {
 }
 
 pub fn render(id: &str, out: &Path, size: u32, label: Option<String>, frame: usize) -> CmdResult {
-    let catalog = Catalog::bundled();
+    let catalog = catalog(&paths_or_err()?);
+    print_warnings(catalog.warnings());
     let Some(mascot) = catalog.get(id) else {
         return Err((
             exit::ERROR,
@@ -336,6 +356,7 @@ pub fn set(key: &str, raw: &str) -> CmdResult {
             &Config::parse(text),
             &state,
             &Layer::default(),
+            catalog(&paths),
             false,
         );
         let after_text = config_edit::set(text, &short, key, raw)?;
@@ -344,6 +365,7 @@ pub fn set(key: &str, raw: &str) -> CmdResult {
             &Config::parse(&after_text),
             &state,
             &Layer::default(),
+            catalog(&paths),
             false,
         );
         let new: Vec<&String> = after
@@ -432,4 +454,99 @@ pub fn forget() -> CmdResult {
         r.short, r.mascot, now.mascot
     );
     Ok(())
+}
+
+/// `pawprint mascot export <id> <dir>`: a bundled mascot in the simple PNG
+/// form (SPEC §12.7), as a starting point for custom art.
+pub fn mascot_export(id: &str, dir: &Path) -> CmdResult {
+    let Some(m) = bundle().mascot(id) else {
+        return Err((
+            exit::ERROR,
+            format!("no bundled mascot {id:?}; see `pawprint list`"),
+        ));
+    };
+    let (toml_path, png_path) = (dir.join("mascot.toml"), dir.join("sprite.png"));
+    if let Some(p) = [&toml_path, &png_path].into_iter().find(|p| p.exists()) {
+        return Err((
+            exit::ERROR,
+            format!("{} already exists; export into a new folder", p.display()),
+        ));
+    }
+    let failed = |path: &Path, e: std::io::Error| (exit::ERROR, format!("{}: {e}", path.display()));
+    let (toml, strip) = export_png(m);
+    std::fs::create_dir_all(dir).map_err(|e| failed(dir, e))?;
+    std::fs::write(&toml_path, toml).map_err(|e| failed(&toml_path, e))?;
+    std::fs::write(&png_path, strip.encode_png()).map_err(|e| failed(&png_path, e))?;
+    println!(
+        "wrote {} and {} ({} frames, {} actions)\n\n\
+         Next: edit sprite.png, then run `pawprint mascot check {}`.\n\
+         To use it, copy the folder to {}: as {id}/ it replaces the built-in;\n\
+         with a new id (in mascot.toml and as the folder name) it adds a mascot.",
+        toml_path.display(),
+        png_path.display(),
+        m.frames.len(),
+        m.actions.len(),
+        dir.display(),
+        paths_or_err()?.user_mascots.display(),
+    );
+    Ok(())
+}
+
+/// `pawprint mascot check <dir>`: the build's validation rules for user
+/// mascots (SPEC §12.11), plus alias collisions with the bundled catalog.
+pub fn mascot_check(dir: &Path) -> CmdResult {
+    // Canonical, so `.` still has a folder name to match the id against.
+    let dir = dir.canonicalize().unwrap_or_else(|_| dir.to_path_buf());
+    let compiled = compile_dir(&dir, library(), Origin::User);
+    let report = &compiled.report;
+    report.errors.iter().for_each(|e| println!("error: {e}"));
+    report
+        .warnings
+        .iter()
+        .for_each(|w| println!("warning: {w}"));
+    let Some(m) = compiled.mascot else {
+        return Err((
+            exit::ERROR,
+            format!("{}: {} error(s)", dir.display(), report.errors.len()),
+        ));
+    };
+    let role = match bundle().mascot(&m.id) {
+        Some(_) => format!("replaces the bundled {}", m.id),
+        None => "adds a new mascot".to_string(),
+    };
+    let summary = format!(
+        "{} OK: {} frames, {} actions; it {role}",
+        m.id,
+        m.frames.len(),
+        m.actions.len()
+    );
+    let with_bundled = Catalog::with_user(bundle().mascots.clone(), vec![m]);
+    with_bundled
+        .warnings()
+        .iter()
+        .for_each(|w| println!("warning: {w}"));
+    println!("{summary}");
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn exported_mascots_pass_check_and_are_not_overwritten() {
+        let root = std::env::temp_dir().join(format!("pawprint-export-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let dir = root.join("walrus");
+        assert_eq!(mascot_export("walrus", &dir), Ok(()));
+        assert!(dir.join("mascot.toml").is_file() && dir.join("sprite.png").is_file());
+        assert_eq!(mascot_check(&dir), Ok(()));
+        assert!(mascot_export("walrus", &dir).is_err(), "never overwrites");
+        assert!(mascot_export("no-such-mascot", &root.join("x")).is_err());
+
+        let renamed = root.join("not-walrus");
+        std::fs::rename(&dir, &renamed).unwrap();
+        assert!(mascot_check(&renamed).is_err(), "id must match the folder");
+        std::fs::remove_dir_all(&root).unwrap();
+    }
 }

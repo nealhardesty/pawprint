@@ -230,26 +230,28 @@ each with a signature action.
 Waves are grouped by base so siblings are reviewed side by side
 ([SPEC §12.8](SPEC.md#128-bases)). Each wave ends with a contact-sheet review.
 
-- [ ] Wave 1: remaining cats (8) on `cat-sit`
-- [ ] Wave 2: dogs (12) on `dog-sit`
-- [ ] Wave 3: ungulates and bears (deer, bison, goat, llama, panda, polar-bear, koala)
-- [ ] Wave 4: rodents and small quadrupeds (squirrel, mouse, hamster, beaver, fox, raccoon, red-panda, badger, skunk, opossum, hedgehog, otter)
-- [ ] Wave 5: big cats, primates, and bespoke mammals (lion, tiger, monkey, sloth, rabbit, capybara, elephant, wolf)
-- [ ] Wave 6: birds (15) on `bird-perched` and `bird-water`
-- [ ] Wave 7: remaining aquatic (10; polar-bear is in wave 3) on `pinniped`, `sea-creature`, and bespoke
-- [ ] Wave 8: critters and bugs (8) on `critter` and `bug`
-- [ ] Wave 9: oddballs (8), all bespoke, each with a rare action (the CRT's `> hello_`, the ghost drifting through the crate, ...)
-- [ ] Nocturnal set has night actions: owl, raccoon, moth, opossum, cat-black
-- [ ] Alias audit: no collisions, no surprising whole-token matches
+- [x] Wave 1: remaining cats (8) on `cat-sit`
+- [x] Wave 2: dogs (12) on `dog-sit`
+- [x] Wave 3: ungulates and bears (deer, bison, goat, llama, panda, polar-bear, koala)
+- [x] Wave 4: rodents and small quadrupeds (squirrel, mouse, hamster, beaver, fox, raccoon, red-panda, badger, skunk, opossum, hedgehog, otter)
+- [x] Wave 5: big cats, primates, and bespoke mammals (lion, tiger, monkey, sloth, rabbit, capybara, elephant, wolf)
+- [x] Wave 6: birds (15) on `bird-perched` and `bird-water`
+- [x] Wave 7: remaining aquatic (10; polar-bear is in wave 3) on `pinniped`, `sea-creature`, and bespoke
+- [x] Wave 8: critters and bugs (8) on `critter` and `bug`
+- [x] Wave 9: oddballs (8), all bespoke, each with a rare action (the CRT's `> hello_`, the ghost drifting through the crate, ...)
+- [x] Nocturnal set has night actions: owl, raccoon, moth, opossum, cat-black, and the ghost (added in wave 9)
+- [x] Alias audit: no collisions, no surprising whole-token matches
       against common hostname words (`db`, `web`, `prod`, `dev`, `test`,
-      `build`, `mini`, `pro`, `lab`, `srv`, `node`, ...)
-- [ ] Catalog stability golden test (200 synthetic hostnames) committed
-- [ ] User mascot overrides and additions (text and PNG forms) from the config `mascots/` folder;
+      `build`, `mini`, `pro`, `lab`, `srv`, `node`, ...). Removed `bug`,
+      `lab`, `grey`, `monitor`, `tv`, `terminal`, `disk`, and `bot`
+      ([SPEC Appendix A](SPEC.md#appendix-a-launch-catalog))
+- [x] Catalog stability golden test (200 synthetic hostnames) committed
+- [x] User mascot overrides and additions (text and PNG forms) from the config `mascots/` folder;
       embed the bases, motion templates, and props in the bundle so text-form
       user mascots can use them (SPEC §12.13)
-- [ ] `pawprint mascot export` / `pawprint mascot check`
-- [ ] `pawprint list` with source column
-- [ ] `docs/gallery.png` and `docs/gallery.gif` embedded in the README
+- [x] `pawprint mascot export` / `pawprint mascot check`
+- [x] `pawprint list` with source column
+- [x] `docs/gallery.png` and `docs/gallery.gif` embedded in the README
 
 **Exit:** `make package` passes the catalog gates on a clean checkout, and
 the full contact sheet passes review.

@@ -6,7 +6,7 @@
 id = "floppy"
 name = "Floppy Disk"
 category = "oddballs"
-aliases = ["disk", "diskette"]
+aliases = ["diskette"]
 accent = "slate"
 
 [palette]

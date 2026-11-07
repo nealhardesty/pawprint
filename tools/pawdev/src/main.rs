@@ -16,6 +16,7 @@ commands:
   help <Makefile>          list make targets and their ## descriptions
   check-assets [--package] validate assets/; --package also enforces the catalog gates
   golden                   regenerate tests/golden/*.png
+  golden-hosts             recompute tests/golden/hostnames.tsv (catalog stability)
   palette                  write assets/palette.gpl from assets/palette.toml
   contact-sheet [--animated] docs/gallery.png (and docs/gallery.gif)
   building-blocks          docs/building-blocks.png: accents, props, bases x templates
@@ -33,6 +34,7 @@ fn main() -> ExitCode {
         ["check-assets"] => check_assets(false),
         ["check-assets", "--package"] => check_assets(true),
         ["golden"] => golden::write_all(&root()),
+        ["golden-hosts"] => golden::write_hosts(&root()),
         ["palette"] => art::write_palette_gpl(&root()),
         ["contact-sheet"] => sheet::contact_sheet(&root(), false),
         ["contact-sheet", "--animated"] => sheet::contact_sheet(&root(), true),

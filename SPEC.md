@@ -235,8 +235,8 @@ All art is authored at **1× in art pixels** and scaled by an integer factor.
 | Badge canvas (without nameplate) | 32 × 32 |
 | Mascot frame | 32 × 32, drawn at (0, 0) |
 | Crate back rim | rows 18–19 |
-| Crate front | rows 20–31 (12 rows), full width; the mascot is hidden behind it |
-| Label strip on crate front | rows 22–29, columns 2–29 (28 × 8 usable) |
+| Crate front | rows 20–31 (12 rows), full width; the mascot is hidden behind it: outline (20), top rail (21), label strip, outline (31) |
+| Label strip on crate front | rows 22–30, columns 2–29 (28 × 9 usable) |
 | Outline | 1 art-pixel dark outline around the crate for contrast on any wallpaper |
 
 Mascot art should keep its face and silhouette in rows 0–19 so it "peeks out"
@@ -317,8 +317,13 @@ corpus of default and fleet hostnames):
    badge grows inward from its anchored corner.
 
 The label fits the strip when its width (`6n − 1` font pixels for `n`
-characters) and height (7) times the font scale fit the strip's 28 × 8 art
-pixels times the art scale. The nameplate is drawn in **font pixels**, so it
+characters) and height (7) times the font scale fit the strip's 28 × 9 art
+pixels times the art scale. On the strip the text is centered both ways
+(rounding down). The strip is 9 rows, two more than a glyph, so the text
+clears the top rail and the bottom outline by at least one art pixel's worth
+at every preset: 1 px at 32 (small), 2 px at 64 (medium), 11 px at 128
+(medium). The nameplate's cream face is also 9 font pixels tall, so text sits
+the same way there. The nameplate is drawn in **font pixels**, so it
 scales with `label_size`, not `size`: `plate-left`, then `plate-mid` once per
 text column, then `plate-right` (all from `crate.toml`), with the text right
 after `plate-left` and centered vertically. Under the crate, the plate is
@@ -749,8 +754,8 @@ badge reaches the instance **in the current graphical session**.
 | `pawprint forget` | Drop this host's cached fallback assignment (through the running badge if there is one, which picks again and saves; else in the state file) and say what the hash picks now. A host whose mascot comes from another rule has nothing to forget. |
 | `pawprint config init` | Write a commented `config.toml` if none exists. |
 | `pawprint config path` | Print the config path. |
-| `pawprint mascot export <id> <dir>` | Write a bundled mascot to `<dir>` in the simple PNG form ([12.7](#127-png-bridges)) as a starting point for custom art. |
-| `pawprint mascot check <dir>` | Validate a custom mascot directory with the same rules as the build ([12.11](#1211-validation-rules)). |
+| `pawprint mascot export <id> <dir>` | Write a bundled mascot into the folder `<dir>` (created if needed; existing files are never overwritten) in the simple PNG form ([12.7](#127-png-bridges)) as a starting point for custom art. |
+| `pawprint mascot check <dir>` | Validate a custom mascot directory with the same rules as the build ([12.11](#1211-validation-rules)), report alias collisions with the bundled catalog, and say whether it replaces a bundled mascot or adds one. Exits 1 on errors. |
 | `pawprint autostart on\|off\|status` | Register or remove launch at graphical login for this user: an entry that runs `<this executable> run` (on Windows `pawprintw.exe run`). Linux: `$XDG_CONFIG_HOME/autostart/pawprint.desktop`. Windows and macOS: [11.1.5](#1115-tray-and-autostart), [11.2](#112-macos). |
 | `pawprint doctor` | Diagnose the environment: session type, chosen backend and why, compositor/WM, layer-shell, ARGB visual, compositing manager, displays with names, scales and work areas, primary detection, GNOME fractional-scaling blur (with the fix), tray availability, IPC endpoint, autostart state, config warnings. |
 | `pawprint paths` | Print every file location ([8.1](#81-files-and-locations)). |
@@ -1458,6 +1463,7 @@ accent = "violet"
 fallback = true                     # eligible for the deterministic fallback (default true)
 nocturnal = true                    # prefers `when = "night"` actions after dark (default false)
 extends = "bird-perched"            # optional base
+prop_offset = [0, 0]                # optional: moves template props, see 12.4 (default [0, 0])
 
 # Glyph → master palette color. Base role glyphs are remapped here.
 [palette]
@@ -1564,7 +1570,11 @@ Details the compiler enforces:
   layer and doesn't set `follows`, it keeps the base layer's. `follows`
   affects offsets only, not visibility.
 - Props are drawn after the mascot (and after `flipx`) at mascot
-  coordinates; `all+` does not move them.
+  coordinates; `all+` does not move them. **`prop_offset = [dx, dy]`** adds
+  to the position of every prop a *motion template* draws, and never to the
+  `prop:` ops in the mascot's own actions. A base may set it; a mascot's own
+  value replaces the base's. PNG mascots can't use templates, so they can't
+  set it. Props are clipped to the frame, so keep the moved props inside it.
 - `ms` defaults to 200 and `weight` to 5. A template action takes the
   template's `weight` and `when` unless the mascot's `[[actions]]` entry sets
   its own, and `name` defaults to the template's name.
@@ -1629,8 +1639,11 @@ The launch template set:
 That is 17 template files (`look-left` and `look-right` are separate). `doze`
 sets `when = "night"`. `peek` holds at `all+0,9`, so mascot rows 0–10 show
 over the rim: eyes belong in rows 8–10. Props in templates land in the top
-right (`zzz` from x 21, `bang` at x 26, `question` at x 24, `heart` at x 22),
-so keep that corner for them where the silhouette allows.
+right (`zzz` rising at x 21, `bang` at x 26, `question` at x 24, `heart` at
+x 22), so keep that corner for them where the silhouette allows. When it
+can't (a side-on animal facing right, a wide cap, a spout), set
+`prop_offset` to move every template prop to the mascot's emptiest corner:
+whale, dolphin, pufferfish, gecko, swan, mushroom, cactus, and teapot do.
 
 ### 12.5 Animation extras that cost nothing at runtime
 
@@ -1643,7 +1656,7 @@ so keep that corner for them where the silhouette allows.
   briefly shows `> hello_`.
 - **Day and night:** `when = "day" | "night" | "any"` (default `any`). Night
   is 20:00–06:00 by the local clock. Nocturnal mascots (owl, raccoon, moth,
-  opossum, cat-black) are livelier at night: their `when = "night"` actions
+  opossum, cat-black, and ghost) are livelier at night: their `when = "night"` actions
   weigh 3× at night (`anim::NOCTURNAL_NIGHT_BOOST`). Everyone else gets
   `doze` at night. No network or location is involved.
 
@@ -1672,7 +1685,9 @@ How 100 complete mascots get made:
      **with labels hidden**, grouped by base, into `docs/gallery.png`.
    - `make contact-sheet ANIMATED=1` also writes `docs/gallery.gif` with
      every action playing: each mascot loops rest, then each action in turn
-     with 700 ms of rest between.
+     with 700 ms of rest between. The sheet is sampled on a 100 ms clock
+     and each GIF frame stores only the pixels that changed, which keeps
+     all 100 mascots in about 1.3 MB.
    - `make building-blocks` renders `docs/building-blocks.png`: the crate in
      all 16 accents with a label, every prop at 4×, and a grid of every base
      with every motion template (each cell shows the template's most-changed
@@ -1712,7 +1727,32 @@ How 100 complete mascots get made:
   `rest` is a frame index (default 0) and `duration_ms` (default 200) sets
   every frame of an action. PNG mascots take no `extends`, `palette`,
   `layers`, or motion templates, and any pixel with partial alpha is an
-  error. `pawprint mascot export <id> <dir>` produces this simpler form.
+  error. `pawprint mascot export <id> <dir>` produces this simpler form:
+  the strip holds every distinct compiled frame, rest first. Because a PNG
+  action has one `duration_ms`, export picks the duration (at least 80 ms)
+  that best fits the action's frame times and lists a held frame several
+  times; times with a common divisor of 80 ms or more come out exact, and
+  the rest are within 50 ms per frame (checked for every bundled mascot).
+
+**User mascots** live in `<config dir>/mascots/<id>/` ([8.1](#81-files-and-locations)),
+in either form: text (with `extends`, motion templates, and props from the
+embedded library, [12.13](#1213-embedding)) or PNG. They are compiled with
+the user rules of [12.11](#1211-validation-rules) once per process and
+shared by the badge and every command that uses the catalog (`run`,
+`explain`, `list`, `render`); `pawprint mascot check` uses the same rules.
+
+- The folder name must equal the `id`. A folder whose id matches a bundled
+  mascot **replaces** it (`list` shows `override`); a new id **adds** a
+  mascot (`user`), eligible for the fallback unless it sets
+  `fallback = false`.
+- User aliases win collisions with bundled ones (rule 8). Each collision is
+  a warning naming both mascots.
+- An invalid user mascot is skipped with a warning (in the log for the
+  badge, on stderr for commands); the bundled mascot of the same id, if
+  any, stays. User mascots never stop the badge from starting.
+- The badge reads the folder when it starts; restart it (`pawprint quit`,
+  then `pawprint`) to pick up changes. `pawprint reload` re-reads only
+  `config.toml`.
 
 ### 12.8 Bases
 
@@ -1782,7 +1822,14 @@ reads as fur, not as a hole in the outline.
 - **Eyes:** 2 × 2 with a 1 px `white` highlight for big-eyed mascots, 1 × 2
   for small ones. Eyes are the main source of expression, so give every
   mascot `eyes.closed` and, where it fits, `eyes.left`, `eyes.right`, and
-  `eyes.happy`.
+  `eyes.happy`. On light fur (white, cream, pale yellow) a white highlight
+  merges with the fur and the eye reads as a dash at 1×, so those mascots
+  map the `h` role to `grey-3`: a solid dot at 1×, a soft catchlight when
+  large. On black fur, use a light iris or tan brow points so the eye shows.
+- **Whiskers and bristles that stick out past the silhouette** have no
+  outline, so they use a mid tone (`grey-2`, as on the walrus and seal) that
+  reads on both light and dark desktops. White ones vanish on a light
+  desktop.
 - **Interact with the crate.** Paws, flippers, beaks, and tails over the rim
   make a mascot feel like it lives there.
 - **Exaggerate the defining feature:** moose paddle antlers and dewlap; elk
@@ -1887,7 +1934,7 @@ pawprint/
 │   ├── install.sh
 │   └── install.ps1
 ├── tests/
-│   └── golden/               # expected badge renders (PNG)
+│   └── golden/               # expected badge renders (PNG) and hostnames.tsv (catalog stability)
 ├── extras/
 │   └── gnome-presenter/      # Plan B GNOME Shell extension (only if needed, 11.5.3)
 ├── docs/
@@ -1939,6 +1986,7 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
 | `lint` | `cargo fmt --check` and `clippy -D warnings` |
 | `fmt` | Format the code |
 | `golden` | Regenerate golden images after an intentional rendering change |
+| `golden-hosts` | Recompute the catalog stability fixture (`tests/golden/hostnames.tsv`) after an intentional catalog change |
 | `contact-sheet` | Render every mascot, labels hidden, grouped by base, into `docs/gallery.png` (`ANIMATED=1` adds `docs/gallery.gif`) |
 | `building-blocks` | Render the crate accents, props, and every base with every motion template into `docs/building-blocks.png` |
 | `palette` | Regenerate `assets/palette.gpl` from `assets/palette.toml` |
@@ -2088,8 +2136,17 @@ and user mascots are in separate directories and are never touched except by
   distribution check (10,000 synthetic hostnames over 100 mascots, no mascot
   above 3× its expected share).
 - **Catalog stability:** a golden list of `(hostname → mascot)` for 200
-  synthetic names under the bundled catalog. A change here means fallback
-  assignments moved on fresh installs, which requires a conscious update.
+  synthetic names under the bundled catalog, with the rule that chose each,
+  in `tests/golden/hostnames.tsv` (checked by `pawdev`'s tests). A change
+  here means assignments moved on fresh installs, which requires a conscious
+  update: `make golden-hosts` recomputes the fixture (append a hostname on
+  its own line to add one), and the diff goes in the PR.
+- **Alias audit:** `pawprint-core`'s `tests/catalog.rs` fails if any alias
+  is a common hostname word or if any of a corpus of ordinary hostnames
+  (`web-01`, `db-prod-3`, `lab3`, `monitor-01`, ...) matches a mascot by rule
+  3 or 4 ([Appendix A](#appendix-a-launch-catalog)). It also checks that
+  every nocturnal mascot has a night action and that every bundled mascot
+  survives `pawprint mascot export` and recompiles to the same frames.
 - **Layout:** anchor/offset ↔ rectangle round-trips, clamping, the 3 × 3
   snap, and nameplate placement at each size.
 - **Config:** precedence, globs, unknown-key warnings, and invalid-value
@@ -2371,10 +2428,10 @@ brief for each mascot's main idle action.
 | `cat-black` | blackcat, void | violet | Only the eyes blink in the dark |
 | `dog-corgi` | corgi | marigold | Ears perk, loaf wiggle |
 | `dog-shiba` | shiba, doge | ochre | Side-eye smile, tail curl |
-| `dog-greyhound` | greyhound, grey | sky | Long nose rests on the crate edge, sigh |
+| `dog-greyhound` | greyhound | sky | Long nose rests on the crate edge, sigh |
 | `dog-pug` | pug | honey | Head tilt, snort |
 | `dog-dachshund` | dachshund, wiener, doxie | copper | Long body slides further out, then back |
-| `dog-labrador` | dog, lab, labrador | honey | Happy pant, tail wag |
+| `dog-labrador` | dog, labrador | honey | Happy pant, tail wag |
 | `dog-husky` | husky | ice | Awoo with its head thrown back |
 | `dog-border-collie` | collie, bordercollie | teal | Alert crouch, eyes dart |
 | `dog-beagle` | beagle | ochre | Sniffs the air, ears flap |
@@ -2387,7 +2444,7 @@ brief for each mascot's main idle action.
 | ID | Extra aliases | Accent | Signature action |
 |---|---|---|---|
 | ★ `owl` | owls, hoot | violet | One slow blink, then a sideways head turn |
-| `crow` | raven, corvid | charcoal | Tilts its head, caws silently |
+| `crow` | raven, corvid | sky | Tilts its head, caws silently |
 | `puffin` | — | brick | Bill clacks, little hop |
 | `penguin` | — | ice | Waddle-shuffle, flipper flap |
 | `kiwi` | — | moss | Long beak probes the crate |
@@ -2428,7 +2485,7 @@ brief for each mascot's main idle action.
 | `frog` | toad | moss | Throat puffs, ribbit |
 | `tortoise` | turtle | pine | Head retracts, slowly re-emerges |
 | `moth` | — | honey | Wings flutter, fuzzy antennae |
-| `beetle` | bug | pine | Shell opens a crack, wings peek |
+| `beetle` | — | pine | Shell opens a crack, wings peek |
 | `snake` | python, viper | moss | Tongue flick, sway |
 | `bee` | bumblebee, honeybee | marigold | Bobbing hover, buzz lines |
 | `snail` | slug | ochre | Eye stalks extend and retract |
@@ -2437,12 +2494,12 @@ brief for each mascot's main idle action.
 
 | ID | Extra aliases | Accent | Signature action |
 |---|---|---|---|
-| `crt` | monitor, tv, terminal | charcoal | Screen flickers, prompt cursor blinks |
-| `floppy` | disk, diskette | slate | Shutter slides open, closed |
+| `crt` | — | charcoal | Screen flickers, prompt cursor blinks |
+| `floppy` | diskette | slate | Shutter slides open, closed |
 | `mushroom` | shroom, fungus | cranberry | Cap bounces, spores puff |
 | `ghost` | boo, spooky | ice | Floats up, fades a step |
 | `ufo` | saucer | teal | Hovers, beam flickers |
-| `robot` | bot, droid | slate | Antenna light blinks, head swivels |
+| `robot` | droid | slate | Antenna light blinks, head swivels |
 | `cactus` | — | pine | A flower pops open |
 | `teapot` | tea, kettle | rose | Lid rattles, steam puff |
 
@@ -2451,6 +2508,18 @@ Totals: 32 + 24 + 16 + 12 + 8 + 8 = **100**.
 Alias collisions are resolved at catalog time. For example, `cat` and `dog`
 belong only to `cat-orange-tabby` and `dog-labrador`, and `cow` is not an
 alias of `cat-cow` (it stays free for a future `cow`).
+
+**Alias audit (M3).** No alias may be a word that machines are commonly
+named with (`db`, `web`, `prod`, `lab`, `bug`, `monitor`, ...): rules 3 and
+4 would send every `lab-3` or `monitor-01` to the same mascot, which defeats
+telling machines apart. The M3 audit removed eight aliases: `bug` (beetle),
+`lab` (dog-labrador), `grey` (dog-greyhound), `monitor`, `tv`, and
+`terminal` (crt; terminal servers are common among remote-desktop users),
+`disk` (floppy), and `bot` (robot). Hostnames that name the animal itself
+still match (`beetle-1`, `labrador-01`, `crt`). `pawprint-core`'s
+`tests/catalog.rs` enforces this with a list of common hostname words and a
+corpus of ordinary hostnames that must match no alias. Mascot ids are not
+audited: a host named `elk` or `fox` gets that animal on purpose.
 
 ---
 

@@ -13,7 +13,8 @@ turns its head to look at you.
   │  OWL  │              │   MOOSE    │       │ BUILD7 │
   └───────┘              └────────────┘       └────────┘
 ```
-*(Real art is 32×32 pixel sprites. This is the idea in ASCII.)*
+*(Real art is 32×32 pixel sprites: see [all 100 mascots](#the-100-mascots).
+This is the idea in ASCII.)*
 
 - **Always on top, never in the way.** Clicks go straight through it, it never
   steals focus, and it stays out of the taskbar, Dock, and Alt-Tab.
@@ -39,12 +40,33 @@ on Wayland, and GNOME on Wayland (Ubuntu 24.04 LTS and newer).
 > `config init`, `forget`, and `preview`, plus `pawprint`, `run`, `move`,
 > `reset-position`, `reload`, `quit`, `status`, `doctor`, and the
 > backend-free commands (`explain`, `list`, `render`, `paths`,
-> `--version`). **Windows** and **macOS** run the badge too (no tray icon,
+> `mascot export`, `mascot check`, `--version`). **Windows** and **macOS** run the badge too (no tray icon,
 > autostart, or preview window yet). There are no
 > release builds or installers yet, so build from source
-> (see [Development](#development)). Only one placeholder mascot (the owl)
-> exists so far. See [`ROADMAP.md`](ROADMAP.md) for progress and
+> (see [Development](#development)). All 100 mascots are drawn, and your
+> own mascots already work ([Custom mascots](#custom-mascots)). See [`ROADMAP.md`](ROADMAP.md) for progress and
 > [`SPEC.md`](SPEC.md) for the design.
+
+---
+
+## The 100 mascots
+
+Six packs: mammals, cats and dogs, birds, aquatic, critters, and oddballs.
+Each one has its own signature move and a few shared ones (blinks, ear
+flicks, a doze at night). Here they are at actual size and 2×, grouped by
+body plan, with labels hidden:
+
+![All 100 PAWPRINT mascots at 1× and 2×](docs/gallery.png)
+
+<details>
+<summary>The same sheet with every animation playing (1.3 MB GIF)</summary>
+
+![All 100 PAWPRINT mascots animated](docs/gallery.gif)
+
+</details>
+
+`pawprint list` prints them all with their aliases (`--category birds`
+narrows it), and `pawprint render <id> --out badge.png` draws one.
 
 ---
 
@@ -245,22 +267,33 @@ Every mascot can be replaced, and you can add your own. The easiest route is
 a PNG sprite strip:
 
 ```sh
-pawprint mascot export owl ./my-owl          # start from a built-in (PNG + mascot.toml)
-# ...edit ./my-owl/sprite.png in Aseprite, LibreSprite, Piskel, etc...
-pawprint mascot check ./my-owl               # validate it
+pawprint mascot export owl ./owl     # start from a built-in: ./owl/mascot.toml + ./owl/sprite.png
+# ...edit ./owl/sprite.png in Aseprite, LibreSprite, Piskel, etc...
+pawprint mascot check ./owl          # validate it with the same rules as the build
 ```
 
 Then copy the folder into the `mascots` folder next to your config file
-(`pawprint paths` shows exactly where). **A folder with the same id as a
-built-in replaces it. A new id adds a new mascot**, which you can select with
-`pawprint set mascot <id>` or match by hostname through its `aliases`.
+(`pawprint paths` shows exactly where, e.g. `~/.config/pawprint/mascots/owl/`).
+**A folder with the same id as a built-in replaces it. A new id adds a new
+mascot**: change `id` in `mascot.toml` and name the folder the same, then
+select it with `pawprint set mascot <id>` or match it by hostname through its
+`aliases` (yours win if they clash with a built-in's; `mascot check` warns).
+
+`pawprint list` shows where each mascot comes from in its SOURCE column:
+`bundled`, `user` (one you added), or `override` (yours, replacing a
+built-in). A mascot with a mistake in it is skipped with a warning (in
+`pawprint explain`, `pawprint list`, and the log) and never stops the badge.
+The badge reads the folder when it starts, so restart it (`pawprint quit`,
+then `pawprint`) after changing a mascot.
 
 The rules, briefly:
 
 - `sprite.png` is a horizontal strip of **32×32 frames**.
 - Pixels are either fully opaque or fully transparent (no soft edges).
 - Keep the face in the top 20 rows. The bottom 12 rows are behind the crate.
-- `mascot.toml` names a rest frame and one or more short actions:
+- `mascot.toml` names a rest frame and one or more short actions. Each
+  action lists frame numbers, and each frame shows for `duration_ms`
+  (80–2000 ms; at most 4 s per action), so repeat a number to hold a frame:
 
 ```toml
 id = "my-owl"
@@ -421,7 +454,8 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make lint` | Format check and clippy (warnings are errors) |
 | `make fmt` | Format the code |
 | `make golden` | Regenerate golden images after an intentional rendering change |
-| `make contact-sheet` | Render every mascot (labels hidden, grouped by body base) into `docs/gallery.png`; `ANIMATED=1` also writes `docs/gallery.gif` with every action playing |
+| `make golden-hosts` | Recompute `tests/golden/hostnames.tsv`, the catalog stability fixture (200 hostnames and the mascot each gets), after an intentional catalog change; review the diff, since it moves real machines |
+| `make contact-sheet` | Render every mascot (labels hidden, grouped by body base) into `docs/gallery.png`; `ANIMATED=1` also writes `docs/gallery.gif` with every action playing (sampled every 100 ms) |
 | `make building-blocks` | Render the crate in every accent, every prop, and every body base with every motion template into `docs/building-blocks.png` |
 | `make palette` | Regenerate `assets/palette.gpl`, the master palette for GIMP, Aseprite, and LibreSprite |
 | `make art-export MASCOT=owl` | Export a mascot's layers (one PNG each) and frames into `out/art/<id>/` for editing in a pixel-art tool |

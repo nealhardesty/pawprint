@@ -6,7 +6,7 @@
 id = "robot"
 name = "Robot"
 category = "oddballs"
-aliases = ["bot", "droid"]
+aliases = ["droid"]
 accent = "slate"
 
 [palette]

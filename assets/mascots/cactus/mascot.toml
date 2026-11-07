@@ -6,6 +6,8 @@ name = "Cactus"
 category = "oddballs"
 aliases = []
 accent = "pine"
+# Template props go over the lower left arm, clear of the face and the right arm.
+prop_offset = [-21, 0]
 
 [palette]
 "." = "clear"

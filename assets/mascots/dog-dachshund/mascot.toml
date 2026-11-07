@@ -18,7 +18,7 @@ extends = "dog-sit"
 "M" = "orange-3"    # shadow on the tan
 "s" = "grey-4"      # ears
 "S" = "fur-black"   # ear shadow
-"e" = "brown-2"     # iris
+"e" = "brown-1"     # iris: light enough to read against the black coat
 "p" = "pink-2"      # tongue
 
 [layers.tail]
@@ -80,8 +80,8 @@ grid = """
 ....kMMMMMMk....
 ..kkllllllffkk..
 .kllllfffffffFk.
-klllwwffffwwfFFk
-klffffffffffffFk
+klllfffffffffFFk
+klffwwffffwwffFk
 klffffffffffffFk
 klffffffffffffFk
 .kfffwwwwwwfffk.

@@ -98,13 +98,13 @@ them in their headers. Your mascot may add any glyph it likes.
 
 | Rows | What lives there |
 |---|---|
-| 0–3 | ears, antlers, crests, and the props templates draw (top right) |
+| 0–3 | ears, antlers, crests, and the props templates draw (top right, or wherever `prop_offset` moves them) |
 | 4–16 | the face; **eyes in rows 8–10** (`peek` shows only rows 0–10) |
 | 17–19 | paws, flippers, beaks, and tails meeting the crate rim |
 | 20–31 | hidden behind the crate front; keep the body going so `duck` and `hop` never show a gap |
 
 The mascot spans roughly columns 2–29. The crate front's label strip is
-rows 22–29 and is always plain cream: never rely on art showing there.
+rows 22–30 and is always plain cream: never rely on art showing there.
 
 ## Gotchas
 
@@ -129,6 +129,22 @@ rows 22–29 and is always plain cream: never rely on art showing there.
 - **Check every variant at 1×.** A 2 × 2 eye moved 1 px is a glance; a
   closed eye is one row of ink. Both are invisible if they land on an
   outline.
+- **Light fur eats the glint.** The base eye is `hk` over `kk`. On white,
+  cream, or pale yellow fur the white `h` merges with the fur and the eye
+  reads as a dash at 1×. Map `"h" = "grey-3"` (labrador, polar bear,
+  hamster, poodle do): a solid dot at 1×, still a soft catchlight at 128.
+  On black fur the problem flips; give the eye a light iris or tan brows
+  (dachshund).
+- **Nothing pale may stick out unoutlined.** Whiskers past the silhouette
+  have no ink around them, so white ones vanish on a light desktop. Use
+  `grey-2` (walrus, seal): it reads on light and dark.
+- **Props need a corner.** Templates draw their props in the top right
+  (`zzz`, `heart`, `bang`, `question`, from x 21). If your face, a spout, or
+  a wingtip lives there, set `prop_offset = [dx, dy]` at the top of the file
+  to move every template prop to your emptiest corner: the gecko uses
+  `[-19, 0]` to put the zzz over its tail, the teapot `[-19, -1]` to put the
+  heart over the handle. It never moves the props in your own actions, and
+  props are clipped, so check every frame of `doze` and `content`.
 - **Sixteen colors go fast.** Ink, three fur shades, three belly shades,
   iris, glint, nose, and pink is already eleven. Props used by your actions
   count too, and several bases (bear, pinniped, ungulate-head) already sit

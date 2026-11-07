@@ -10,6 +10,8 @@ category = "aquatic"
 aliases = ["orca"]
 accent = "sky"
 extends = "sea-creature"
+# Template props (doze's zzz) ride on the back, clear of the face on the right.
+prop_offset = [-9, -1]
 
 # The base fins are left out: a side-on whale shows its flukes instead.
 rest = ["body", "head", "eyes", "water", "tail"]

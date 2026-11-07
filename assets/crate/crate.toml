@@ -1,11 +1,16 @@
 # The shared crate (SPEC §4.1-4.2), drawn in accent shades so any accent
 # tints it. Back rim: rows 18-19 behind the mascot. Front: rows 20-31 in front
-# of it, with the cream label strip at rows 22-29, columns 2-29. The strip
+# of it, with the cream label strip at rows 22-30, columns 2-29. The strip
 # stays plain cream: the label is stenciled onto it at any font scale.
 #
 # Glyphs: k ink outline, 3 lit wood (top, left), 2 wood, 1 shaded wood
-# (bottom, right, inside), n and o nail heads (ink) on the top and bottom
-# rails, s cream label.
+# (bottom, right, inside), n nail heads (ink) on the top rails, o nail
+# heads on the nameplate's bottom rail, s cream label.
+#
+# The crate front has a top rail only: the strip runs down to the bottom
+# outline so it is 9 rows tall, like the nameplate's. A 7-row glyph then
+# gets one clear row above and below at every preset (one art pixel at 1x
+# small, two physical pixels at 2x medium) instead of touching the rail.
 #
 # The nameplate (used when the label doesn't fit the strip) is a board
 # nailed under or beside the crate, drawn in font pixels: plate-left, then
@@ -45,7 +50,7 @@ k2ssssssssssssssssssssssssssss1k
 k2ssssssssssssssssssssssssssss1k
 k2ssssssssssssssssssssssssssss1k
 k2ssssssssssssssssssssssssssss1k
-k2o11111111221112112211111111o1k
+k2ssssssssssssssssssssssssssss1k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 """
 

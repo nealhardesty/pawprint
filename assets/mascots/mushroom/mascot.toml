@@ -7,6 +7,8 @@ name = "Mushroom"
 category = "oddballs"
 aliases = ["shroom", "fungus"]
 accent = "cranberry"
+# Template props hang under the right of the cap, beside the stem.
+prop_offset = [0, 6]
 
 [palette]
 "." = "clear"
