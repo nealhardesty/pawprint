@@ -45,7 +45,7 @@ backend = "auto"           # "auto" | "windows" | "macos" | "x11" | "wayland"
 
 # Per-host overrides. Keys are short hostnames or glob patterns (* and ?).
 # Any top-level key may appear in a host table. `pawprint set <key> <value>`
-# and the tray's Size and Animation menus write into this host's table.
+# and the tray's Size and Animation menus add this host's table below.
 #
 # [hosts.buildbox]
 # mascot = "capybara"
@@ -53,6 +53,7 @@ backend = "auto"           # "auto" | "windows" | "macos" | "x11" | "wayland"
 # [hosts."prod-*"]
 # accent = "cranberry"
 # label_case = "upper"
+[hosts]
 "##;
 
 /// Turn a command-line value into a TOML value for `key`, checked the way
@@ -189,6 +190,10 @@ mod tests {
         let cfg = Config::parse(TEMPLATE);
         assert!(cfg.warnings.is_empty(), "{:?}", cfg.warnings);
         assert!(cfg.hosts.is_empty(), "host examples are commented out");
+        // A host's table goes after the examples, at the end.
+        let out = super::set(TEMPLATE, "owl", "size", "128").unwrap();
+        assert!(out.ends_with("label_case = \"upper\"\n[hosts]\n\n[hosts.owl]\nsize = 128\n"), "{out}");
+        assert_eq!(unset_host_key(&out, "owl", "size").unwrap().0, TEMPLATE);
         let from_file = cfg.effective("owl", &Layer::default());
         let defaults = Config::default().effective("owl", &Layer::default());
         // Same values; every one from the file.

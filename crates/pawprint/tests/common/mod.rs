@@ -104,6 +104,7 @@ impl Env {
             "SWAYSOCK",
             "XDG_CONFIG_HOME",
             "XDG_STATE_HOME",
+            "DBUS_SESSION_BUS_ADDRESS",
         ] {
             cmd.env_remove(k);
         }
@@ -203,14 +204,23 @@ impl Env {
         std::fs::read_to_string(dir.join("state.toml")).unwrap_or_default()
     }
 
-    pub fn write_config(&self, text: &str) {
+    pub fn config_file(&self) -> PathBuf {
         let dir = if cfg!(target_os = "macos") {
             self.home().join("Library/Application Support/pawprint")
         } else {
             self.home().join(".config/pawprint")
         };
-        std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("config.toml"), text).unwrap();
+        dir.join("config.toml")
+    }
+
+    pub fn config(&self) -> String {
+        std::fs::read_to_string(self.config_file()).unwrap_or_default()
+    }
+
+    pub fn write_config(&self, text: &str) {
+        let path = self.config_file();
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, text).unwrap();
     }
 
     /// What the badge should look like at scale 1: `pawprint render`.

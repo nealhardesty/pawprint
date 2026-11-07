@@ -405,3 +405,38 @@ fn output_mode_and_scale_changes_recreate_and_stay_crisp() {
         opaque * 9.0 / 4.0
     );
 }
+
+#[test]
+#[ignore = "needs sway, swaybg, grim, wtype; run `make test-wayland`"]
+fn preview_is_a_floating_window_that_closes() {
+    const BACKDROP: [u8; 3] = [0x5a, 0x60, 0x6b];
+    let mut env = Env::new("wl-preview");
+    let sway = Sway::start(&mut env, "");
+    let mut preview = env.spawn(
+        env!("CARGO_BIN_EXE_pawprint"),
+        &["preview", "owl", "--size", "64"],
+    );
+    // An xdg toplevel with a fixed size, so sway floats it (centered).
+    wait_for("the preview window", || {
+        (sway.focused(&env).as_deref() == Some("pawprint")).then_some(())
+    });
+    let expected = env.expected(64);
+    let found = wait_for("the backdrop on screen", || {
+        let set = std::collections::BTreeSet::from([BACKDROP]);
+        sway.grab(&env)
+            .bbox_of([0, 0, 1280, 720], &set)
+            .filter(|b| b[2] == 96 && b[3] == 96)
+    });
+    let rest = sway.grab(&env);
+    assert_badge_at(&rest, &expected, found[0] + 16, found[1] + 16, BACKDROP);
+
+    // Esc closes it (it has the keyboard focus, as a normal window).
+    let out = env
+        .command("wtype")
+        .args(["-s", "300", "-k", "Escape"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let status = wait_for("Esc to close the preview", || preview.exited());
+    assert!(status.success());
+}

@@ -12,6 +12,7 @@ use crate::{CmdResult, exit, instance};
 
 /// Whether this user's login starts the badge.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))] // until Windows and macOS land
 pub enum State {
     /// On: where the entry lives and the command it runs.
     On {
