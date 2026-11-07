@@ -27,12 +27,12 @@ size = 64
 
 # Where the badge sits on the target display. Dragging in move mode overrides this.
 position = "top-right"     # top-left | top | top-right | left | center | right | bottom-left | bottom | bottom-right
-offset = [16, 16]          # logical px inward from the anchor
+offset = [16, 16]          # logical px inward from the anchor (each -100000 to 100000)
 display = "primary"        # "primary" | an output name from `pawprint doctor`
 
 # Animation.
 animation = "idle"         # "idle" | "static"
-interval = [8, 20]         # seconds between idle actions (min, max)
+interval = [8, 20]         # seconds between idle actions (min, max), 1 <= min <= max <= 3600
 
 # Crate color.
 accent = "auto"            # "auto" | a palette name (see `pawprint list --accents`) | "#rrggbb"
@@ -93,16 +93,16 @@ fn to_toml(key: &str, value: &Value) -> toml::Value {
         .expect("a toml_edit value is valid TOML")
 }
 
-/// The `[hosts]` table's key for host `short`: an existing exact (non-glob)
-/// entry that matches it case-insensitively, else `short` lowercased.
+/// The `[hosts]` table's key for host `short`: the exact table loading
+/// uses ([`config::is_exact_host`], the last match), else `short`
+/// lowercased.
 fn host_key(hosts: &Table, short: &str) -> String {
-    let short = short.to_lowercase();
     hosts
         .iter()
         .map(|(k, _)| k)
-        .filter(|k| !k.contains(['*', '?']))
-        .find(|k| k.to_lowercase() == short)
-        .map_or(short, str::to_string)
+        .filter(|k| config::is_exact_host(k, short))
+        .last()
+        .map_or_else(|| short.to_lowercase(), str::to_string)
 }
 
 fn parse(text: &str) -> Result<DocumentMut, String> {
@@ -291,6 +291,22 @@ mod tests {
             set("", "owl", "mascot", "otter"),
             "[hosts.owl]\nmascot = \"otter\"\n"
         );
+    }
+
+    #[test]
+    fn set_edits_the_table_loading_uses() {
+        for text in [
+            "[hosts.OWL]\nsize = 32\n[hosts.owl]\nsize = 32\n",
+            "[hosts.owl]\nsize = 32\n[hosts.\"OWL.example.com\"]\nsize = 32\n",
+        ] {
+            let out = set(text, "owl", "size", "128");
+            let s = Config::parse(&out).effective("owl", &Layer::default());
+            assert_eq!(s.size.value, 128, "{out}");
+            let (out, removed) = unset_host_key(&out, "owl", "size").unwrap();
+            assert!(removed);
+            let s = Config::parse(&out).effective("owl", &Layer::default());
+            assert_eq!(s.size.value, 32, "{out}");
+        }
     }
 
     #[test]

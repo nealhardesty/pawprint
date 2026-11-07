@@ -2,7 +2,9 @@
 //!
 //! A config file never prevents the badge from starting: syntax errors,
 //! unknown keys, and invalid values become warnings, and the affected keys
-//! fall back to the next layer down.
+//! fall back to the next layer down (a glob table, the top level, then the
+//! default). That includes a `mascot` or `accent` that is well formed but
+//! not in the catalog ([`Config::effective_checked`]).
 
 use std::fmt;
 
@@ -69,6 +71,9 @@ impl fmt::Display for Backend {
         })
     }
 }
+
+/// The largest `offset` component, either sign, in logical pixels.
+pub const MAX_OFFSET: i64 = 100_000;
 
 /// One layer of settings: the top level, a `[hosts]` table, or flags.
 /// `None` means "not set here".
@@ -143,17 +148,36 @@ impl Config {
     }
 
     /// Effective settings for host `short`, with where each value came from.
+    /// Only checks values on their own; see [`Config::effective_checked`].
     pub fn effective(&self, short: &str, flags: &Layer) -> Settings {
+        self.effective_checked(short, flags, |_| true, |_| true).0
+    }
+
+    /// [`Config::effective`], also skipping any `mascot` that `mascot_ok`
+    /// rejects and any `accent` that `accent_ok` rejects (not in the
+    /// catalog), so the next layer down applies. Returns a warning for each
+    /// skipped value.
+    pub fn effective_checked(
+        &self,
+        short: &str,
+        flags: &Layer,
+        mascot_ok: impl Fn(&str) -> bool,
+        accent_ok: impl Fn(&str) -> bool,
+    ) -> (Settings, Vec<String>) {
         let short = short.to_lowercase();
         let mut globs: Vec<(usize, &String, &Layer)> = self
             .hosts
             .iter()
             .enumerate()
-            .filter(|(_, (p, _))| is_glob(p) && glob_match(p, &short))
+            .filter(|(_, (p, _))| {
+                let p = host_pattern(p);
+                is_glob(p) && glob_match(p, &short)
+            })
             .map(|(i, (p, l))| (i, p, l))
             .collect();
         // Most specific first: longest pattern, then fewest wildcards, then file order.
         globs.sort_by_key(|(i, p, _)| {
+            let p = host_pattern(p);
             (
                 std::cmp::Reverse(p.len()),
                 p.chars().filter(|c| matches!(c, '*' | '?')).count(),
@@ -166,7 +190,7 @@ impl Config {
             .hosts
             .iter()
             .rev()
-            .find(|(p, _)| !is_glob(p) && *p == short)
+            .find(|(p, _)| is_exact_host(p, &short))
         {
             layers.push((l, Source::Host(p.clone())));
         }
@@ -176,6 +200,22 @@ impl Config {
                 .map(|(_, p, l)| (l, Source::Host(p.clone()))),
         );
         layers.push((&self.top, Source::TopLevel));
+
+        let mascot_ok = |m: &String| m == "auto" || mascot_ok(m);
+        let accent_ok = |a: &String| a == "auto" || accent_ok(a);
+        let mut warnings = Vec::new();
+        for (l, source) in &layers {
+            if let Some(m) = l.mascot.as_ref().filter(|m| !mascot_ok(m)) {
+                warnings.push(format!(
+                    "mascot = {m:?} ({source}) is not in the catalog (see `pawprint list`); using the next layer down"
+                ));
+            }
+            if let Some(a) = l.accent.as_ref().filter(|a| !accent_ok(a)) {
+                warnings.push(format!(
+                    "accent = {a:?} ({source}) is not a palette name or #rrggbb (see `pawprint list --accents`); using the next layer down"
+                ));
+            }
+        }
 
         fn pick<T: Clone>(
             layers: &[(&Layer, Source)],
@@ -195,8 +235,12 @@ impl Config {
                     source: Source::Default,
                 })
         }
-        Settings {
-            mascot: pick(&layers, |l| l.mascot.clone(), "auto".to_string()),
+        let settings = Settings {
+            mascot: pick(
+                &layers,
+                |l| l.mascot.clone().filter(mascot_ok),
+                "auto".to_string(),
+            ),
             label: pick(&layers, |l| l.label.clone(), "auto".to_string()),
             label_case: pick(&layers, |l| l.label_case, LabelCase::Upper),
             label_size: pick(&layers, |l| l.label_size, LabelSize::Auto),
@@ -206,10 +250,15 @@ impl Config {
             display: pick(&layers, |l| l.display.clone(), "primary".to_string()),
             animation: pick(&layers, |l| l.animation, Animation::Idle),
             interval: pick(&layers, |l| l.interval, [8, 20]),
-            accent: pick(&layers, |l| l.accent.clone(), "auto".to_string()),
+            accent: pick(
+                &layers,
+                |l| l.accent.clone().filter(accent_ok),
+                "auto".to_string(),
+            ),
             tray: pick(&layers, |l| l.tray, true),
             backend: pick(&layers, |l| l.backend, Backend::Auto),
-        }
+        };
+        (settings, warnings)
     }
 }
 
@@ -289,7 +338,7 @@ pub fn check_value(key: &str, value: &toml::Value) -> Result<(), String> {
 fn set_key(layer: &mut Layer, key: &str, v: &toml::Value, ctx: &str, warnings: &mut Vec<String>) {
     let mut bad = |expected: &str| {
         warnings.push(format!(
-            "{ctx}{key} = {v}: expected {expected}; using the default"
+            "{ctx}{key} = {v}: expected {expected}; using the next layer down"
         ))
     };
     let s = v.as_str();
@@ -321,8 +370,16 @@ fn set_key(layer: &mut Layer, key: &str, v: &toml::Value, ctx: &str, warnings: &
             None => bad("an anchor such as \"top-right\""),
         },
         "offset" => match int_pair(v) {
-            Some([x, y]) => layer.offset = Some([x as i32, y as i32]),
-            None => bad("[x, y]"),
+            Some([x, y])
+                if [x, y]
+                    .iter()
+                    .all(|n| (-MAX_OFFSET..=MAX_OFFSET).contains(n)) =>
+            {
+                layer.offset = Some([x as i32, y as i32])
+            }
+            _ => bad(&format!(
+                "[x, y] logical px, each -{MAX_OFFSET} to {MAX_OFFSET}"
+            )),
         },
         "display" => match s {
             Some(d) => layer.display = Some(d.into()),
@@ -336,7 +393,7 @@ fn set_key(layer: &mut Layer, key: &str, v: &toml::Value, ctx: &str, warnings: &
             Some([lo, hi]) if 1 <= lo && lo <= hi && hi <= 3600 => {
                 layer.interval = Some([lo as u32, hi as u32])
             }
-            _ => bad("[min, max] seconds with 1 <= min <= max"),
+            _ => bad("[min, max] seconds with 1 <= min <= max <= 3600"),
         },
         "accent" => match s {
             Some(a)
@@ -369,6 +426,19 @@ fn int_pair(v: &toml::Value) -> Option<[i64; 2]> {
 
 fn is_glob(pattern: &str) -> bool {
     pattern.contains(['*', '?'])
+}
+
+/// A `[hosts]` key as it is matched: cut at the first `.`, as the short
+/// name is, so `web01.example.com` matches host `web01` (SPEC §8.3).
+fn host_pattern(key: &str) -> &str {
+    key.split('.').next().unwrap_or(key)
+}
+
+/// Whether `[hosts."<key>"]` is the exact (non-glob) table for host `short`.
+/// Case-insensitive. When several match, the last one in the file applies.
+pub fn is_exact_host(key: &str, short: &str) -> bool {
+    let p = host_pattern(key);
+    !is_glob(p) && p.to_lowercase() == short.to_lowercase()
 }
 
 /// `*` matches any run of characters (including none), `?` exactly one.
@@ -566,5 +636,101 @@ mascot = "capybara"
         assert_eq!(t.animation, Some(Animation::Static));
         assert_eq!(t.backend, Some(Backend::X11));
         assert_eq!(t.tray, Some(false));
+    }
+
+    #[test]
+    fn offset_is_range_checked_and_falls_through() {
+        let cfg = Config::parse(
+            "offset = [4, 5]\n[hosts.a]\noffset = [100001, 0]\n[hosts.b]\noffset = [0, -9999999999]\n[hosts.c]\noffset = [-100000, 100000]",
+        );
+        assert_eq!(cfg.warnings.len(), 2, "{:#?}", cfg.warnings);
+        assert!(
+            cfg.warnings
+                .iter()
+                .all(|w| w.contains(&format!("-{MAX_OFFSET} to {MAX_OFFSET}"))),
+            "{:#?}",
+            cfg.warnings
+        );
+        assert_eq!(cfg.effective("a", &Layer::default()).offset.value, [4, 5]);
+        assert_eq!(cfg.effective("b", &Layer::default()).offset.value, [4, 5]);
+        assert_eq!(
+            cfg.effective("c", &Layer::default()).offset.value,
+            [-100000, 100000]
+        );
+    }
+
+    #[test]
+    fn interval_warning_names_the_cap() {
+        let cfg = Config::parse("interval = [1, 3601]");
+        assert!(
+            cfg.warnings[0].contains("max <= 3600"),
+            "{:?}",
+            cfg.warnings
+        );
+    }
+
+    #[test]
+    fn host_keys_match_the_short_name_of_an_fqdn() {
+        let cfg = Config::parse(
+            "[hosts.\"web01.example.com\"]\nmascot = \"owl\"\n[hosts.\"DB*.Example.com\"]\naccent = \"plum\"",
+        );
+        let s = cfg.effective("web01", &Layer::default());
+        assert_eq!(
+            s.mascot,
+            Sourced {
+                value: "owl".into(),
+                source: Source::Host("web01.example.com".into())
+            }
+        );
+        assert_eq!(
+            cfg.effective("db02", &Layer::default()).accent.value,
+            "plum"
+        );
+        assert_eq!(
+            cfg.effective("web02", &Layer::default()).mascot.value,
+            "auto"
+        );
+    }
+
+    #[test]
+    fn values_the_catalog_rejects_fall_through_to_the_next_layer() {
+        let cfg = Config::parse(
+            "mascot = \"owl\"\naccent = \"teal\"\n[hosts.\"x*\"]\nmascot = \"nope\"\naccent = \"mauve\"\n[hosts.x]\nmascot = \"gone\"",
+        );
+        let (s, warnings) = cfg.effective_checked(
+            "x",
+            &Layer::default(),
+            |id| id == "owl",
+            |name| name == "teal",
+        );
+        assert_eq!(s.mascot.value, "owl");
+        assert_eq!(s.mascot.source, Source::TopLevel);
+        assert_eq!(s.accent.value, "teal");
+        assert_eq!(warnings.len(), 3, "{warnings:#?}");
+        assert!(
+            warnings
+                .iter()
+                .any(|w| w.contains("\"gone\"") && w.contains("[hosts.\"x\"]"))
+        );
+        assert!(
+            warnings.iter().all(|w| w.contains("next layer down")),
+            "{warnings:#?}"
+        );
+        let (s, _) = cfg.effective_checked("y", &Layer::default(), |_| false, |_| false);
+        assert_eq!(
+            (s.mascot.value.as_str(), s.accent.value.as_str()),
+            ("auto", "auto"),
+            "nothing valid: the default"
+        );
+    }
+
+    #[test]
+    fn duplicate_host_tables_the_last_wins() {
+        let cfg = Config::parse("[hosts.OWL]\nsize = 32\n[hosts.owl]\nsize = 128");
+        assert_eq!(
+            cfg.effective("owl", &Layer::default()).size.source,
+            Source::Host("owl".into())
+        );
+        assert_eq!(cfg.effective("owl", &Layer::default()).size.value, 128);
     }
 }

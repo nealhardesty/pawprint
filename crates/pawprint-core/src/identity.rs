@@ -93,8 +93,14 @@ pub fn resolve(
 ) -> Resolved {
     let raw = hostname.trim().to_string();
     let short = host::short_name(&raw);
-    let settings = config.effective(&short, flags);
+    let (settings, skipped) = config.effective_checked(
+        &short,
+        flags,
+        |id| catalog.get(id).is_some(),
+        |name| accent::lookup(name, accents).is_some(),
+    );
     let mut warnings = config.warnings.clone();
+    warnings.extend(skipped);
     let mut trace = Vec::new();
     let mut step = |rule: Rule, outcome: String| trace.push(RuleStep { rule, outcome });
 
@@ -105,7 +111,6 @@ pub fn resolve(
         catalog,
         recompute,
         &mut step,
-        &mut warnings,
     );
     let (mascot, rule) = chosen;
     let new_assignment =
@@ -170,20 +175,14 @@ fn choose(
     catalog: &Catalog,
     recompute: bool,
     step: &mut impl FnMut(Rule, String),
-    warnings: &mut Vec<String>,
 ) -> (String, Rule) {
-    // Rule 1
+    // Rule 1. `explicit` is "auto" or in the catalog: precedence skips
+    // anything else (`Config::effective_checked`).
     if explicit == "auto" {
         step(Rule::Explicit, "none (mascot = \"auto\")".into());
-    } else if catalog.get(explicit).is_some() {
+    } else {
         step(Rule::Explicit, format!("mascot = {explicit:?}"));
         return (explicit.to_string(), Rule::Explicit);
-    } else {
-        warnings.push(format!("mascot {explicit:?} is not in the catalog (see `pawprint list`); choosing automatically"));
-        step(
-            Rule::Explicit,
-            format!("{explicit:?} is not in the catalog, ignored"),
-        );
     }
 
     // Rule 2
@@ -377,6 +376,17 @@ mod tests {
         let r = run("owl", "mascot = \"dodo\"", &State::default());
         assert_eq!((r.mascot.as_str(), r.rule), ("owl", Rule::WholeName));
         assert!(r.warnings.iter().any(|w| w.contains("dodo")));
+    }
+
+    #[test]
+    fn invalid_host_values_fall_back_to_the_next_layer() {
+        let config = "mascot = \"bear\"\naccent = \"teal\"\n[hosts.owl]\nmascot = \"dodo\"\naccent = \"mauve\"";
+        let r = run("owl", config, &State::default());
+        assert_eq!((r.mascot.as_str(), r.rule), ("bear", Rule::Explicit));
+        assert_eq!(r.settings.mascot.source, Source::TopLevel);
+        assert_eq!(r.accent.name, "teal");
+        assert!(r.warnings.iter().any(|w| w.contains("\"dodo\"")));
+        assert!(r.warnings.iter().any(|w| w.contains("\"mauve\"")));
     }
 
     #[test]

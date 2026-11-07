@@ -113,10 +113,6 @@ impl fmt::Display for Position {
     }
 }
 
-fn to_physical(logical: i32, scale: f64) -> i32 {
-    (f64::from(logical) * scale).round() as i32
-}
-
 /// The badge rectangle for `pos`, clamped into `usable`. The saved position
 /// itself is never changed by clamping (SPEC §6.1).
 pub fn place(
@@ -127,25 +123,19 @@ pub fn place(
     scale: f64,
 ) -> PhysicalRect {
     let (h, v) = pos.anchor.axes();
-    let along = |axis: Axis, start: i32, area: u32, len: u32, off: i32| match axis {
-        Axis::Start => start + off,
-        Axis::End => start + area as i32 - len as i32 - off,
-        Axis::Center => start + (area as i32 - len as i32) / 2 + off,
+    // In i64, so no offset can overflow before the clamp.
+    let along = |axis: Axis, start: i32, area: u32, len: u32, off: i32| {
+        let (start, area, len) = (i64::from(start), i64::from(area), i64::from(len));
+        let off = (f64::from(off) * scale).round() as i64;
+        let pos = match axis {
+            Axis::Start => start + off,
+            Axis::End => start + area - len - off,
+            Axis::Center => start + (area - len) / 2 + off,
+        };
+        pos.clamp(i64::from(i32::MIN), i64::from(i32::MAX)) as i32
     };
-    let x = along(
-        h,
-        usable.x,
-        usable.width,
-        width,
-        to_physical(pos.offset[0], scale),
-    );
-    let y = along(
-        v,
-        usable.y,
-        usable.height,
-        height,
-        to_physical(pos.offset[1], scale),
-    );
+    let x = along(h, usable.x, usable.width, width, pos.offset[0]);
+    let y = along(v, usable.y, usable.height, height, pos.offset[1]);
     PhysicalRect::new(x, y, width, height).clamped_into(usable)
 }
 
@@ -421,6 +411,20 @@ mod tests {
             place(far, 64, 64, USABLE, 1.0),
             PhysicalRect::new(1856, 16, 64, 64)
         );
+    }
+
+    #[test]
+    fn extreme_offsets_clamp_without_overflow() {
+        for anchor in Anchor::ALL {
+            for off in [i32::MAX, i32::MIN] {
+                let pos = Position {
+                    anchor,
+                    offset: [off, off],
+                };
+                let rect = place(pos, 64, 64, USABLE, 2.0);
+                assert_eq!(rect.clamped_into(USABLE), rect, "{pos}");
+            }
+        }
     }
 
     #[test]

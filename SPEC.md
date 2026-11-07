@@ -684,12 +684,12 @@ size = 64
 
 # Where the badge sits on the target display. Dragging in move mode overrides this.
 position = "top-right"     # top-left | top | top-right | left | center | right | bottom-left | bottom | bottom-right
-offset = [16, 16]          # logical px inward from the anchor
+offset = [16, 16]          # logical px inward from the anchor (each -100000 to 100000)
 display = "primary"        # "primary" | an output name from `pawprint doctor`
 
 # Animation.
 animation = "idle"         # "idle" | "static"
-interval = [8, 20]         # seconds between idle actions (min, max)
+interval = [8, 20]         # seconds between idle actions (min, max), 1 <= min <= max <= 3600
 
 # Crate color.
 accent = "auto"            # "auto" | a palette name (see `pawprint list --accents`) | "#rrggbb"
@@ -711,9 +711,12 @@ label_case = "upper"
 ```
 
 Unknown keys are a **warning**, not an error, so a newer fleet config still
-loads on older binaries. Invalid values (bad mascot id, bad accent) log a
-warning and fall back to the default for that key. A config file never
-prevents the badge from starting.
+loads on older binaries. An invalid value (wrong type, out of range, or a
+mascot or accent that isn't in the catalog) logs a warning and is ignored,
+so that key falls back to the next layer down ([8.3](#83-precedence)): a
+bad `mascot` in `[hosts.buildbox]` yields to a matching glob, then the
+top level, then the default. A config file never prevents the badge from
+starting.
 
 ### 8.3 Precedence
 
@@ -725,6 +728,13 @@ For each key, highest wins:
    then fewest wildcards, then file order)
 4. Top-level keys
 5. Built-in defaults
+
+Host keys compare case-insensitively. A key with a dot is matched by its
+part before the first dot, the way the short name is made
+([5.2](#52-labels)): `[hosts."web01.example.com"]` applies to `web01`, and
+`"web*.example.com"` acts as `web*` (so `"*.example.com"` matches every
+host). If several exact tables match (`[hosts.OWL]` and `[hosts.owl]`), the
+last one in the file applies, and `pawprint set` edits that one.
 
 The same `config.toml` can be copied to every machine in a fleet. Each host
 picks up its own section.
@@ -762,8 +772,8 @@ and **Animation** choices all edit the config the same way
 (`pawprint_core::config_edit`):
 
 - **Where:** the exact `[hosts."<short>"]` table for this host's short name
-  (an existing table that matches it case-insensitively, else a new one,
-  appended at the end). An exact host table outranks globs and top-level
+  (the existing exact table loading uses, matched as in 8.3, else a new
+  one, appended at the end). An exact host table outranks globs and top-level
   keys (8.3), so the choice always takes effect, and a config copied to
   another machine doesn't carry it over. Only `pawprint run` flags rank
   higher.
