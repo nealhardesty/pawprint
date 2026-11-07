@@ -179,7 +179,10 @@ use run_key as platform;
 
 /// Windows: the `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` value
 /// `pawprint` = `"<dir>\pawprintw.exe" run`. HKCU Run entries run at every
-/// interactive logon, RDP logons included (F10).
+/// interactive logon, RDP logons included (F10). Settings → Apps → Startup
+/// (and Task Manager) can switch an entry off without removing it, in
+/// `Explorer\StartupApproved\Run`: `status` says so, and `on` and `off`
+/// clear that switch.
 #[cfg(windows)]
 mod run_key {
     use std::path::PathBuf;
@@ -187,13 +190,18 @@ mod run_key {
 
     use windows_sys::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_SUCCESS, WIN32_ERROR};
     use windows_sys::Win32::System::Registry::{
-        HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ, RegDeleteKeyValueW, RegGetValueW, RegSetKeyValueW,
+        HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_BINARY, RRF_RT_REG_SZ, RegDeleteKeyValueW,
+        RegGetValueW, RegSetKeyValueW,
     };
 
     use super::State;
 
     const KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
     const VALUE: &str = "pawprint";
+    /// The Startup apps switch: a binary value whose first byte is odd
+    /// (0x03) when the user turned the entry off, even (0x02) when on.
+    const APPROVED: &str =
+        r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
 
     fn wide(s: &str) -> Vec<u16> {
         s.encode_utf16().chain([0]).collect()
@@ -227,14 +235,47 @@ mod run_key {
         match code {
             ERROR_SUCCESS => {
                 let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
+                let mut command = String::from_utf16_lossy(&buf[..len]);
+                if switched_off() {
+                    command.push_str(
+                        " (disabled in Startup apps; `pawprint autostart on` turns it back on)",
+                    );
+                }
                 Ok(State::On {
                     entry: entry(),
-                    command: String::from_utf16_lossy(&buf[..len]),
+                    command,
                 })
             }
             ERROR_FILE_NOT_FOUND => Ok(State::Off),
             code => Err(fail("read", code)),
         }
+    }
+
+    /// Whether the user switched the entry off in Startup apps.
+    fn switched_off() -> bool {
+        let (key, value) = (wide(APPROVED), wide(VALUE));
+        let mut buf = [0u8; 64];
+        let mut bytes = buf.len() as u32;
+        // SAFETY: `buf` holds `bytes` bytes.
+        let code = unsafe {
+            RegGetValueW(
+                HKEY_CURRENT_USER,
+                key.as_ptr(),
+                value.as_ptr(),
+                RRF_RT_REG_BINARY,
+                null_mut(),
+                buf.as_mut_ptr().cast(),
+                &mut bytes,
+            )
+        };
+        code == ERROR_SUCCESS && bytes > 0 && buf[0] & 1 == 1
+    }
+
+    /// Forget the Startup apps switch, so the entry counts as on.
+    fn clear_switch() {
+        let (key, value) = (wide(APPROVED), wide(VALUE));
+        // SAFETY: NUL-terminated strings; a missing value is fine.
+        unsafe { RegDeleteKeyValueW(HKEY_CURRENT_USER, key.as_ptr(), value.as_ptr()) };
     }
 
     pub fn enable() -> Result<State, String> {
@@ -255,11 +296,13 @@ mod run_key {
         if code != ERROR_SUCCESS {
             return Err(fail("write", code));
         }
+        clear_switch();
         status()
     }
 
     pub fn disable() -> Result<(), String> {
         let (key, value) = (wide(KEY), wide(VALUE));
+        clear_switch();
         // SAFETY: NUL-terminated strings.
         match unsafe { RegDeleteKeyValueW(HKEY_CURRENT_USER, key.as_ptr(), value.as_ptr()) } {
             ERROR_SUCCESS | ERROR_FILE_NOT_FOUND => Ok(()),
@@ -402,30 +445,49 @@ mod launchd {
 
     /// Write the agent and load it now, which starts a badge (or finds the
     /// running one and exits). An agent that is already loaded stays as it
-    /// is; one that can't load now (an SSH login) still loads at the next
-    /// GUI login.
+    /// is unless its plist changed (a new install path), which launchd only
+    /// reads on load, so it is unloaded and loaded again. One that can't
+    /// load now (an SSH login) still loads at the next GUI login.
     pub fn enable() -> Result<State, String> {
         let (exe, arg) = super::command_line()?;
         let path = plist_path()?;
-        write(&path, &exe, &arg)?;
-        if !loaded() {
-            let out = launchctl(&["bootstrap", &domain(), &path.to_string_lossy()])?;
-            if !out.status.success() {
-                log::warn!(
-                    "launchctl bootstrap: {}",
-                    String::from_utf8_lossy(&out.stderr).trim()
-                );
-            }
+        let changed = write(&path, &exe, &arg)?;
+        let mut load = !loaded();
+        if !load && changed {
+            run_logged(&["bootout", &format!("{}/{LABEL}", domain())])?;
+            load = true;
+        }
+        if load {
+            run_logged(&["bootstrap", &domain(), &path.to_string_lossy()])?;
         }
         status()
     }
 
-    fn write(path: &Path, exe: &Path, arg: &str) -> Result<(), String> {
+    /// Run launchctl; a failure is logged, not fatal.
+    fn run_logged(args: &[&str]) -> Result<(), String> {
+        let out = launchctl(args)?;
+        if !out.status.success() {
+            log::warn!(
+                "launchctl {}: {}",
+                args[0],
+                String::from_utf8_lossy(&out.stderr).trim()
+            );
+        }
+        Ok(())
+    }
+
+    /// Write the plist; true when its content changed.
+    fn write(path: &Path, exe: &Path, arg: &str) -> Result<bool, String> {
         let fail = |e: std::io::Error| format!("cannot write {}: {e}", path.display());
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir).map_err(fail)?;
         }
-        std::fs::write(path, plist(&[&exe.to_string_lossy(), arg])).map_err(fail)
+        let text = plist(&[&exe.to_string_lossy(), arg]);
+        if std::fs::read_to_string(path).is_ok_and(|old| old == text) {
+            return Ok(false);
+        }
+        std::fs::write(path, text).map_err(fail)?;
+        Ok(true)
     }
 
     /// Unload the agent (which stops a badge it started) and remove it.

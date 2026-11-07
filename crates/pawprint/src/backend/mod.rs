@@ -17,6 +17,8 @@ mod sni;
 mod wayland;
 #[cfg(windows)]
 mod windows;
+#[cfg(windows)]
+mod windows_tray;
 #[cfg(target_os = "linux")]
 mod x11;
 
@@ -26,8 +28,6 @@ use linux as platform;
 use macos as platform;
 #[cfg(windows)]
 use windows as platform;
-#[cfg(windows)]
-pub use windows::allow_foreground;
 
 /// Run the badge until it quits. `listener` is this session's claimed IPC
 /// endpoint (SPEC §10.4).

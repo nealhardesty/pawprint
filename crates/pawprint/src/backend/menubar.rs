@@ -20,7 +20,7 @@ use objc2_core_graphics::{CGColorSpace, kCGColorSpaceSRGB};
 use objc2_foundation::{NSObject, NSSize, NSString, ns_string};
 use pawprint_core::badge::Command;
 use pawprint_core::menu::{MenuItem, TrayState};
-use pawprint_core::render::Frame;
+use pawprint_core::render::{self, Frame};
 use pawprint_core::sprite::RgbaImage;
 
 use super::macos::{Inbox, cg_image, wake};
@@ -121,33 +121,17 @@ fn build_menu(
     menu
 }
 
-/// The rest frame drawn into an [`ICON_POINTS`] box with a one-point
-/// margin, at `scale` pixels per point, nearest neighbor (32 art pixels
-/// fill 16 points: exact at 2x, every other pixel at 1x). Colorful, so not
-/// a template image.
-fn icon_pixels(icon: &RgbaImage, scale: u32) -> RgbaImage {
-    let size = ICON_POINTS * scale;
-    let mut out = RgbaImage::new(size, size);
-    for y in 0..size - 2 * scale {
-        for x in 0..size - 2 * scale {
-            let p = icon.pixel(x * 2 / scale, y * 2 / scale);
-            if p[3] != 0 {
-                out.put(i64::from(x + scale), i64::from(y + scale), p);
-            }
-        }
-    }
-    out
-}
-
-/// The icon as an `NSImage` with a 1x and a 2x bitmap, so AppKit picks the
-/// pixels instead of interpolating.
+/// The rest frame in an [`ICON_POINTS`] box with a one-point margin, as an
+/// `NSImage` with a 1x and a 2x bitmap, so AppKit picks the pixels instead
+/// of interpolating (32 art pixels fill 16 points: exact at 2x, every other
+/// pixel at 1x). Colorful, so not a template image.
 fn icon(img: &RgbaImage) -> Retained<NSImage> {
     let points = NSSize::new(f64::from(ICON_POINTS), f64::from(ICON_POINTS));
     let image = NSImage::initWithSize(NSImage::alloc(), points);
     // SAFETY: kCGColorSpaceSRGB is a valid color space name.
     let srgb = CGColorSpace::with_name(Some(unsafe { kCGColorSpaceSRGB }));
     for scale in [1, 2] {
-        let frame = Frame::from_rgba(&icon_pixels(img, scale));
+        let frame = Frame::from_rgba(&render::tray_icon(img, ICON_POINTS * scale, scale));
         if let Some(cg) = srgb.as_deref().and_then(|s| cg_image(&frame, s)) {
             let rep = NSBitmapImageRep::initWithCGImage(NSBitmapImageRep::alloc(), &cg);
             rep.setSize(points);
@@ -195,28 +179,5 @@ impl Target {
         });
         // SAFETY: NSObject's designated initializer.
         unsafe { msg_send![super(this), init] }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn icon_is_nearest_neighbor_with_a_margin() {
-        let mut art = RgbaImage::new(32, 32);
-        art.put(0, 0, [255, 0, 0, 255]);
-        art.put(1, 0, [0, 255, 0, 255]);
-        art.put(31, 31, [0, 0, 255, 255]);
-        let x2 = icon_pixels(&art, 2);
-        assert_eq!((x2.width, x2.height), (36, 36));
-        assert_eq!(x2.pixel(1, 1), [0, 0, 0, 0], "margin");
-        assert_eq!(x2.pixel(2, 2), [255, 0, 0, 255]);
-        assert_eq!(x2.pixel(3, 2), [0, 255, 0, 255]);
-        assert_eq!(x2.pixel(33, 33), [0, 0, 255, 255]);
-        let x1 = icon_pixels(&art, 1);
-        assert_eq!((x1.width, x1.height), (18, 18));
-        assert_eq!(x1.pixel(1, 1), [255, 0, 0, 255], "every other art pixel");
-        assert_eq!(x1.pixel(2, 1), [0, 0, 0, 0]);
     }
 }

@@ -1,7 +1,7 @@
 //! Windows backend (SPEC §11.1): a layered, topmost, click-through tool
 //! window, drawn with `UpdateLayeredWindow` from the shared premultiplied
 //! BGRA frame, and a notification-area icon whose menu is the core's tray
-//! menu.
+//! menu (`windows_tray`).
 //!
 //! The window procedure only records what happened, as core events and tray
 //! choices, in thread-local queues, and the loop hands them to the shell.
@@ -18,16 +18,14 @@ use std::sync::mpsc;
 use pawprint_core::badge::{Command, Event};
 use pawprint_core::config::Backend;
 use pawprint_core::geom::{PhysicalRect, Point};
-use pawprint_core::menu::{MenuItem, TrayState};
 use pawprint_core::movemode::{Key, KeyCode};
 use pawprint_core::render::Frame;
-use pawprint_core::sprite::RgbaImage;
 use pawprint_core::surface::{DisplayInfo, Surface, select_display};
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, SIZE, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::{
     AC_SRC_ALPHA, AC_SRC_OVER, BI_RGB, BITMAPINFO, BITMAPINFOHEADER, BLENDFUNCTION, BeginPaint,
-    BitBlt, CreateBitmap, CreateCompatibleDC, CreateDIBSection, CreateSolidBrush, DIB_RGB_COLORS,
-    DeleteDC, DeleteObject, EndPaint, EnumDisplayMonitors, GetMonitorInfoW, HBITMAP, HDC, HMONITOR,
+    BitBlt, CreateCompatibleDC, CreateDIBSection, CreateSolidBrush, DIB_RGB_COLORS, DeleteDC,
+    DeleteObject, EndPaint, EnumDisplayMonitors, GetMonitorInfoW, HBITMAP, HDC, HMONITOR,
     InvalidateRect, MONITORINFO, MONITORINFOEXW, PAINTSTRUCT, SRCCOPY, SelectObject,
 };
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
@@ -40,15 +38,12 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyState, ReleaseCapture, SetCapture, VK_DOWN, VK_ESCAPE, VK_LEFT, VK_RETURN, VK_RIGHT,
     VK_SHIFT, VK_UP,
 };
-use windows_sys::Win32::UI::Shell::{
-    NIF_ICON, NIF_MESSAGE, NIF_SHOWTIP, NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION,
-    NIN_SELECT, NOTIFYICON_VERSION_4, NOTIFYICONDATAW, Shell_NotifyIconW,
-};
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 use windows_sys::core::BOOL;
 
+use super::windows_tray::{self, NotifyIcon};
 use crate::doctor::Report;
-use crate::shell::{PREVIEW_BACKDROP, Shell, Tray};
+use crate::shell::{PREVIEW_BACKDROP, Shell};
 use crate::{CmdResult, exit, ipc};
 
 const CLASS: &str = "PawprintBadge";
@@ -56,11 +51,6 @@ const PREVIEW_CLASS: &str = "PawprintPreview";
 
 /// Posted by the IPC thread to wake the loop.
 const WM_WAKE: u32 = WM_APP;
-/// The tray icon's callback message.
-const WM_TRAY: u32 = WM_APP + 1;
-const TRAY_ID: u32 = 1;
-/// `NIN_SELECT | NINF_KEY`: Enter or Space on the focused icon.
-const NIN_KEYSELECT: u32 = NIN_SELECT | 1;
 
 /// The preview: a normal window with a title, a close box, and a taskbar
 /// button (SPEC §9).
@@ -82,18 +72,13 @@ thread_local! {
     /// The preview's memory DC and its frame's size, which `WM_PAINT`
     /// copies to the window.
     static PAINT: Cell<(HDC, i32, i32)> = const { Cell::new((null_mut(), 0, 0)) };
-    /// The registered `TaskbarCreated` message (Explorer restarted).
-    static TASKBAR_CREATED: Cell<u32> = const { Cell::new(0) };
-    /// The tray icon as last shown, so `wndproc` can open its menu and add
-    /// it again after Explorer restarts.
-    static TRAY: RefCell<Option<(NOTIFYICONDATAW, Vec<MenuItem>)>> = const { RefCell::new(None) };
 }
 
 fn push(event: Event) {
     EVENTS.with_borrow_mut(|events| events.push(event));
 }
 
-fn wide(s: &str) -> Vec<u16> {
+pub(super) fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain([0]).collect()
 }
 
@@ -147,7 +132,7 @@ fn drive(mut shell: Shell, listener: Option<ipc::Listener>) -> CmdResult {
 
     shell.start(&mut window);
     if has_tray {
-        shell.set_tray(Box::new(NotifyIcon { hwnd: window.hwnd }));
+        shell.set_tray(Box::new(NotifyIcon::new(window.hwnd)));
     }
     loop {
         pump();
@@ -176,8 +161,9 @@ fn drive(mut shell: Shell, listener: Option<ipc::Listener>) -> CmdResult {
                 u32::try_from(d.as_micros().div_ceil(1000)).unwrap_or(INFINITE - 1)
             })
         };
-        // SAFETY: no handles; wakes on any input or posted message.
-        unsafe { MsgWaitForMultipleObjects(0, null(), 0, wait, QS_ALLINPUT) };
+        // SAFETY: no handles; wakes on any input or posted message, even
+        // input that arrived before the last peek (MWMO_INPUTAVAILABLE).
+        unsafe { MsgWaitForMultipleObjectsEx(0, null(), wait, QS_ALLINPUT, MWMO_INPUTAVAILABLE) };
     }
 }
 
@@ -232,6 +218,7 @@ fn displays_changed(hwnd: HWND, why: &str) {
             )
         };
     }
+    windows_tray::rescale();
     push(Event::DisplaysChanged(monitors()));
 }
 
@@ -257,20 +244,10 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             BitBlt(dc, (client.right - w) / 2, 0, w, h, src, 0, 0, SRCCOPY);
             EndPaint(hwnd, &ps);
         },
-        WM_TRAY => match (lparam & 0xffff) as u32 {
-            // Left click, keyboard, and right click all open the menu at
-            // the point the shell gives (NOTIFYICON_VERSION_4).
-            NIN_SELECT | NIN_KEYSELECT | WM_CONTEXTMENU => {
-                let (x, y) = (i32::from(wparam as i16), i32::from((wparam >> 16) as i16));
-                if let Some(command) = tray_menu(hwnd, x, y) {
-                    CHOICES.with_borrow_mut(|c| c.push(command));
-                }
+        m if windows_tray::is_tray_message(m) => {
+            if let Some(command) = windows_tray::message(hwnd, m, wparam, lparam) {
+                CHOICES.with_borrow_mut(|c| c.push(command));
             }
-            _ => {}
-        },
-        m if m != 0 && m == TASKBAR_CREATED.get() => {
-            log::info!("tray: Explorer restarted; adding the icon again");
-            TRAY.with_borrow(|t| t.as_ref().map(|(data, _)| add_icon(data)));
         }
         // Only reaches us in move mode: otherwise the window is transparent.
         WM_LBUTTONDOWN if interactive => {
@@ -342,206 +319,6 @@ fn monitors() -> Vec<DisplayInfo> {
     list
 }
 
-/// The tray (SPEC §11.1.5): one notification-area icon on the badge window,
-/// whose callback message `wndproc` handles. Its data lives in [`TRAY`] so
-/// `wndproc` can open the menu and add it again when Explorer restarts.
-struct NotifyIcon {
-    hwnd: HWND,
-}
-
-impl Tray for NotifyIcon {
-    fn show(&mut self, state: &TrayState) {
-        let old = TRAY.take();
-        if !state.visible {
-            if let Some((data, _)) = old {
-                log::info!("tray: off (tray = false)");
-                remove_icon(&data);
-            }
-            return;
-        }
-        let mut data = NOTIFYICONDATAW {
-            cbSize: size_of::<NOTIFYICONDATAW>() as u32,
-            hWnd: self.hwnd,
-            uID: TRAY_ID,
-            uFlags: NIF_ICON | NIF_MESSAGE | NIF_TIP | NIF_SHOWTIP,
-            uCallbackMessage: WM_TRAY,
-            hIcon: make_icon(&state.icon),
-            ..Default::default()
-        };
-        data.Anonymous.uVersion = NOTIFYICON_VERSION_4;
-        let tip: Vec<u16> = state
-            .tooltip
-            .encode_utf16()
-            .take(data.szTip.len() - 1)
-            .collect();
-        data.szTip[..tip.len()].copy_from_slice(&tip);
-        match &old {
-            // SAFETY: `data` is a complete NOTIFYICONDATAW; the old icon is ours.
-            Some((was, _)) => unsafe {
-                Shell_NotifyIconW(NIM_MODIFY, &data);
-                DestroyIcon(was.hIcon);
-            },
-            None if add_icon(&data) => log::info!("tray: notification area icon added"),
-            // Explorer isn't running yet; TaskbarCreated adds it.
-            None => log::info!("tray: no notification area yet; waiting for Explorer"),
-        }
-        TRAY.set(Some((data, state.menu.clone())));
-    }
-}
-
-impl Drop for NotifyIcon {
-    fn drop(&mut self) {
-        if let Some((data, _)) = TRAY.take() {
-            remove_icon(&data);
-        }
-    }
-}
-
-fn add_icon(data: &NOTIFYICONDATAW) -> bool {
-    // SAFETY: `data` is a complete NOTIFYICONDATAW.
-    unsafe { Shell_NotifyIconW(NIM_ADD, data) != 0 && Shell_NotifyIconW(NIM_SETVERSION, data) != 0 }
-}
-
-fn remove_icon(data: &NOTIFYICONDATAW) {
-    // SAFETY: as above; the icon handle is ours.
-    unsafe {
-        Shell_NotifyIconW(NIM_DELETE, data);
-        DestroyIcon(data.hIcon);
-    }
-}
-
-/// The rest frame as a notification-area icon at the system's small-icon
-/// size (16 px at 100%, 32 at 200%).
-fn make_icon(img: &RgbaImage) -> HICON {
-    // SAFETY: no preconditions.
-    let size = unsafe { GetSystemMetrics(SM_CXSMICON) }.clamp(16, 256) as u32;
-    let bgra = icon_pixels(img, size);
-    let info = BITMAPINFO {
-        bmiHeader: BITMAPINFOHEADER {
-            biSize: size_of::<BITMAPINFOHEADER>() as u32,
-            biWidth: size as i32,
-            biHeight: -(size as i32),
-            biPlanes: 1,
-            biBitCount: 32,
-            biCompression: BI_RGB,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-    // The alpha channel decides; the mask must exist but is ignored.
-    let mask_bits = vec![0u8; size.div_ceil(16) as usize * 2 * size as usize];
-    // SAFETY: the DIB holds `bgra.len()` bytes; the icon copies both
-    // bitmaps, which are deleted after.
-    unsafe {
-        let mut bits = null_mut();
-        let color = CreateDIBSection(null_mut(), &info, DIB_RGB_COLORS, &mut bits, null_mut(), 0);
-        if color.is_null() {
-            return null_mut();
-        }
-        std::ptr::copy_nonoverlapping(bgra.as_ptr(), bits.cast::<u8>(), bgra.len());
-        let mask = CreateBitmap(size as i32, size as i32, 1, 1, mask_bits.as_ptr().cast());
-        let icon = CreateIconIndirect(&ICONINFO {
-            fIcon: 1,
-            xHotspot: 0,
-            yHotspot: 0,
-            hbmMask: mask,
-            hbmColor: color,
-        });
-        DeleteObject(color);
-        DeleteObject(mask);
-        icon
-    }
-}
-
-/// `img` (straight RGBA, binary alpha) at `size` × `size`, as BGRA. Each
-/// icon pixel covers a box of source pixels: it is opaque when at least
-/// half of them are, with their average color, so pixel art keeps its
-/// shapes and its binary alpha when halved (16 px) and stays sharp when
-/// enlarged.
-fn icon_pixels(img: &RgbaImage, size: u32) -> Vec<u8> {
-    let span = |i: u32, n: u32| {
-        let a = i * n / size;
-        a..((i + 1) * n / size).max(a + 1)
-    };
-    let mut out = Vec::with_capacity((size * size * 4) as usize);
-    for y in 0..size {
-        for x in 0..size {
-            let (mut sum, mut opaque, mut total) = ([0u32; 3], 0, 0);
-            for sy in span(y, img.height) {
-                for sx in span(x, img.width) {
-                    let i = ((sy * img.width + sx) * 4) as usize;
-                    let p = &img.data[i..i + 4];
-                    total += 1;
-                    if p[3] != 0 {
-                        opaque += 1;
-                        (0..3).for_each(|c| sum[c] += u32::from(p[c]));
-                    }
-                }
-            }
-            if opaque * 2 >= total {
-                let c = |i: usize| (sum[i] / opaque) as u8;
-                out.extend_from_slice(&[c(2), c(1), c(0), 255]);
-            } else {
-                out.extend_from_slice(&[0; 4]);
-            }
-        }
-    }
-    out
-}
-
-/// Open the tray menu at (x, y) and return the chosen command. The classic
-/// popup-menu rule: the owner must be the foreground window, or the menu
-/// does not close when the user clicks elsewhere, and a posted `WM_NULL`
-/// after it lets the next click open it again.
-fn tray_menu(hwnd: HWND, x: i32, y: i32) -> Option<Command> {
-    fn build(items: &[MenuItem], commands: &mut Vec<Command>) -> HMENU {
-        // SAFETY: AppendMenuW copies each label; a submenu belongs to its
-        // parent and is destroyed with it.
-        unsafe {
-            let menu = CreatePopupMenu();
-            for item in items {
-                let label = wide(&item.label);
-                if !item.children.is_empty() {
-                    let sub = build(&item.children, commands);
-                    AppendMenuW(menu, MF_POPUP, sub as usize, label.as_ptr());
-                } else if let Some(command) = item.command {
-                    commands.push(command);
-                    let check = if item.checked == Some(true) {
-                        MF_CHECKED
-                    } else {
-                        MF_UNCHECKED
-                    };
-                    AppendMenuW(menu, MF_STRING | check, commands.len(), label.as_ptr());
-                }
-            }
-            menu
-        }
-    }
-    let mut commands = Vec::new();
-    // Built and released before the menu's modal loop, which may re-enter
-    // `wndproc`.
-    let menu = TRAY.with_borrow(|t| t.as_ref().map(|(_, items)| build(items, &mut commands)))?;
-    // SAFETY: our window and our menu.
-    let id = unsafe {
-        SetForegroundWindow(hwnd);
-        let id = TrackPopupMenu(
-            menu,
-            TPM_RETURNCMD | TPM_NONOTIFY | TPM_RIGHTBUTTON,
-            x,
-            y,
-            0,
-            hwnd,
-            null(),
-        );
-        PostMessageW(hwnd, WM_NULL, 0, 0);
-        DestroyMenu(menu);
-        id
-    };
-    usize::try_from(id)
-        .ok()
-        .and_then(|id| commands.get(id.checked_sub(1)?).copied())
-}
-
 fn rect(r: RECT) -> PhysicalRect {
     PhysicalRect::new(
         r.left,
@@ -603,7 +380,6 @@ impl Window {
             if RegisterClassW(&wc) == 0 {
                 return Err(std::io::Error::last_os_error());
             }
-            TASKBAR_CREATED.set(RegisterWindowMessageW(wide("TaskbarCreated").as_ptr()));
             let hwnd = CreateWindowExW(
                 ex,
                 class.as_ptr(),
@@ -828,9 +604,16 @@ impl Surface for Window {
             SetWindowLongPtrW(self.hwnd, GWL_EXSTYLE, ex as isize);
             if on {
                 // Arrow keys need the focus. Windows grants it only if the
-                // foreground process allowed it (`pawprint move` does,
-                // through `allow_foreground`); dragging works regardless.
-                self.previous_focus = GetForegroundWindow();
+                // foreground process allowed it (`pawprint move` does, as
+                // `ipc::windows` connects); dragging works regardless. Move
+                // from the tray menu finds the badge in the foreground
+                // already: the keyboard goes back to whoever had it before.
+                let foreground = GetForegroundWindow();
+                self.previous_focus = if foreground == self.hwnd {
+                    windows_tray::foreground_before_menu()
+                } else {
+                    foreground
+                };
                 SetForegroundWindow(self.hwnd);
             } else {
                 if DRAGGING.get() {
@@ -844,14 +627,6 @@ impl Surface for Window {
             }
         }
     }
-}
-
-/// Called by `pawprint move` in the terminal, which usually owns the
-/// foreground: lets the badge take the keyboard for arrow-key nudging. The
-/// permission lasts until the next user input.
-pub fn allow_foreground() {
-    // SAFETY: no preconditions; fails harmlessly without foreground rights.
-    unsafe { AllowSetForegroundWindow(ASFW_ANY) };
 }
 
 pub fn doctor(report: &mut Report) {
@@ -894,35 +669,4 @@ pub fn doctor(report: &mut Report) {
     let displays = monitors();
     report.displays(&displays, select_display(&displays, "primary"));
     report.row("tray", "notification area icon (Shell_NotifyIconW)");
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn icon_pixels_keep_binary_alpha_at_16_and_32() {
-        let mut img = RgbaImage::new(32, 32);
-        // A full 2 × 2 block, a lone pixel, and a half-covered 2 × 2 box.
-        for (x, y) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
-            img.put(x, y, [200, 0, 0, 255]);
-        }
-        img.put(4, 0, [0, 200, 0, 255]);
-        img.put(6, 2, [0, 0, 100, 255]);
-        img.put(7, 2, [0, 0, 200, 255]);
-        let big = icon_pixels(&img, 32);
-        assert_eq!(&big[..4], &[0, 0, 200, 255], "BGRA at 1:1");
-        assert_eq!(&big[16..20], &[0, 200, 0, 255]);
-        let small = icon_pixels(&img, 16);
-        assert_eq!(small.len(), 16 * 16 * 4);
-        assert_eq!(&small[..4], &[0, 0, 200, 255], "a full box stays");
-        assert_eq!(&small[8..12], &[0; 4], "one pixel in four goes");
-        let i = (16 + 3) * 4;
-        assert_eq!(
-            &small[i..i + 4],
-            &[150, 0, 0, 255],
-            "half a box stays, averaged"
-        );
-        assert!(small.chunks(4).all(|p| p[3] == 0 || p[3] == 255));
-    }
 }

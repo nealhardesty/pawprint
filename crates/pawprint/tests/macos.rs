@@ -375,6 +375,9 @@ fn menu_choice(env: &Env, pid: u32, rect: [i32; 4], scale: f64) {
 fn badge_in_a_gui_session() {
     let mut env = Env::new("macos");
     env.set("TMPDIR", env.runtime().to_string_lossy());
+    // The runtime warns on stderr (the badge log) about every object
+    // autoreleased with no pool in place, which would leak (SPEC §11.2).
+    env.set("OBJC_DEBUG_MISSING_POOLS", "YES");
     let mut badge = env.run_badge();
     let pid = badge.0.id();
     let rect = wait_for("the badge to be placed", || {
@@ -483,6 +486,19 @@ fn badge_in_a_gui_session() {
         std::thread::sleep(Duration::from_millis(50));
     };
     assert!(code.success(), "exit {code}\n{}", env.log());
+    // The badge's main thread drains every object it autoreleases. AppKit's
+    // own helper threads leak a few at startup and when the menu-bar item
+    // is created; those aren't the badge's to fix.
+    let log = env.log();
+    let main = log
+        .lines()
+        .find_map(|l| l.split("macos: main thread ").nth(1))
+        .expect("the badge logs its main thread with --verbose");
+    let leaks = log
+        .lines()
+        .filter(|l| l.contains(&format!("MISSING POOLS: ({main})")))
+        .count();
+    assert_eq!(leaks, 0, "objects autoreleased without a pool:\n{log}");
     assert_eq!(env.pawprint(&["status"]).status.code(), Some(4));
     let sockets = std::fs::read_dir(env.runtime().join("pawprint"))
         .map(|d| d.count())
@@ -611,12 +627,30 @@ fn autostart_round_trip() {
     );
     assert!(env.ok(&["doctor"]).contains("run at login"));
     // The agent runs `pawprint run`, which stays up: no badge ran before.
-    let pid = wait_for("launchd to start the badge", || {
+    let agent_pid = || {
         launchctl_print()?
             .lines()
             .find_map(|l| l.trim().strip_prefix("pid = ")?.parse::<i32>().ok())
-    });
+    };
+    let pid = wait_for("launchd to start the badge", agent_pid);
     eprintln!("autostart: launchd started the badge as pid {pid}");
+
+    // `on` again with the same plist leaves the loaded agent alone; with a
+    // changed one (a stale install path) it reloads it, so launchd runs the
+    // new command.
+    env.ok(&["autostart", "on"]);
+    assert_eq!(agent_pid(), Some(pid), "an unchanged agent is not reloaded");
+    std::fs::write(
+        &plist,
+        text.replace("<string>run</string>", "<string>stale</string>"),
+    )
+    .unwrap();
+    env.ok(&["autostart", "on"]);
+    assert_eq!(std::fs::read_to_string(&plist).unwrap(), text);
+    let pid = wait_for("launchd to restart the badge", || {
+        agent_pid().filter(|&p| p != pid)
+    });
+    eprintln!("autostart: the changed agent was reloaded (badge pid {pid})");
 
     let off = env.ok(&["autostart", "off"]);
     assert!(off.contains("Autostart is off"), "{off}");
