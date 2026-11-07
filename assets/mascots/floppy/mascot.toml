@@ -1,0 +1,304 @@
+# Floppy, a bespoke oddball: a blue 3.5" diskette standing in the crate,
+# with a face doodled on its label. The metal shutter has a window; sliding
+# it left lines the window up with the hole and shows the brown disk inside.
+# The rare action flips the disk round to show its back, where the metal hub
+# spins, and flips it back.
+id = "floppy"
+name = "Floppy Disk"
+category = "oddballs"
+aliases = ["disk", "diskette"]
+accent = "slate"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "blue-1"      # plastic light
+"f" = "blue-2"      # plastic
+"F" = "blue-3"      # plastic shadow, label recess
+"w" = "white"       # label, shutter light
+"c" = "grey-1"      # label shadow, shutter metal
+"C" = "grey-2"      # shutter shadow
+"d" = "grey-4"      # hub holes
+"o" = "brown-3"     # the disk inside
+"O" = "brown-4"     # the disk inside, shadow
+"r" = "red-1"       # label stripe
+"R" = "red-2"       # label stripe shadow
+"p" = "pink-1"      # blush
+
+# Front: chamfered top-right corner, the hole the shutter covers, a striped
+# label. It continues behind the crate front.
+[layers.body]
+at = [4, 1]
+grid = """
+kkkkkkkkkkkkkkkkkkkkk...
+kllllllllllllllllllllk..
+klffffffOOOOffffffffffk.
+klffffffoooofffffffffffk
+klffffffffffffffffffffFk
+klfFFFFFFFFFFFFFFFFFFfFk
+klfrrrrrrrrrrrrrrrrrRfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+klfwwwwwwwwwwwwwwwwwcfFk
+"""
+
+# The disk seen edge-on, halfway through the flip.
+[layers."body.edge"]
+at = [13, 1]
+grid = """
+kkkkkk
+kllffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+klfffk
+"""
+
+# The back: plain plastic (the flip mirrors it, so the chamfer swaps sides).
+[layers."body.back"]
+at = [4, 1]
+grid = """
+kkkkkkkkkkkkkkkkkkkkk...
+kllllllllllllllllllllk..
+klffffffOOOOffffffffffk.
+klffffffoooofffffffffffk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+"""
+
+# The metal hub on the back, with its drive-pin hole at four turns
+# (hidden at rest).
+[layers."hub.a"]
+at = [12, 9]
+grid = """
+..wwcc..
+.wcccdC.
+wccCCdcC
+wcCddCcC
+wcCddCcC
+cccCCcCC
+.ccccCC.
+..CCCC..
+"""
+
+[layers."hub.b"]
+at = [12, 9]
+grid = """
+..wwcc..
+.wccccC.
+wccCCccC
+wcCddCcC
+wcCddCcC
+cccCCddC
+.ccccCC.
+..CCCC..
+"""
+
+[layers."hub.c"]
+at = [12, 9]
+grid = """
+..wwcc..
+.wccccC.
+wccCCccC
+wcCddCcC
+wcCddCcC
+ccdCCcCC
+.cdccCC.
+..CCCC..
+"""
+
+[layers."hub.d"]
+at = [12, 9]
+grid = """
+..wwcc..
+.wccccC.
+wddCCccC
+wcCddCcC
+wcCddCcC
+cccCCcCC
+.ccccCC.
+..CCCC..
+"""
+
+# The sliding metal shutter. Its window shows plastic at rest; slid 4 px
+# left, the window lines up with the hole.
+[layers.shutter]
+at = [9, 2]
+grid = """
+wwwwwwwwwwwC
+wcccccC....C
+wcccccC....C
+CCCCCCCCCCCC
+"""
+
+[layers.blush]
+at = [9, 11]
+grid = """
+pp..........pp
+"""
+
+[layers.eyes]
+at = [11, 9]
+grid = """
+kk......kk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+grid = """
+kk......kk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+grid = """
+kk......kk
+kk......kk
+"""
+
+[layers."eyes.up"]
+at = [11, 8]
+grid = """
+kk......kk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.mouth]
+at = [14, 12]
+grid = """
+k..k
+.kk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "hop"
+weight = 3
+
+# Signature: it glances up and slides its shutter open, then closed.
+[[actions]]
+name = "shutter"
+weight = 4
+frames = [
+  { ops = ["eyes=up"], ms = 300 },
+  { ops = ["eyes=up", "shutter+-2,0"], ms = 100 },
+  { ops = ["eyes=up", "shutter+-4,0"], ms = 800 },
+  { ops = ["eyes=up", "shutter+-2,0"], ms = 100 },
+  { ops = ["eyes=up"], ms = 250 },
+  { ops = ["eyes=closed"], ms = 140 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it flips round to show its back, spins the hub, and flips back.
+[[actions]]
+name = "flip"
+weight = 1
+frames = [
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = ["body=edge", "-shutter", "-blush", "-eyes", "-mouth"], ms = 110 },
+  { ops = ["body=back", "+hub.a", "-blush", "-eyes", "-mouth", "flipx"], ms = 400 },
+  { ops = ["body=back", "+hub.b", "-blush", "-eyes", "-mouth", "flipx"], ms = 140 },
+  { ops = ["body=back", "+hub.c", "-blush", "-eyes", "-mouth", "flipx"], ms = 140 },
+  { ops = ["body=back", "+hub.d", "-blush", "-eyes", "-mouth", "flipx"], ms = 140 },
+  { ops = ["body=back", "+hub.a", "-blush", "-eyes", "-mouth", "flipx"], ms = 400 },
+  { ops = ["body=edge", "-shutter", "-blush", "-eyes", "-mouth"], ms = 110 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]
