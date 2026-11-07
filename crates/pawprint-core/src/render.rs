@@ -68,6 +68,22 @@ pub fn scale(img: &RgbaImage, factor: u32) -> RgbaImage {
     out
 }
 
+/// A tray or menu-bar icon (SPEC §11.1.5, §11.2): `img` (the 32 × 32 rest
+/// frame) drawn nearest-neighbor into a `size` × `size` square with a
+/// transparent `margin` on every side. Nearest neighbor keeps the binary
+/// alpha and the pixel-art edges at any size.
+pub fn tray_icon(img: &RgbaImage, size: u32, margin: u32) -> RgbaImage {
+    let mut out = RgbaImage::new(size, size);
+    let inner = size.saturating_sub(2 * margin).max(1);
+    for y in 0..inner {
+        for x in 0..inner {
+            let p = img.pixel(x * img.width / inner, y * img.height / inner);
+            out.put(i64::from(x + margin), i64::from(y + margin), p);
+        }
+    }
+    out
+}
+
 /// Copy the opaque pixels of `src` onto `dst` with `src`'s top-left at `at`.
 fn blit(dst: &mut RgbaImage, src: &RgbaImage, at: Point) {
     for y in 0..src.height {
@@ -325,5 +341,31 @@ mod tests {
         let b = bundle();
         let img = render_badge(&owl_spec(Some("PROD-OWL-02"), 64), &b.crate_art, &b.font);
         assert_eq!((img.width, img.height), (142, 90));
+    }
+
+    #[test]
+    fn tray_icons_are_nearest_neighbor_with_binary_alpha() {
+        let mut art = RgbaImage::new(32, 32);
+        art.put(0, 0, [255, 0, 0, 255]);
+        art.put(1, 0, [0, 255, 0, 255]);
+        art.put(31, 31, [0, 0, 255, 255]);
+        // 1:1, and doubled: every art pixel kept.
+        assert_eq!(tray_icon(&art, 32, 0), art);
+        assert_eq!(tray_icon(&art, 64, 0), scale(&art, 2));
+        // Halved (a 16-px icon): every other art pixel.
+        let half = tray_icon(&art, 16, 0);
+        assert_eq!((half.width, half.height), (16, 16));
+        assert_eq!(half.pixel(0, 0), [255, 0, 0, 255]);
+        assert_eq!(half.pixel(15, 15), [0, 0, 0, 0]);
+        // The macOS menu bar's 18-point box with a 1-point margin, at 2x.
+        let boxed = tray_icon(&art, 36, 2);
+        assert_eq!(boxed.pixel(1, 1), [0, 0, 0, 0], "margin");
+        assert_eq!(boxed.pixel(2, 2), [255, 0, 0, 255]);
+        assert_eq!(boxed.pixel(3, 2), [0, 255, 0, 255]);
+        assert_eq!(boxed.pixel(33, 33), [0, 0, 255, 255]);
+        assert_eq!(boxed.pixel(34, 34), [0, 0, 0, 0], "margin");
+        // An odd size (20 px at 125%) keeps binary alpha.
+        let odd = tray_icon(&art, 20, 0);
+        assert!(odd.data.chunks(4).all(|p| p[3] == 0 || p[3] == 255));
     }
 }
