@@ -1,0 +1,15 @@
+[package]
+name = "pawprint-sprite"
+description = "Compiler for PAWPRINT's text pixel-art mascot sources"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+png.workspace = true
+postcard.workspace = true
+serde.workspace = true
+toml.workspace = true
