@@ -1,0 +1,186 @@
+# Shark, on sea-creature. A dark slate shark face-on: a tall dorsal fin on
+# top (`fin`, with a mirrored `fin.back`), countershaded pale belly, gill
+# slits on both cheeks, and a permanent toothy grin. The signature dives so
+# only the fin is left circling at the waterline, then pops up with the
+# grin wide open; the rare one flashes a gleaming tooth and a wink.
+id = "shark"
+name = "Shark"
+category = "aquatic"
+aliases = []
+accent = "slate"
+extends = "sea-creature"
+
+[palette]
+"l" = "grey-2"      # skin light
+"f" = "grey-3"      # skin
+"F" = "grey-4"      # skin shadow, gill slits
+"w" = "grey-1"      # belly
+"t" = "white"       # NEW: teeth
+"p" = "red-2"       # mouth inside
+
+[layers.body]
+at = [4, 16]
+grid = """
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+klffffffffffFFFFFFFFFFFk
+"""
+
+[layers.head]
+at = [4, 5]
+grid = """
+........kkkkkkkk........
+.....kkkllllllffkkk.....
+...kkllllffffffffFFkk...
+..kllffffffffffffffFFk..
+.klfffffffffffffffffFFk.
+klfkffffffffffffffffkFFk
+klFfkkkkkkkkkkkkkkkkfFfk
+klFfkpttttttttttttpkfFfk
+kwFwkpptpptpptpptppkwFwk
+kwwwwkkkkkkkkkkkkkkwwwwk
+kwwwwwwwwwwwwwwwwwwwwwwk
+"""
+
+# The base side fins, made to follow the head so they dive with it.
+[layers.fins]
+at = [1, 13]
+follows = "head"
+grid = """
+.kk........................kk.
+klfk......................kFfk
+kffFk....................kFFFk
+.kfFFk..................kFFFk.
+..kkFk..................kFkk..
+"""
+
+# The dorsal fin is its own slot, so it can circle while the head is under.
+[layers.fin]
+at = [12, 0]
+grid = """
+.....kk.
+....klfk
+...klffk
+..klfffk
+.klffffk
+klffffFk
+"""
+
+[layers."fin.back"]
+at = [12, 0]
+grid = """
+.kk.....
+klfk....
+klffk...
+klfffk..
+klffFFk.
+klfffFFk
+"""
+
+[layers.eyes]
+at = [9, 8]
+grid = """
+hk..........hk
+kk..........kk
+"""
+
+[layers."eyes.closed"]
+at = [9, 9]
+grid = """
+kk..........kk
+"""
+
+[layers."eyes.left"]
+at = [8, 8]
+grid = """
+hk..........hk
+kk..........kk
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+grid = """
+hk..........hk
+kk..........kk
+"""
+
+[layers."eyes.happy"]
+at = [8, 8]
+grid = """
+.kk........kk.
+k..k......k..k
+"""
+
+[layers."eyes.wink"]
+at = [9, 8]
+grid = """
+hk............
+kk..........kk
+"""
+
+[layers."mouth.open"]
+at = [8, 11]
+grid = """
+kkkkkkkkkkkkkkkk
+kpttttttttttttpk
+kpptpptpptpptppk
+kppppppppppppppk
+kppptpptpptpptpk
+kpttttttttttttpk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: dives, leaving the fin to circle the crate, then pops up grinning.
+[[actions]]
+name = "fin-circle"
+weight = 4
+frames = [
+  { ops = ["head+0,3", "fin+0,3"], ms = 120 },
+  { ops = ["head+0,17", "fin+0,11", "water=ripple"], ms = 200 },
+  { ops = ["head+0,17", "fin+-7,11"], ms = 220 },
+  { ops = ["head+0,17", "fin=back", "fin+-3,11", "water=ripple"], ms = 220 },
+  { ops = ["head+0,17", "fin=back", "fin+5,11"], ms = 220 },
+  { ops = ["head+0,17", "fin+2,11", "water=ripple"], ms = 220 },
+  { ops = ["head+0,3", "fin+0,3", "+mouth.open", "eyes=happy"], ms = 120 },
+  { ops = ["+mouth.open", "eyes=happy"], ms = 700 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the biggest grin yet, a gleam off one tooth, and a wink.
+[[actions]]
+name = "tooth-gleam"
+weight = 1
+frames = [
+  { ops = ["+mouth.open"], ms = 300 },
+  { ops = ["+mouth.open", "prop:sparkle@19,9"], ms = 300 },
+  { ops = ["+mouth.open", "eyes=wink", "prop:sparkle@19,8"], ms = 700 },
+  { ops = ["eyes=wink"], ms = 200 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,94 @@
+# Narwhal, on sea-creature. A pale, icy blue head speckled with darker
+# spots on top, the base's flippers at the waterline, and a long spiral
+# ivory tusk sweeping up to the top-right corner (`tusk`, following the
+# head). The signature is a gentle bob that makes the tusk tip twinkle; the
+# rare one watches a bubble rise from the water and pop on the tusk.
+id = "narwhal"
+name = "Narwhal"
+category = "aquatic"
+aliases = []
+accent = "sky"
+extends = "sea-creature"
+
+[palette]
+"l" = "white"       # skin light
+"f" = "blue-1"      # skin
+"F" = "blue-2"      # skin shadow, mouth line
+"s" = "blue-2"      # NEW: spots
+"w" = "white"       # belly
+"y" = "cream"       # NEW: tusk
+"Y" = "brown-1"     # NEW: tusk spiral
+
+[layers.head]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllllllffkk...
+..klllfsfffffsffFk..
+.kllsffffsffffsfFFk.
+kllffffsfffsffffsfFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffFffffffFffffFk
+klffwwwFFFFFFwwwffFk
+klfwwwwwwwwwwwwwwfFk
+lfwwwwwwwwwwwwwwwwfF
+"""
+
+[layers.tusk]
+at = [15, 0]
+follows = "head"
+grid = """
+............kk.
+..........kkyk.
+........kkYyYk.
+......kkyYyYk..
+....kkYyYykk...
+..kkyYyYkk.....
+kkYyYykk.......
+kyYkk..........
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a slow bob, and the tusk tip twinkles twice.
+[[actions]]
+name = "tusk-sparkle"
+weight = 4
+frames = [
+  { ops = ["head+0,1"], ms = 300 },
+  { ops = [], ms = 200 },
+  { ops = ["eyes=happy", "prop:sparkle@25,-2"], ms = 350 },
+  { ops = ["eyes=happy"], ms = 150 },
+  { ops = ["eyes=happy", "prop:sparkle@25,-2"], ms = 350 },
+  { ops = ["head+0,1"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a bubble rises out of the water, drifts onto the tusk, and pops.
+[[actions]]
+name = "bubble-pop"
+weight = 1
+frames = [
+  { ops = ["eyes=right", "prop:bubble@24,12"], ms = 300 },
+  { ops = ["eyes=right", "prop:bubble@25,8"], ms = 300 },
+  { ops = ["eyes=right", "prop:bubble@25,4"], ms = 300 },
+  { ops = ["eyes=right", "prop:bubble@25,0"], ms = 400 },
+  { ops = ["eyes=closed", "prop:sparkle@25,-2"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

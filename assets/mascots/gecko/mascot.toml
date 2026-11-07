@@ -1,0 +1,236 @@
+# Gecko, on critter. A spotted leopard gecko in profile, facing right: a
+# rounded snout with the wide gecko smile, a big round eye (green iris, slit
+# pupil), a fat banded tail curled up behind it (`tail`, so tail-flick
+# works), and splayed legs with sticky white toe pads on the rim. The
+# signature licks its own eyeball (`tongue.reach`, `tongue.lick`); the rare
+# one does lizard push-ups and shows off.
+id = "gecko"
+name = "Gecko"
+category = "critters"
+aliases = ["lizard"]
+accent = "moss"
+extends = "critter"
+
+[palette]
+"l" = "yellow-1"    # skin light
+"f" = "yellow-2"    # skin
+"F" = "orange-3"    # skin shadow, smile, nostrils
+"s" = "brown-3"     # NEW: leopard spots and tail bands
+"w" = "cream"       # chin and belly
+"e" = "green-1"     # iris
+"m" = "white"       # NEW: toe pads
+"p" = "pink-2"      # mouth and tongue
+
+[layers.body]
+at = [4, 20]
+grid = """
+kwwwwwwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwwwwwwk
+"""
+
+[layers.head]
+at = [4, 6]
+grid = """
+................kkkkkkk....
+..............kklllllllkk..
+.............klllfsffffffk.
+............kllffffffsffffk
+.........kkklffsffffffffffk
+.....kkkklllffffFfffffffffk
+..kkkllllffsffsffFFFFFFFFFk
+.kllffsfffsfffffwwwwwwwwwk.
+klffsffffffffsfffkkkkkkkk..
+klffffffsffffffsfffk.......
+klfffsfffffsfffffsffk......
+klwwwwwwwwwwwwwwwwwwk......
+kwwwwwwwwwwwwwwwwwwwk......
+kwwwwwwwwwwwwwwwwwwwk......
+"""
+
+[layers.eyes]
+at = [21, 7]
+follows = "head"
+grid = """
+.kkk.
+khkek
+kekek
+.kkk.
+"""
+
+[layers."eyes.closed"]
+at = [21, 7]
+follows = "head"
+grid = """
+.kkk.
+kfffk
+kkkkk
+.kkk.
+"""
+
+[layers."eyes.left"]
+at = [21, 7]
+follows = "head"
+grid = """
+.kkk.
+kkhek
+kkeek
+.kkk.
+"""
+
+[layers."eyes.right"]
+at = [21, 7]
+follows = "head"
+grid = """
+.kkk.
+kehkk
+keekk
+.kkk.
+"""
+
+[layers."eyes.happy"]
+at = [21, 7]
+follows = "head"
+grid = """
+.kkk.
+kkfkk
+kfffk
+.kkk.
+"""
+
+[layers.nose]
+at = [28, 10]
+follows = "head"
+grid = """
+F
+"""
+
+[layers."nose.sniff"]
+at = [28, 9]
+follows = "head"
+grid = """
+F
+"""
+
+[layers."mouth.open"]
+at = [21, 12]
+follows = "head"
+grid = """
+kkkkkkkkkk
+kpppppppk.
+.kkkkkkk..
+"""
+
+[layers."tongue.reach"]
+at = [28, 11]
+follows = "head"
+grid = """
+.kkk
+pppk
+.kkk
+"""
+
+[layers."tongue.lick"]
+at = [22, 6]
+follows = "head"
+grid = """
+..kkkkkkk.
+.kpppppppk
+.kkkkkpppk
+......kppk
+......kppk
+......kppk
+......pppk
+"""
+
+[layers.feet]
+at = [5, 16]
+grid = """
+...kfk.........kfk....
+...kffk.......kffk....
+m.kfffk.m..m.kfffk.m..
+kmkmkmkmk..kmkmkmkmkmk
+"""
+
+[layers.tail]
+at = [0, 8]
+grid = """
+.kk...
+kffk..
+kfsk..
+kffk..
+ksfk..
+kffk..
+kfsfk.
+kffff.
+.kfsff
+..kkkk
+"""
+
+[layers."tail.flick"]
+at = [0, 7]
+grid = """
+..kk..
+.kffk.
+kfsk..
+kffk..
+ksfk..
+kffk..
+kfsfk.
+kffff.
+.kfsff
+..kkkk
+"""
+
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the tongue curls up and wipes right across one eye.
+[[actions]]
+name = "eye-lick"
+weight = 4
+frames = [
+  { ops = ["+mouth.open"], ms = 120 },
+  { ops = ["+mouth.open", "+tongue.reach"], ms = 100 },
+  { ops = ["+mouth.open", "+tongue.lick"], ms = 300 },
+  { ops = ["+mouth.open", "+tongue.reach"], ms = 100 },
+  { ops = ["+mouth.open", "+tongue.lick"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 150 },
+]
+
+# Rare: three lizard push-ups, toes stuck to the rim, then a proud sparkle.
+[[actions]]
+name = "push-ups"
+weight = 1
+frames = [
+  { ops = ["all+0,-2", "feet+0,2"], ms = 160 },
+  { ops = [], ms = 160 },
+  { ops = ["all+0,-2", "feet+0,2"], ms = 160 },
+  { ops = [], ms = 160 },
+  { ops = ["all+0,-2", "feet+0,2"], ms = 160 },
+  { ops = ["eyes=happy", "prop:sparkle@24,0"], ms = 600 },
+  { ops = [], ms = 200 },
+]

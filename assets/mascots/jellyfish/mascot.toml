@@ -1,0 +1,184 @@
+# Jellyfish, bespoke. A soft pink bell with a shine and a frilly lavender
+# rim, a sleepy little face, and long trailing strands around two frilly
+# oral arms that hang into the crate (`tentacles`, +sway, +knot). The
+# signature pulses: the bell squeezes (`head.squeeze`), it rises, and it
+# drifts back down. The rare one ties its tentacles in a bow by mistake.
+id = "jellyfish"
+name = "Jellyfish"
+category = "aquatic"
+aliases = ["jelly", "medusa"]
+accent = "violet"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "white"       # shine
+"f" = "pink-1"      # bell
+"F" = "pink-2"      # bell shadow, smile
+"w" = "purple-1"    # frilly rim
+"o" = "purple-1"    # oral arms
+"t" = "purple-2"    # trailing strands
+"h" = "white"       # eye highlight
+
+[layers.head]
+at = [7, 2]
+grid = """
+.....kkkkkkkk.....
+...kklllfffffkk...
+..kllfffffffffFk..
+.klfffffffffffFFk.
+.kffffffffffffFFk.
+kffffffffffffffFFk
+kffffffffffffffFFk
+kffffffFffFffffFFk
+kfffffffFFfffffFFk
+kwwwwwwwwwwwwwwwwk
+.kwwkwwkwwkwwkwwk.
+..kk.kk.kk.kk.kk..
+"""
+
+[layers."head.squeeze"]
+at = [8, 1]
+grid = """
+....kkkkkkkk....
+..kklllfffffkk..
+.kllfffffffffFk.
+.klfffffffffFFk.
+klfffffffffffFFk
+kffffffffffffFFk
+kffffffffffffFFk
+kffffffffffffFFk
+kfffffFffFfffFFk
+kffffffFFffffFFk
+kwwwwwwwwwwwwwwk
+.kwwkwwkkwwkwwk.
+..kk.kk..kk.kk..
+"""
+
+[layers.tentacles]
+at = [7, 14]
+follows = "head"
+grid = """
+..t.t.kook...t.t..
+.t..t..kook..t..t.
+.t.t....kook..t.t.
+..tt...kook...tt..
+..t.t.kook...t.t..
+.t..t..kok...t..t.
+"""
+
+[layers."tentacles.sway"]
+at = [7, 14]
+follows = "head"
+grid = """
+.t..t...kook.t..t.
+.t.t...kook...t.t.
+..tt..kook....tt..
+..t.t..kok...t.t..
+.t..t.kook...t..t.
+.t.t...kook...t.t.
+"""
+
+[layers."tentacles.knot"]
+at = [7, 14]
+follows = "head"
+grid = """
+..t.t........t.t..
+...ttkk...kk.tt...
+...tkookkkooktt...
+..t.kookkkookt.t..
+..t.tkkk.kkk.t.t..
+.t..t..t.t...t..t.
+"""
+
+
+[layers.eyes]
+at = [11, 7]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 8]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 7]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 7]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 7]
+follows = "head"
+grid = """
+.kk....kk.
+k..k..k..k
+"""
+
+[layers."mouth.open"]
+at = [14, 9]
+follows = "head"
+grid = """
+kkkk
+kFFk
+.kk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the bell squeezes, it pulses up, and it drifts slowly down.
+[[actions]]
+name = "pulse"
+weight = 4
+frames = [
+  { ops = ["head=squeeze", "tentacles=sway"], ms = 200 },
+  { ops = ["head+0,-1"], ms = 150 },
+  { ops = ["head+0,-2", "tentacles=sway"], ms = 400 },
+  { ops = ["head+0,-2"], ms = 400 },
+  { ops = ["head+0,-1", "tentacles=sway"], ms = 500 },
+  { ops = [], ms = 400 },
+]
+
+# Rare: the tentacles end up tied in a little bow; a worried wobble, then
+# they come undone.
+[[actions]]
+name = "tangle"
+weight = 1
+frames = [
+  { ops = ["tentacles=sway"], ms = 200 },
+  { ops = ["tentacles=knot", "eyes=left"], ms = 500 },
+  { ops = ["tentacles=knot", "eyes=right", "prop:sweat@24,3"], ms = 500 },
+  { ops = ["tentacles=knot", "head=squeeze", "prop:sweat@24,4"], ms = 300 },
+  { ops = ["tentacles=sway", "head+0,-1"], ms = 250 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,167 @@
+# Dolphin, on sea-creature. A grey bottlenose arching out of the water in
+# profile, facing left: a round melon, a long beak with a smile line, a
+# white throat and belly, a hooked dorsal fin on its back (`dorsal`), and a
+# little flipper under the chest. Everything follows the head, so `head+0,-3`
+# lifts the whole dolphin while the water stays put: the signature leaps and
+# dips under, and the rare one twirls at the top of the leap.
+id = "dolphin"
+name = "Dolphin"
+category = "aquatic"
+aliases = ["porpoise"]
+accent = "teal"
+extends = "sea-creature"
+
+[palette]
+"l" = "grey-1"      # skin light
+"f" = "grey-2"      # skin
+"F" = "grey-3"      # skin shadow, smile line
+"w" = "white"       # throat and belly
+
+[layers.body]
+at = [17, 16]
+follows = "head"
+grid = """
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+kwwwfffffffFk
+"""
+
+[layers.fins]
+at = [8, 14]
+follows = "head"
+grid = """
+.kffk
+kFFk.
+"""
+
+[layers.head]
+at = [1, 3]
+grid = """
+.........kkkkkkk.............
+.......kklllllllkkk..........
+......kllllffffffffkk........
+.....klllfffffffffffFkk......
+.kkkkllffffffffffffffFFk.....
+klffffffffffffffffffffFFk....
+kFFFFFFFFfffffffffffffffFk...
+.kwwwwwwwwwffffffffffffffFk..
+...kkwwwwwwwwwfffffffffffFk..
+.....kkkwwwwwwwwffffffffffFk.
+........kkkwwwwwwwffffffffFk.
+...........kkkwwwwwffffffffFk
+..............kkkwwwfffffffFk
+"""
+
+[layers.dorsal]
+at = [14, 0]
+follows = "head"
+grid = """
+.........kk
+.......kkfk
+.....kklffk
+...kklfffFk
+..lfffffFk.
+......fFk..
+"""
+
+[layers.eyes]
+at = [10, 7]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.closed"]
+at = [10, 8]
+grid = """
+kk
+"""
+
+[layers."eyes.left"]
+at = [9, 7]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.right"]
+at = [11, 7]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.happy"]
+at = [9, 7]
+grid = """
+.kk.
+k..k
+"""
+
+[layers."mouth.open"]
+at = [2, 9]
+grid = """
+kkkkkkkk
+.kpppppk
+..kkkkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "hop"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a crouch, a leap clear of the water, a dive under, and back up.
+[[actions]]
+name = "leap"
+weight = 4
+frames = [
+  { ops = ["head+0,1"], ms = 150 },
+  { ops = ["head+0,-2", "water=ripple"], ms = 110 },
+  { ops = ["head+0,-3", "eyes=happy", "+mouth.open"], ms = 400 },
+  { ops = ["head+0,-2"], ms = 110 },
+  { ops = ["head+0,5", "water=ripple"], ms = 110 },
+  { ops = ["head+0,19", "water=ripple"], ms = 400 },
+  { ops = ["head+0,8"], ms = 130 },
+  { ops = ["head+0,2"], ms = 150 },
+]
+
+# Rare: the same leap with a twirl at the top, landing the other way round
+# for a moment before it turns back.
+[[actions]]
+name = "twirl"
+weight = 1
+frames = [
+  { ops = ["head+0,1"], ms = 150 },
+  { ops = ["head+0,-3", "water=ripple"], ms = 110 },
+  { ops = ["head+0,-3", "eyes=closed"], ms = 160 },
+  { ops = ["head+0,-3", "eyes=closed", "flipx"], ms = 160 },
+  { ops = ["head+0,-3", "eyes=happy", "+mouth.open"], ms = 160 },
+  { ops = ["head+0,-3", "eyes=happy", "+mouth.open", "flipx"], ms = 500 },
+  { ops = ["head+0,19", "water=ripple", "flipx"], ms = 400 },
+  { ops = ["head+0,8"], ms = 130 },
+  { ops = ["head+0,2"], ms = 150 },
+]

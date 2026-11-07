@@ -1,0 +1,240 @@
+# Octopus, bespoke. A round lavender mantle with a shine, big glossy eyes,
+# pink cheeks, and a little smile; arms hang over the crate rim, the outer
+# two curling at the tips. The right outer arm is its own slot (`arm`, with
+# `arm.up` and `arm.curl`) for the signature curl. The rare action inks a
+# little cloud (`ink.puff`, `ink.cloud`, `ink.wisp`) and hides behind it.
+id = "octopus"
+name = "Octopus"
+category = "aquatic"
+aliases = ["octo", "kraken"]
+accent = "violet"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "white"       # shine
+"f" = "purple-1"    # skin
+"F" = "purple-2"    # skin shadow, smile
+"c" = "pink-1"      # cheeks and suckers
+"h" = "white"       # eye highlight
+"i" = "grey-4"      # ink cloud
+"I" = "grey-3"      # ink cloud light
+
+[layers.head]
+at = [5, 1]
+grid = """
+.......kkkkkkkk.......
+....kkkffffffffkkk....
+..kkfllfffffffffFFkk..
+.kfllfffffffffffffFFk.
+kfflfffffffffffffffFFk
+kffffffffffffffffffFFk
+kffffffffffffffffffFFk
+kffffffffffffffffffFFk
+kffffffffffffffffffFFk
+kfccffffffffffffffccFk
+kffffffffFffFffffffFFk
+kfffffffffFFfffffffFFk
+.kFFFFFFFFFFFFFFFFFFk.
+"""
+
+[layers.tentacles]
+at = [0, 13]
+follows = "head"
+grid = """
+.....kffk.kfk.kffk.kfk.
+....kffk..kfk.kffk.kfk.
+.kk.kfk...kck.kcck.kck.
+kfk.kfk...kfk.kffk.kfk.
+kfkkffk..kfk..kcck..kfk
+kfffffk..kck..kffk..kck
+.kkkkk...kk....kk....kk
+"""
+
+[layers.arm]
+at = [23, 13]
+follows = "head"
+grid = """
+kffk.....
+.kffk....
+..kfk.kk.
+..kfk.kfk
+..kffkkfk
+..kfffffk
+...kkkkk.
+"""
+
+[layers."arm.up"]
+at = [23, 5]
+follows = "head"
+grid = """
+......kk.
+.....kffk
+.....kfk.
+....kffk.
+....kfk..
+...kffk..
+...kfk...
+..kffk...
+.kffk....
+"""
+
+[layers."arm.curl"]
+at = [23, 4]
+follows = "head"
+grid = """
+....kkk..
+...kfffk.
+...kfkfk.
+....kkfk.
+....kffk.
+....kfk..
+...kffk..
+...kfk...
+..kffk...
+.kffk....
+"""
+
+[layers."ink.puff"]
+at = [12, 12]
+grid = """
+..kkkk..
+..kIik..
+.kiiiik.
+..kiik..
+..kkkk..
+"""
+
+[layers."ink.cloud"]
+at = [5, 3]
+grid = """
+.........kkkkk........
+........kIIiiik.......
+......kkIIiiiiikk.....
+...kkkiiIiiiiiiIikkk..
+..kiIIiiiiiiiiIIiiiik.
+..kIIiiiiiiiiIIiiiiik.
+..kIiiiiiIIiIIiiiiiik.
+.kiiiiiiIIiiiiiiiiiiik
+..kiiiiiIiiiiiiiiiiik.
+..kiiiiiiiiiiiiiiiiik.
+..kiiiiiiiiiiiiiiiiik.
+...kkkiiiiiiiiiiikkk..
+......kkkiiiiikkk.....
+.........kkkkk........
+"""
+
+[layers."ink.wisp"]
+at = [5, 4]
+grid = """
+................kkk...
+...kkk.........kIiik..
+..kIiik........kiiik..
+..kiiik........kiiik..
+..kiiik.........kkk...
+...kkk...kkk..........
+........kIiik.........
+........kiiik.........
+........kiiik.........
+.........kkk..........
+"""
+
+
+[layers.eyes]
+at = [9, 7]
+follows = "head"
+grid = """
+.kk......kk.
+khkk....khkk
+kkkk....kkkk
+.kk......kk.
+"""
+
+[layers."eyes.closed"]
+at = [9, 9]
+follows = "head"
+grid = """
+kkkk....kkkk
+"""
+
+[layers."eyes.left"]
+at = [8, 7]
+follows = "head"
+grid = """
+.kk......kk.
+hkkk....hkkk
+kkkk....kkkk
+.kk......kk.
+"""
+
+[layers."eyes.right"]
+at = [10, 7]
+follows = "head"
+grid = """
+.kk......kk.
+kkhk....kkhk
+kkkk....kkkk
+.kk......kk.
+"""
+
+[layers."eyes.happy"]
+at = [9, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers."mouth.open"]
+at = [14, 11]
+follows = "head"
+grid = """
+kkkk
+kcck
+.kk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "curious"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the right arm lifts off the rim, curls up, and settles back.
+[[actions]]
+name = "arm-curl"
+weight = 4
+frames = [
+  { ops = ["arm=up", "eyes=right"], ms = 200 },
+  { ops = ["arm=curl", "eyes=right"], ms = 700 },
+  { ops = ["arm=up", "eyes=happy"], ms = 200 },
+  { ops = ["arm=curl", "eyes=happy"], ms = 400 },
+  { ops = ["arm=up"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: startled, it squirts a little ink cloud and hides behind it, then
+# peeks out once the ink thins.
+[[actions]]
+name = "ink-cloud"
+weight = 1
+frames = [
+  { ops = ["all+0,-1", "prop:bang@26,0"], ms = 150 },
+  { ops = ["+ink.puff", "+mouth.open"], ms = 150 },
+  { ops = ["+ink.cloud", "head+0,6"], ms = 250 },
+  { ops = ["+ink.cloud", "head+0,19"], ms = 500 },
+  { ops = ["+ink.wisp", "head+0,19"], ms = 400 },
+  { ops = ["head+0,8", "eyes=left"], ms = 400 },
+  { ops = ["head+0,8", "eyes=right"], ms = 400 },
+  { ops = ["head+0,4"], ms = 150 },
+  { ops = [], ms = 200 },
+]
