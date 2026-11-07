@@ -162,7 +162,7 @@ pub fn pick_action(mascot: &Mascot, local_hour: u8, roll: u64) -> Option<usize> 
         if !a.when.matches(local_hour) || a.frames.is_empty() {
             0
         } else if mascot.nocturnal && night && a.when == When::Night {
-            u64::from(a.weight * NOCTURNAL_NIGHT_BOOST)
+            u64::from(a.weight) * u64::from(NOCTURNAL_NIGHT_BOOST)
         } else {
             u64::from(a.weight)
         }
@@ -302,6 +302,17 @@ pub(crate) mod tests {
             "nocturnal: night actions weigh 3x"
         );
         assert_eq!(pick_action(&mascot(&[]), 12, 5), None);
+    }
+
+    #[test]
+    fn huge_weights_never_overflow() {
+        let mut m = mascot(&[
+            ("a", u32::MAX, When::Night, &[(1, 200)]),
+            ("b", u32::MAX, When::Any, &[(1, 200)]),
+        ]);
+        m.nocturnal = true;
+        assert_eq!(pick_action(&m, 22, u64::from(u32::MAX) * 3 - 1), Some(0));
+        assert_eq!(pick_action(&m, 22, u64::from(u32::MAX) * 3), Some(1));
     }
 
     #[test]

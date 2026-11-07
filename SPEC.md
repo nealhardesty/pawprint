@@ -397,6 +397,11 @@ Rules apply in order. The first one that produces a mascot wins.
   `prod-owl02` → `[prod, owl]`.
 - For rule 3, `squash(short)` is computed after removing all-digit tokens:
   `red-panda-01` → `redpanda`.
+- Because host names lose their digits before lookup, an alias or id that
+  contains a digit (`r2d2`, `owl2`) can never match one. Such a mascot is
+  still chosen by `mascot = "<id>"` or the fallback. Validation rejects
+  digits in bundled ids and aliases and warns about them in user mascots
+  ([12.11](#1211-validation-rules) rule 8).
 
 **Rule 4 in detail.** For `n` from `len(tokens)` down to 1, form every run of
 `n` adjacent tokens, concatenated (`[prod, red, panda]` at `n = 2` gives
@@ -1673,6 +1678,8 @@ Details the compiler enforces:
   `+slot` shows a slot's default layer; `+slot.variant` and `slot=variant`
   show that variant.
 - Offsets are signed integers after a `+`: `head+-1,0` moves the head left.
+  Every op offset, prop position, and `prop_offset` component is within
+  −64 to 64 (twice the frame); anything larger is an error.
 - **`follows = "<slot>"`** on a layer makes its slot take that slot's
   offsets as well as its own, so `head+1,0` carries the eyes, ears, nose, and
   mouth that follow `head`. Chains are allowed (`eyes` follows `disc`
@@ -1686,7 +1693,7 @@ Details the compiler enforces:
   `prop:` ops in the mascot's own actions. A base may set it; a mascot's own
   value replaces the base's. PNG mascots can't use templates, so they can't
   set it. Props are clipped to the frame, so keep the moved props inside it.
-- `ms` defaults to 200 and `weight` to 5. A template action takes the
+- `ms` defaults to 200 and `weight` to 5 (1–1000). A template action takes the
   template's `weight` and `when` unless the mascot's `[[actions]]` entry sets
   its own, and `name` defaults to the template's name.
 - Grids: one glyph per pixel, any non-whitespace character; leading
@@ -1972,16 +1979,21 @@ M3. The build also fails if no mascot is eligible for the fallback.
    palette. Every palette value is a master palette name (bundled) or a
    name/`#rrggbb` (user).
 3. Every op references an existing slot or variant. Every template's `needs`
-   are satisfied.
+   are satisfied. Op offsets, prop positions, and `prop_offset` are within
+   −64 to 64.
 4. Compiled frames: every alpha is 0 or 255 (always true for grids, checked
    for PNG mascots). More than 16 colors is a warning, and a warning in a
    bundled mascot fails the build.
-5. At least one action. Durations 80–2000 ms. Each action ≤ 4000 ms total.
+5. At least one action. Weights 1–1000. Durations 80–2000 ms. Each action
+   ≤ 4000 ms total.
    Every bundled mascot has a signature (non-template) action.
 6. The rest frame has opaque pixels in rows 0–19.
 7. `accent` resolves.
-8. Squashed aliases are unique across the catalog (bundled check). For user
-   mascots, collisions are a warning, and the user mascot wins.
+8. Squashed aliases are unique across the catalog (bundled check), also with
+   their digits dropped. For user mascots, collisions are a warning, and the
+   user mascot wins. An id or alias that contains a digit never matches a
+   host name ([5.3](#53-choosing-a-mascot)), so it is an error in a bundled
+   mascot and a warning in a user mascot.
 9. **Catalog gates (bundled only, `make package` only):** ≥ `minimum`
    (100) valid entries, every `required` id present, and every showcase
    (required) mascot has ≥ 2 template actions, a signature action (not from

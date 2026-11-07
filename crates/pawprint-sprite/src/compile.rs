@@ -21,6 +21,11 @@ pub const MAX_MS: u32 = 2000;
 pub const MAX_ACTION_MS: u32 = 4000;
 /// Weight of an action that doesn't set one.
 pub const DEFAULT_WEIGHT: u32 = 5;
+/// Largest action weight, so weighted picks never overflow (SPEC §12.11).
+pub const MAX_WEIGHT: u32 = 1000;
+/// Largest op offset, prop position, or `prop_offset` component, either
+/// sign, in art pixels: twice the frame, so anything larger is a typo.
+pub const MAX_OP_OFFSET: i32 = 64;
 /// Rows that must show something at rest, so the mascot peeks out of the
 /// crate (SPEC §4.2).
 const VISIBLE_ROWS: usize = 20;
@@ -271,7 +276,7 @@ fn compile_file(
     read_file: &dyn Fn(&str) -> Result<Vec<u8>, String>,
     report: &mut Report,
 ) -> Option<Mascot> {
-    let identity = Identity::check(&file, dir_name, lib, report);
+    let identity = Identity::check(&file, dir_name, lib, origin, report);
     let base = file.extends.clone();
     let mut out = Interner::default();
     let actions = if let Some(sprite) = file.sprite.clone() {
@@ -350,6 +355,7 @@ impl Identity {
         file: &MascotFile,
         dir_name: Option<&str>,
         lib: &Library,
+        origin: Origin,
         report: &mut Report,
     ) -> Option<Identity> {
         let start = report.errors.len();
@@ -385,6 +391,19 @@ impl Identity {
                     "aliases",
                     format!("alias {alias:?} has no letters or digits"),
                 );
+            }
+        }
+        // Host names are matched with their digits dropped (SPEC §5.3), so
+        // a name with a digit never matches: an error for bundled mascots,
+        // a warning for user mascots.
+        let names = std::iter::once(("id", &id)).chain(file.aliases.iter().map(|a| ("aliases", a)));
+        for (context, name) in names.filter(|(_, n)| n.bytes().any(|b| b.is_ascii_digit())) {
+            let message = format!(
+                "{name:?} contains a digit; host names are matched with digits dropped, so it never matches one"
+            );
+            match origin {
+                Origin::Bundled => report.error(context, message),
+                Origin::User => report.warn(context, message),
             }
         }
         let accent = file.accent.clone().unwrap_or_default();
@@ -562,15 +581,26 @@ fn split_layer_name(name: &str) -> (String, Option<String>) {
     }
 }
 
+fn in_op_range(v: i32) -> bool {
+    (-MAX_OP_OFFSET..=MAX_OP_OFFSET).contains(&v)
+}
+
 /// Parse one layer op (SPEC §12.3). Offsets are signed: `head+-1,0`.
 fn parse_op(s: &str) -> Result<Op, String> {
     let bad = || format!("cannot parse op {s:?}");
+    let parse_xy = |xy: &str| match parse_xy(xy) {
+        Some((x, y)) if in_op_range(x) && in_op_range(y) => Ok((x, y)),
+        Some((x, y)) => Err(format!(
+            "op {s:?}: {x},{y} is outside -{MAX_OP_OFFSET} to {MAX_OP_OFFSET}"
+        )),
+        None => Err(bad()),
+    };
     if s == "flipx" {
         return Ok(Op::FlipX);
     }
     if let Some(rest) = s.strip_prefix("prop:") {
         let (name, xy) = rest.split_once('@').ok_or_else(bad)?;
-        let (x, y) = parse_xy(xy).ok_or_else(bad)?;
+        let (x, y) = parse_xy(xy)?;
         return Ok(Op::Prop {
             name: name.to_string(),
             x,
@@ -591,7 +621,7 @@ fn parse_op(s: &str) -> Result<Op, String> {
         });
     }
     if let Some((slot, xy)) = s.split_once('+') {
-        let (dx, dy) = parse_xy(xy).ok_or_else(bad)?;
+        let (dx, dy) = parse_xy(xy)?;
         return Ok(if slot == "all" {
             Op::All { dx, dy }
         } else {
@@ -656,12 +686,12 @@ impl Model<'_> {
             Op::Hide(slot) => pose.slots[self.slot(slot)?].visible = false,
             Op::Offset { slot, dx, dy } => {
                 let s = &mut pose.slots[self.slot(slot)?];
-                s.dx += dx;
-                s.dy += dy;
+                s.dx = s.dx.saturating_add(*dx);
+                s.dy = s.dy.saturating_add(*dy);
             }
             Op::All { dx, dy } => {
-                pose.all.0 += dx;
-                pose.all.1 += dy;
+                pose.all.0 = pose.all.0.saturating_add(*dx);
+                pose.all.1 = pose.all.1.saturating_add(*dy);
             }
             Op::Prop { name, x, y } => {
                 if !self.lib.props.contains_key(name) {
@@ -680,8 +710,8 @@ impl Model<'_> {
         let mut next = self.follows[slot];
         // Chains are acyclic (checked at compile time), so this ends.
         while let Some(i) = next {
-            dx += pose.slots[i].dx;
-            dy += pose.slots[i].dy;
+            dx = dx.saturating_add(pose.slots[i].dx);
+            dy = dy.saturating_add(pose.slots[i].dy);
             next = self.follows[i];
         }
         (dx, dy)
@@ -691,7 +721,10 @@ impl Model<'_> {
         let mut canvas: Canvas = vec![None; N * N];
         let mut blit = |pixels: &Canvas, width: usize, x0: i32, y0: i32| {
             for (i, p) in pixels.iter().enumerate() {
-                let (x, y) = (x0 + (i % width) as i32, y0 + (i / width) as i32);
+                let (x, y) = (
+                    x0.saturating_add((i % width) as i32),
+                    y0.saturating_add((i / width) as i32),
+                );
                 if let Some(c) = p
                     && (0..N as i32).contains(&x)
                     && (0..N as i32).contains(&y)
@@ -710,8 +743,8 @@ impl Model<'_> {
                     blit(
                         &layer.pixels,
                         layer.width,
-                        layer.x + dx + pose.all.0,
-                        layer.y + dy + pose.all.1,
+                        layer.x.saturating_add(dx).saturating_add(pose.all.0),
+                        layer.y.saturating_add(dy).saturating_add(pose.all.1),
                     );
                 }
             }
@@ -724,7 +757,10 @@ impl Model<'_> {
         for (name, x, y) in &pose.props {
             let prop = &self.lib.props[name];
             for (i, p) in prop.pixels.iter().enumerate() {
-                let (px, py) = (x + (i % prop.width) as i32, y + (i / prop.width) as i32);
+                let (px, py) = (
+                    x.saturating_add((i % prop.width) as i32),
+                    y.saturating_add((i / prop.width) as i32),
+                );
                 if let Some(c) = p
                     && (0..N as i32).contains(&px)
                     && (0..N as i32).contains(&py)
@@ -792,6 +828,14 @@ fn build_model<'a>(
         prop_offset: file.prop_offset.map_or((0, 0), |[dx, dy]| (dx, dy)),
         lib,
     };
+    if let Some([dx, dy]) = file.prop_offset
+        && !(in_op_range(dx) && in_op_range(dy))
+    {
+        report.error(
+            "prop_offset",
+            format!("[{dx}, {dy}] is outside -{MAX_OP_OFFSET} to {MAX_OP_OFFSET}"),
+        );
+    }
     let mut follows: Vec<(String, String)> = Vec::new();
     for (name, value) in file.layers.clone() {
         let ctx = format!("layer {name}");
@@ -1054,8 +1098,8 @@ fn render_step(
     for op in &step.ops {
         let mut op = parse_op(op)?;
         if let Op::Prop { x, y, .. } = &mut op {
-            *x += prop_offset.0;
-            *y += prop_offset.1;
+            *x = x.saturating_add(prop_offset.0);
+            *y = y.saturating_add(prop_offset.1);
         }
         model.apply(&mut pose, &op)?;
     }
@@ -1074,8 +1118,8 @@ fn finish_action(
 ) -> Option<Action> {
     let start = report.errors.len();
     let weight = weight.unwrap_or(DEFAULT_WEIGHT);
-    if weight == 0 {
-        report.error(ctx, "weight must be at least 1");
+    if !(1..=MAX_WEIGHT).contains(&weight) {
+        report.error(ctx, format!("weight {weight} is outside 1-{MAX_WEIGHT}"));
     }
     if frames.is_empty() {
         report.error(ctx, "an action needs at least one frame");
@@ -1088,8 +1132,8 @@ fn finish_action(
             );
         }
     }
-    let total: u32 = frames.iter().map(|&(_, ms)| ms).sum();
-    if total > MAX_ACTION_MS {
+    let total: u64 = frames.iter().map(|&(_, ms)| u64::from(ms)).sum();
+    if total > u64::from(MAX_ACTION_MS) {
         report.error(
             ctx,
             format!("lasts {total} ms; an action is at most {MAX_ACTION_MS} ms"),
@@ -1771,5 +1815,103 @@ frames = [{{ ops = ["eyes+1,0"], ms = 200 }}, {{ ops = ["all+0,1", "flipx"] }}]
         for bad in ["head", "head+1", "prop:zzz", "head+a,b"] {
             assert!(parse_op(bad).is_err(), "{bad}");
         }
+    }
+
+    fn action(ops: &str) -> String {
+        format!("[[actions]]\nname = \"far\"\nframes = [{{ ops = [{ops}] }}]")
+    }
+
+    #[test]
+    fn out_of_range_offsets_are_errors_not_overflow() {
+        for op in [
+            "\"prop:zzz@2147483647,0\"",
+            "\"prop:zzz@0,-2147483648\"",
+            "\"eyes+2147483647,0\"",
+            "\"all+0,-2147483648\"",
+            "\"prop:zzz@65,0\"",
+            "\"eyes+0,-65\"",
+        ] {
+            let c = compile_owl(&action(op));
+            assert!(
+                errors(&c).contains(&format!("-{MAX_OP_OFFSET} to {MAX_OP_OFFSET}")),
+                "{op}: {}",
+                errors(&c)
+            );
+        }
+        let c = compile_owl(&action("\"prop:zzz@64,-64\", \"eyes+-64,64\""));
+        assert!(c.report.errors.is_empty(), "{}", errors(&c));
+
+        // Many in-range ops on one slot add up without overflowing.
+        let many = vec!["\"eyes+64,64\""; 200].join(", ");
+        let c = compile_owl(&action(&many));
+        assert!(c.report.errors.is_empty(), "{}", errors(&c));
+    }
+
+    #[test]
+    fn out_of_range_prop_offset_is_an_error() {
+        const DOZE: (&str, &str) = (
+            "doze",
+            "name = \"doze\"\nframes = [{ ops = [\"prop:zzz@20,20\"] }]",
+        );
+        let lib = lib_with(&[], &[BLINK, DOZE], &[ZZZ]);
+        let src = owl_src("[[actions]]\nuse = \"doze\"").replace(
+            "accent = \"violet\"",
+            "accent = \"violet\"\nprop_offset = [2147483647, 0]",
+        );
+        let c = compile(&src, Some("owl"), &lib, Origin::User, &no_files);
+        assert!(errors(&c).contains("prop_offset"), "{}", errors(&c));
+    }
+
+    #[test]
+    fn weight_is_capped_and_durations_never_overflow() {
+        let c = compile_owl(&format!(
+            "[[actions]]\nname = \"heavy\"\nweight = {}\nframes = [{{ ops = [] }}]",
+            MAX_WEIGHT + 1
+        ));
+        assert!(
+            errors(&c).contains(&format!("1-{MAX_WEIGHT}")),
+            "{}",
+            errors(&c)
+        );
+        let c = compile_owl(&format!(
+            "[[actions]]\nname = \"heavy\"\nweight = {MAX_WEIGHT}\nframes = [{{ ops = [] }}]"
+        ));
+        assert!(c.report.errors.is_empty(), "{}", errors(&c));
+
+        let c = compile_owl(
+            "[[actions]]\nname = \"long\"\nframes = [{ ops = [], ms = 4294967295 }, { ops = [], ms = 4294967295 }]",
+        );
+        assert!(errors(&c).contains("lasts 8589934590 ms"), "{}", errors(&c));
+    }
+
+    #[test]
+    fn digits_in_ids_and_aliases() {
+        let lib = lib_with(&[], &[BLINK], &[ZZZ]);
+        let src = owl_src("").replace("aliases = [\"hoot\"]", "aliases = [\"hoot\", \"owl2\"]");
+        let c = compile(&src, Some("owl"), &lib, Origin::User, &no_files);
+        assert!(c.report.errors.is_empty(), "{}", errors(&c));
+        assert!(
+            c.report
+                .warnings
+                .iter()
+                .any(|w| w.to_string().contains("\"owl2\"") && w.to_string().contains("digit")),
+            "{:?}",
+            c.report.warnings
+        );
+        assert!(c.mascot.is_some(), "a user mascot still compiles");
+
+        let c = compile(&src, Some("owl"), &lib, Origin::Bundled, &no_files);
+        assert!(errors(&c).contains("digit"), "{}", errors(&c));
+
+        let src = owl_src("").replace("id = \"owl\"", "id = \"r2d2\"");
+        let c = compile(&src, Some("r2d2"), &lib, Origin::User, &no_files);
+        assert!(
+            c.report
+                .warnings
+                .iter()
+                .any(|w| w.to_string().contains("digit")),
+            "{:?}",
+            c.report.warnings
+        );
     }
 }

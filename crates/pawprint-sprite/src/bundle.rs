@@ -159,13 +159,14 @@ pub fn build_bundle(assets: &Path) -> BundleReport {
     BundleReport { bundle, report }
 }
 
-/// Rule 8: squashed aliases (and ids) are unique across the catalog.
+/// Rule 8: squashed aliases (and ids) are unique across the catalog, also
+/// with their digits dropped, the form host names are matched in.
 fn check_aliases(mascots: &[Mascot], report: &mut Report) {
     let mut owner: BTreeMap<String, &str> = BTreeMap::new();
     for m in mascots {
         let mut names: Vec<String> = std::iter::once(&m.id)
             .chain(&m.aliases)
-            .map(|a| squash(a))
+            .map(|a| squash(a).replace(|c: char| c.is_ascii_digit(), ""))
             .collect();
         names.sort();
         names.dedup();
@@ -298,6 +299,17 @@ mod tests {
         );
         assert_eq!(report.errors.len(), 1, "{:?}", report.errors);
         assert!(report.errors[0].message.contains("\"polarbear\""));
+    }
+
+    #[test]
+    fn collisions_count_after_dropping_digits() {
+        let mut report = Report::default();
+        check_aliases(
+            &[mascot("owl", &[], vec![]), mascot("owl2", &[], vec![])],
+            &mut report,
+        );
+        assert_eq!(report.errors.len(), 1, "{:?}", report.errors);
+        assert!(report.errors[0].message.contains("\"owl\""));
     }
 
     #[test]
