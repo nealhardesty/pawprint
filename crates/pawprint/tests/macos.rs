@@ -375,6 +375,9 @@ fn menu_choice(env: &Env, pid: u32, rect: [i32; 4], scale: f64) {
 fn badge_in_a_gui_session() {
     let mut env = Env::new("macos");
     env.set("TMPDIR", env.runtime().to_string_lossy());
+    // The runtime warns on stderr (the badge log) about every object
+    // autoreleased with no pool in place, which would leak (SPEC §11.2).
+    env.set("OBJC_DEBUG_MISSING_POOLS", "YES");
     let mut badge = env.run_badge();
     let pid = badge.0.id();
     let rect = wait_for("the badge to be placed", || {
@@ -483,6 +486,11 @@ fn badge_in_a_gui_session() {
         std::thread::sleep(Duration::from_millis(50));
     };
     assert!(code.success(), "exit {code}\n{}", env.log());
+    let log = env.log();
+    assert!(
+        !log.contains("MISSING POOLS"),
+        "objects autoreleased without a pool:\n{log}"
+    );
     assert_eq!(env.pawprint(&["status"]).status.code(), Some(4));
     let sockets = std::fs::read_dir(env.runtime().join("pawprint"))
         .map(|d| d.count())
