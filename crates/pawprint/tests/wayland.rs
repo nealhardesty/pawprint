@@ -54,9 +54,15 @@ impl Sway {
                     n.starts_with(prefix) && n.ends_with(suffix)
                 })
         };
-        let socket = wait_for("the sway socket", || {
-            find("wayland-", "").filter(|p| p.extension().is_none())
-        });
+        let start = std::time::Instant::now();
+        let socket = loop {
+            if let Some(s) = find("wayland-", "").filter(|p| p.extension().is_none()) {
+                break s;
+            }
+            let log = std::fs::read_to_string(env.dir.join("sway.log")).unwrap_or_default();
+            assert!(start.elapsed().as_secs() < 10, "sway did not start:\n{log}");
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        };
         let ipc = wait_for("the sway IPC socket", || find("sway-ipc.", ".sock"));
         env.set(
             "WAYLAND_DISPLAY",
