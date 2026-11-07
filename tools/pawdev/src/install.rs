@@ -593,6 +593,16 @@ pub fn test_install() -> Result<(), String> {
             let _ =
                 std::fs::set_permissions(home.join("run"), std::fs::Permissions::from_mode(0o700));
         }
+        // Windows: the temp dir can be an 8.3 short path (C:\Users\RUNNER~1),
+        // which PowerShell reports in long form; compare long forms only.
+        #[cfg(windows)]
+        let home = std::fs::canonicalize(&home)
+            .ok()
+            .and_then(|p| {
+                p.to_str()
+                    .map(|s| PathBuf::from(s.trim_start_matches(r"\\?\")))
+            })
+            .unwrap_or(home);
         println!(
             "\n{} ({}), home {}",
             shell.name,

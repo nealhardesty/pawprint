@@ -2337,10 +2337,11 @@ and a release whose `.sha256` is wrong.
    --no-autostart` (no autostart entry), then `--uninstall --purge`. The
    config and state are gone.
 
-Autostart: on Linux the test checks the XDG entry, and on Windows that
-`autostart status` reports the installed binary (and `off` after uninstall). On macOS it also passes when the CLI says
-autostart isn't available on that OS and the installer warned about it.
-The coordinator makes macOS strict once its implementation is merged. On
+Autostart: on Linux the test checks the XDG entry; on Windows, that
+`autostart status` reports the installed binary (and `off` after
+uninstall). On macOS it also passes when the CLI says autostart isn't
+available there yet and the installer warned about it. The coordinator
+makes macOS strict once its implementation is merged. On
 Windows and macOS the badge and the autostart entry are the user's real
 ones, so run the test where PAWPRINT isn't installed (CI does).
 
