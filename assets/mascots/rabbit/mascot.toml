@@ -1,0 +1,205 @@
+# Rabbit, bespoke (no base). A soft grey bunny: two tall upright ears with
+# pink insides (rows 0-8), a round head with fluffy cheeks, a white muzzle,
+# a tiny pink nose, two little buck teeth (`teeth`, shown at rest), and
+# white paws on the rim. `ears.flick` is the rabbit's flop: the right ear
+# tips over sideways, which the signature holds after a nose wiggle. The
+# rare one is a binky: a leap with a twist in mid-air.
+id = "rabbit"
+name = "Rabbit"
+category = "mammals"
+aliases = ["bunny", "hare"]
+accent = "rose"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "grey-1"      # fur light
+"f" = "grey-2"      # fur
+"F" = "grey-3"      # fur shadow
+"w" = "white"       # muzzle, belly, paws, teeth
+"M" = "grey-1"      # mouth and toe lines
+"h" = "white"       # eye glint
+"n" = "pink-2"      # nose
+"p" = "pink-1"      # inner ears
+
+[layers.body]
+at = [5, 15]
+grid = """
+...kkffffffffffffkk...
+.kklfffffffffffffFFkk.
+klfffffwwwwwwwwffffFFk
+klffffwwwwwwwwwwfffFFk
+klffffwwwwwwwwwwfffFFk
+klffffwwwwwwwwwwfffFFk
+klffffwwwwwwwwwwfffFFk
+klfffffwwwwwwwwffffFFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+"""
+
+# Tall upright ears.
+[layers.ears]
+at = [9, 0]
+follows = "head"
+grid = """
+.kkk.....kkk.
+klpfk...kfpFk
+klpfk...kfpFk
+klpfk...kfpFk
+klpfk...kfpFk
+klpfk...kfpFk
+klpfk...kfpFk
+kfpfk...kfpFk
+.kfk.....kFk.
+"""
+
+# The flop: the right ear tips over sideways.
+[layers."ears.flick"]
+at = [9, 0]
+follows = "head"
+grid = """
+.kkk..............
+klpfk.............
+klpfk.........kk..
+klpfk.......kkfFk.
+klpfk.....kkppppk.
+klpfk...kkppppkk..
+klpfk...kfpkkk....
+kfpfk...kfpk......
+.kfk.....kFk......
+"""
+
+[layers.head]
+at = [7, 6]
+grid = """
+....kkkkkkkkkk....
+..kkllllllllffkk..
+.kllffffffffffFFk.
+klfffffffffffffFFk
+klfffffffffffffFFk
+klffffffffffffffFk
+klfffwwwwwwwwfffFk
+kfffwwwwwwwwwwffFk
+.kfwwwwwMMwwwwwFk.
+..kFwwwMwwMwwwFk..
+...kkFFFFFFFFkk...
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [15, 13]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [14, 12]
+follows = "head"
+grid = """
+nnnn
+"""
+
+[layers.teeth]
+at = [15, 15]
+follows = "head"
+grid = """
+ww
+"""
+
+[layers.paws]
+at = [8, 17]
+grid = """
+.kkkk......kkkk.
+kwwwwk....kwwwwk
+kwMwMk....kMwMwk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a fast nose wiggle, then one ear flops over and stays a while.
+[[actions]]
+name = "wiggle-flop"
+weight = 5
+frames = [
+  { ops = ["nose=sniff"], ms = 90 },
+  { ops = [], ms = 90 },
+  { ops = ["nose=sniff"], ms = 90 },
+  { ops = [], ms = 90 },
+  { ops = ["nose=sniff"], ms = 90 },
+  { ops = ["ears=flick"], ms = 1200 },
+  { ops = ["ears=flick", "nose=sniff"], ms = 100 },
+  { ops = ["ears=flick", "eyes=right"], ms = 600 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a binky, a joyful leap with a twist in the air.
+[[actions]]
+name = "binky"
+weight = 1
+frames = [
+  { ops = ["all+0,1", "eyes=happy"], ms = 160 },
+  { ops = ["all+0,-2", "eyes=happy"], ms = 100 },
+  { ops = ["all+0,-4", "eyes=happy", "ears=flick", "flipx"], ms = 220 },
+  { ops = ["all+0,-2", "eyes=happy", "prop:sparkle@24,1"], ms = 140 },
+  { ops = ["all+0,1", "eyes=happy", "prop:sparkle@24,0"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 500 },
+]

@@ -1,0 +1,232 @@
+# Llama on ungulate-head. Tall and narrow where its siblings are broad: a
+# small head held high on a long woolly neck, tall banana ears curving in at
+# the tips (with pink yarn tassels), a fluffy cream topknot, heavy-lidded
+# eyes, and a soft split-lipped muzzle. No antlers. The signature chews,
+# side-eyes you, and twitches an ear; the rare one spits.
+id = "llama"
+name = "Llama"
+category = "mammals"
+aliases = ["alpaca"]
+accent = "rose"
+extends = "ungulate-head"
+
+rest = ["body", "ears", "head", "eyes", "nose", "tassels", "topknot"]
+
+[palette]
+"l" = "cream"       # wool light
+"f" = "brown-1"     # wool
+"F" = "brown-2"     # wool shadow
+"u" = "white"       # NEW: topknot highlight
+"w" = "cream"       # muzzle
+"M" = "brown-2"     # split lip
+"n" = "brown-3"     # nostrils
+"p" = "brown-2"     # inner ear, mouth
+"r" = "pink-1"      # NEW: tassel light
+"R" = "pink-2"      # NEW: tassel
+
+# A long woolly neck that widens into the body behind the crate.
+[layers.body]
+at = [4, 13]
+grid = """
+.......klffffFFk........
+.......klffffFFk........
+.......klffffFFk........
+......kllffffFFFk.......
+......klfffffFFFk.......
+......klfffffFFFk.......
+.....kllffffffFFFk......
+...kklfffffffffFFFkk....
+.kklffffffffffffffFFkk..
+klfffffffffffffffffFFFk.
+klfffffffffffffffffFFFk.
+klfffffffffffffffffFFFk.
+klfffffffffffffffffFFFk.
+klfffffffffffffffffFFFk.
+klfffffffffffffffffFFFk.
+klfffffffffffffffffFFFk.
+klfffffffffffffffffFFFk.
+klfffffffffffffffffFFFk.
+klfffffffffffffffffFFFk.
+"""
+
+# Tall banana ears, curving in at the tips.
+[layers.ears]
+at = [8, 0]
+follows = "head"
+grid = """
+..kk........kk..
+.kpk........kpk.
+kppk........kppk
+kplk........kpFk
+kplk........kpFk
+kflk........kfFk
+.kfk.........kFk
+"""
+
+[layers."ears.flick"]
+at = [8, 0]
+follows = "head"
+grid = """
+..kk........kpk.
+.kpk........kppk
+kppk........kpFk
+kplk........kpFk
+kplk........kfFk
+kflk.........kFk
+.kfk............
+"""
+
+[layers.head]
+at = [10, 4]
+grid = """
+..kkkkkkkk..
+.klllllllfk.
+kllfffffffFk
+klffffffffFk
+klffffffffFk
+klffffffffFk
+kfffffffffFk
+kfffffffffFk
+.kfwwwwwwFk.
+.kwwwMMwwwk.
+..kwwMMwwk..
+...kkkkkk...
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hkk....hkk
+kkk....kkk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kkk....kkk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hkk....hkk
+kkk....kkk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hkk....hkk
+kkk....kkk
+"""
+
+[layers."eyes.happy"]
+at = [11, 8]
+follows = "head"
+grid = """
+.k......k.
+k.k....k.k
+"""
+
+# The side-eye: heavy lids, pupils slid to one side.
+[layers."eyes.side"]
+at = [11, 8]
+follows = "head"
+grid = """
+FFF....FFF
+kkF....kkF
+"""
+
+[layers.nose]
+at = [13, 12]
+follows = "head"
+grid = """
+n....n
+"""
+
+[layers."nose.sniff"]
+at = [12, 12]
+follows = "head"
+grid = """
+nn....nn
+"""
+
+[layers."mouth.open"]
+at = [14, 13]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+# Pink yarn tassels hanging from the ears.
+[layers.tassels]
+at = [6, 6]
+follows = "head"
+grid = """
+.kk..............kk.
+krRk............krRk
+kRRk............kRRk
+.kk..............kk.
+"""
+
+[layers.topknot]
+at = [12, 2]
+follows = "head"
+grid = """
+.kk..kk.
+kuukkulk
+kuuuulfk
+kuulllfk
+.kllllk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: chews, slides you a long side-eye, twitches an ear.
+[[actions]]
+name = "chew-side-eye"
+weight = 4
+frames = [
+  { ops = ["+mouth.open"], ms = 180 },
+  { ops = [], ms = 160 },
+  { ops = ["+mouth.open"], ms = 180 },
+  { ops = [], ms = 160 },
+  { ops = ["eyes=side"], ms = 900 },
+  { ops = ["eyes=side", "ears=flick"], ms = 120 },
+  { ops = ["eyes=side"], ms = 140 },
+  { ops = ["eyes=side", "ears=flick"], ms = 120 },
+  { ops = ["eyes=side"], ms = 500 },
+  { ops = ["eyes=closed"], ms = 140 },
+]
+
+# Rare: winds up and spits off to the left, then looks very pleased.
+[[actions]]
+name = "spit"
+weight = 1
+frames = [
+  { ops = ["eyes=side"], ms = 500 },
+  { ops = ["eyes=side", "head+0,-1", "nose=sniff"], ms = 300 },
+  { ops = ["eyes=closed", "+mouth.open", "head+-1,0"], ms = 120 },
+  { ops = ["eyes=closed", "+mouth.open", "head+-1,0", "prop:sweat@6,10"], ms = 120 },
+  { ops = ["eyes=side", "prop:sweat@2,7"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 900 },
+  { ops = [], ms = 200 },
+]

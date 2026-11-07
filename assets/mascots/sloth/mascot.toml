@@ -1,0 +1,236 @@
+# Sloth on primate. Where the monkey is all ears and mischief, the sloth has
+# no visible ears (`ears` is left out of `rest`), a round shaggy brown
+# head, a cream face mask with the sloth's dark stripes running from the eyes
+# down and back, a permanent gentle smile drawn into the head, and long
+# cream claws hooked over the rim. The signature is the slowest blink in the
+# catalog (about three seconds, with a half-lidded stop each way); the rare
+# one is a wave, also very slow.
+id = "sloth"
+name = "Sloth"
+category = "mammals"
+aliases = []
+accent = "moss"
+extends = "primate"
+
+rest = ["body", "head", "eyes", "nose", "paws"]
+
+[palette]
+"l" = "brown-1"     # fur light
+"f" = "brown-2"     # fur
+"F" = "brown-3"     # fur shadow
+"w" = "cream"       # face mask
+"M" = "brown-3"     # smile
+"d" = "brown-4"     # NEW: eye stripes, nose
+"c" = "cream"       # NEW: claws
+"h" = "white"       # eye glint
+"p" = "pink-2"      # mouth inside
+
+[layers.body]
+at = [6, 14]
+grid = """
+...klffffffffffFk...
+.kklffffffffffffFkk.
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfflffffffffflffFFk
+klffffffffffffffFFFk
+klfffflffffflffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+"""
+
+[layers.head]
+at = [7, 3]
+grid = """
+....kkkkkkkkkk....
+..kkllllllllffkk..
+.kllffffffffffFFk.
+klffffwwwwwwffffFk
+klfwwwwwwwwwwwwfFk
+klwddddwwwwddddwFk
+kldddddwwwwdddddFk
+kddddwwwwwwwwddddk
+kfdwwwwwwwwwwwwdFk
+kfwwwwwwwwwwwwwwFk
+kfwwwwMwwwwMwwwwFk
+.kFwwwwMMMMwwwwFk.
+..kkFwwwwwwwwFkk..
+....kkkkkkkkkk....
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.half"]
+at = [11, 8]
+follows = "head"
+grid = """
+dd......dd
+hk......hk
+"""
+
+[layers."eyes.closed"]
+at = [11, 8]
+follows = "head"
+grid = """
+dd......dd
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk........hk
+kkd......dkk
+"""
+
+[layers."eyes.right"]
+at = [11, 8]
+follows = "head"
+grid = """
+.hk......hk
+dkk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.ww......ww.
+w..w....w..w
+"""
+
+[layers.nose]
+at = [14, 11]
+follows = "head"
+grid = """
+.dd.
+dddd
+"""
+
+[layers."nose.sniff"]
+at = [14, 10]
+follows = "head"
+grid = """
+.dd.
+dddd
+"""
+
+[layers."mouth.open"]
+at = [14, 13]
+follows = "head"
+grid = """
+kkkk
+kppk
+.kk.
+"""
+
+[layers.paws]
+at = [3, 13]
+grid = """
+.kk....................kk.
+klfk..................kffk
+klfFk................kFffk
+kfffk................kfffk
+kfffFk..............kFfffk
+.cfcfc..............cfcfc.
+.c.c.c..............c.c.c.
+"""
+
+[layers."paws.wave"]
+at = [3, 3]
+grid = """
+.....................c.c.c.
+.....................cfcfc.
+.....................kfffk.
+.....................kfffk.
+.....................kfffk.
+.....................kfFfk.
+.....................kfFfk.
+.....................kfFfk.
+.....................kffFk.
+....................kfffFk.
+.kk.................kffFk..
+klfk.......................
+klfFk......................
+kfffk......................
+kfffFk.....................
+.cfcfc.....................
+.c.c.c.....................
+"""
+
+[layers."paws.wave2"]
+at = [3, 3]
+grid = """
+......................c.c.c
+......................cfcfc
+......................kfffk
+.....................kfffk.
+.....................kfffk.
+.....................kfFfk.
+.....................kfFfk.
+.....................kfFfk.
+.....................kffFk.
+....................kfffFk.
+.kk.................kffFk..
+klfk.......................
+klfFk......................
+kfffk......................
+kfffFk.....................
+.cfcfc.....................
+.c.c.c.....................
+"""
+
+[[actions]]
+use = "blink"
+weight = 5
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "yawn"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the slowest blink in the catalog, and a smile.
+[[actions]]
+name = "slow-blink"
+weight = 5
+frames = [
+  { ops = ["eyes=half"], ms = 600 },
+  { ops = ["eyes=closed"], ms = 1400 },
+  { ops = ["eyes=half"], ms = 700 },
+  { ops = ["eyes=happy"], ms = 1000 },
+]
+
+# Rare: raises one long arm, ever so slowly, and waves hello.
+[[actions]]
+name = "slow-wave"
+weight = 1
+frames = [
+  { ops = ["eyes=half"], ms = 500 },
+  { ops = ["paws=wave", "eyes=half"], ms = 700 },
+  { ops = ["paws=wave2", "eyes=happy"], ms = 700 },
+  { ops = ["paws=wave", "eyes=happy"], ms = 700 },
+  { ops = ["paws=wave2", "eyes=happy"], ms = 700 },
+  { ops = ["eyes=half"], ms = 500 },
+]
