@@ -161,20 +161,20 @@ to end on the mascots that matter most.
 **Showcase 12**: each with ≥ 2 template actions, a signature action, and a
 rare action:
 
-- [ ] `owl`: blink / look-left / signature head turn / rare full head spin (night)
-- [ ] `moose`: blink / ear-flick / signature heavy paddle-antler nod / rare: a bird lands on an antler
-- [ ] `elk`: blink / ear-flick / signature head raise / rare: silent bugle with a `note` prop
-- [ ] `marmot`: blink / duck / signature pop-up and double sniff / rare: whistle with `bang`
-- [ ] `armadillo`: blink / peek / signature curl and half roll / rare: rolls off the crate and back
-- [ ] `bear`: blink / doze / signature tiny yawn with paw on rim / rare: finds a `heart`-shaped honey drop
-- [ ] `walrus`: blink / bob / signature whisker twitch and tusk bob / rare: balances a `pebble` on its nose
-- [ ] `chipmunk`: blink / sniff / signature cheek-puff seed stash / rare: cheeks over-full, seed pops out
-- [ ] `cat-maine-coon-black`: blink / ear-flick / signature amber side-eye and tail flick / rare: ruff fluffs up
-- [ ] `cat-buff-tabby`: blink / content / signature melt into the crate until ears and cheeks remain / rare: loaf overflows the crate edge
-- [ ] `cat-cow`: blink / look-right / signature paws the loose crate flap / rare: flap swings, `startle`
-- [ ] `cat-tuxedo`: blink / tail-flick / signature tucks a white paw / rare: formal bow
+- [x] `owl`: blink / look-left / signature head turn / rare full head spin (night)
+- [x] `moose`: blink / ear-flick / signature heavy paddle-antler nod / rare: a bird lands on an antler
+- [x] `elk`: blink / ear-flick / signature head raise / rare: silent bugle with a `note` prop
+- [x] `marmot`: blink / duck / signature pop-up and double sniff / rare: whistle with `bang`
+- [x] `armadillo`: blink / peek / signature curl and half roll / rare: rolls off the crate and back
+- [x] `bear`: blink / doze / signature tiny yawn with paw on rim / rare: finds a `heart`-shaped honey drop
+- [x] `walrus`: blink / bob / signature whisker twitch and tusk bob / rare: balances a `pebble` on its nose
+- [x] `chipmunk`: blink / sniff / signature cheek-puff seed stash / rare: cheeks over-full, seed pops out
+- [x] `cat-maine-coon-black`: blink / ear-flick / signature amber side-eye and tail flick / rare: ruff fluffs up
+- [x] `cat-buff-tabby`: blink / content / signature melt into the crate until ears and cheeks remain / rare: loaf overflows the crate edge
+- [x] `cat-cow`: blink / look-right / signature paws the loose crate flap / rare: flap swings, `startle`
+- [x] `cat-tuxedo`: blink / tail-flick / signature tucks a white paw / rare: formal bow
 
-- [ ] Readability review at 1× with labels covered: moose vs. elk, cow cat vs. tuxedo
+- [x] Readability review at 1× with labels covered: moose vs. elk, cow cat vs. tuxedo (all showcase mascots also have `doze` for night, per SPEC §12.5)
 - [ ] **Measure the 20-character label limit** against real hostnames and
       remote-client scaling at each size. Record the result in SPEC §4.4.
 
