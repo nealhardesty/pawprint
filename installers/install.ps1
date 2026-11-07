@@ -51,7 +51,11 @@ way: download/v<version>/<asset>, with latest redirecting to tag/v<version>).
     if ($Purge -and -not $Uninstall) { throw 'pawprint: -Purge goes with -Uninstall' }
 
     $prefixDir = if ($Prefix) { $Prefix } else { Join-Path $env:LOCALAPPDATA 'Programs\pawprint' }
-    $prefixDir = [IO.Path]::GetFullPath($prefixDir)
+    # Relative to this shell's location ($PWD, not the process directory that
+    # GetFullPath uses), ~ expanded, and with no trailing separator except
+    # on a drive root.
+    $prefixDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($prefixDir)
+    if ($prefixDir.Length -gt 3) { $prefixDir = $prefixDir.TrimEnd('\', '/') }
     $exe = Join-Path $prefixDir 'pawprint.exe'
     $base = if ($env:PAWPRINT_DOWNLOAD_BASE) { $env:PAWPRINT_DOWNLOAD_BASE } else { 'https://github.com/nealhardesty/pawprint/releases' }
     $names = 'pawprint.exe', 'pawprintw.exe'
