@@ -1011,8 +1011,8 @@ the same code (two `[[bin]]` targets with one shared `main`):
 The code is the `pawprint` library crate (`src/lib.rs`, `pawprint::main`);
 `src/main.rs` and `src/bin/pawprintw.rs` are three-line wrappers. On other
 systems `pawprintw` builds as a stub that points at `pawprint`. Bare
-`pawprint` starts the `pawprintw.exe` next to it, falling back to itself.
-A GUI-subsystem process still writes to stdout and stderr handles it
+`pawprint` starts the `pawprintw.exe` next to it, falling back to itself,
+after marking its own stdio handles non-inheritable (FW8). A GUI-subsystem process still writes to stdout and stderr handles it
 inherits, so `pawprintw run --verbose` with redirected output logs to that
 file.
 
@@ -2113,9 +2113,10 @@ taking the bottom 48 px) through `make test-windows-display`.
 | FW2 | `BitBlt` from the screen DC includes layered windows only with `CAPTUREBLT`. | The test captures with `SRCCOPY | CAPTUREBLT` | **Confirmed** |
 | FW3 | A normal window shown and activated after the badge stays below it (`WS_EX_TOPMOST`), and a `WS_EX_NOACTIVATE` window is never made foreground by showing, placing, or redrawing it. | Contract items 2 and 3 | **Confirmed** |
 | FW4 | A GUI-subsystem exe writes to inherited stdout/stderr: `pawprintw.exe run --verbose` with stderr redirected to a file logs there. | The test reads the badge's log from its stderr file | **Confirmed** |
-| FW5 | `SPI_SETWORKAREA` from an ordinary process returns success but leaves the work area unchanged while Explorer runs. An app bar (`SHAppBarMessage` `ABM_NEW` + `ABM_SETPOS`) does shrink it, and the shell then broadcasts `WM_SETTINGCHANGE` with `SPI_SETWORKAREA`. | The test simulates a taskbar with an app bar | **Confirmed** (SPI: no effect; app bar: see CI) |
+| FW5 | `SPI_SETWORKAREA` from an ordinary process returns success but leaves the work area unchanged while Explorer runs. An app bar (`SHAppBarMessage` `ABM_NEW` + `ABM_SETPOS`) does shrink it, and the shell then broadcasts `WM_SETTINGCHANGE` with `SPI_SETWORKAREA`. | The test simulates a taskbar with an app bar | **Confirmed** (the badge re-lays out to the 40 px smaller work area and back) |
 | FW6 | `AllowSetForegroundWindow(ASFW_ANY)` from the process running `pawprint move`, then `SetForegroundWindow` in the badge, gives the badge the keyboard when that process may set the foreground. | Arrow-key nudging works from a terminal (11.1.4) | **Confirmed on the runner**; verify from Windows Terminal and conhost on a desktop |
 | FW7 | `CreateNamedPipeW` with `FILE_FLAG_FIRST_PIPE_INSTANCE` fails with `ERROR_ACCESS_DENIED` when the name exists, and a pipe name vanishes when its last server handle closes. | The pipe is the instance lock; no stale endpoints (10.4) | **Confirmed** (`make test` on windows-latest; the desktop test's crash-free restarts) |
+| FW8 | `std::process::Command` on Windows creates children with handle inheritance on, so a child inherits every inheritable handle, including the parent's own redirected stdout and stderr, even when its stdio is set to null. | Bare `pawprint` marks its stdio handles non-inheritable before starting the detached badge; otherwise `pawprint \| more` or a script capturing its output would wait until the badge quits | **Confirmed** (the desktop test hung until this was fixed) |
 
 ---
 

@@ -264,10 +264,24 @@ fn detached_badge() -> io::Result<Command> {
     }
     #[cfg(windows)]
     {
+        use std::os::windows::io::AsRawHandle;
         use std::os::windows::process::CommandExt;
+        use windows_sys::Win32::Foundation::{HANDLE_FLAG_INHERIT, SetHandleInformation};
         // DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP: no console, and no
         // Ctrl+C from the terminal that started it.
         cmd.creation_flags(0x0000_0008 | 0x0000_0200);
+        // Windows children inherit every inheritable handle, so the badge
+        // would keep our stdout pipe open and `pawprint | more` or a script
+        // capturing our output would wait for the badge to quit. We exit
+        // soon, so stop our own stdio from being inherited.
+        for handle in [
+            std::io::stdin().as_raw_handle(),
+            std::io::stdout().as_raw_handle(),
+            std::io::stderr().as_raw_handle(),
+        ] {
+            // SAFETY: changes only a flag; a null or invalid handle just fails.
+            unsafe { SetHandleInformation(handle, HANDLE_FLAG_INHERIT, 0) };
+        }
     }
     Ok(cmd)
 }
