@@ -13,7 +13,7 @@ use crate::geom::{PhysicalRect, Point};
 use crate::identity::{self, Resolved};
 use crate::layout;
 use crate::menu::{self, TrayState};
-use crate::movemode::{Key, MoveMode, Outcome};
+use crate::movemode::{self, Key, MoveMode, Outcome};
 use crate::render::{self, BadgeSpec, Frame};
 use crate::state::State;
 use crate::surface::{DisplayInfo, select_display};
@@ -35,6 +35,8 @@ pub enum Command {
     Quit,
     SetSize(u32),
     SetAnimation(Animation),
+    /// Drop this host's cached fallback mascot (`pawprint forget`).
+    Forget,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -78,6 +80,8 @@ pub struct Inputs {
     pub flags: Layer,
     /// Seeds animation timing; the shell uses the clock.
     pub seed: u64,
+    /// `pawprint preview`: play every action in turn.
+    pub preview: bool,
 }
 
 pub struct Badge<'c> {
@@ -104,6 +108,7 @@ impl<'c> Badge<'c> {
             state,
             flags,
             seed,
+            preview,
         } = inputs;
         let resolved = identity::resolve(
             &hostname,
@@ -114,12 +119,15 @@ impl<'c> Badge<'c> {
             &assets.accents,
             false,
         );
-        let anim = Scheduler::new(
+        let mut anim = Scheduler::new(
             resolved.settings.animation.value,
             resolved.settings.interval.value,
             seed,
             now,
         );
+        if preview {
+            anim.cycle_all(now);
+        }
         Badge {
             catalog,
             assets,
@@ -247,6 +255,20 @@ impl<'c> Badge<'c> {
                 self.flags.animation = Some(mode);
                 self.reresolve(now, out);
             }
+            Command::Forget => {
+                if self
+                    .state
+                    .assignments
+                    .remove(&self.resolved.short)
+                    .is_some()
+                {
+                    let n = out.len();
+                    self.reresolve(now, out);
+                    if !out[n..].iter().any(|e| matches!(e, Effect::SaveState(_))) {
+                        out.push(Effect::SaveState(self.state.clone()));
+                    }
+                }
+            }
         }
     }
 
@@ -297,7 +319,9 @@ impl<'c> Badge<'c> {
 
     /// Emit Place / Present / SetTray only for what actually changed.
     fn refresh(&mut self, out: &mut Vec<Effect>) {
+        let mascot = self.mascot();
         let tray = TrayState {
+            icon: render::compose_1x(&self.assets.crate_art, mascot, 0, self.resolved.accent.rgb),
             visible: self.resolved.settings.tray.value,
             tooltip: format!(
                 "PAWPRINT: {} ({})",
@@ -319,7 +343,6 @@ impl<'c> Badge<'c> {
         }
 
         let Some(display) = self.target() else { return };
-        let mascot = self.mascot();
         let s = &self.resolved.settings;
         let spec = BadgeSpec {
             mascot,
@@ -331,7 +354,11 @@ impl<'c> Badge<'c> {
             anchor: self.resolved.position.value.anchor,
             display_scale: display.scale,
         };
-        let img = render::render_badge(&spec, &self.assets.crate_art, &self.assets.font);
+        let mut img = render::render_badge(&spec, &self.assets.crate_art, &self.assets.font);
+        if self.moving.is_some() {
+            let p = layout::art_scale(s.size.value, display.scale);
+            movemode::draw_outline(&mut img, self.resolved.accent.rgb, p);
+        }
         let rect = match &self.moving {
             Some(m) => PhysicalRect {
                 width: img.width,
@@ -402,6 +429,7 @@ mod tests {
                 state,
                 flags: Layer::default(),
                 seed: 42,
+                preview: false,
             };
             let mut badge = Badge::new(Catalog::bundled(), bundle(), inputs, now.instant);
             let mut surface = FakeSurface::new(vec![display("DP-1", 1920, 1080, true)]);
@@ -558,6 +586,59 @@ mod tests {
             }
         });
         assert_eq!(last_save.unwrap().position, None);
+    }
+
+    #[test]
+    fn move_mode_shows_the_dashed_accent_outline() {
+        let mut rig = Rig::new("owl", "");
+        let resting = rig.surface.frames.last().unwrap().clone();
+        let accent = rig.badge.resolved().accent.rgb;
+        rig.send(Event::Command(Command::Move));
+        let moving = rig.surface.frames.last().unwrap().clone();
+        assert_ne!(moving, resting, "a new frame with the outline");
+        // Top-left pixel: premultiplied BGRA of the accent.
+        assert_eq!(&moving.bgra[..4], &[accent.2, accent.1, accent.0, 255]);
+        rig.send(Event::Key(Key {
+            code: KeyCode::Escape,
+            shift: false,
+        }));
+        assert_eq!(rig.surface.frames.last(), Some(&resting), "gone afterwards");
+    }
+
+    #[test]
+    fn forget_drops_the_cached_mascot_and_picks_again() {
+        let mut state = State::default();
+        state.assignments.insert("buildbox".into(), "moose".into());
+        let mut rig = Rig::with_state("buildbox", "", state);
+        assert_eq!(rig.badge.resolved().mascot, "moose");
+        let shell = rig.send(Event::Command(Command::Forget));
+        let saved = shell.iter().rev().find_map(|e| match e {
+            Effect::SaveState(s) => Some(s.clone()),
+            _ => None,
+        });
+        let saved = saved.expect("state saved");
+        assert_eq!(
+            saved.assignments.get("buildbox"),
+            Some(&rig.badge.resolved().mascot),
+            "the new pick is cached"
+        );
+        // A host matched by name has nothing cached: nothing to save.
+        let mut owl = Rig::new("owl", "");
+        assert!(
+            !owl.send(Event::Command(Command::Forget))
+                .iter()
+                .any(|e| matches!(e, Effect::SaveState(_)))
+        );
+    }
+
+    #[test]
+    fn tray_icon_is_the_rest_frame_in_its_crate() {
+        let rig = Rig::new("owl", "");
+        let Some(Effect::SetTray(t)) = rig.shell.first() else {
+            panic!("tray first")
+        };
+        assert_eq!((t.icon.width, t.icon.height), (32, 32));
+        assert!(t.icon.data.chunks(4).any(|p| p[3] == 255));
     }
 
     #[test]

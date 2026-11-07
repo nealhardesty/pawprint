@@ -481,6 +481,19 @@ impl Surface for Mac {
     }
 }
 
+/// `pawprint preview` (SPEC §9). Hook for M4: run the same loop as [`run`]
+/// without IPC, with the window made normal while `shell.is_preview()`:
+/// focusable, closable, with a title, not topmost, not click-through; Esc
+/// and closing send `Command::Quit`. The shell already centers the badge,
+/// cycles every action, and draws it on a backdrop with a margin.
+pub fn preview(shell: Shell) -> CmdResult {
+    let _ = shell;
+    Err((
+        crate::exit::ERROR,
+        "preview: not implemented on this platform yet (see ROADMAP.md M4)".into(),
+    ))
+}
+
 pub fn doctor(report: &mut Report) {
     report.section("Session");
     report.row(

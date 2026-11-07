@@ -57,15 +57,17 @@ pub enum Request {
     ResetPosition,
     Reload,
     Quit,
+    Forget,
 }
 
 impl Request {
-    pub const ALL: [Request; 5] = [
+    pub const ALL: [Request; 6] = [
         Request::Status,
         Request::Move,
         Request::ResetPosition,
         Request::Reload,
         Request::Quit,
+        Request::Forget,
     ];
 
     pub fn name(self) -> &'static str {
@@ -75,6 +77,7 @@ impl Request {
             Request::ResetPosition => "reset-position",
             Request::Reload => "reload",
             Request::Quit => "quit",
+            Request::Forget => "forget",
         }
     }
 

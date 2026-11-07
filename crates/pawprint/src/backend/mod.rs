@@ -10,6 +10,8 @@ mod linux;
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(target_os = "linux")]
+mod sni;
+#[cfg(target_os = "linux")]
 mod wayland;
 #[cfg(windows)]
 mod windows;
@@ -29,6 +31,13 @@ pub use windows::allow_foreground;
 /// endpoint (SPEC §10.4).
 pub fn run(shell: Shell, listener: ipc::Listener) -> CmdResult {
     platform::run(shell, listener)
+}
+
+/// `pawprint preview`: a normal window showing `shell`'s mascot until it is
+/// closed. Backends reuse their badge surface with a preview flag
+/// (`Shell::is_preview`).
+pub fn preview(shell: Shell) -> CmdResult {
+    platform::preview(shell)
 }
 
 /// Add the platform's checks to `pawprint doctor`.

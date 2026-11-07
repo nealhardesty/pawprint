@@ -1,13 +1,14 @@
 //! Shared Linux pieces (SPEC §10.6): backend selection (§3.2), the `calloop`
-//! event loop both backends run on, scale helpers, and the Linux half of
-//! `pawprint doctor`.
+//! event loop both backends run on, the StatusNotifierItem tray, scale
+//! helpers, and the Linux half of `pawprint doctor`.
 
 use calloop::EventLoop;
 use calloop::channel::{self, Event as ChannelEvent};
+use pawprint_core::badge::Command;
 use pawprint_core::config::Backend;
 use pawprint_core::surface::{DisplayInfo, Surface, select_display};
 
-use super::{wayland, x11};
+use super::{sni, wayland, x11};
 use crate::doctor::Report;
 use crate::shell::Shell;
 use crate::{CmdResult, exit, ipc};
@@ -137,7 +138,16 @@ pub fn select(configured: Backend, env: &Env) -> Selection {
     }
 }
 
-pub fn run(mut shell: Shell, listener: ipc::Listener) -> CmdResult {
+pub fn run(shell: Shell, listener: ipc::Listener) -> CmdResult {
+    start(shell, Some(listener))
+}
+
+/// `pawprint preview`: the same backends, in preview mode, without IPC.
+pub fn preview(shell: Shell) -> CmdResult {
+    start(shell, None)
+}
+
+fn start(mut shell: Shell, listener: Option<ipc::Listener>) -> CmdResult {
     let configured = shell.configured_backend();
     if matches!(configured, Backend::Windows | Backend::Macos) {
         log::warn!("backend = \"{configured}\" does not exist on Linux; using auto");
@@ -163,6 +173,13 @@ pub fn run(mut shell: Shell, listener: ipc::Listener) -> CmdResult {
     }
 }
 
+/// What wakes the loop besides the display connection: IPC requests and
+/// tray menu choices, both posted from their own threads.
+pub enum Inbox {
+    Ipc(ipc::Incoming),
+    Menu(Command),
+}
+
 /// What both backends hand to [`drive`]: the shell and the surface, split so
 /// the shell can drive the surface.
 pub trait App: 'static {
@@ -173,28 +190,42 @@ pub trait App: 'static {
     fn flush(&mut self) -> Result<(), String>;
 }
 
-/// The loop every Linux backend runs (SPEC §10.1): IPC arrives on a calloop
-/// channel, the display connection is a calloop source the backend inserted,
-/// and the loop sleeps until the next native event or the core's deadline.
+/// The loop every Linux backend runs (SPEC §10.1): IPC requests and tray
+/// choices arrive on a calloop channel, the display connection is a calloop
+/// source the backend inserted, and the loop sleeps until the next native
+/// event or the core's deadline. `listener` is `None` for a preview, which
+/// also gets no tray.
 pub fn drive<A: App>(
     mut event_loop: EventLoop<'static, A>,
     app: &mut A,
-    listener: ipc::Listener,
+    listener: Option<ipc::Listener>,
 ) -> CmdResult {
     let fail = |e: String| (exit::ERROR, e);
-    let (tx, rx) = channel::channel::<ipc::Incoming>();
+    let (tx, rx) = channel::channel::<Inbox>();
     event_loop
         .handle()
         .insert_source(rx, |event, _, app: &mut A| {
-            if let ChannelEvent::Msg(incoming) = event {
-                let (shell, surface) = app.parts();
-                shell.request(surface, incoming);
+            let (shell, surface) = app.parts();
+            match event {
+                ChannelEvent::Msg(Inbox::Ipc(incoming)) => shell.request(surface, incoming),
+                ChannelEvent::Msg(Inbox::Menu(command)) => shell.menu(surface, command),
+                ChannelEvent::Closed => {}
             }
         })
         .map_err(|e| fail(format!("event loop: {e}")))?;
-    ipc::serve(listener, move |incoming| tx.send(incoming).is_ok());
+    // The tray joins once the badge is on screen, so the session bus never
+    // delays it.
+    let mut tray = listener.is_some().then(|| sni::Sni::new(tx.clone()));
+    if let Some(listener) = listener {
+        ipc::serve(listener, move |incoming| {
+            tx.send(Inbox::Ipc(incoming)).is_ok()
+        });
+    }
     loop {
         app.flush().map_err(fail)?;
+        if let Some(t) = tray.take() {
+            app.parts().0.set_tray(Box::new(t));
+        }
         let (shell, _) = app.parts();
         if shell.done() {
             return Ok(());
@@ -355,24 +386,34 @@ fn gnome_scaling(report: &mut Report) {
     ));
 }
 
-/// StatusNotifierItem host on the session bus (the tray itself is M4).
+/// The StatusNotifierItem watcher on the session bus (SPEC §11.4, F29).
+/// Without one the badge runs without a tray and says nothing; this is
+/// where the user finds out.
 fn tray(report: &mut Report, env: &Env) {
-    let has_watcher = || -> zbus::Result<bool> {
-        let conn = zbus::blocking::Connection::session()?;
-        let dbus = zbus::blocking::fdo::DBusProxy::new(&conn)?;
-        Ok(dbus.name_has_owner("org.kde.StatusNotifierWatcher".try_into()?)?)
-    };
-    match has_watcher() {
-        Ok(true) => report.row(
-            "tray",
-            "StatusNotifierItem host available (tray arrives in M4)",
+    let short = pawprint_core::host::short_name(&crate::hostname::detect().unwrap_or_default());
+    let enabled = crate::paths::Paths::detect().is_none_or(|p| {
+        crate::commands::load_config(&p)
+            .0
+            .effective(&short, &Default::default())
+            .tray
+            .value
+    });
+    if !enabled {
+        report.row("tray", "off (tray = false in config)");
+        return;
+    }
+    match sni::watcher_present() {
+        Ok(true) => report.row("tray", "StatusNotifierItem host available"),
+        Ok(false) if env.gnome() => report.problem(
+            "no tray: this GNOME has no AppIndicator extension (Ubuntu ships one; elsewhere \
+             install \"AppIndicator and KStatusNotifierItem Support\"). The CLI does everything \
+             the tray does (F29).",
         ),
-        Ok(false) if env.gnome() => report.row(
-            "tray",
-            "none: this GNOME has no AppIndicator extension; use the CLI (F29)",
+        Ok(false) => report.problem(
+            "no tray: nothing on the session bus shows StatusNotifierItems \
+             (org.kde.StatusNotifierWatcher). The CLI does everything the tray does.",
         ),
-        Ok(false) => report.row("tray", "no StatusNotifierItem host; use the CLI"),
-        Err(e) => report.row("tray", format!("unknown (session bus: {e})")),
+        Err(e) => report.problem(format!("no tray: cannot reach the session bus ({e})")),
     }
 }
 

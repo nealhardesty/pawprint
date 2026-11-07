@@ -4,10 +4,36 @@
 
 use std::time::{Duration, Instant};
 
+use pawprint_sprite::{Rgb, RgbaImage};
+
 use crate::geom::{PhysicalRect, Point};
 
 /// Move mode ends after this long without interaction.
 pub const TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Move mode's outline (SPEC §6.3): one art pixel wide, in the accent
+/// color, dashed two art pixels on and two off, drawn over the edge of the
+/// badge image (`p` physical pixels per art pixel). The gaps keep the art
+/// underneath, so transparent corners stay click-through where the platform
+/// hit-tests per pixel.
+pub fn draw_outline(img: &mut RgbaImage, accent: Rgb, p: u32) {
+    let p = p.max(1);
+    let ink = [accent.0, accent.1, accent.2, 255];
+    let (w, h) = (img.width, img.height);
+    let on = |t: u32| (t / p / 2).is_multiple_of(2);
+    for x in (0..w).filter(|&x| on(x)) {
+        for d in 0..p.min(h) {
+            img.put(x.into(), d.into(), ink);
+            img.put(x.into(), (h - 1 - d).into(), ink);
+        }
+    }
+    for y in (0..h).filter(|&y| on(y)) {
+        for d in 0..p.min(w) {
+            img.put(d.into(), y.into(), ink);
+            img.put((w - 1 - d).into(), y.into(), ink);
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyCode {
@@ -151,6 +177,25 @@ impl MoveMode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn outline_is_dashed_on_the_edge_only() {
+        let mut img = RgbaImage::new(16, 12);
+        draw_outline(&mut img, Rgb(1, 2, 3), 2);
+        let ink = [1, 2, 3, 255];
+        let row = |y| -> String {
+            (0..16)
+                .map(|x| if img.pixel(x, y) == ink { '#' } else { '.' })
+                .collect()
+        };
+        // Two art pixels on, two off, at two physical pixels per art pixel.
+        assert_eq!(row(0), "####....####..##", "the right edge dashes too");
+        assert_eq!(row(1), row(0), "one art pixel thick");
+        assert_eq!(row(2), "##............##", "the inside is untouched");
+        assert_eq!(row(5), "................", "side gaps");
+        assert_eq!(row(9), "##............##");
+        assert_eq!(row(11), row(0));
+    }
 
     const USABLE: PhysicalRect = PhysicalRect::new(0, 0, 1920, 1040);
     const START: PhysicalRect = PhysicalRect::new(1840, 16, 64, 64);

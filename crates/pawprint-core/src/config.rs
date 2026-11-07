@@ -261,6 +261,31 @@ pub struct Settings {
     pub backend: Sourced<Backend>,
 }
 
+/// Every key a config file (or a `[hosts]` table) may set, in SPEC §8.2 order.
+pub const KEYS: [&str; 13] = [
+    "mascot",
+    "label",
+    "label_case",
+    "label_size",
+    "size",
+    "position",
+    "offset",
+    "display",
+    "animation",
+    "interval",
+    "accent",
+    "tray",
+    "backend",
+];
+
+/// Check one `key = value` exactly as loading does. `Err` is the warning
+/// loading would log for it.
+pub fn check_value(key: &str, value: &toml::Value) -> Result<(), String> {
+    let mut warnings = Vec::new();
+    set_key(&mut Layer::default(), key, value, "", &mut warnings);
+    warnings.pop().map_or(Ok(()), Err)
+}
+
 fn set_key(layer: &mut Layer, key: &str, v: &toml::Value, ctx: &str, warnings: &mut Vec<String>) {
     let mut bad = |expected: &str| {
         warnings.push(format!(

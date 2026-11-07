@@ -8,6 +8,7 @@ pub mod anim;
 pub mod badge;
 pub mod catalog;
 pub mod config;
+pub mod config_edit;
 pub mod geom;
 pub mod hash;
 pub mod host;
