@@ -1,0 +1,175 @@
+# Elk (wapiti), a showcase mascot on ungulate-head. Built to read apart from
+# the moose at a glance: a slim, long, mid-brown face; a tall, narrow rack of
+# branching tines with ivory tips; a shaggy dark mane at the throat between
+# pale tan shoulders.
+id = "elk"
+name = "Elk"
+category = "mammals"
+aliases = ["wapiti"]
+accent = "copper"
+extends = "ungulate-head"
+
+[palette]
+"l" = "brown-1"     # face light
+"f" = "brown-2"     # face
+"F" = "brown-3"     # face shadow
+"w" = "brown-1"     # muzzle
+"M" = "brown-3"     # mouth line
+"z" = "cream"       # tine tips
+"x" = "brown-3"     # antler
+"X" = "brown-4"     # antler base
+"n" = "fur-black"   # nose
+"a" = "brown-3"     # NEW: mane
+"A" = "brown-4"     # NEW: mane shadow, shaggy edge
+"q" = "brown-1"     # NEW: pale shoulders
+"y" = "cream"       # NEW: shoulder light
+"Q" = "brown-2"     # NEW: shoulder shadow
+
+# Pale shoulders with the dark mane hanging down the middle.
+[layers.body]
+at = [4, 15]
+grid = """
+....kkAaaaaaaaaaaaAkk...
+..kkqAaaaaaaaaaaaaaAQkk.
+.kyqqAaaaaaaaaaaaaaAQQk.
+kyqqqqAaaaaaaaaaaaAqQQQk
+kyqqqqqAaAaaaaAaAqqqQQQk
+kyqqqqqqAqAaaAqAqqqqqQQk
+kyqqqqqqqqAaaAqqqqqqqQQk
+kyqqqqqqqqqAAqqqqqqqqQQk
+kyqqqqqqqqqqqqqqqqqqqQQk
+kyqqqqqqqqqqqqqqqqqqqQQk
+kyqqqqqqqqqqqqqqqqqqqQQk
+kyqqqqqqqqqqqqqqqqqqqQQk
+kyqqqqqqqqqqqqqqqqqqqQQk
+kyqqqqqqqqqqqqqqqqqqqQQk
+kyqqqqqqqqqqqqqqqqqqqQQk
+kyqqqqqqqqqqqqqqqqqqqQQk
+kyqqqqqqqqqqqqqqqqqqqQQk
+"""
+
+# A slim, long face tapering to a dark nose.
+[layers.head]
+at = [9, 4]
+grid = """
+...kkkkkkkk...
+.kkllllllffkk.
+kllffffffffFFk
+klfffffffffFFk
+klfffffffffFFk
+klfffffffffFFk
+.klffffffffFk.
+.klffffffffFk.
+..klffffffFk..
+..klwwwwwwFk..
+..kwwwwwwwwk..
+..kwwwwwwwwk..
+...kwwMMwwk...
+....kkkkkk....
+"""
+
+[layers.eyes]
+at = [11, 8]
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [13, 14]
+grid = """
+nnnnnn
+.nnnn.
+"""
+
+[layers."nose.sniff"]
+at = [13, 13]
+grid = """
+nnnnnn
+.nnnn.
+"""
+
+[layers."mouth.open"]
+at = [14, 16]
+grid = """
+kppk
+.kk.
+"""
+
+# Tall, narrow rack: each beam sweeps up and out, with three tines.
+[layers.antlers]
+at = [0, 0]
+grid = """
+.....k....................k.....
+....kzk..k............k..kzk....
+....kxk.kzk..k....k..kzk.kxk....
+....kxk.kxk.kzk..kzk.kxk.kxk....
+.....kxkkxk.kxk..kxk.kxkkxk.....
+......kxxxkkxk....kxkkxxxk......
+.......kkxXXk......kXXxkk.......
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 4
+
+[[actions]]
+use = "doze"
+
+# Signature: lifts its head, alert, and flicks an ear.
+[[actions]]
+name = "head-raise"
+weight = 4
+frames = [
+  { ops = ["head+0,-1"], ms = 180 },
+  { ops = ["head+0,-2"], ms = 500 },
+  { ops = ["head+0,-2", "ears=flick"], ms = 140 },
+  { ops = ["head+0,-2"], ms = 500 },
+  { ops = ["head+0,-1"], ms = 180 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: a silent bugle, head up, one note drifting away.
+[[actions]]
+name = "bugle"
+weight = 1
+frames = [
+  { ops = ["head+0,-1"], ms = 160 },
+  { ops = ["head+0,-2", "mouth=open", "eyes=closed"], ms = 400 },
+  { ops = ["head+0,-2", "mouth=open", "eyes=closed", "prop:note@23,9"], ms = 450 },
+  { ops = ["head+0,-2", "mouth=open", "eyes=closed", "prop:note@24,6"], ms = 450 },
+  { ops = ["head+0,-2", "prop:note@25,3"], ms = 400 },
+  { ops = ["head+0,-1"], ms = 180 },
+  { ops = [], ms = 300 },
+]

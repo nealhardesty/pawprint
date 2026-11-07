@@ -1,0 +1,132 @@
+# Walrus, a showcase mascot on pinniped. A broad, smooth, tawny head with
+# small eyes, two fat whisker pads with bristles fanning out to both sides,
+# and long ivory tusks (`tusks`, a new slot) hanging down to the rim between
+# the fore-flippers.
+id = "walrus"
+name = "Walrus"
+category = "aquatic"
+aliases = []
+accent = "ice"
+extends = "pinniped"
+
+[palette]
+"l" = "brown-1"     # hide light
+"f" = "brown-2"     # hide
+"F" = "brown-3"     # hide shadow
+"w" = "orange-1"    # whisker pads and chest
+"M" = "brown-2"     # bristle follicles, pad crease
+"v" = "white"       # whiskers
+"t" = "white"       # NEW: tusk
+"T" = "grey-1"      # NEW: tusk shadow
+
+# A wider head that ends in two fat whisker pads.
+[layers.head]
+at = [5, 4]
+grid = """
+......kkkkkkkkkk......
+....kkllllllllffkk....
+...kllffffffffffFFk...
+..kllffffffffffffFFk..
+.klfffffffffffffffFFk.
+.klfffffffffffffffFFk.
+klffffffffffffffffffFk
+klfffwwwwwwwwwwwwfffFk
+kffwwwwwwwwwwwwwwwwfFk
+kfwwMwwMwwwwwwMwwMwwFk
+kfwwwwwwwwMMwwwwwwwwFk
+.kMwwwwwwwMMwwwwwwwMk.
+..kkMMMMMk..kMMMMMkk..
+"""
+
+# Nostrils on top of the pads.
+[layers.nose]
+at = [13, 11]
+grid = """
+nn..nn
+"""
+
+[layers."nose.sniff"]
+at = [13, 10]
+grid = """
+nn..nn
+"""
+
+[layers."mouth.open"]
+at = [14, 15]
+grid = """
+kppk
+.kk.
+"""
+
+# Bristles fanning out from both pads.
+[layers.whiskers]
+at = [2, 11]
+grid = """
+vv........................vv
+..vvvv................vvvv..
+vvvv....................vvvv
+..vvv..................vvv..
+"""
+
+[layers."whiskers.twitch"]
+at = [2, 10]
+grid = """
+vv........................vv
+..vvvv................vvvv..
+vvvv....................vvvv
+..vvv..................vvv..
+"""
+
+# Long tusks from under the pads, down past the rim.
+[layers.tusks]
+at = [11, 16]
+follows = "head"
+grid = """
+ktTk..kTtk
+ktTk..kTtk
+ktTk..kTtk
+ktTk..kTtk
+.ktk..ktk.
+..k....k..
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "bob"
+weight = 4
+
+[[actions]]
+use = "doze"
+
+# Signature: whiskers twitch, then a slow bob that leads with the tusks.
+[[actions]]
+name = "tusk-bob"
+weight = 4
+frames = [
+  { ops = ["whiskers=twitch"], ms = 120 },
+  { ops = [], ms = 120 },
+  { ops = ["whiskers=twitch"], ms = 120 },
+  { ops = [], ms = 200 },
+  { ops = ["head+0,1"], ms = 160 },
+  { ops = ["head+0,2", "eyes=closed"], ms = 500 },
+  { ops = ["head+0,1"], ms = 160 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: catches a pebble on its head, balances it, and lets it roll off.
+[[actions]]
+name = "pebble-balance"
+weight = 1
+frames = [
+  { ops = ["head+0,-1", "prop:pebble@13,0"], ms = 400 },
+  { ops = ["head+1,-1", "prop:pebble@14,0"], ms = 300 },
+  { ops = ["head+-1,-1", "prop:pebble@12,0"], ms = 300 },
+  { ops = ["head+0,-1", "eyes=happy", "prop:pebble@13,0"], ms = 700 },
+  { ops = ["head+1,-1", "prop:pebble@20,2"], ms = 160 },
+  { ops = ["head+1,0", "prop:pebble@24,8"], ms = 160 },
+  { ops = ["eyes=closed"], ms = 160 },
+  { ops = [], ms = 300 },
+]

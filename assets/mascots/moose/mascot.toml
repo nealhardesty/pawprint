@@ -1,0 +1,215 @@
+# Moose, a showcase mascot on ungulate-head. Near-black fur, broad flat
+# paddle antlers that span the whole frame, a long heavy muzzle that widens
+# into a drooping bulb, and a dewlap (the "bell") under the chin. A bluebird
+# visits the right paddle in the rare action.
+id = "moose"
+name = "Moose"
+category = "mammals"
+aliases = []
+accent = "pine"
+extends = "ungulate-head"
+
+[palette]
+"l" = "brown-3"     # fur light
+"f" = "brown-4"     # fur
+"F" = "fur-black"   # fur shadow
+"w" = "brown-2"     # muzzle bulb
+"M" = "brown-3"     # muzzle shadow, lip line
+"z" = "cream"       # antler light
+"x" = "brown-1"     # antler
+"X" = "brown-2"     # antler shadow
+"n" = "fur-black"   # nostrils
+"g" = "blue-2"      # NEW: bluebird
+"o" = "orange-1"    # NEW: bluebird breast
+
+# No pale throat patch: a moose is dark all over.
+[layers.body]
+at = [4, 15]
+grid = """
+.......klfffffFFk.......
+......klfffffffFFk......
+....klfffffffffffFFk....
+..klfffffffffffffffFFk..
+.klffffffffffffffffffFk.
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+"""
+
+# A long face: it narrows below the eyes, then swells into the bulbous,
+# overhanging muzzle.
+[layers.head]
+at = [7, 4]
+grid = """
+....kkkkkkkkkk....
+..kkllllllllffkk..
+.kllffffffffffFFk.
+.klfffffffffffFFk.
+.klfffffffffffFFk.
+.klfffffffffffFFk.
+..klffffffffffFk..
+...klffffffffFk...
+..klllwwwwwwwwFk..
+.klwwwwwwwwwwwwMk.
+klwwwwwwwwwwwwwwMk
+kMwwwwwwwwwwwwwwMk
+.kMMwwwwwwwwwwMMk.
+..kkkkMMMMMMkkkk..
+"""
+
+# Small dark eyes with a pale rim, so they read on the dark face.
+[layers.eyes]
+at = [10, 8]
+grid = """
+whkw....whkw
+wkkw....wkkw
+.ww......ww.
+"""
+
+[layers."eyes.closed"]
+at = [10, 8]
+grid = """
+.ww......ww.
+wkkw....wkkw
+.ww......ww.
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+grid = """
+hkww....hkww
+kkww....kkww
+.ww......ww.
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+grid = """
+wwhk....wwhk
+wwkk....wwkk
+.ww......ww.
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+# Broad, flat paddles out to the frame edges, points along the top.
+[layers.antlers]
+at = [0, 0]
+grid = """
+.k.k.k.k................k.k.k.k.
+kzkzkzkzk..............kzkzkzkzk
+kzzzzzzzzk.k........k.kzzzzzzzzk
+kxxxxxxxzzkzk......kzkzzxxxxxxxk
+kxxxxxxxxxxxk......kxxxxxxxxxxxk
+.kXxxxxxxxxxk......kxxxxxxxxxXk.
+..kkXXXXxxxk........kxxxXXXXkk..
+......kkXXk..........kXXkk......
+"""
+
+# Wide-set nostrils on the front of the bulb.
+[layers.nose]
+at = [10, 14]
+grid = """
+.n........n.
+nn........nn
+"""
+
+[layers."nose.sniff"]
+at = [10, 14]
+grid = """
+.nn......nn.
+nnn......nnn
+"""
+
+[layers."mouth.open"]
+at = [13, 16]
+grid = """
+kppppk
+.kkkk.
+"""
+
+# The bell: a flap of skin and hair hanging under the chin.
+[layers.dewlap]
+at = [14, 18]
+follows = "head"
+grid = """
+klllk
+.klk.
+..k..
+"""
+
+# A bluebird, hidden at rest; it rides the antlers once it lands.
+[layers."bird.fly"]
+at = [23, 0]
+follows = "antlers"
+grid = """
+k.....k.
+kgk..kgk
+.kgkkgk.
+.kooggkk
+..kkkk..
+"""
+
+[layers."bird.perch"]
+at = [23, 0]
+follows = "antlers"
+grid = """
+..kkk...
+.kgkgkkk
+kkoggggk
+.kooggk.
+..kkkk..
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 4
+
+[[actions]]
+use = "doze"
+
+# Signature: one slow, heavy nod, the paddles dipping with it.
+[[actions]]
+name = "heavy-nod"
+weight = 4
+frames = [
+  { ops = ["head+0,1"], ms = 160 },
+  { ops = ["head+0,2", "eyes=closed"], ms = 240 },
+  { ops = ["head+0,3", "eyes=closed"], ms = 600 },
+  { ops = ["head+0,2"], ms = 220 },
+  { ops = ["head+0,1"], ms = 180 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: a bluebird lands on the right paddle, looks around, and leaves.
+[[actions]]
+name = "bird-visit"
+weight = 1
+frames = [
+  { ops = ["+bird.fly", "bird+6,0"], ms = 160 },
+  { ops = ["+bird.fly", "bird+3,0"], ms = 160 },
+  { ops = ["+bird.perch", "eyes=right"], ms = 1200 },
+  { ops = ["+bird.perch", "eyes=closed"], ms = 160 },
+  { ops = ["+bird.perch", "eyes=right"], ms = 700 },
+  { ops = ["+bird.fly", "bird+3,0"], ms = 160 },
+  { ops = ["+bird.fly", "bird+6,0"], ms = 160 },
+  { ops = [], ms = 300 },
+]
