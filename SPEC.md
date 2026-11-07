@@ -932,7 +932,7 @@ large C++ runtime for a 64-pixel image. Direct platform APIs come to four small 
 | Linux tray | `ksni` 0.3 (`default-features = false, features = ["blocking", "async-io"]`, which avoids tokio) over `zbus` 5 (`default-features = false, features = ["async-io", "blocking-api"]`; ksni 0.3 needs zbus 5, and zbus 6 has no `blocking` module); `zbus` also carries the Plan B presenter protocol. `blocking` is pinned to 1.6 (F36) |
 | Logging | `log` + a minimal file logger (`pawprint::logger`: 1 MB cap, one rotation to `pawprint.log.1`; dependencies log at warn and above only, since zbus logs every D-Bus call at info) |
 | IPC encoding | `serde_json` |
-| Unix calls | `libc`: `localtime_r` (the local hour, `Now::local_hour`), `setsid` (detached start), `getuid`. Windows uses `GetLocalTime` from `windows-sys`. |
+| Unix calls | `libc`: `localtime_r` (the local hour, `Now::local_hour`), `setsid`, `close_range`/`fcntl` (detached start), `getuid`. Windows uses `GetLocalTime` from `windows-sys`. |
 
 No hashing, PRNG, font, or image-scaling crates: those are small, frozen,
 and in-tree.
@@ -976,11 +976,30 @@ by `_`). The first pipe instance is created with
 name exists; that maps to `AddrInUse`. The server connects one instance at a
 time and creates the next before handing a connected one to the IPC thread,
 so the name exists for as long as the badge runs and vanishes when it dies
-(`remove_stale` has nothing to do). The pipe has the default DACL: full
-control for the creating user, SYSTEM, and administrators, read-only for
-everyone else, so only they can write a request; `PIPE_REJECT_REMOTE_CLIENTS`
-refuses network clients. Pipe reads have no timeout (only those users can
-connect).
+(`remove_stale` has nothing to do). Every instance gets an explicit
+security descriptor, `O:<user>D:P(A;;GA;;;<user>)(A;;GA;;;SY)` (the user SID
+from `GetTokenInformation(TokenUser)`, built with
+`ConvertStringSecurityDescriptorToSecurityDescriptorW`): owned by the user,
+and a protected DACL that lets only the user and SYSTEM open the pipe or add
+an instance to it. No other account, anonymous included, can even open it
+for reading. `PIPE_REJECT_REMOTE_CLIENTS` refuses network clients.
+
+The client opens the pipe with `SECURITY_SQOS_PRESENT |
+SECURITY_IDENTIFICATION`, so the server can't act as the client, and checks
+that the pipe's owner (`GetSecurityInfo`) is its own user SID before it
+sends anything. Another account that created the name first fails that
+check (or refuses the open), which `claim` and the CLI report as an error
+("the pipe belongs to another user") rather than "already running". The
+owner, not the server process's token, is what is checked: the badge sets
+it explicitly, so an elevated badge still matches, and no other non-admin
+account can make itself our pipe's owner.
+
+All pipe I/O is overlapped (`FILE_FLAG_OVERLAPPED`) and waits with
+`GetOverlappedResultEx` for the 5-second IPC timeout, then `CancelIoEx`, on
+both sides: a client that connects and never writes can't stall the IPC
+thread, and a badge that never answers can't hang the CLI. The server's
+`flush` waits (with the same timeout) for the client to read the answer and
+close its end, so closing the server end never drops the answer.
 
 ### 10.5 IPC protocol
 
@@ -1012,8 +1031,9 @@ Platform code is unavoidable. Duplicated platform code is not. The rules:
    snapping, timing, labels, mascots, or config belongs in `pawprint-core`.
 2. **Logic that appears in two backends moves to the core** in the change
    that introduces the second copy.
-3. **Each backend stays small,** around 500–800 lines including its tray and
-   autostart glue. A backend growing past that is a sign that rule 1 is being
+3. **Each backend stays small,** around 500–800 lines including its
+   autostart glue. A tray in a module of its own (`backend::windows_tray`,
+   `backend::menubar`, `backend::sni`) doesn't count toward its backend. A backend growing past that is a sign that rule 1 is being
    broken.
 4. **The core has a `FakeSurface`,** so move mode, display changes, reloads,
    and animation are tested in `make test` on every OS, without a window.
@@ -1045,7 +1065,8 @@ What is shared, and by whom:
 | Animation scheduler, `next_deadline()` | `pawprint-core::anim` | All backends |
 | Compositor, integer scaler, font | `pawprint-core::render` | All backends, `render`, `preview`, golden tests |
 | **One pixel format**: premultiplied little-endian ARGB8888 (bytes B, G, R, A) plus a 1-bit mask | `pawprint-core::render` | Windows `UpdateLayeredWindow`, X11 32-bit visual, `wl_shm` `ARGB8888`, macOS `CGImage`, presenter extension (F30); the mask feeds the X11 shape fallback |
-| Tray menu model (items, checks, actions) | `pawprint-core::menu` | Windows tray, macOS menu bar (`backend::menubar`), `ksni` |
+| Tray menu model (items, checks, actions) | `pawprint-core::menu` | Windows tray (`backend::windows_tray`), macOS menu bar (`backend::menubar`), `ksni` |
+| Tray icon scaling (`render::tray_icon`: nearest neighbor, binary alpha, optional margin) | `pawprint-core::render` | Windows tray, macOS menu bar |
 | Sprite compiler | `pawprint-sprite` crate | `build.rs`, runtime user mascots, `pawdev`, `pawprint mascot check` |
 | IPC protocol and server loop | `pawprint::ipc` | Unix-socket transport shared by Linux and macOS; named-pipe transport on Windows |
 | Autostart interface (`on`/`off`/`status`) | `pawprint::autostart` | Three small implementations behind one interface: Linux XDG entry, Windows HKCU `Run`, macOS LaunchAgent |
@@ -1095,7 +1116,9 @@ Each backend must deliver the same **contract**, using the shared pieces in
 - The loop (`backend::windows::run`, and `preview` without IPC): drain the
   message queue, hand the events and tray choices `wndproc` recorded and the
   queued IPC requests to the shell, `tick`, then
-  `MsgWaitForMultipleObjects(QS_ALLINPUT)` with `Shell::timeout()`. The
+  `MsgWaitForMultipleObjectsEx(QS_ALLINPUT, MWMO_INPUTAVAILABLE)` with
+  `Shell::timeout()` (input that arrived before the last peek still wakes
+  it). The
   IPC thread queues each request on a channel and wakes the loop with
   `PostMessageW(WM_APP)`. `wndproc` only records core events and tray
   choices in thread-local queues: Win32 calls such as `SetWindowPos` send
@@ -1148,25 +1171,32 @@ move the window outside the core's constraint, snap, and save):
   The class cursor is the four-way move arrow, shown only in move mode.
 - Keys: `WM_KEYDOWN` arrows, Enter, and Escape, with Shift from
   `GetKeyState`. The keyboard needs the foreground, which Windows gives a
-  background process only with permission: `pawprint move` calls
-  `AllowSetForegroundWindow(ASFW_ANY)` first (it runs in the foreground
-  terminal), and the badge calls `SetForegroundWindow` on entering move mode
-  and hands the foreground back to the previous window when it ends. Where
+  background process only with permission: every IPC client calls
+  `AllowSetForegroundWindow(<badge pid>)` as it connects, with the pid from
+  `GetNamedPipeServerProcessId` (`pawprint move` runs in the foreground
+  terminal; for other commands it does nothing), and the badge calls
+  `SetForegroundWindow` on entering move mode and hands the foreground back
+  to the previous window when it ends. Move from the tray menu finds the
+  badge in the foreground already (the menu took it), so the previous window
+  is the one that was in the foreground when the menu opened; the badge
+  itself never counts as one. Where
   Windows refuses, dragging still works. A click never activates the badge
   (`WS_EX_NOACTIVATE`, `MA_NOACTIVATE`).
 
 #### 11.1.5 Tray and autostart
 
-- Tray: `backend::windows::NotifyIcon` implements `shell::Tray`, attached
-  with `Shell::set_tray` once the badge is shown. One `Shell_NotifyIconW`
-  icon (id 1) on the badge window, `NOTIFYICON_VERSION_4`, with the
-  callback message `WM_APP + 1` and the tooltip from `TrayState`. The icon
-  is the rest frame in its crate (`TrayState.icon`, 32 × 32) at the
-  system's small-icon size (`SM_CXSMICON`: 16 px at 100%, 32 at 200%):
-  each icon pixel is a box of source pixels, opaque when at least half of
-  them are, with their average color, so the 16-pixel icon keeps binary
-  alpha. `tray = false` removes it (`NIM_DELETE`); quitting removes it
-  before the window goes.
+- Tray: `backend::windows_tray::NotifyIcon` implements `shell::Tray`,
+  attached with `Shell::set_tray` once the badge is shown; the badge's
+  `wndproc` passes it the tray messages. One `Shell_NotifyIconW` icon
+  (id 1) on the badge window, `NOTIFYICON_VERSION_4`, with the callback
+  message `WM_APP + 1` and the tooltip from `TrayState`. The icon is the
+  rest frame in its crate (`TrayState.icon`, 32 × 32) at the small-icon size
+  for the primary display's DPI (`GetSystemMetricsForDpi(SM_CXSMICON)`: 16
+  px at 100%, 32 at 200%), scaled by the core's `render::tray_icon`
+  (nearest neighbor, so it keeps binary alpha), and redrawn when that size
+  changes (`WM_DPICHANGED`, `WM_DISPLAYCHANGE`, `WM_SETTINGCHANGE`).
+  `tray = false` removes it (`NIM_DELETE`); quitting removes it before the
+  window goes.
 - Menu: **Move**, **Size ▸ 32/64/128**, **Animation ▸ Idle/Static**,
   **Reset position**, **Reload config**, **Quit**, built on each opening
   from the core's menu model: an item with children is a submenu, a
@@ -1178,15 +1208,21 @@ move the window outside the core's constraint, snap, and save):
   queues the chosen command and the loop hands it to `Shell::menu`, so
   Size and Animation are saved like `pawprint set` (8.6). The menu's modal
   loop runs inside `wndproc`, so animation and IPC wait while it is open.
-- `TaskbarCreated` (registered at startup) adds the icon again after
-  Explorer restarts, and `wndproc` keeps what it needs (the icon data and
-  the menu model) in a thread-local, so neither needs the shell.
+- `TaskbarCreated` (registered when the tray is attached) adds the icon
+  again after Explorer restarts, and `wndproc` keeps what it needs (the icon
+  data and the menu model) in a thread-local, so neither needs the shell.
+  Both that message and the callback pass `ChangeWindowMessageFilterEx`, so
+  an elevated badge still hears from the unelevated Explorer.
 - Autostart (`pawprint::autostart`):
   `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, value
   `pawprint` = `"<dir>\pawprintw.exe" run` (`REG_SZ`), where `<dir>` holds
   the running `pawprint.exe`. `status` reads the value back, `off`
   deletes it (already off is fine). HKCU Run entries run at every
-  interactive logon, RDP logons included.
+  interactive logon, RDP logons included. Settings → Apps → Startup and
+  Task Manager can switch the entry off without removing it, in the binary
+  value `HKCU\…\Explorer\StartupApproved\Run\pawprint` (first byte odd,
+  `0x03`, when off): `status` then adds "disabled in Startup apps", and
+  `on` and `off` delete that value, so `on` means on.
 
 #### 11.1.6 Two executables on Windows
 
@@ -1195,8 +1231,8 @@ and the shell does not wait for it. A console-subsystem executable flashes a
 console window when started at logon. PAWPRINT therefore ships **both** from
 the same code (two `[[bin]]` targets with one shared `main`):
 
-- `pawprint.exe` (console subsystem): the CLI. Bare `pawprint` and
-  `pawprint run --detach` spawn `pawprintw.exe run` with `DETACHED_PROCESS`.
+- `pawprint.exe` (console subsystem): the CLI. Bare `pawprint` starts
+  `pawprintw.exe run` detached.
 - `pawprintw.exe` (`#![windows_subsystem = "windows"]`): the badge, and the
   autostart target.
 
@@ -1204,8 +1240,18 @@ The code is the `pawprint` library crate (`src/lib.rs`, `pawprint::main`);
 `src/main.rs` and `src/bin/pawprintw.rs` are three-line wrappers. On other
 systems `pawprintw` builds as a stub that points at `pawprint`. Bare
 `pawprint` starts the `pawprintw.exe` next to it, falling back to itself,
-after marking its own stdio handles non-inheritable (FW8). A GUI-subsystem process still writes to stdout and stderr handles it
-inherits, so `pawprintw run --verbose` with redirected output logs to that
+with `CreateProcessW` and `bInheritHandles = FALSE`, so the badge holds
+none of the CLI's handles (FW8), and `DETACHED_PROCESS |
+CREATE_NEW_PROCESS_GROUP` (no console, no Ctrl+C from the terminal). It
+first asks for `CREATE_BREAKAWAY_FROM_JOB`, so a terminal that runs its
+children in a job doesn't take the badge along when it closes, and retries
+without it where the job forbids breakaway. The process handle tells
+whether the badge exited early (`WaitForSingleObject(0)`,
+`GetExitCodeProcess`). On Unix the detached badge gets `setsid`, null
+stdio, and every descriptor from 3 up marked close-on-exec
+(`close_range(CLOSE_RANGE_CLOEXEC)`, else `fcntl` up to `_SC_OPEN_MAX`), for
+the same reason. A GUI-subsystem process still writes to stdout and stderr
+handles it inherits, so `pawprintw run --verbose` with redirected output logs to that
 file.
 
 #### 11.1.7 Known limits
@@ -1252,6 +1298,11 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   point is `backingScaleFactor` pixels, so rects round-trip exactly. Screen
   origins are spread by the largest scale, so with mixed scales the screens
   keep their arrangement and never overlap in physical space.
+- Autorelease pools: without `NSApplicationMain` nothing drains
+  autoreleased objects, so setup runs inside an `autoreleasepool` and every
+  turn of the loop inside one of its own. The GUI-session test runs the
+  badge with `OBJC_DEBUG_MISSING_POOLS=YES` and fails on any "MISSING
+  POOLS" line in its log.
 - Event loop: `nextEventMatchingMask(any, untilDate: deadline,
   NSDefaultRunLoopMode)` waits for the next event or `Shell::timeout()`.
   The IPC thread, menu choices, and the screen-change observer wake it by posting an
@@ -1275,7 +1326,7 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
 - Menu bar (`backend::menubar`, the `shell::Tray`): a square
   `NSStatusItem`, created after `finishLaunching` and attached with
   `Shell::set_tray` after `Shell::start`. Its button image is the 32 × 32
-  rest frame in an 18-point box with a 1-point margin, as two bitmaps
+  rest frame in an 18-point box with a 1-point margin (`render::tray_icon`), as two bitmaps
   (36 px at 2x, the art 1:1; 18 px at 1x, every other art pixel), so AppKit
   never interpolates; it is colorful, so not a template image. The tooltip
   is the tray tooltip. The `NSMenu` is rebuilt from `TrayState.menu` on
@@ -1300,7 +1351,9 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   `KeepAlive = { SuccessfulExit = false }` (restart on crash, not on
   `pawprint quit`; `pawprint run` exits 0 when a badge already runs, so a
   login with a running badge doesn't loop), and `ProcessType = Interactive`.
-  `autostart on` writes it and, unless the agent is already loaded, loads
+  `autostart on` writes it and, if its content changed while the agent is
+  loaded, unloads it (`launchctl bootout`; a failure is logged), since
+  launchd reads the plist only on load. Unless the agent is still loaded, it loads
   it now with `launchctl bootstrap gui/<uid> <plist>`, which starts the
   badge (a failure, e.g. from an SSH login, is logged; the agent still
   loads at the next GUI login). `off` runs `launchctl bootout
@@ -2529,9 +2582,9 @@ Win32 known folders can't be redirected, so it uses the real profile.
 | Click-through | `WindowFromPoint` skips the badge, and a `SendInput` click on the label reaches the window below |
 | Move mode | `pawprint move` clears `TRANSPARENT`; `WindowFromPoint` finds the badge on the art and the backdrop on a transparent pixel; a `SendInput` drag moves it, saves the position, and is pixel-exact; arrow keys and Enter when Windows grants the foreground |
 | Work area | an app bar docked at the top (40 px) moves the badge down 40 px, and back when it goes (FW5) |
-| IPC and instances | `status`, `move`, `reset-position`, `quit` over the pipe; a second `run` says "already running"; bare `pawprint` starts `pawprintw.exe` detached |
-| Tray | `Shell_NotifyIconGetRect` finds the badge's icon (else a no-op `NIM_MODIFY` must succeed); a posted `WM_CONTEXTMENU` callback opens the menu, which is read from the test process (`MN_GETHMENU`: the six labels, Size ▸ 64 checked); `SendInput` clicks on **Size** and **128** resize the badge in place and write `size = 128` into `[hosts.owl]`; `pawprint unset size` brings it back |
-| Autostart | `autostart on` writes the `Run` value `"<dir>\pawprintw.exe" run` (read back with `RegGetValueW`), `status` shows it, `off` deletes it, a second `off` says "already off"; the user's value is restored |
+| IPC and instances | `status`, `move`, `reset-position`, `quit` over the pipe; a second `run` says "already running"; bare `pawprint` starts `pawprintw.exe` detached. The pipe itself is covered by `ipc::windows`'s unit tests in `make test`: its owner and DACL are exactly the user and SYSTEM, a client that connects and never writes doesn't stall the server, an unserved pipe times the client out after 5 s, and a pipe owned by Administrators (where the token may assign that owner) is refused |
+| Tray | `Shell_NotifyIconGetRect` finds the badge's icon (else a no-op `NIM_MODIFY` must succeed); a posted `WM_CONTEXTMENU` callback opens the menu, which is read from the test process (`MN_GETHMENU`: the six labels, Size ▸ 64 checked); `SendInput` clicks on **Size** and **128** resize the badge in place and write `size = 128` into `[hosts.owl]`; `pawprint unset size` brings it back; after a click on the backdrop window, **Move** from the menu enters move mode, and when Esc ends it the foreground goes back to the backdrop window, not the badge |
+| Autostart | `autostart on` writes the `Run` value `"<dir>\pawprintw.exe" run` (read back with `RegGetValueW`), `status` shows it, `off` deletes it, a second `off` says "already off"; a `StartupApproved\Run` value starting with `0x03` makes `status` say "disabled in Startup apps" and `on` deletes it; the user's values are restored |
 | Preview | `pawprintw.exe preview owl --size 64` opens `PawprintPreview`: caption and system menu, no `WS_POPUP`, none of the overlay's extended styles, title `PAWPRINT preview`, a client area 96 px tall and at least 96 wide on the slate backdrop; `WM_CLOSE` and Esc each end it with exit code 0 |
 
 Pixel, click, drag, and key checks are skipped, with a message, when the
@@ -2664,9 +2717,9 @@ taking the bottom 48 px) through `make test-windows-display`.
 | FW3 | A normal window shown and activated after the badge stays below it (`WS_EX_TOPMOST`), and a `WS_EX_NOACTIVATE` window is never made foreground by showing, placing, or redrawing it. | Contract items 2 and 3 | **Confirmed** |
 | FW4 | A GUI-subsystem exe writes to inherited stdout/stderr: `pawprintw.exe run --verbose` with stderr redirected to a file logs there. | The test reads the badge's log from its stderr file | **Confirmed** |
 | FW5 | `SPI_SETWORKAREA` from an ordinary process returns success but leaves the work area unchanged while Explorer runs. An app bar (`SHAppBarMessage` `ABM_NEW` + `ABM_SETPOS`) does shrink it, and the shell then broadcasts `WM_SETTINGCHANGE` with `SPI_SETWORKAREA`. | The test simulates a taskbar with an app bar | **Confirmed** (the badge re-lays out to the 40 px smaller work area and back) |
-| FW6 | `AllowSetForegroundWindow(ASFW_ANY)` from the process running `pawprint move`, then `SetForegroundWindow` in the badge, gives the badge the keyboard when that process may set the foreground. | Arrow-key nudging works from a terminal (11.1.4) | **Confirmed on the runner**; verify from Windows Terminal and conhost on a desktop |
+| FW6 | `AllowSetForegroundWindow` (then `ASFW_ANY`, now the badge's pid) from the process running `pawprint move`, then `SetForegroundWindow` in the badge, gives the badge the keyboard when that process may set the foreground. | Arrow-key nudging works from a terminal (11.1.4) | **Confirmed on the runner**; verify from Windows Terminal and conhost on a desktop |
 | FW7 | `CreateNamedPipeW` with `FILE_FLAG_FIRST_PIPE_INSTANCE` fails with `ERROR_ACCESS_DENIED` when the name exists, and a pipe name vanishes when its last server handle closes. | The pipe is the instance lock; no stale endpoints (10.4) | **Confirmed** (`make test` on windows-latest; the desktop test's crash-free restarts) |
-| FW8 | `std::process::Command` on Windows creates children with handle inheritance on, so a child inherits every inheritable handle, including the parent's own redirected stdout and stderr, even when its stdio is set to null. | Bare `pawprint` marks its stdio handles non-inheritable before starting the detached badge; otherwise `pawprint \| more` or a script capturing its output would wait until the badge quits | **Confirmed** (the desktop test hung until this was fixed) |
+| FW8 | `std::process::Command` on Windows creates children with handle inheritance on, so a child inherits every inheritable handle, including the parent's own redirected stdout and stderr, even when its stdio is set to null. | Bare `pawprint` starts the badge with `CreateProcessW(bInheritHandles = FALSE)` (11.1.6); otherwise `pawprint \| more` or a script capturing its output would wait until the badge quits. The same holds for inherited descriptors on Unix, which the detached start marks close-on-exec | **Confirmed** (the desktop test hung until this was fixed; the Unix side by `instance`'s unit test) |
 | FW9 | `Shell_NotifyIconGetRect` returns a newly added notification icon's rectangle on the runner (`[797, 720, 32, 48]`, in the taskbar below the 720-px work area): new icons are shown, not hidden in the overflow. | The desktop test finds the tray icon directly; a no-op `NIM_MODIFY` is its fallback where an icon sits in the overflow | **Confirmed** |
 | FW10 | Another process can read and drive a menu shown by `TrackPopupMenu`: `FindWindowExW("#32768")` + `MN_GETHMENU` give its `HMENU`, `GetMenuStringW`, `GetMenuState`, `GetSubMenu`, and `GetMenuItemRect(NULL, ..)` work on it, and `SendInput` clicks choose items (`TPM_RETURNCMD` returns the id). | The tray menu is tested end to end with real clicks (16.1.3) | **Confirmed** |
 | FW11 | Windows keeps a `WS_CAPTION \| WS_SYSMENU \| WS_MINIMIZEBOX` window at least `SM_CXMIN` wide: a 96-px client area came out 120 px at 96 DPI. | The preview widens about its center and centers the frame on its backdrop brush (11.1.1) | **Confirmed** |
