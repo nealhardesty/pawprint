@@ -33,11 +33,16 @@ Runs on **Windows 10/11**, **macOS 13+**, and **Linux**: X11, KDE Plasma 6
 on Wayland, and GNOME on Wayland (Ubuntu 24.04 LTS and newer).
 
 > **Status: pre-release.** PAWPRINT is being built now. This README describes
-> how 1.0 will work. Today the shared core, the art compiler, and the
-> backend-free commands (`pawprint explain`, `list`, `render`, `paths`,
-> `--version`) work; the on-screen badge arrives with the platform backends.
-> See [`ROADMAP.md`](ROADMAP.md) for progress and [`SPEC.md`](SPEC.md) for the
-> design.
+> how 1.0 will work. Today **the badge runs on Linux** (X11, Wayland
+> compositors with layer-shell such as KDE Plasma and Sway, and GNOME
+> through XWayland), with `pawprint`, `run`, `move`, `reset-position`,
+> `reload`, `quit`, `status`, and `doctor`, plus the backend-free commands
+> (`explain`, `list`, `render`, `paths`, `--version`). **Windows** and
+> **macOS** run the badge too (no tray icon or autostart yet). There are no
+> release builds or installers yet, so build from source
+> (see [Development](#development)). Only one placeholder mascot (the owl)
+> exists so far. See [`ROADMAP.md`](ROADMAP.md) for progress and
+> [`SPEC.md`](SPEC.md) for the design.
 
 ---
 
@@ -129,9 +134,12 @@ Install locations: `~/.local/bin/pawprint` on Linux and macOS, and
 
 **Why "move mode"?** The badge lets every click pass through to whatever is
 underneath, so it never blocks a button you need. To drag it, you first ask
-it to hold still. Move mode ends when you let go, when you press Esc, or
-after 30 seconds. Its position is anchored to the nearest corner or edge, so
-it stays put when a remote session changes resolution.
+it to hold still. Move mode ends when you let go, when you press Enter or
+Esc, or after 30 seconds. The arrow keys nudge it by a pixel (Shift: ten)
+while move mode is on, and the keyboard goes to the badge until it ends.
+Its position is anchored to the nearest corner or edge, so it stays put
+when a remote session changes resolution. (On Wayland, clicks anywhere
+else on the screen are held back while move mode is on.)
 
 ### How it picks a mascot
 
@@ -291,11 +299,35 @@ through drawing one on a shared body base, step by step.
 
 Run **`pawprint doctor`** first. It reports the session type, which backend
 was chosen and why, your displays and which one is primary, transparency
-support, autostart status, and any config problems.
+support, autostart status, and any config problems. For example, on a
+Linux X11 session with no compositor:
+
+```
+$ pawprint doctor
+...
+Backend
+  backend             x11
+  why                 DISPLAY is set
+  window manager      Openbox
+  compositor          none
+  ARGB visual         yes
+  transparency        bounding shape from the badge mask (pixel-identical)
+  RandR monitors      yes (1.5)
+  display             DP-1 1920x1080+0+0 scale 1 usable 1920x1040+0+40 (primary)  <- badge
+  tray                StatusNotifierItem host available (tray arrives in M4)
+
+No problems found.
+```
+
+On Linux, PAWPRINT picks its backend like this: a Wayland compositor with
+layer-shell (KDE Plasma, Sway, Hyprland, ...) gets the native Wayland
+backend; GNOME on Wayland uses X11 through XWayland; anything else with
+`DISPLAY` set (X11 desktops, xrdp, Xvnc) uses X11. Set `backend = "x11"` or
+`"wayland"` in the config only if `doctor` suggests it.
 
 | Problem | Try |
 |---|---|
-| Nothing appears | `pawprint status`. If it isn't running, `pawprint run --verbose` shows errors in the terminal. |
+| Nothing appears | `pawprint status`. If it isn't running, `pawprint run --verbose` shows errors in the terminal. Exit code 3 means no usable graphical session was found. |
 | Black or gray box instead of transparency (Linux X11) | No compositor is running. PAWPRINT should switch to shaped mode automatically; `doctor` shows which mode is in use. |
 | It's on the wrong monitor | `pawprint doctor` lists output names; set `display = "<name>"`. |
 | Blurry on Ubuntu/GNOME with fractional scaling | Run `pawprint doctor`; it shows the `gsettings` command that makes it crisp. |
@@ -304,7 +336,9 @@ support, autostart status, and any config problems.
 | Want a fresh fallback pick | `pawprint forget` clears this host's remembered choice. |
 | "already running" but nothing visible | It's running in a different session (for example the console vs. RDP). `pawprint quit` from that session, or log out of it. |
 
-Logs: `pawprint paths` shows the log file location.
+Logs: `pawprint paths` shows the log file location (on Linux,
+`~/.local/state/pawprint/pawprint.log`; it is capped at 1 MB, with one
+older file kept as `pawprint.log.1`).
 
 ---
 
@@ -341,12 +375,21 @@ work. Contributor rules for humans and coding agents are in
 | macOS | Xcode Command Line Tools: `xcode-select --install` (provides `make`, `lipo`, `codesign`) |
 | Windows | Visual Studio Build Tools (C++ workload) and GNU Make: `winget install ezwinports.make`. Run targets from PowerShell. |
 | Publishing | [GitHub CLI](https://cli.github.com), authenticated with `gh auth login` |
+| Linux display tests (optional) | `make test-x11` and `make test-wayland` drive real display servers. On Ubuntu: `sudo apt-get install xvfb xcompmgr openbox sway swaybg grim foot wtype` |
+| Windows display test (optional) | `make test-windows-display` runs the badge on your own desktop: nothing to install, but quit any running badge first and leave the mouse alone for a few seconds |
 
 ### Make targets
 
 **Everything goes through `make`.** Run `make` on its own to list targets.
 The targets are the same on Linux, macOS, and Windows, and CI runs the same
 ones.
+
+To try the badge from a checkout, `make run` runs it in the foreground
+(Ctrl-C or `pawprint quit` stops it). After `make build`, the CLI is
+`target/debug/pawprint`: bare `target/debug/pawprint` starts the badge in
+the background, and `target/debug/pawprint move`, `status`, and `quit` talk
+to it. On Windows the build also makes `target\debug\pawprintw.exe`, the
+windowless twin that bare `pawprint` starts so no console window opens.
 
 | Target | What it does |
 |---|---|
@@ -355,6 +398,11 @@ ones.
 | `make run` | Build and run the badge in the foreground (`ARGS="--verbose"` passes flags) |
 | `make preview MASCOT=owl` | Show one mascot cycling through its animations |
 | `make test` | Unit tests, golden image tests, and mascot catalog validation |
+| `make test-x11` | Linux: run the badge under Xvfb (bare, with the `xcompmgr` compositor, with the `openbox` window manager) and check its pixels, click-through, move mode, and single instance |
+| `make test-wayland` | Linux: run the badge under headless Sway and check placement, click-through, move mode, panels, and output changes from screenshots |
+| `make test-linux-display` | Both display-server suites (a separate CI job runs this) |
+| `make test-macos-display` | macOS: run the badge in your logged-in desktop and check its window level, placement, IPC, and (with Screen Recording and Accessibility granted to the terminal) pixels, drag, and keys; a CI job runs it on `macos-latest` |
+| `make test-windows-display` | Windows: run `pawprintw.exe` on this desktop and check its window styles, top-right placement, topmost, click-through, a real move-mode drag, work-area changes, the named pipe, and its pixels on screen (a separate CI job runs this on `windows-latest`) |
 | `make check-assets` | Validate the mascot catalog only |
 | `make lint` | Format check and clippy (warnings are errors) |
 | `make fmt` | Format the code |

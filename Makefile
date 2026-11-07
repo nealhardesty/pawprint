@@ -15,7 +15,7 @@ ANIMATED ?=
 TARGETS = x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows-msvc
 
 .DEFAULT_GOAL := help
-.PHONY: help build run preview test check-assets lint fmt golden contact-sheet building-blocks palette art-export art-import ci release package publish install uninstall doctor clean check-all-targets spike-f22
+.PHONY: help build run preview test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden contact-sheet building-blocks palette art-export art-import ci release package publish install uninstall doctor clean check-all-targets spike-f22
 
 help: ## List targets
 	@$(PAWDEV) help $(firstword $(MAKEFILE_LIST))
@@ -32,6 +32,20 @@ preview: ## Preview a mascot: make preview MASCOT=owl
 test: ## Unit tests, golden render tests, and asset validation
 	$(CARGO) test --workspace
 	$(PAWDEV) check-assets
+
+test-x11: ## Linux: drive the X11 backend under Xvfb, with and without xcompmgr and openbox (needs those installed)
+	$(CARGO) test --package pawprint --test x11 -- --ignored --test-threads=1
+
+test-wayland: ## Linux: drive the Wayland backend under headless sway, checked with grim (needs sway, swaybg, grim, foot, wtype)
+	$(CARGO) test --package pawprint --test wayland -- --ignored --test-threads=1
+
+test-linux-display: test-x11 test-wayland ## Linux: both display-server test suites
+
+test-macos-display: ## macOS: drive the badge in the logged-in desktop session and check its window, level, and pixels
+	$(CARGO) test --package pawprint --test macos -- --ignored --test-threads=1 --nocapture
+
+test-windows-display: ## Windows: run pawprintw.exe on this desktop and check its window styles, placement, click-through, move mode, IPC, and pixels
+	$(CARGO) test --package pawprint --test windows -- --ignored --test-threads=1 --nocapture
 
 check-assets: ## Validate the mascot catalog only (catalog gates are reported, not enforced)
 	$(PAWDEV) check-assets

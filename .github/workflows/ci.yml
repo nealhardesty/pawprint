@@ -37,3 +37,67 @@ jobs:
 
       - name: make ci
         run: make ci
+
+  # The X11 and Wayland backends against real display servers: Xvfb (bare,
+  # with xcompmgr, with openbox) and headless sway, checked pixel by pixel.
+  linux-display:
+    name: make test-linux-display (ubuntu)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - name: Install display servers and test tools
+        run: sudo apt-get update && sudo apt-get install -y xvfb xcompmgr openbox sway swaybg grim foot wtype
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: make test-linux-display
+        run: make test-linux-display
+
+  # The macOS backend in the runner's logged-in desktop session: window
+  # level, placement, accessory policy, IPC, and (where the runner permits
+  # capture and synthetic input) pixels, drag, and keys.
+  macos-display:
+    name: make test-macos-display (macos)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: make test-macos-display
+        run: make test-macos-display
+
+      - name: pawprint doctor
+        if: always()
+        run: make doctor
+
+  # The Windows backend on the runner's desktop: window styles, placement,
+  # click-through, move mode, IPC, and screen pixels (SPEC §16.1.2).
+  windows-display:
+    name: make test-windows-display (windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - name: Install GNU Make
+        shell: bash
+        run: command -v make || choco install make --no-progress -y
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: make test-windows-display
+        run: make test-windows-display
+
+      - name: pawprint doctor
+        if: always()
+        run: make doctor

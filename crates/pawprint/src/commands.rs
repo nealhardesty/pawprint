@@ -18,7 +18,7 @@ fn paths_or_err() -> Result<Paths, (u8, String)> {
 }
 
 /// Config file, or defaults if there is none. The note says which.
-fn load_config(paths: &Paths) -> (Config, String) {
+pub fn load_config(paths: &Paths) -> (Config, String) {
     match std::fs::read_to_string(&paths.config_file) {
         Ok(text) => (
             Config::parse(&text),
