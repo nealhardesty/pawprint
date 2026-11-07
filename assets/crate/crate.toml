@@ -1,0 +1,90 @@
+# The shared crate (SPEC §4.1-4.2), drawn in accent shades so any accent
+# tints it. Back rim: rows 18-19 behind the mascot. Front: rows 20-31 in front
+# of it, with the cream label strip at rows 22-29, columns 2-29.
+#
+# The nameplate (used when the label doesn't fit the strip) is drawn in font
+# pixels: plate-left, then plate-mid once per text column, then plate-right.
+# Text starts right after plate-left and is centered vertically.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"1" = "accent-shadow"
+"2" = "accent"
+"3" = "accent-highlight"
+"s" = "cream"
+
+[layers.back]
+at = [0, 18]
+grid = """
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+k111111111111111111111111111111k
+"""
+
+[layers.front]
+at = [0, 20]
+grid = """
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+k333333333333333333333333333333k
+k2ssssssssssssssssssssssssssss1k
+k2ssssssssssssssssssssssssssss1k
+k2ssssssssssssssssssssssssssss1k
+k2ssssssssssssssssssssssssssss1k
+k2ssssssssssssssssssssssssssss1k
+k2ssssssssssssssssssssssssssss1k
+k2ssssssssssssssssssssssssssss1k
+k2ssssssssssssssssssssssssssss1k
+k111111111111111111111111111111k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+"""
+
+[layers.plate-left]
+grid = """
+kkk
+k33
+k2s
+k2s
+k2s
+k2s
+k2s
+k2s
+k2s
+k2s
+k2s
+k11
+kkk
+"""
+
+[layers.plate-mid]
+grid = """
+k
+3
+s
+s
+s
+s
+s
+s
+s
+s
+s
+1
+k
+"""
+
+[layers.plate-right]
+grid = """
+kkk
+33k
+s1k
+s1k
+s1k
+s1k
+s1k
+s1k
+s1k
+s1k
+s1k
+11k
+kkk
+"""

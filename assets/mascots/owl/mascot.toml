@@ -1,0 +1,84 @@
+# Placeholder owl (M0). The showcase owl replaces it in M2 (ROADMAP).
+id = "owl"
+name = "Owl"
+category = "birds"
+aliases = ["owls", "hoot"]
+accent = "violet"
+nocturnal = true
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"f" = "brown-2"     # feathers
+"F" = "brown-3"     # feather shadow
+"l" = "brown-1"     # belly
+"w" = "cream"       # facial disc
+"e" = "amber"       # iris
+"h" = "white"       # eye highlight
+"b" = "orange-2"    # beak and talons
+
+[layers.body]
+at = [6, 12]
+grid = """
+..kkkkkkkkkkkkkkkk..
+.kffffffffffffffffk.
+kFfffllllllllllfffFk
+kFffllFllllllFllffFk
+kFffllllllllllllffFk
+kFfflllFllllFlllffFk
+kFffllllllllllllffFk
+kFfflbbllllllbblffFk
+kFffffffffffffffffFk
+kFffffffffffffffffFk
+"""
+
+[layers.head]
+at = [7, 1]
+grid = """
+kk..............kk
+kfk............kfk
+kffk..........kffk
+kfffkkkkkkkkkkfffk
+kffffffffffffffffk
+kffwwwwffffwwwwffk
+kfwwwwwwffwwwwwwfk
+kfwwwwwwwwwwwwwwfk
+kfwwwwwwwwwwwwwwfk
+kfwwwwwwwwwwwwwwfk
+kffwwwwwbbwwwwwffk
+kfffwwwwbbwwwwfffk
+kffffffffffffffffk
+"""
+
+[layers.eyes]
+at = [10, 7]
+grid = """
+.ee.....ee..
+ehke....ehke
+ekke....ekke
+.ee.....ee..
+"""
+
+[layers."eyes.closed"]
+at = [10, 7]
+grid = """
+............
+............
+kkkk....kkkk
+............
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+name = "head-turn"     # signature: one slow blink, then a sideways head turn
+weight = 3
+frames = [
+  { ops = ["eyes=closed"], ms = 160 },
+  { ops = [], ms = 200 },
+  { ops = ["head+1,0", "eyes+1,0"], ms = 220 },
+  { ops = ["head+2,0", "eyes+2,0"], ms = 900 },
+  { ops = ["head+1,0", "eyes+1,0"], ms = 200 },
+]

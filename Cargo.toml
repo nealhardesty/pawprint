@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/pawprint-sprite"]
+members = ["crates/pawprint-core", "crates/pawprint-sprite"]
 exclude = ["spikes"]
 
 [workspace.package]

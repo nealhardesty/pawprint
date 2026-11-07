@@ -113,6 +113,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pawprint-core"
+version = "0.1.0"
+dependencies = [
+ "pawprint-sprite",
+ "serde",
+ "toml",
+]
+
+[[package]]
 name = "pawprint-sprite"
 version = "0.1.0"
 dependencies = [
