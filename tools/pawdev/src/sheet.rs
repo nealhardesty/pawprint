@@ -217,14 +217,17 @@ fn frame_at(t: &[(usize, u32)], ms: u32) -> usize {
 }
 
 fn gallery_gif(root: &Path, l: &Layout, first: RgbaImage) -> Result<(), String> {
+    // The sheet is sampled on a 100 ms clock. A finer one (GIF allows 10 ms)
+    // multiplies the frame count, because 100 mascots change at unrelated
+    // times, and the shortest frames in the catalog are 80 ms anyway.
+    const TICK_MS: u32 = 100;
     let lines: Vec<Vec<(usize, u32)>> = l.cells.iter().map(|(m, _, _)| timeline(m)).collect();
-    // Change points, rounded to GIF's 10 ms clock.
     let mut times: Vec<u32> = vec![0];
     for t in &lines {
         let mut acc = 0;
         for &(_, d) in t {
             acc += d;
-            times.push(acc / 10 * 10);
+            times.push(acc / TICK_MS * TICK_MS);
         }
     }
     times.sort_unstable();
@@ -234,7 +237,8 @@ fn gallery_gif(root: &Path, l: &Layout, first: RgbaImage) -> Result<(), String> 
     let mut img = first;
     let mut shown: Vec<usize> = vec![0; l.cells.len()];
     // GIF frame k shows the sheet at times[k] until times[k + 1]. The first
-    // is the whole sheet; later ones cover only the cells that changed. The
+    // is the whole sheet; later ones cover only the cells that changed, with
+    // unchanged pixels transparent so they compress to almost nothing. The
     // state at `end` is all-rest again, which frame 0 already shows.
     let mut frames: Vec<((u32, u32, u32, u32), RgbaImage)> =
         vec![((0, 0, img.width, img.height), img.clone())];
@@ -244,6 +248,7 @@ fn gallery_gif(root: &Path, l: &Layout, first: RgbaImage) -> Result<(), String> 
         .collect();
     for &now in &times[1..times.len() - 1] {
         let mut bbox: Option<(u32, u32, u32, u32)> = None;
+        let before = img.clone();
         for (i, (m, x, y)) in l.cells.iter().enumerate() {
             let f = frame_at(&lines[i], now);
             if f != shown[i] {
@@ -260,27 +265,31 @@ fn gallery_gif(root: &Path, l: &Layout, first: RgbaImage) -> Result<(), String> 
         let mut sub = RgbaImage::new(x1 - x0, y1 - y0);
         for yy in 0..sub.height {
             for xx in 0..sub.width {
-                sub.put(i64::from(xx), i64::from(yy), img.pixel(x0 + xx, y0 + yy));
+                let p = img.pixel(x0 + xx, y0 + yy);
+                if p != before.pixel(x0 + xx, y0 + yy) {
+                    sub.put(i64::from(xx), i64::from(yy), p);
+                }
             }
         }
         frames.push(((x0, y0, x1 - x0, y1 - y0), sub));
     }
 
-    // One global palette: every color used anywhere.
+    // One global palette: index 0 is transparent, then every color used.
     let mut index: HashMap<[u8; 3], u8> = HashMap::new();
-    let mut palette: Vec<u8> = Vec::new();
+    let mut palette: Vec<u8> = vec![0, 0, 0];
     let mut indexed = Vec::new();
     for (_, sub) in &frames {
         let mut buf = Vec::with_capacity((sub.width * sub.height) as usize);
         for p in sub.data.chunks(4) {
             let key = [p[0], p[1], p[2]];
             let i = match index.get(&key) {
+                _ if p[3] == 0 => 0,
                 Some(&i) => i,
                 None => {
-                    if index.len() == 256 {
-                        return Err("gallery uses more than 256 colors".into());
+                    if index.len() == 255 {
+                        return Err("gallery uses more than 255 colors".into());
                     }
-                    let i = index.len() as u8;
+                    let i = index.len() as u8 + 1;
                     index.insert(key, i);
                     palette.extend_from_slice(&key);
                     i
@@ -313,6 +322,8 @@ fn gallery_gif(root: &Path, l: &Layout, first: RgbaImage) -> Result<(), String> 
             width: rect.2 as u16,
             height: rect.3 as u16,
             buffer: std::borrow::Cow::Borrowed(buf),
+            transparent: Some(0),
+            dispose: gif::DisposalMethod::Keep,
             ..gif::Frame::default()
         };
         enc.write_frame(&frame).map_err(gif_err)?;
