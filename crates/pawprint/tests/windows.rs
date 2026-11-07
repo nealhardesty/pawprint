@@ -409,8 +409,9 @@ fn layered_topmost_click_through_badge() {
     let label = at(32, 60);
     let body = at(32, 32);
     let expected = env.expected(64);
-    let corner = (0..64)
-        .flat_map(|py| (0..64).map(move |px| (px, py)))
+    // Inside the edge, where move mode draws its dashed outline (SPEC §6.3).
+    let corner = (2..62)
+        .flat_map(|py| (2..62).map(move |px| (px, py)))
         .find(|&(px, py)| expected.px(px as u32, py as u32)[3] == 0)
         .map(|(px, py)| at(px, py))
         .expect("a transparent pixel");

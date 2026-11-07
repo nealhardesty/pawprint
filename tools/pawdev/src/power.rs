@@ -107,9 +107,12 @@ impl Session {
         for sub in ["home", "run"] {
             std::fs::create_dir_all(dir.join(sub)).map_err(|e| e.to_string())?;
         }
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(dir.join("run"), std::fs::Permissions::from_mode(0o700))
-            .map_err(|e| e.to_string())?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(dir.join("run"), std::fs::Permissions::from_mode(0o700))
+                .map_err(|e| e.to_string())?;
+        }
         let n = (150..250)
             .find(|n| !Path::new(&format!("/tmp/.X{n}-lock")).exists())
             .ok_or("no free X display number")?;

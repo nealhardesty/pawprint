@@ -125,12 +125,14 @@ fn capture(env: &Env) -> Option<Image> {
     (ok && path.exists()).then(|| Image::load(&path))
 }
 
-/// Opaque badge pixels that differ on screen at (x, y).
+/// Opaque badge pixels that differ on screen at (x, y). The outer art pixel
+/// (2 px at size 64) is skipped: the check runs in move mode, which draws
+/// its dashed outline there (SPEC §6.3).
 fn wrong_pixels(screen: &Image, badge: &Image, x: i32, y: i32) -> (usize, usize) {
     let mut wrong = 0;
     let mut total = 0;
-    for by in 0..badge.height {
-        for bx in 0..badge.width {
+    for by in 2..badge.height - 2 {
+        for bx in 2..badge.width - 2 {
             let b = badge.px(bx, by);
             if b[3] != 255 {
                 continue;
