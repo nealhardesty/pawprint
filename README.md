@@ -397,6 +397,7 @@ to it.
 | `make test-x11` | Linux: run the badge under Xvfb (bare, with the `xcompmgr` compositor, with the `openbox` window manager) and check its pixels, click-through, move mode, and single instance |
 | `make test-wayland` | Linux: run the badge under headless Sway and check placement, click-through, move mode, panels, and output changes from screenshots |
 | `make test-linux-display` | Both display-server suites (a separate CI job runs this) |
+| `make test-macos-display` | macOS: run the badge in your logged-in desktop and check its window level, placement, IPC, and (with Screen Recording and Accessibility granted to the terminal) pixels, drag, and keys; a CI job runs it on `macos-latest` |
 | `make check-assets` | Validate the mascot catalog only |
 | `make lint` | Format check and clippy (warnings are errors) |
 | `make fmt` | Format the code |
