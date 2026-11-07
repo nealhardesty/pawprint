@@ -1,0 +1,252 @@
+# Penguin on bird-water: a king penguin. A black head with yellow ear
+# patches that run down into an orange-blushed white front, a slim black
+# bill with an orange stripe, and black flippers at its sides. Unlike the
+# puffin, the head is all black and the bill is small.
+# Signature: a waddle-shuffle and a flipper flap. Rare: it flops onto its
+# belly and toboggans clean across the crate, then pops back up.
+id = "penguin"
+name = "Penguin"
+category = "birds"
+aliases = []
+accent = "ice"
+extends = "bird-water"
+
+[palette]
+"l" = "grey-3"      # back light
+"f" = "fur-black"   # back
+"F" = "grey-4"      # back shadow
+"w" = "white"       # front
+"o" = "orange-1"    # chest blush
+"y" = "yellow-1"    # ear patches
+"e" = "grey-2"      # eye ring
+"n" = "grey-4"      # bill
+"O" = "orange-2"    # bill stripe
+"b" = "grey-3"      # feet
+"B" = "grey-4"      # feet shadow
+"p" = "orange-2"    # inside of the bill
+
+[layers.body]
+at = [8, 13]
+grid = """
+kyooooooooooooyk
+kwoooooooooooowk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwk
+"""
+
+# Flippers at its sides, and raised for the flap.
+[layers.wings]
+at = [3, 13]
+grid = """
+...kfk..............kFk...
+..kffk..............kFFk..
+..kffk..............kFFk..
+.kfffk..............kFFFk.
+.kffFk..............kFFFk.
+kffFkk..............kkFFFk
+kkkk.k..............k.kkkk
+"""
+
+[layers."wings.open"]
+at = [0, 12]
+grid = """
+kk............................kk
+kfkk........................kkFk
+.kffkk....................kkFFk.
+..kfffkk................kkFFFk..
+...kkfffk..............kFFFkk...
+.....kkkk..............kkkk.....
+"""
+
+# A small black head; the ear patches curl down into the chest.
+[layers.head]
+at = [7, 3]
+grid = """
+.....kkkkkkkk.....
+...kkllllllffkk...
+..kllffffffffFFk..
+.klffffffffffffFk.
+.klffffffffffffFk.
+.klffffffffffffFk.
+.klffffffffffffFk.
+.kyfffffffffffffk.
+kyyyfffffffffffyyk
+kyyywwwwwwwwwwyyyk
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......kh
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+ee......ee
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+kh......kh
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.ee....ee.
+e..e..e..e
+"""
+
+[layers.bill]
+at = [14, 9]
+follows = "head"
+grid = """
+.kk.
+knnk
+knOk
+.kk.
+"""
+
+[layers."mouth.open"]
+at = [14, 9]
+follows = "head"
+grid = """
+.kk.
+knnk
+kkkk
+kOOk
+.kk.
+"""
+
+[layers."feet.lift"]
+at = [9, 17]
+grid = """
+.kbbbk........
+kbBbBbk.kbbbk.
+.......kbBbBbk
+"""
+
+[layers."feet.step"]
+at = [9, 17]
+grid = """
+........kbbbk.
+.kbbbk.kbBbBbk
+kbBbBbk.......
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "shiver"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: shuffles side to side, then flaps both flippers.
+[[actions]]
+name = "waddle-flap"
+weight = 5
+frames = [
+  { ops = ["feet=lift", "all+-1,0", "head+0,-1"], ms = 200 },
+  { ops = [], ms = 120 },
+  { ops = ["feet=step", "all+1,0", "head+0,-1"], ms = 200 },
+  { ops = [], ms = 120 },
+  { ops = ["feet=lift", "all+-1,0", "head+0,-1"], ms = 200 },
+  { ops = [], ms = 160 },
+  { ops = ["wings=open", "eyes=happy"], ms = 140 },
+  { ops = ["eyes=happy"], ms = 120 },
+  { ops = ["wings=open", "eyes=happy", "all+0,-1"], ms = 140 },
+  { ops = ["eyes=happy"], ms = 400 },
+]
+
+# Rare: flops onto its belly and toboggans across the crate, off one side,
+# then pops back up out of the crate.
+[[actions]]
+name = "toboggan"
+weight = 1
+frames = [
+  { ops = ["all+0,2", "wings=open"], ms = 160 },
+  { grid = "slide", ops = ["all+-6,0"], ms = 200 },
+  { grid = "slide", ops = ["all+0,0"], ms = 160 },
+  { grid = "slide", ops = ["all+8,0"], ms = 120 },
+  { grid = "slide", ops = ["all+18,0"], ms = 100 },
+  { grid = "slide", ops = ["all+30,0"], ms = 600 },
+  { ops = ["all+0,12"], ms = 300 },
+  { ops = ["all+0,5", "eyes=happy"], ms = 120 },
+  { ops = ["all+0,-1", "eyes=happy", "wings=open"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 500 },
+]
+
+[frames.slide]
+grid = """
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+...........kk.......kkkkk.......
+..........kllkkkkkkkfffffkk.....
+.......kkkklfffffffffffffffkk...
+...kkkkfffflfffffffffffffyfhkk..
+..klfffffffFffffffffffffyyffkkkk
+.kbkffffffffFFfffffffffyyyfffOOk
+kbbkfwwwwwwwwwwwwwwwwwwwwwwfkkk.
+.kkkkkkkkkkkkkkkkkkkkkkkkkkkk...
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""

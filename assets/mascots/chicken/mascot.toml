@@ -1,0 +1,182 @@
+# Chicken on bird-water: a plump white hen. A big red three-point comb
+# (an `ears` slot, so ear-flick wobbles it), a short yellow beak with a red
+# wattle hanging below, and a pale breast. The comb breaks the top of the
+# silhouette like nothing else on the shelf.
+# Signature: pecks twice, then jerks its head this way and that. Rare: it
+# strains, sweats, and lays an egg on the rim.
+id = "chicken"
+name = "Chicken"
+category = "birds"
+aliases = ["hen", "rooster"]
+accent = "marigold"
+extends = "bird-water"
+
+[palette]
+"l" = "white"       # feathers light
+"f" = "white"       # feathers
+"F" = "grey-1"      # feather shadow
+"w" = "white"       # breast
+"r" = "red-1"       # comb and wattle
+"R" = "red-2"       # comb shadow
+"b" = "yellow-2"    # beak and feet
+"B" = "orange-3"    # beak shadow
+"E" = "white"       # egg
+"G" = "grey-2"      # egg shadow, wing feathers
+"p" = "red-2"       # inside of the beak
+
+[layers.wings]
+at = [2, 17]
+grid = """
+kk........................kk
+kfFk....................kFFk
+kffFk..................kFFFk
+kffFFk................kFFGFk
+kffFFk................kFGFFk
+.kffFk................kFFFk.
+.kkfFk................kFFkk.
+...kkk................kkk...
+"""
+
+[layers.eyes]
+at = [11, 7]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 8]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 7]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 7]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 7]
+follows = "head"
+grid = """
+.kk....kk.
+k..k..k..k
+"""
+
+# The beak, with the wattle hanging below it.
+[layers.bill]
+at = [13, 9]
+follows = "head"
+grid = """
+.kkkk.
+kbbbBk
+.kbBk.
+.krrk.
+.krRk.
+..kk..
+"""
+
+[layers."mouth.open"]
+at = [13, 9]
+follows = "head"
+grid = """
+.kkkk.
+kbbbBk
+kkkkkk
+kpppBk
+.krRk.
+..kk..
+"""
+
+# The comb.
+[layers.ears]
+at = [11, 0]
+follows = "head"
+grid = """
+.kk.kk.kk.
+krrkrrkrrk
+krrrrrrrRk
+.kRrrrrRk.
+"""
+
+[layers."ears.flick"]
+at = [11, 0]
+follows = "head"
+grid = """
+kk.kk.kk..
+krrkrrkrrk
+krrrrrrrRk
+.kRrrrrRk.
+"""
+
+# Rare: a fresh egg on the rim.
+[layers."egg.laid"]
+at = [22, 14]
+grid = """
+.kkk.
+kEEGk
+kEEEk
+kEEGk
+kGGGk
+.kkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "startle"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: two quick pecks at the rim, then sharp little head jerks.
+[[actions]]
+name = "peck"
+weight = 5
+frames = [
+  { ops = ["head+0,1"], ms = 100 },
+  { ops = ["head+0,4", "eyes=closed"], ms = 120 },
+  { ops = ["head+0,1"], ms = 100 },
+  { ops = ["head+0,4", "eyes=closed"], ms = 120 },
+  { ops = [], ms = 300 },
+  { ops = ["head+-1,0", "eyes=left"], ms = 400 },
+  { ops = ["head+1,0", "eyes=right"], ms = 400 },
+  { ops = ["head+-1,0", "eyes=left"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: rises, strains, sweats, and an egg appears on the rim. Proud.
+[[actions]]
+name = "egg"
+weight = 1
+frames = [
+  { ops = ["all+0,-1", "eyes=closed"], ms = 400 },
+  { ops = ["all+0,-2", "eyes=closed", "prop:sweat@24,0"], ms = 500 },
+  { ops = ["all+1,-2", "eyes=closed", "prop:sweat@24,1"], ms = 100 },
+  { ops = ["all+-1,-2", "eyes=closed", "prop:sweat@24,1"], ms = 100 },
+  { ops = ["all+0,-2", "eyes=closed", "prop:sweat@24,2"], ms = 300 },
+  { ops = ["+egg.laid", "-bill", "+mouth.open"], ms = 300 },
+  { ops = ["+egg.laid", "eyes=happy", "ears=flick"], ms = 900 },
+  { ops = ["+egg.laid", "eyes=happy"], ms = 600 },
+  { ops = ["eyes=happy"], ms = 300 },
+]

@@ -1,0 +1,227 @@
+# Eagle on bird-perched. A dark brown body under a white head, a heavy brow
+# angled into a permanent frown over pale yellow eyes, and a big yellow
+# hooked beak. Broad and flat-crowned where the owl is round and tufted.
+# Signature: wings half open, a stern stare. Rare: the full wingspan, and a
+# silent screech.
+id = "eagle"
+name = "Eagle"
+category = "birds"
+aliases = ["hawk", "falcon"]
+accent = "copper"
+extends = "bird-perched"
+
+[palette]
+"l" = "brown-2"     # feathers light
+"f" = "brown-3"     # feathers
+"F" = "brown-4"     # feather shadow
+"w" = "brown-3"     # no pale breast
+"m" = "brown-4"     # breast feather marks
+"W" = "white"       # head
+"G" = "grey-1"      # head shadow
+"M" = "grey-2"      # brow ridge
+"e" = "yellow-1"    # pale iris
+"b" = "yellow-2"    # beak and talons
+"B" = "orange-3"    # beak shadow
+"p" = "red-2"       # inside of the beak
+
+[layers.body]
+at = [5, 12]
+grid = """
+..kkllllllllllllffkk..
+.klllfffffffffffffFFk.
+kllffffffffffffffffFFk
+klfffffffmffmfffffffFk
+klffffffffffffffffffFk
+klffffffmffmffmfffffFk
+klffffffffffffffffffFk
+klfffffffmffmfffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+"""
+
+# A white head, flat on top, with ragged feathers where it meets the brown.
+[layers.head]
+at = [6, 3]
+grid = """
+....kkkkkkkkkkkk....
+..kkWWWWWWWWWWWWkk..
+.kWWWWWWWWWWWWWWWGk.
+kWWWWWWWWWWWWWWWWWGk
+kWWWWWWWWWWWWWWWWWGk
+kWWWWWWWWWWWWWWWWWGk
+kWWWWWWWWWWWWWWWWGGk
+kWWWWWWWWWWWWWWWWGGk
+.kWWWWWWWWWWWWWWGGk.
+.kGWWWWWWWWWWWWWGGk.
+..WlWWlWWWWWWlWWlG..
+"""
+
+# The brow slopes down toward the beak: a frown that never lifts.
+[layers.eyes]
+at = [8, 7]
+follows = "head"
+grid = """
+MM............MM
+.MMMM......MMMM.
+..ekk......kke..
+..ee........ee..
+"""
+
+[layers."eyes.closed"]
+at = [8, 7]
+follows = "head"
+grid = """
+MM............MM
+.MMMM......MMMM.
+..kkk......kkk..
+"""
+
+[layers."eyes.left"]
+at = [8, 7]
+follows = "head"
+grid = """
+MM............MM
+.MMMM......MMMM.
+..kke......kke..
+..ee........ee..
+"""
+
+[layers."eyes.right"]
+at = [8, 7]
+follows = "head"
+grid = """
+MM............MM
+.MMMM......MMMM.
+..ekk......ekk..
+..ee........ee..
+"""
+
+[layers."eyes.happy"]
+at = [8, 7]
+follows = "head"
+grid = """
+................
+.MM..........MM.
+..kkk......kkk..
+.k...k....k...k.
+"""
+
+# Wide open: the brow lifts a little and the pupils pin.
+[layers."eyes.stare"]
+at = [8, 6]
+follows = "head"
+grid = """
+MM............MM
+.MMMM......MMMM.
+..eee......eee..
+..ekk......kke..
+..eee......eee..
+"""
+
+# A big yellow hook, curving down to a point.
+[layers.beak]
+at = [12, 9]
+follows = "head"
+grid = """
+..kkkk..
+.kbbbbk.
+kbbbbbBk
+kbbbbbBk
+.kbbbBk.
+..kbBk..
+..kBk...
+...k....
+"""
+
+[layers."mouth.open"]
+at = [12, 9]
+follows = "head"
+grid = """
+..kkkk..
+.kbbbbk.
+kbbbbbBk
+kkbbbBkk
+kppkkppk
+.kbbbBk.
+..kbBk..
+...kk...
+"""
+
+[layers."wings.spread"]
+at = [0, 4]
+grid = """
+k.k.k......................k.k.k
+klkfkk....................kkfkFk
+klfffFk..................klfffFk
+klffffFk................klffffFk
+.klfffFFk..............kllfffFk.
+.klffffFFk............kllffffFk.
+..klfffFFk............kllfffFk..
+..klffffFFk..........kllffffFk..
+...klfffFFk..........kllfffFk...
+...klffffFk..........klffffFk...
+....klffFFk..........kllffFk....
+....klfffFk..........klfffFk....
+.....klffk............kffFk.....
+.....klfFk............klfFk.....
+......kFk..............klk......
+......kk................kk......
+"""
+
+[layers.feet]
+at = [10, 18]
+grid = """
+.kbbk....kbbk.
+kbkbk....kbkbk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 4
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: rises, wings half open, and fixes you with a long stern stare.
+[[actions]]
+name = "stern-stare"
+weight = 5
+frames = [
+  { ops = ["wings=open"], ms = 160 },
+  { ops = ["wings=open", "all+0,-1"], ms = 200 },
+  { ops = ["wings=open", "all+0,-1", "eyes=stare"], ms = 1400 },
+  { ops = ["wings=open", "all+0,-1", "eyes=closed"], ms = 160 },
+  { ops = ["wings=open"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the full wingspan, and a screech nobody hears.
+[[actions]]
+name = "full-spread"
+weight = 1
+frames = [
+  { ops = ["wings=open"], ms = 150 },
+  { ops = ["wings=spread", "all+0,-1"], ms = 400 },
+  { ops = ["wings=spread", "all+0,-1", "-beak", "+mouth.open", "eyes=stare"], ms = 900 },
+  { ops = ["wings=spread", "all+0,-1", "eyes=stare"], ms = 500 },
+  { ops = ["wings=open"], ms = 200 },
+  { ops = [], ms = 300 },
+]

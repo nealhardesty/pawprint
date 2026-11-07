@@ -1,0 +1,230 @@
+# Heron on bird-water. A grey heron, side on and facing left: a white face
+# and neck streaked with black, a black crest plume trailing behind, a
+# yellow dagger of a bill, and grey folded wings. It rests hunched with a
+# short kinked neck; `head.mid` and `head.long` carry the neck at full
+# stretch. The base's side `wings` and `feet` are left out of `rest`.
+# Signature: the neck extends slowly and retracts. Rare: it strikes into
+# the crate and swallows a fish whole.
+id = "heron"
+name = "Heron"
+category = "birds"
+aliases = ["egret"]
+accent = "sky"
+extends = "bird-water"
+rest = ["body", "head", "eyes", "bill"]
+
+[palette]
+"l" = "grey-1"      # feathers light
+"f" = "grey-2"      # feathers
+"F" = "grey-3"      # feather shadow
+"W" = "white"       # face and neck
+"w" = "grey-1"      # breast
+"d" = "fur-black"   # crest, neck streaks
+"y" = "yellow-1"    # bill
+"Y" = "yellow-2"    # bill shadow
+"s" = "blue-1"      # fish
+"S" = "grey-2"      # fish back
+
+[layers.head]
+at = [0, 4]
+grid = """
+..........kkkkkk........
+.........kddddddkk......
+........kWWWWWWddddkk...
+.kkkkkkkWWWWWWWlFkkddkk.
+kyyyyyyyykWWWWWlFk..kddk
+.kkkYYYYkkWWWWllFk...kk.
+.....kkkkkWdWWlFk.......
+..........kWWdlFk.......
+..........kWdWlFk.......
+..........kWWdlFk.......
+"""
+
+[layers."head.mid"]
+at = [0, 2]
+grid = """
+..........kkkkkk........
+.........kddddddkk......
+........kWWWWWWddddkk...
+.kkkkkkkWWWWWWWlFkkddkk.
+kyyyyyyyykWWWWWlFk..kddk
+.kkkYYYYkkWWWWllFk...kk.
+.....kkkkkWdWWlFk.......
+..........kWWdlFk.......
+..........kWdWlFk.......
+..........kWWdlFk.......
+..........kWdWlFk.......
+..........kWWdlFk.......
+"""
+
+[layers."head.long"]
+at = [0, 0]
+grid = """
+..........kkkkkk........
+.........kddddddkk......
+........kWWWWWWddddkk...
+.kkkkkkkWWWWWWWlFkkddkk.
+kyyyyyyyykWWWWWlFk..kddk
+.kkkYYYYkkWWWWllFk...kk.
+.....kkkkkWdWWlFk.......
+..........kWWdlFk.......
+..........kWdWlFk.......
+..........kWWdlFk.......
+..........kWdWlFk.......
+..........kWWdlFk.......
+..........kWdWlFk.......
+..........kWWdlFk.......
+"""
+
+[layers.body]
+at = [7, 13]
+grid = """
+..........kkkk.........
+..kWWdWllfffFFkkk......
+.kWWWWlffffffffFFk.....
+kWWdWlfffffffffffFk....
+kWWWlfffffffffFffFFk...
+kwWWlffffffffFFffffFk..
+kwwlffffffffFfffffFFk..
+kwwlfffffffFfffffffFFk.
+kwwlffffffFffffffffFFk.
+kwwlffffffFffffffffFFk.
+kwwlffffffFffffffffFFk.
+kwwlffffffFffffffffFFk.
+kwwlffffffFffffffffFFk.
+kwwlffffffFffffffffFFk.
+kwwlffffffFffffffffFFk.
+kwwlffffffFffffffffFFk.
+kwwlffffffFffffffffFFk.
+kwwlffffffFffffffffFFk.
+kwwlffffffFffffffffFFk.
+"""
+
+[layers.eyes]
+at = [9, 7]
+follows = "head"
+grid = """
+hk
+"""
+
+[layers."eyes.closed"]
+at = [9, 7]
+follows = "head"
+grid = """
+kk
+"""
+
+[layers."eyes.left"]
+at = [8, 7]
+follows = "head"
+grid = """
+khW
+"""
+
+[layers."eyes.right"]
+at = [9, 7]
+follows = "head"
+grid = """
+Wk
+"""
+
+[layers."eyes.happy"]
+at = [9, 6]
+follows = "head"
+grid = """
+kk
+"""
+
+# The dagger.
+[layers.bill]
+at = [0, 7]
+follows = "head"
+grid = """
+.kkkkkkk..
+kyyyyyyyyk
+.kkkYYYYkk
+.....kkkkk
+"""
+
+[layers."mouth.open"]
+at = [0, 6]
+follows = "head"
+grid = """
+.kkkkkk...
+kyyyyyyk..
+.kkkkkkkkk
+kYYYYYYYkk
+.kkkkkkkkk
+"""
+
+# Rare: a fish, hanging from the tip of the bill.
+[layers."fish.held"]
+at = [1, 9]
+follows = "head"
+grid = """
+.kk.
+kssk
+kssk
+kSsk
+kSSk
+.kk.
+kssk
+k..k
+"""
+
+# Rare: the lump of a swallowed fish, on its way down the neck.
+[layers."lump.down"]
+at = [9, 10]
+follows = "head"
+grid = """
+kW
+kW
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 4
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the neck stretches up, slow and smooth, looks about, and
+# settles back down.
+[[actions]]
+name = "neck-stretch"
+weight = 5
+frames = [
+  { ops = ["head=mid", "eyes+0,-2", "bill+0,-2"], ms = 400 },
+  { ops = ["head=long", "eyes+0,-4", "bill+0,-4"], ms = 500 },
+  { ops = ["head=long", "eyes+0,-4", "bill+0,-4", "eyes=left"], ms = 900 },
+  { ops = ["head=long", "eyes+0,-4", "bill+0,-4", "eyes=closed"], ms = 140 },
+  { ops = ["head=long", "eyes+0,-4", "bill+0,-4"], ms = 400 },
+  { ops = ["head=mid", "eyes+0,-2", "bill+0,-2"], ms = 400 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: spots something in the crate, strikes, and comes up with a fish,
+# which goes down in one gulp.
+[[actions]]
+name = "strike"
+weight = 1
+frames = [
+  { ops = ["eyes=left"], ms = 300 },
+  { ops = ["head+0,1", "eyes=left"], ms = 200 },
+  { ops = ["all+0,10"], ms = 100 },
+  { ops = ["all+0,10"], ms = 300 },
+  { ops = ["all+0,2", "+fish.held"], ms = 120 },
+  { ops = ["+fish.held", "eyes=happy"], ms = 700 },
+  { ops = ["head+0,-1", "eyes=closed"], ms = 200 },
+  { ops = ["+lump.down", "eyes=closed"], ms = 250 },
+  { ops = ["+lump.down", "lump+0,2", "eyes=happy"], ms = 250 },
+  { ops = ["eyes=happy"], ms = 400 },
+]

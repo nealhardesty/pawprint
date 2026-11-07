@@ -1,0 +1,210 @@
+# Hummingbird on bird-perched. The smallest bird in the catalog: a tiny
+# green body perched on the rim in three-quarter view, a white chest, a ruby
+# throat, a forked tail, and a needle of a beak far longer than its head.
+# The body stops at the rim on purpose, so when it hovers there is air
+# under it. `wings.blur` and `wings.flap` are pale, ink-free fans: flicking
+# between them reads as a blur.
+# Signature: hovers on blurred wings. Rare: zips off one side of the badge
+# and back in from the other.
+id = "hummingbird"
+name = "Hummingbird"
+category = "birds"
+aliases = ["hummer"]
+accent = "teal"
+extends = "bird-perched"
+
+[palette]
+"l" = "green-1"     # feathers light
+"g" = "green-2"     # feathers
+"G" = "green-3"     # feather shadow
+"F" = "teal"        # deepest shadow, with a sheen
+"w" = "white"       # chest
+"r" = "red-1"       # ruby throat
+"T" = "grey-4"      # tail
+"n" = "grey-4"      # needle beak
+"d" = "grey-3"      # feet
+"z" = "blue-1"      # wing blur
+"Z" = "grey-1"      # wing blur edge
+
+[layers.body]
+at = [10, 10]
+grid = """
+.kwrrrrrrggGk....
+.kwrrrrrrrgGFk...
+kwwrrrrrrgggGFk..
+kwwwwrrrrgggGFFk.
+kwwwwwwgggggGFFk.
+kwwwwwwgggggGFFFk
+.kwwwwwggggGFFFk.
+.kwwwwwgggGFFkTTk
+..kwwwkggGFkTTTk.
+...kdk.kdkkkTTk..
+"""
+
+[layers.wings]
+at = [19, 11]
+grid = """
+..kk..
+.kGGk.
+kGGGFk
+kGGFFk
+.kGFFk
+..kFk.
+...k..
+"""
+
+[layers."wings.blur"]
+at = [18, 0]
+grid = """
+..........ZZ.
+.......ZZZzZ.
+.....ZZzzzwZ.
+....ZzzwzzzZ.
+...ZzzwzzzZ..
+..ZzwzzzzZ...
+..ZzzzzZZ....
+.ZzzzZZ......
+.ZzZZ........
+ZZZ..........
+"""
+
+[layers."wings.flap"]
+at = [19, 7]
+grid = """
+ZZZZ.........
+ZzzzZZZZ.....
+ZzwzzzzzZZZ..
+.ZzzwzzzzzzZ.
+..ZZzzzwzzzZ.
+....ZZZzzzZ..
+.......ZZZ...
+"""
+
+[layers.head]
+at = [10, 3]
+grid = """
+.....kkkk........
+...kkllggkk......
+..klllggggGk.....
+.kllgggggggGk....
+.klgggggggGGk....
+.kgggggggggGk....
+.kgggggggggGk....
+"""
+
+[layers.eyes]
+at = [13, 8]
+follows = "head"
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.closed"]
+at = [13, 9]
+follows = "head"
+grid = """
+kk
+"""
+
+[layers."eyes.left"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.right"]
+at = [14, 8]
+follows = "head"
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.happy"]
+at = [12, 8]
+follows = "head"
+grid = """
+.kk.
+k..k
+"""
+
+# The needle.
+[layers.beak]
+at = [2, 9]
+follows = "head"
+grid = """
+nnnnnnnnn
+"""
+
+[layers."mouth.open"]
+at = [2, 8]
+follows = "head"
+grid = """
+.nnnnnnnn
+n........
+.nnnnnnnn
+"""
+
+[layers.feet]
+at = [13, 19]
+grid = """
+k
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 4
+
+[[actions]]
+use = "shiver"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: lifts off and hovers on a blur of wings, then settles.
+[[actions]]
+name = "hover"
+weight = 5
+frames = [
+  { ops = ["wings=blur", "all+0,-1"], ms = 80 },
+  { ops = ["wings=flap", "all+0,-3"], ms = 80 },
+  { ops = ["wings=blur", "all+0,-4"], ms = 80 },
+  { ops = ["wings=flap", "all+0,-4"], ms = 80 },
+  { ops = ["wings=blur", "all+0,-5"], ms = 80 },
+  { ops = ["wings=flap", "all+0,-5"], ms = 80 },
+  { ops = ["wings=blur", "all+0,-5", "eyes=right"], ms = 80 },
+  { ops = ["wings=flap", "all+0,-4", "eyes=right"], ms = 80 },
+  { ops = ["wings=blur", "all+0,-4", "eyes=right"], ms = 80 },
+  { ops = ["wings=flap", "all+0,-5", "eyes=right"], ms = 80 },
+  { ops = ["wings=blur", "all+0,-5"], ms = 80 },
+  { ops = ["wings=flap", "all+0,-4"], ms = 80 },
+  { ops = ["wings=blur", "all+0,-3"], ms = 80 },
+  { ops = ["wings=flap", "all+0,-1"], ms = 80 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: zips off the left of the badge and comes back in from the right.
+[[actions]]
+name = "zip"
+weight = 1
+frames = [
+  { ops = ["wings=blur", "all+0,-3"], ms = 80 },
+  { ops = ["wings=flap", "all+0,-4", "eyes=left"], ms = 160 },
+  { ops = ["wings=blur", "all+-10,-4"], ms = 80 },
+  { ops = ["wings=flap", "all+-24,-4"], ms = 80 },
+  { ops = ["all+-40,0"], ms = 700 },
+  { ops = ["wings=blur", "all+24,-5", "eyes=left"], ms = 80 },
+  { ops = ["wings=flap", "all+10,-5", "eyes=left"], ms = 80 },
+  { ops = ["wings=blur", "all+3,-4", "eyes=left"], ms = 80 },
+  { ops = ["wings=flap", "all+0,-4"], ms = 120 },
+  { ops = ["wings=blur", "all+0,-2"], ms = 80 },
+  { ops = ["eyes=happy"], ms = 500 },
+]
