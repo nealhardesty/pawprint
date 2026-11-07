@@ -118,7 +118,8 @@ jobs:
   # installer under every shell (sh, dash, bash; Windows PowerShell 5.1 and
   # PowerShell 7) against the archive and a local HTTP server laid out like
   # GitHub releases: fresh install, upgrade, checksum mismatch, uninstall,
-  # purge. `make publish DRY_RUN=1` prints the gh commands and runs none.
+  # purge, relative paths. `make publish DRY_RUN=1` and
+  # `make release-finalize DRY_RUN=1` print the gh commands and run none.
   install:
     name: make test-install (${{ matrix.os }})
     strategy:
@@ -152,3 +153,6 @@ jobs:
 
       - name: make publish DRY_RUN=1
         run: make publish DRY_RUN=1
+
+      - name: make release-finalize DRY_RUN=1
+        run: make release-finalize DRY_RUN=1

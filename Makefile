@@ -18,7 +18,7 @@ DRY_RUN ?=
 TARGETS = x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows-msvc
 
 .DEFAULT_GOAL := help
-.PHONY: help build run preview power-check test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden golden-hosts contact-sheet building-blocks palette art-export art-import ci release package publish install uninstall test-install lint-installers doctor clean check-all-targets spike-f22
+.PHONY: help build run preview power-check test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden golden-hosts contact-sheet building-blocks palette art-export art-import ci release package publish release-finalize install uninstall test-install lint-installers doctor clean check-all-targets spike-f22
 
 help: ## List targets
 	@$(PAWDEV) help $(firstword $(MAKEFILE_LIST))
@@ -93,8 +93,11 @@ package: ## release + archives + .sha256 sidecars into dist/; enforces catalog g
 	$(PAWDEV) check-assets --package
 	$(PAWDEV) package
 
-publish: ## Upload dist/* and installers to the GitHub release v<version> (needs gh, a clean tree, the tag on HEAD); DRY_RUN=1 only prints the gh commands
+publish: ## Upload dist/* and installers to the draft GitHub release v<version> (needs gh, a clean tree, the tag on HEAD, dist/ packaged from it); DRY_RUN=1 only prints the gh commands
 	$(PAWDEV) publish $(if $(DRY_RUN),--dry-run)
+
+release-finalize: ## After every OS has run make publish: check the draft release has all archives, sidecars, and installers, then publish it; DRY_RUN=1 only prints
+	$(PAWDEV) finalize $(if $(DRY_RUN),--dry-run)
 
 install: package ## Package, then install for this user with the real installer (--archive dist/...): autostart on, badge started
 	$(PAWDEV) install
@@ -102,7 +105,7 @@ install: package ## Package, then install for this user with the real installer 
 uninstall: ## Remove the install and autostart with the real installer (config is kept)
 	$(PAWDEV) uninstall
 
-test-install: package ## Run the installers end to end in a throwaway home, under every shell found (sh, dash, bash; powershell, pwsh)
+test-install: package ## Run the installers end to end in a throwaway home, under every shell found (sh, dash, bash; powershell, pwsh); macOS and Windows refuse if autostart is already on, outside CI
 	$(PAWDEV) test-install
 
 lint-installers: ## shellcheck installers/install.sh as POSIX sh (needs shellcheck)

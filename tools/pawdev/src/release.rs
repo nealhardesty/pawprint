@@ -7,8 +7,11 @@
 //!   static linking, signature) and run where this machine can run it.
 //! - package: release, then one archive per build plus a `sha256sum`-format
 //!   sidecar into `dist/`, named exactly as SPEC §15.2 says.
+//!   `dist/COMMIT` records the commit they were built from.
 //! - publish: upload `dist/*` and the installers to the GitHub release
-//!   `v<version>` with `gh`, creating the release on first use.
+//!   `v<version>` with `gh`, creating it as a draft on first use.
+//! - finalize: once every OS has uploaded, check that every asset is there
+//!   and publish the draft.
 
 use std::fs::{self, File};
 use std::io::Write;
@@ -314,6 +317,9 @@ pub fn package() -> Result<(), String> {
     let (version, _) = workspace_package(&root)?;
     let dist = root.join("dist");
     fs::create_dir_all(&dist).map_err(|e| e.to_string())?;
+    let commit = built_from(&root)?;
+    fs::write(dist.join(COMMIT_FILE), format!("{commit}\n")).map_err(|e| e.to_string())?;
+    let mtime = source_date_epoch(&root);
     println!();
     for build in &builds {
         let name = build.archive_name(&version);
@@ -333,15 +339,62 @@ pub fn package() -> Result<(), String> {
             files.push((doc.into(), root.join(doc), 0o644));
         }
         if build.is_zip() {
-            write_zip(&path, &files)?;
+            write_zip(&path, &files, mtime)?;
         } else {
-            write_tar_gz(&path, &files)?;
+            write_tar_gz(&path, &files, mtime)?;
         }
         let hash = write_sidecar(&path)?;
         let size = fs::metadata(&path).map_err(|e| e.to_string())?.len();
         println!("  dist/{name}  {:.2} MB  sha256 {hash}", size as f64 / 1e6);
     }
+    println!("  dist/{COMMIT_FILE}  {commit}");
     Ok(())
+}
+
+/// `dist/COMMIT`: the commit `make package` built from, so `make publish`
+/// can refuse archives built from anything but the tagged commit.
+const COMMIT_FILE: &str = "COMMIT";
+
+/// `HEAD`, with `-dirty` appended when the tree has uncommitted changes.
+fn built_from(root: &Path) -> Result<String, String> {
+    let git = |args: &[&str]| output(Command::new("git").args(args).current_dir(root));
+    let head = git(&["rev-parse", "HEAD"])?;
+    let dirty = !git(&["status", "--porcelain"])?.is_empty();
+    Ok(if dirty { format!("{head}-dirty") } else { head })
+}
+
+/// `dist/` must have been packaged from `head` (the tagged commit).
+fn check_dist_commit(root: &Path, head: &str) -> Result<(), String> {
+    let commit = fs::read_to_string(root.join("dist").join(COMMIT_FILE)).map_err(|_| {
+        format!(
+            "dist/{COMMIT_FILE} is missing, so dist/ can't be matched to a commit; run `make clean` and `make package`"
+        )
+    })?;
+    let commit = commit.trim();
+    if commit != head {
+        return Err(format!(
+            "dist/ was packaged from {commit}, but the tag is on {head}; run `make clean` and `make package` from the tag"
+        ));
+    }
+    Ok(())
+}
+
+/// The archives' file times: `SOURCE_DATE_EPOCH` if set, else the commit
+/// time of `HEAD`, so packaging a commit twice gives the same archive bytes
+/// (from the same binaries).
+fn source_date_epoch(root: &Path) -> u64 {
+    std::env::var("SOURCE_DATE_EPOCH")
+        .ok()
+        .or_else(|| {
+            output(
+                Command::new("git")
+                    .args(["log", "-1", "--format=%ct", "HEAD"])
+                    .current_dir(root),
+            )
+            .ok()
+        })
+        .and_then(|s| s.trim().parse().ok())
+        .unwrap_or_else(now)
 }
 
 type Entry = (String, PathBuf, u32);
@@ -357,8 +410,8 @@ fn now() -> u64 {
 }
 
 /// A flat `.tar.gz`: the files at the top level, owned by root, with the
-/// given modes.
-pub fn write_tar_gz(path: &Path, files: &[Entry]) -> Result<(), String> {
+/// given modes and modification time (seconds since 1970).
+pub fn write_tar_gz(path: &Path, files: &[Entry], mtime: u64) -> Result<(), String> {
     let fail = |e: std::io::Error| format!("cannot write {}: {e}", path.display());
     let gz = flate2::write::GzEncoder::new(
         File::create(path).map_err(fail)?,
@@ -370,7 +423,7 @@ pub fn write_tar_gz(path: &Path, files: &[Entry]) -> Result<(), String> {
         let mut header = tar::Header::new_gnu();
         header.set_size(data.len() as u64);
         header.set_mode(*mode);
-        header.set_mtime(now());
+        header.set_mtime(mtime);
         header.set_cksum();
         tar.append_data(&mut header, name, data.as_slice())
             .map_err(fail)?;
@@ -379,13 +432,15 @@ pub fn write_tar_gz(path: &Path, files: &[Entry]) -> Result<(), String> {
     Ok(())
 }
 
-/// A flat `.zip` (deflated).
-pub fn write_zip(path: &Path, files: &[Entry]) -> Result<(), String> {
+/// A flat `.zip` (deflated), every file stamped with `mtime` (as UTC).
+pub fn write_zip(path: &Path, files: &[Entry], mtime: u64) -> Result<(), String> {
     let fail = |e: &dyn std::fmt::Display| format!("cannot write {}: {e}", path.display());
+    let time = zip_time(mtime).map_err(|e| fail(&e))?;
     let mut zip = zip::ZipWriter::new(File::create(path).map_err(|e| fail(&e))?);
     for (name, src, mode) in files {
         let options = zip::write::SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Deflated)
+            .last_modified_time(time)
             .unix_permissions(*mode);
         zip.start_file(name.as_str(), options)
             .map_err(|e| fail(&e))?;
@@ -393,6 +448,27 @@ pub fn write_zip(path: &Path, files: &[Entry]) -> Result<(), String> {
     }
     zip.finish().map_err(|e| fail(&e))?;
     Ok(())
+}
+
+/// Seconds since 1970 as a zip (DOS) time, which can't go before 1980.
+fn zip_time(secs: u64) -> Result<zip::DateTime, String> {
+    // Days to a civil date: Howard Hinnant's `civil_from_days`.
+    let days = (secs / 86400) as i64 + 719_468;
+    let era = days.div_euclid(146_097);
+    let doe = days.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = (doy - (153 * mp + 2) / 5 + 1) as u8;
+    let month = (if mp < 10 { mp + 3 } else { mp - 9 }) as u8;
+    let year = (yoe + era * 400 + i64::from(month <= 2)) as u16;
+    if year < 1980 {
+        return Ok(zip::DateTime::default());
+    }
+    let t = secs % 86400;
+    let (h, m, s) = ((t / 3600) as u8, (t / 60 % 60) as u8, (t % 60) as u8);
+    zip::DateTime::from_date_and_time(year, month, day, h, m, s)
+        .map_err(|e| format!("{secs} is not a zip time: {e}"))
 }
 
 pub fn sha256_hex(data: &[u8]) -> String {
@@ -413,32 +489,49 @@ fn write_sidecar(archive: &Path) -> Result<String, String> {
     Ok(hash)
 }
 
+/// Every archive a release carries, one per OS build (SPEC §15.2).
+const RELEASE_TARGETS: [&str; 4] = [
+    "x86_64-unknown-linux-musl",
+    "aarch64-unknown-linux-musl",
+    "universal-apple-darwin",
+    "x86_64-pc-windows-msvc",
+];
+
+const INSTALLERS: [&str; 2] = ["installers/install.sh", "installers/install.ps1"];
+
+fn gh_args(args: &[&str]) -> Vec<String> {
+    args.iter().map(|a| a.to_string()).collect()
+}
+
+fn gh() -> Result<PathBuf, String> {
+    which("gh").ok_or_else(|| {
+        "this needs the GitHub CLI: https://cli.github.com, then `gh auth login`".to_string()
+    })
+}
+
 /// `make publish` (`DRY_RUN=1` prints the commands and runs nothing).
 pub fn publish(dry_run: bool) -> Result<(), String> {
     let root = root();
     let (version, repo) = workspace_package(&root)?;
     let tag = format!("v{version}");
     let assets = publish_assets(&root, &version)?;
-    let ready = check_tree(&root, &tag);
+    let ready = check_tree(&root, &tag).and_then(|head| check_dist_commit(&root, &head));
 
-    let view = ["release", "view", &tag, "--repo", &repo]
-        .map(String::from)
-        .to_vec();
-    let mut create: Vec<String> = ["release", "create", &tag, "--repo", &repo]
-        .map(String::from)
-        .to_vec();
-    create.extend(
-        [
-            "--title",
-            &format!("PAWPRINT {version}"),
-            "--generate-notes",
-            "--verify-tag",
-        ]
-        .map(String::from),
-    );
-    let mut upload: Vec<String> = ["release", "upload", &tag, "--repo", &repo, "--clobber"]
-        .map(String::from)
-        .to_vec();
+    let title = format!("PAWPRINT {version}");
+    let view = gh_args(&["release", "view", &tag, "--repo", &repo]);
+    let create = gh_args(&[
+        "release",
+        "create",
+        &tag,
+        "--repo",
+        &repo,
+        "--draft",
+        "--title",
+        &title,
+        "--generate-notes",
+        "--verify-tag",
+    ]);
+    let mut upload = gh_args(&["release", "upload", &tag, "--repo", &repo, "--clobber"]);
     upload.extend(assets);
 
     if dry_run {
@@ -452,8 +545,7 @@ pub fn publish(dry_run: bool) -> Result<(), String> {
         return Ok(());
     }
     ready?;
-    let gh = which("gh")
-        .ok_or("make publish needs the GitHub CLI: https://cli.github.com, then `gh auth login`")?;
+    let gh = gh()?;
     let exists = Command::new(&gh)
         .args(&view)
         .current_dir(&root)
@@ -465,12 +557,88 @@ pub fn publish(dry_run: bool) -> Result<(), String> {
     if exists {
         println!("release {tag} exists; uploading (same-named assets are replaced)");
     } else {
-        println!("creating release {tag}");
+        println!("creating draft release {tag}");
         run(Command::new(&gh).args(&create).current_dir(&root))?;
     }
     run(Command::new(&gh).args(&upload).current_dir(&root))?;
-    println!("published: https://github.com/{repo}/releases/tag/{tag}");
+    println!(
+        "uploaded to https://github.com/{repo}/releases/tag/{tag}\n\
+         once Linux, macOS, and Windows have all published, run `make release-finalize`"
+    );
     Ok(())
+}
+
+/// `make release-finalize`: check that the draft release has every asset of
+/// every OS, then publish it (`DRY_RUN=1` prints the commands only).
+pub fn finalize(dry_run: bool) -> Result<(), String> {
+    let root = root();
+    let (version, repo) = workspace_package(&root)?;
+    let tag = format!("v{version}");
+    let expected = release_assets(&version);
+    let list = gh_args(&[
+        "release",
+        "view",
+        &tag,
+        "--repo",
+        &repo,
+        "--json",
+        "assets",
+        "--jq",
+        ".assets[].name",
+    ]);
+    let edit = gh_args(&["release", "edit", &tag, "--repo", &repo, "--draft=false"]);
+
+    if dry_run {
+        println!("DRY_RUN: would run, from {}:", root.display());
+        println!("  {}    # the uploaded assets", shell_line(&list));
+        println!(
+            "  {}    # only if every asset below is there",
+            shell_line(&edit)
+        );
+        println!("expected assets:");
+        for a in &expected {
+            println!("  {a}");
+        }
+        return Ok(());
+    }
+    let gh = gh()?;
+    let present = output(Command::new(&gh).args(&list).current_dir(&root))?;
+    let missing = missing_assets(&expected, &present);
+    if !missing.is_empty() {
+        return Err(format!(
+            "release {tag} is still missing:\n  {}\nrun `make package && make publish` on the OS that builds them, then try again",
+            missing.join("\n  ")
+        ));
+    }
+    run(Command::new(&gh).args(&edit).current_dir(&root))?;
+    println!(
+        "published: https://github.com/{repo}/releases/tag/{tag} (all {} assets)",
+        expected.len()
+    );
+    Ok(())
+}
+
+/// The asset names a complete release has: each archive, its sidecar, and
+/// the installers.
+fn release_assets(version: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    for target in RELEASE_TARGETS {
+        let archive = archive_name(target, version);
+        names.push(format!("{archive}.sha256"));
+        names.push(archive);
+    }
+    names.extend(INSTALLERS.map(|p| p.rsplit('/').next().unwrap().to_string()));
+    names
+}
+
+/// The expected names not among `present` (one name per line).
+fn missing_assets(expected: &[String], present: &str) -> Vec<String> {
+    let present: Vec<&str> = present.lines().map(str::trim).collect();
+    expected
+        .iter()
+        .filter(|name| !present.contains(&name.as_str()))
+        .cloned()
+        .collect()
 }
 
 /// `dist/*` (all of this version) and the two installers, relative to the root.
@@ -480,6 +648,7 @@ fn publish_assets(root: &Path, version: &str) -> Result<Vec<String>, String> {
         .map_err(|_| "dist/ is empty: run `make package` first".to_string())?
         .filter_map(|e| e.ok())
         .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|f| f != COMMIT_FILE)
         .collect();
     files.sort();
     if files.is_empty() {
@@ -492,13 +661,13 @@ fn publish_assets(root: &Path, version: &str) -> Result<Vec<String>, String> {
         ));
     }
     let mut assets: Vec<String> = files.iter().map(|f| format!("dist/{f}")).collect();
-    assets.extend(["installers/install.sh", "installers/install.ps1"].map(String::from));
+    assets.extend(INSTALLERS.map(String::from));
     Ok(assets)
 }
 
 /// A release must be built from exactly the tagged commit: a clean tree, and
-/// the tag on HEAD.
-pub fn check_tree(root: &Path, tag: &str) -> Result<(), String> {
+/// the tag on HEAD. Returns HEAD.
+pub fn check_tree(root: &Path, tag: &str) -> Result<String, String> {
     let git = |args: &[&str]| output(Command::new("git").args(args).current_dir(root));
     let dirty = git(&["status", "--porcelain"])?;
     if !dirty.is_empty() {
@@ -520,14 +689,14 @@ pub fn check_tree(root: &Path, tag: &str) -> Result<(), String> {
             &head[..12.min(head.len())]
         ));
     }
-    Ok(())
+    Ok(head)
 }
 
 /// Quote arguments for display, so a printed command can be pasted.
 fn shell_line(args: &[String]) -> String {
     std::iter::once("gh".to_string())
         .chain(args.iter().map(|a| {
-            if a.contains(|c: char| c.is_whitespace() || "\"'$".contains(c)) {
+            if a.contains(|c: char| c.is_whitespace() || "\"'$[]*?".contains(c)) {
                 format!("'{a}'")
             } else {
                 a.clone()
@@ -603,7 +772,7 @@ mod tests {
         ];
 
         let tgz = dir.join("a.tar.gz");
-        write_tar_gz(&tgz, &files).unwrap();
+        write_tar_gz(&tgz, &files, 1_700_000_000).unwrap();
         let mut tar = tar::Archive::new(flate2::read::GzDecoder::new(File::open(&tgz).unwrap()));
         let entries: Vec<(String, u32)> = tar
             .entries()
@@ -622,9 +791,13 @@ mod tests {
         );
 
         let zip_path = dir.join("a.zip");
-        write_zip(&zip_path, &files).unwrap();
+        write_zip(&zip_path, &files, 1_700_000_000).unwrap();
         let mut zip = zip::ZipArchive::new(File::open(&zip_path).unwrap()).unwrap();
         assert_eq!(zip.len(), 2);
+        // 1700000000 is 2023-11-14 22:13:20 UTC.
+        let time = zip.by_index(0).unwrap().last_modified().unwrap();
+        assert_eq!((time.year(), time.month(), time.day()), (2023, 11, 14));
+        assert_eq!((time.hour(), time.minute(), time.second()), (22, 13, 20));
         let mut data = String::new();
         std::io::Read::read_to_string(&mut zip.by_name("pawprint").unwrap(), &mut data).unwrap();
         assert_eq!(data, "binary");
@@ -638,6 +811,51 @@ mod tests {
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
         );
         fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn repackaging_gives_the_same_bytes() {
+        let dir = temp("reproducible");
+        let files = vec![("LICENSE".to_string(), root().join("LICENSE"), 0o644)];
+        for ext in ["tar.gz", "zip"] {
+            let (a, b) = (dir.join(format!("a.{ext}")), dir.join(format!("b.{ext}")));
+            for path in [&a, &b] {
+                if ext == "zip" {
+                    write_zip(path, &files, 1_700_000_000).unwrap();
+                } else {
+                    write_tar_gz(path, &files, 1_700_000_000).unwrap();
+                }
+                std::thread::sleep(std::time::Duration::from_millis(1100));
+            }
+            assert_eq!(fs::read(&a).unwrap(), fs::read(&b).unwrap(), "{ext}");
+        }
+        assert_eq!(zip_time(0).unwrap(), zip::DateTime::default());
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn a_complete_release_has_every_archive_sidecar_and_installer() {
+        let expected = release_assets("1.2.0");
+        assert_eq!(expected.len(), 10);
+        for target in RELEASE_TARGETS {
+            let archive = archive_name(target, "1.2.0");
+            assert!(expected.contains(&format!("{archive}.sha256")));
+            assert!(expected.contains(&archive));
+        }
+        // This OS's builds are among them.
+        for build in plan(&root()).1 {
+            assert!(RELEASE_TARGETS.contains(&build.target), "{}", build.target);
+        }
+        let all = expected.join("\n");
+        assert!(missing_assets(&expected, &all).is_empty());
+        let partial = format!(
+            "install.sh\n{}\n",
+            archive_name(RELEASE_TARGETS[0], "1.2.0")
+        );
+        let missing = missing_assets(&expected, &partial);
+        assert_eq!(missing.len(), 8);
+        assert!(missing.contains(&"install.ps1".to_string()));
+        assert!(!missing.contains(&"install.sh".to_string()));
     }
 
     #[test]
@@ -655,20 +873,39 @@ mod tests {
         };
         git(&["init", "-q"]);
         fs::write(dir.join("a"), "1").unwrap();
-        git(&["add", "a"]);
+        fs::write(dir.join(".gitignore"), "/dist/\n").unwrap();
+        git(&["add", "a", ".gitignore"]);
         git(&["commit", "-q", "-m", "one"]);
 
         let e = check_tree(&dir, "v1.0.0").unwrap_err();
         assert!(e.contains("doesn't exist"), "{e}");
         git(&["tag", "v1.0.0"]);
-        assert_eq!(check_tree(&dir, "v1.0.0"), Ok(()));
+        let head = check_tree(&dir, "v1.0.0").unwrap();
+        assert_eq!(head, git(&["rev-parse", "HEAD"]));
+
+        // dist/COMMIT: what `make package` built from.
+        let e = check_dist_commit(&dir, &head).unwrap_err();
+        assert!(e.contains("missing"), "{e}");
+        fs::create_dir_all(dir.join("dist")).unwrap();
+        fs::write(dir.join("dist/COMMIT"), built_from(&dir).unwrap() + "\n").unwrap();
+        assert_eq!(check_dist_commit(&dir, &head), Ok(()));
 
         fs::write(dir.join("a"), "2").unwrap();
         let e = check_tree(&dir, "v1.0.0").unwrap_err();
         assert!(e.contains("uncommitted"), "{e}");
+        assert_eq!(built_from(&dir).unwrap(), format!("{head}-dirty"));
+        fs::write(dir.join("dist/COMMIT"), built_from(&dir).unwrap()).unwrap();
+        let e = check_dist_commit(&dir, &head).unwrap_err();
+        assert!(e.contains("-dirty"), "{e}");
+
+        // Packaged from the tag, then the tag moved on: refused.
         git(&["commit", "-q", "-am", "two"]);
         let e = check_tree(&dir, "v1.0.0").unwrap_err();
         assert!(e.contains("points at"), "{e}");
+        fs::write(dir.join("dist/COMMIT"), &head).unwrap();
+        let moved = git(&["rev-parse", "HEAD"]);
+        let e = check_dist_commit(&dir, &moved).unwrap_err();
+        assert!(e.contains("packaged from"), "{e}");
         let _ = fs::remove_dir_all(dir);
     }
 }
