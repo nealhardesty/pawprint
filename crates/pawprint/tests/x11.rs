@@ -716,6 +716,26 @@ fn single_instance_and_detached_start() {
     assert!(String::from_utf8_lossy(&second.stdout).contains("already running"));
     assert!(String::from_utf8_lossy(&env.ok(&[]).into_bytes()).contains("already running"));
 
+    // A badge that doesn't answer (stopped, or stuck) still owns the
+    // session: a second one must not replace it (SPEC §10.4).
+    let pid = first.0.id() as i32;
+    // SAFETY: kill only sends a signal.
+    unsafe { libc::kill(pid, libc::SIGSTOP) };
+    let mut second = Proc(
+        env.command(env!("CARGO_BIN_EXE_pawprint"))
+            .arg("run")
+            .stdout(std::process::Stdio::piped())
+            .spawn()
+            .unwrap(),
+    );
+    let code = wait_for("the second badge to give up", || second.exited());
+    unsafe { libc::kill(pid, libc::SIGCONT) };
+    let mut out = String::new();
+    std::io::Read::read_to_string(&mut second.0.stdout.take().unwrap(), &mut out).unwrap();
+    assert!(code.success() && out.contains("already running"), "{out}");
+    let status = env.ok(&["status"]);
+    assert!(status.contains(&format!("pid {pid}")), "{status}");
+
     // After a crash the stale socket is replaced; bare `pawprint` detaches.
     first.0.kill().unwrap();
     first.0.wait().unwrap();
@@ -732,11 +752,11 @@ fn single_instance_and_detached_start() {
         x.badge().is_none().then_some(())
     });
     assert!(
-        !env.runtime()
-            .join("pawprint")
-            .read_dir()
+        !env.runtime().join("pawprint").read_dir().unwrap().any(|e| e
             .unwrap()
-            .any(|_| true),
+            .path()
+            .extension()
+            .is_some_and(|x| x == "sock")),
         "socket removed on quit"
     );
     assert!(first.exited().is_some());

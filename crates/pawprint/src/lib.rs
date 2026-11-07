@@ -255,10 +255,7 @@ fn run(verbose: bool) -> CmdResult {
     let listener = match instance::claim(&endpoint) {
         Ok(instance::Claim::Claimed(l)) => l,
         Ok(instance::Claim::Running(s)) => {
-            println!(
-                "PAWPRINT is already running in this session (pid {}).",
-                s.pid
-            );
+            println!("{}", instance::already_running(s.as_deref()));
             return Ok(());
         }
         Err(e) => {

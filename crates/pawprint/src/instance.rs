@@ -146,7 +146,8 @@ pub fn endpoint() -> Result<PathBuf, NoSession> {
 }
 
 /// Linux: `$XDG_RUNTIME_DIR/pawprint`, falling back to a private directory in
-/// /tmp for sessions without one. macOS: `$TMPDIR/pawprint`.
+/// /tmp (never `$TMPDIR`, which two terminals may see differently) for
+/// sessions without one. macOS: `$TMPDIR/pawprint`.
 #[cfg(unix)]
 fn endpoint_dir() -> PathBuf {
     match std::env::var_os("XDG_RUNTIME_DIR").filter(|d| !d.is_empty() && cfg!(target_os = "linux"))
@@ -154,7 +155,7 @@ fn endpoint_dir() -> PathBuf {
         Some(dir) => PathBuf::from(dir).join("pawprint"),
         None if cfg!(target_os = "macos") => user_temp_dir().join("pawprint"),
         // SAFETY: getuid has no preconditions.
-        None => std::env::temp_dir().join(format!("pawprint-{}", unsafe { libc::getuid() })),
+        None => PathBuf::from("/tmp").join(format!("pawprint-{}", unsafe { libc::getuid() })),
     }
 }
 
@@ -195,39 +196,53 @@ fn endpoint_dir() -> PathBuf {
 pub enum Claim {
     /// We hold the endpoint; serve IPC on it.
     Claimed(Listener),
-    /// A live badge already answers on it.
-    Running(Box<Status>),
+    /// A live badge holds it: its status, if it answers.
+    Running(Option<Box<Status>>),
 }
 
-/// Take the endpoint. If it exists and a badge answers `status`, that badge
-/// keeps it. If nobody answers, it is stale: remove it and take it.
+/// Take the endpoint. A live badge holds it for as long as it runs (the
+/// Unix lock and the Windows pipe both die with the process), so it is
+/// never taken from one, even when it doesn't answer.
 pub fn claim(endpoint: &std::path::Path) -> io::Result<Claim> {
     match Platform::bind(endpoint) {
-        Ok(l) => return Ok(Claim::Claimed(l)),
-        Err(e) if e.kind() != io::ErrorKind::AddrInUse => return Err(e),
-        Err(_) => {}
+        Ok(l) => Ok(Claim::Claimed(l)),
+        Err(e) if e.kind() == io::ErrorKind::AddrInUse => Ok(Claim::Running(
+            ipc::call(endpoint, Request::Status)
+                .ok()
+                .and_then(|r| r.status)
+                .map(Box::new),
+        )),
+        Err(e) => Err(e),
     }
-    if let Ok(ipc::Response {
-        status: Some(status),
-        ..
-    }) = ipc::call(endpoint, Request::Status)
-    {
-        return Ok(Claim::Running(Box::new(status)));
-    }
-    log::info!("removing stale endpoint {}", endpoint.display());
-    Platform::remove_stale(endpoint)?;
-    Platform::bind(endpoint).map(Claim::Claimed)
 }
 
-/// Remove our endpoint on a clean exit.
+/// "already running", with the pid when the badge answered.
+pub fn already_running(status: Option<&Status>) -> String {
+    match status {
+        Some(s) => format!(
+            "PAWPRINT is already running in this session (pid {}).",
+            s.pid
+        ),
+        None => "PAWPRINT is already running in this session (it is not answering).".into(),
+    }
+}
+
+/// Remove our endpoint on a clean exit. Only the badge that claimed it
+/// calls this, and it holds the endpoint until it exits.
 pub fn release(endpoint: &std::path::Path) {
     let _ = Platform::remove_stale(endpoint);
 }
 
-/// A running badge's status, if one answers in this session.
+/// A running badge's status, if one answers in this session. A badge that
+/// answers with an error (its loop did not answer in time) is running but
+/// stuck, which is an error, not "not running".
 pub fn running(endpoint: &std::path::Path) -> Result<Option<Status>, CallError> {
     match ipc::call(endpoint, Request::Status) {
-        Ok(r) => Ok(r.status),
+        Ok(r) if r.ok => Ok(r.status),
+        Ok(r) => Err(CallError::Io(io::Error::other(
+            r.error
+                .unwrap_or_else(|| "the badge answered with an error".into()),
+        ))),
         Err(CallError::NotRunning) => Ok(None),
         Err(e) => Err(e),
     }
@@ -297,10 +312,7 @@ pub fn start() -> CmdResult {
     let endpoint = endpoint().map_err(|e| (exit::NO_SESSION, e))?;
     match running(&endpoint) {
         Ok(Some(s)) => {
-            println!(
-                "PAWPRINT is already running in this session (pid {}).",
-                s.pid
-            );
+            println!("{}", already_running(Some(&s)));
             return Ok(());
         }
         Ok(None) => {}
@@ -320,6 +332,14 @@ pub fn start() -> CmdResult {
         }
         if let Ok(Some(code)) = child.try_wait() {
             let code = code.code().unwrap_or(1);
+            // Another start won the race; ours saw it and stepped aside.
+            if code == 0 {
+                println!(
+                    "{}",
+                    already_running(running(&endpoint).ok().flatten().as_ref())
+                );
+                return Ok(());
+            }
             let hint = crate::paths::Paths::detect()
                 .map(|p| format!("see {} or run `pawprint doctor`", p.log_file.display()))
                 .unwrap_or_else(|| "run `pawprint doctor`".into());

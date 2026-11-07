@@ -950,6 +950,9 @@ instance lock, and it is keyed by **graphical session**, not by user:
 | Linux Wayland | `WAYLAND_DISPLAY` | `$XDG_RUNTIME_DIR/pawprint/wayland-<name>.sock` |
 | Linux X11 | `DISPLAY` | `$XDG_RUNTIME_DIR/pawprint/x11-<display>.sock` |
 
+Without `XDG_RUNTIME_DIR`, Linux uses `/tmp/pawprint-<uid>/` (always
+`/tmp`, never `$TMPDIR`, so every terminal in the session agrees).
+
 On Linux the key comes from the environment alone, `WAYLAND_DISPLAY` first,
 so a terminal in the session finds its badge without probing any display
 server. GNOME on Wayland keys on `WAYLAND_DISPLAY` even though the badge
@@ -957,18 +960,27 @@ draws through XWayland. The X11 key keeps host and display number and drops
 the screen (`:0`, `:0.0`, and `unix:0` are all `x11-0`; `localhost:10.0` is
 `x11-localhost_10`). An absolute `WAYLAND_DISPLAY` has its `/` replaced.
 
-Startup (`instance::claim`): bind the endpoint. If it already exists and a
-live instance answers `status`, print "already running" and exit 0. If
-nobody answers, it is stale (a crashed badge): remove it and bind again.
-Binding first means two badges started at once can't both win. Sockets are
-created mode `0600` in a `0700` directory that must belong to the user. A
-clean exit removes the socket.
+Startup (`instance::claim`): bind the endpoint. If a live badge holds it,
+print "already running" (with its pid if it answers `status`) and exit 0,
+**whether or not it answers**: a stopped or stuck badge still owns its
+session, so it is never replaced. Binding first means two badges started at
+once can't both win.
+
+On Unix the lock is an exclusive `flock(LOCK_EX | LOCK_NB)` on
+`<key>.lock` next to the socket, taken before binding and held for the life
+of the process. The kernel releases it when the process dies, however it
+dies. Holding the lock, `bind` removes any socket left at the path (a
+crashed badge's) and binds; failing to take it is `AddrInUse`. Only the
+lock holder ever unlinks the socket, on a clean exit; the lock file stays.
+Sockets are created mode `0600` in a `0700` directory that must be a real
+directory (not a symlink) belonging to the user.
 
 The session key and the transport are the only platform parts:
 `instance::session_key()` per OS, and `ipc::Transport` (`bind`, `accept`,
 `connect`, `remove_stale`), with `ipc::unix::UnixSocket` for Linux and
 macOS and `ipc::windows::NamedPipe` for Windows. `bind` must fail with
-`AddrInUse` while the endpoint exists; that is what makes it a lock.
+`AddrInUse` while another live process holds the endpoint; that is what
+makes it a lock.
 
 The Windows key is `<user>-<session id>` (`GetUserNameW`, with `\` replaced
 by `_`). The first pipe instance is created with
@@ -998,8 +1010,12 @@ returns the same fields `pawprint status` prints, under `"status"`: `pid`,
 `scale`, `mascot`, `label`, `position`, `position_source`, `size`,
 `moving`. `move` answers `no target display` when there is nothing to move.
 `quit` answers before the badge exits. Unknown `v`, unknown commands, and
-malformed lines get an error response. Either side gives up after 5
-seconds, and a request line is at most 4 KiB. The CLI and the badge always
+malformed lines get an error response. The client gives up after 5
+seconds; the badge's IPC thread waits at most 4 seconds for the loop and
+then answers `{"ok":false,"error":"the badge did not answer in time"}`, so
+the client hears why. An `ok:false` answer means a live badge (busy or
+stuck), never a stale endpoint. A request line is at most 4 KiB. The CLI
+and the badge always
 come from the same binary, so the protocol carries no compatibility shims
 beyond the version check.
 
@@ -2463,7 +2479,7 @@ directory and fails with the badge's log.
 | X11 | Xvfb + `xcompmgr` started and stopped under a running badge | the window is rebuilt as 32-bit ARGB and back; pixel-exact and click-through in both |
 | X11 | Xvfb + `openbox` | a managed DOCK, at the requested position, above a normal window mapped later, clicks pass through to that window (F32), drag works |
 | X11 | GNOME-like environment (`XDG_CURRENT_DESKTOP=GNOME`, no layer-shell) | the `gnome` profile is chosen, ARGB, keyed on `WAYLAND_DISPLAY` |
-| X11 | Xvfb | single instance: a second `run` and bare `pawprint` say "already running"; after a crash the stale socket is replaced; bare `pawprint` detaches; `quit` removes the socket |
+| X11 | Xvfb | single instance: a second `run` and bare `pawprint` say "already running", even while the first is stopped (SIGSTOP) and not answering; after a crash the stale socket is replaced; bare `pawprint` detaches; `quit` removes the socket |
 | Wayland | headless sway, pixman renderer, `swaybg` backdrop | layer surface pixel-exact at top-right (via `grim`); a virtual-pointer click on the badge focuses the `foot` window under it; in move mode the click is taken |
 | Wayland | headless sway | move-mode drag far outside the badge (F7) saves the right position and is pixel-exact; `wtype` arrow keys, Enter, Escape with exclusive keyboard |
 | Wayland | headless sway + `swaybar` | the badge sits below the bar's exclusive zone (F3), pixel-exact |
