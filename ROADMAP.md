@@ -9,8 +9,11 @@ before building it.
 **Current state:** M0 (foundations) is done: the Cargo workspace, the
 shared core with its tests, the sprite compiler, embedded placeholder art
 (crate, font, one owl), the backend-free CLI commands, every `make` target,
-and CI on Linux, macOS, and Windows. Nothing opens a window yet; that is M1.
-The repository is public.
+and CI on Linux, macOS, and Windows. M1 is under way: the shared runtime
+(shell, IPC, single instance, doctor) and the Linux backends (X11 with the
+GNOME profile, and Wayland) work and are tested against real X and Wayland
+servers in CI. The Windows and macOS backends are next. The repository is
+public.
 
 ---
 
@@ -88,30 +91,36 @@ Ubuntu GNOME Wayland**, meeting the backend contract
 ([SPEC §11](SPEC.md#11-platform-backends)). This is the milestone that can
 change the design.
 
-- [ ] Windows backend: layered topmost tool window, `UpdateLayeredWindow`,
+- [x] Windows backend: layered topmost tool window, `UpdateLayeredWindow`,
       per-monitor DPI v2, work area, move mode via `HTCAPTION`;
       `pawprint.exe` + `pawprintw.exe`
-- [ ] macOS backend: accessory app, non-activating `NSPanel` at status level,
+- [x] macOS backend: accessory app, non-activating `NSPanel` at status level,
       all Spaces, nearest-neighbor layer, `visibleFrame`, move mode
-- [ ] Shared Linux module: `calloop` loop, scale helpers, backend selection
+- [x] Shared Linux module: `calloop` loop, scale helpers, backend selection
       ([SPEC §3.2](SPEC.md#32-linux-backend-selection-backend--auto))
-- [ ] X11 backend: DOCK + ABOVE/STICKY/SKIP_*, empty input shape, ARGB visual
+- [x] X11 backend: DOCK + ABOVE/STICKY/SKIP_*, empty input shape, ARGB visual
       with a compositor, bounding-shape fallback without one, override-redirect
       when no WM, RandR monitors, `_NET_WORKAREA`, move mode with pointer grab
-- [ ] **GNOME profile** of the X11 backend, via XWayland ([SPEC §11.5](SPEC.md#115-gnome-wayland-ubuntu)),
-      tested on Ubuntu 24.04 LTS and 26.04 LTS
-- [ ] Wayland backend: layer-shell overlay, empty input region, margins from
+      (tested under Xvfb bare, with `xcompmgr`, and with `openbox`)
+- [ ] **GNOME profile** of the X11 backend (*implemented and covered by `make test-x11`; awaiting owner runs on real Ubuntu 24.04/26.04*), via XWayland ([SPEC §11.5](SPEC.md#115-gnome-wayland-ubuntu)),
+      tested on Ubuntu 24.04 LTS and 26.04 LTS. *Implemented and selected
+      automatically; the owner checks on real Ubuntu are still to do.*
+- [x] Wayland backend: layer-shell overlay, empty input region, margins from
       anchor/offset, `kde_output_order_v1` primary, fractional scale,
-      move mode via implicit grab (fallback: full-output drag surface)
-- [ ] Single instance per graphical session + IPC (`status`, `move`,
+      move mode (implicit-grab drag failed on sway, F7; the full-area drag
+      surface is the design now). Tested under headless sway; owner check on Plasma pending.
+- [x] Single instance per graphical session + IPC (`status`, `move`,
       `reset-position`, `reload`, `quit`), shared Unix transport for Linux and macOS
-- [ ] `pawprint`, `run`, `move`, `reset-position`, `quit`, `status`, `doctor`
+      (Windows named pipe and the Windows/macOS session keys: stubs for those backends)
+- [x] `pawprint`, `run`, `move`, `reset-position`, `quit`, `status`, `doctor`
       (including GNOME fractional-scaling detection and fix)
-- [ ] Display-change handling on every backend
+- [x] Display-change handling on every backend
+- [x] Display-server tests: `make test-x11`, `make test-wayland`, and a Linux
+      CI job that runs them
 - [ ] Facts to settle (update [SPEC §18](SPEC.md#18-facts-ledger)):
   - [ ] F3 `exclusive_zone = 0` vs. Plasma panels
   - [ ] F6 primary output on Plasma
-  - [ ] F7 Wayland drag with implicit grab
+  - [x] F7 Wayland drag with implicit grab (refuted on sway 1.9: press-relative coordinates)
   - [ ] F15 ad-hoc re-sign after `lipo`
   - [ ] F23 Windows virtual desktops
   - [ ] F24 layer-shell in KRdp/krfb streams
@@ -119,16 +128,43 @@ change the design.
 - [ ] **Conditional:** if any GNOME check fails, build the Plan B presenter
       extension ([SPEC §11.5.3](SPEC.md#1153-plan-b-the-presenter-extension))
       and `pawprint gnome-extension install|remove`
-- [ ] DRY review: no backend makes a layout, timing, or identity decision;
-      each backend is within its size budget
-- [ ] macOS hostname: read `HostName`/`LocalHostName` through the
+- [x] DRY review: no backend makes a layout, timing, or identity decision;
+      each backend is within its size budget (*X11 and Wayland reviewed:
+      about 760 and 800 code lines after rustfmt, no decisions; Wayland's
+      anchor choice reuses `layout::snap`*)
+- [x] macOS hostname: read `HostName`/`LocalHostName` through the
       SystemConfiguration API instead of `scutil --get` (M0 stopgap,
       SPEC §5.1)
-- [ ] Local clock hour for `Now::local_hour` on each platform (the core takes
-      it as an input; SPEC §10.1)
-- [ ] `pawprintw.exe` second `[[bin]]` on Windows (SPEC §11.1.6)
-- [ ] Move-mode drag events in physical desktop coordinates on every backend
-      (the core's coordinate space, SPEC §6.1)
+- [x] Local clock hour for `Now::local_hour` on each platform (the core takes
+      it as an input; SPEC §10.1): `localtime_r` on Unix, `GetLocalTime` on Windows
+- [x] `pawprintw.exe` second `[[bin]]` on Windows (SPEC §11.1.6)
+- [x] Move-mode drag events in physical desktop coordinates on every backend
+      (the core's coordinate space, SPEC §6.1) (*X11 and Wayland done*)
+
+**Handoff for the Windows and macOS backends** (built on top of this
+branch). Everything platform-independent already exists; a backend is a
+`Surface` and a native loop:
+
+1. `crates/pawprint/src/backend/windows.rs` / `macos.rs`: replace the stub
+   `run(shell, listener)` and `doctor(report)`. `run` owns the window and
+   the native loop; call `shell.set_backend(..)`, `shell.start(&mut
+   surface)` once, `ipc::serve(listener, post)` with a `post` that queues
+   the `Incoming` and wakes the loop (`PostMessageW` / main queue), then
+   loop: wait at most `shell.timeout()`, translate native events into
+   `shell.handle(&mut surface, Event::..)`, hand queued requests to
+   `shell.request(&mut surface, incoming)`, call `shell.tick(&mut
+   surface)`, and stop when `shell.done()`. `backend::linux::drive` is the
+   reference loop.
+2. `crates/pawprint/src/instance.rs`: `session_key()` for the OS
+   (`ProcessIdToSessionId` → `"<user>-<sid>"`; `SessionGetInfo` → the
+   audit session id). macOS reuses the Unix-socket transport as is.
+3. `crates/pawprint/src/ipc/windows.rs`: the named-pipe `Transport`
+   (`bind` must fail with `AddrInUse` while the pipe exists).
+4. `instance::detached_badge`: spawn `pawprintw.exe run` on Windows.
+5. Remove the `cfg_attr(not(target_os = "linux"), allow(dead_code))` at
+   the top of `main.rs` once both backends use the runtime.
+6. Doctor: add rows with `report.row`, problems with `report.problem`, and
+   return displays to `report.displays`.
 
 **Exit:** [SPEC §16.3](SPEC.md#163-spike-exit-criteria-m1-one-owl-prototype)
 passes on all five desktops, **and** the owner has run a first pass of the
@@ -225,10 +261,10 @@ Can run in parallel with M2/M3 once M1 passes.
 - [ ] Tray / menu bar / StatusNotifierItem from the shared menu model ([SPEC §11.1.5](SPEC.md#1115-tray-and-autostart))
 - [ ] `pawprint autostart on|off|status` (HKCU Run, LaunchAgent, XDG autostart)
 - [ ] `pawprint set` / `unset` via `toml_edit`, `config init`, `config path`
-- [ ] Config reload on `reload`, tray, and mtime change
+- [ ] Config reload on `reload`, tray, and mtime change (*`pawprint reload` works since M1; tray and mtime remain*)
 - [ ] `explain --recompute`, `forget`
-- [ ] Move mode polish: arrow-key nudging, Esc cancel, 30 s timeout, dashed outline
-- [ ] Logging with size cap and rotation
+- [ ] Move mode polish: arrow-key nudging, Esc cancel, 30 s timeout, dashed outline (*nudging, Esc, and the timeout work on X11 and Wayland since M1; the dashed outline remains*)
+- [x] Logging with size cap and rotation (done in M1)
 - [ ] Power check against [SPEC §7.2](SPEC.md#72-power-budget) on each OS; record numbers in SPEC
 
 **Exit:** a week of daily use across the owner's machines with no annoyances
@@ -286,12 +322,11 @@ Ideas worth doing, roughly by value. None are commitments.
 
 Decisions still needed. Each has a recommendation.
 
-1. **Wayland drag fallback.** If F7 fails on Plasma, is a full-output
-   transparent drag surface acceptable, or should Wayland move mode be
-   keyboard-only? *Recommendation:* full-output surface; decide after the
-   M1 spike.
+None open right now.
 
-Settled since the first draft: Linux aarch64 ships at 1.0 (the M0 spike
+Settled since the first draft: Wayland move mode drags on a full-area
+transparent surface, because the implicit-grab drag failed on sway (F7,
+SPEC §11.4); Linux aarch64 ships at 1.0 (the M0 spike
 showed it cross-links with rustup's `rust-lld` alone); the repository is public; GNOME on Wayland
 (Ubuntu) is a launch target; backends share everything through the core;
 art is produced through the text pipeline in SPEC §12; the label limit is 20,

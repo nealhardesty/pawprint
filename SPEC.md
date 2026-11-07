@@ -11,7 +11,11 @@ same change.
 
 **Status of this document:** M0 (foundations) is implemented: the shared
 core, the sprite compiler, embedded placeholder art, and the backend-free CLI
-commands. Platform backends start in M1. The repository is public. Facts marked
+commands. M1 is in progress: the shared runtime (shell, IPC, single
+instance, doctor) and the Linux backends (X11 with its GNOME profile, and
+Wayland) are implemented and tested against real display servers
+([16.1.1](#1611-display-server-tests-linux)); the Windows and macOS backends
+are next. The repository is public. Facts marked
 **(verify)** come from platform documentation or prior experience and have not
 yet been confirmed by a PAWPRINT spike. When a spike confirms or refutes one,
 update the [Facts ledger](#18-facts-ledger) and drop the marker.
@@ -166,6 +170,13 @@ When step 3 runs inside a Wayland session that is neither Plasma nor GNOME,
 PAWPRINT logs a warning, because always-on-top and click-through for
 XWayland windows then depend on an untested compositor.
 
+`backend = "x11"` or `"wayland"` in the config skips the detection (a
+forced `x11` in a GNOME Wayland session still gets the `gnome` profile).
+`"windows"` and `"macos"` mean nothing on Linux; they log a warning and act
+like `auto`. The decision is a pure function (`backend::linux::select`),
+unit-tested for every row above, and `pawprint doctor` prints it with its
+reason.
+
 ### 3.3 Remote clients
 
 PAWPRINT has no knowledge of remote clients. It draws into the desktop of the
@@ -311,7 +322,7 @@ stamp. `"as-is"` keeps the configured or detected case. `"lower"` lowercases.
 | Platform | Source | Notes |
 |---|---|---|
 | Windows | `GetComputerNameExW(ComputerNameDnsHostname)` | Preserves case. Falls back to `ComputerNameNetBIOS` (uppercase, max 15 characters). |
-| macOS | SystemConfiguration `HostName` if set, else `LocalHostName` | Avoid bare `gethostname()`: on macOS it can return a DHCP- or reverse-DNS-assigned name that changes between networks. `ComputerName` ("Someone's MacBook Pro") is a friendly name, not a hostname, and is never used. M0 reads both keys with `scutil --get`; M1 may call the SystemConfiguration API directly once `objc2` is a dependency. |
+| macOS | SystemConfiguration `HostName` if set, else `LocalHostName` | Avoid bare `gethostname()`: on macOS it can return a DHCP- or reverse-DNS-assigned name that changes between networks. `ComputerName` ("Someone's MacBook Pro") is a friendly name, not a hostname, and is never used. Read through the SystemConfiguration API (`objc2-system-configuration`): `HostName` from the `/System/System` preferences path, else `SCDynamicStoreCopyLocalHostName`, the same values `scutil --get` prints (checked in `make test-macos-display`). |
 | Linux | `/proc/sys/kernel/hostname` (the kernel nodename, which is what `gethostname(2)` returns), else `/etc/hostname` | — |
 | Any | `PAWPRINT_HOSTNAME` env var | Overrides detection. Used by tests and `pawprint explain --host`. |
 
@@ -528,7 +539,7 @@ deadline. There is no fixed tick.
 | User mascots (`mascots/<id>/`) | config dir | config dir | config dir |
 | State (`state.toml`) | `$XDG_STATE_HOME/pawprint/` (`~/.local/state/pawprint/`) | `~/Library/Application Support/pawprint/` | `%LOCALAPPDATA%\pawprint\` |
 | Log (`pawprint.log`, max 1 MB, one rotation) | state dir | `~/Library/Logs/pawprint/` | state dir |
-| IPC endpoint | `$XDG_RUNTIME_DIR/pawprint/<session>.sock` | `$TMPDIR/pawprint/<session>.sock` | `\\.\pipe\pawprint-<user>-<session-id>` |
+| IPC endpoint | `$XDG_RUNTIME_DIR/pawprint/<session>.sock` (`/tmp/pawprint-<uid>/` without `XDG_RUNTIME_DIR`) | `$TMPDIR/pawprint/<session>.sock` | `\\.\pipe\pawprint-<user>-<session-id>` |
 | Installed binary | `~/.local/bin/pawprint` | `~/.local/bin/pawprint` | `%LOCALAPPDATA%\Programs\pawprint\` |
 
 `pawprint paths` prints all of these for the current machine. The config file
@@ -630,7 +641,7 @@ badge reaches the instance **in the current graphical session**.
 
 | Command | What it does |
 |---|---|
-| `pawprint` | Start the badge in the background for this session and return. If it is already running, say so and exit 0. |
+| `pawprint` | Start the badge in the background for this session and return. If it is already running, say so and exit 0. It waits up to 5 s for the new badge to answer; if the badge exits first, `pawprint` exits with the badge's code and points at the log and `doctor`. |
 | `pawprint run` | Run the badge in the foreground. Autostart entries use this. `--verbose` logs to stderr. |
 | `pawprint move` | Enter move mode on the running badge. |
 | `pawprint reset-position` | Forget the dragged position. |
@@ -716,7 +727,25 @@ reading the time zone is a platform call.
 
 The IPC server runs on its own thread and posts commands into the native loop
 (`PostMessageW` on Windows, the main dispatch queue on macOS, a `calloop`
-channel on Linux).
+channel on Linux). Every request, `status` included, is answered by the
+loop, so a badge that answers is a badge whose loop is alive.
+
+In code, everything in that loop except the native wait is written once,
+in `pawprint::shell::Shell`:
+
+| Call | When the backend makes it |
+|---|---|
+| `Shell::start(&mut surface)` | Once, when the surface can report its displays |
+| `Shell::handle(&mut surface, event)` | For each translated native event. Events before `start` and repeated identical display sets are dropped, so a backend reports every native change without filtering. |
+| `Shell::request(&mut surface, incoming)` | For each IPC request the loop receives |
+| `Shell::timeout()` | Before sleeping: how long the native wait may last (`None` = until an event) |
+| `Shell::tick(&mut surface)` | After every wakeup; sends `Deadline` once it has passed |
+| `Shell::done()` | After every wakeup; true after `Quit` |
+
+The shell runs the surface effects through `surface::apply`, writes
+`SaveState` atomically, re-reads the config on `ReloadConfig`, logs, and
+builds the `status` answer. On Linux, `backend::linux::drive` is the whole
+loop for both backends.
 
 ### 10.2 Why not winit, Tauri, or Qt
 
@@ -737,12 +766,14 @@ large C++ runtime for a 64-pixel image. Direct platform APIs come to four small 
 | PNG decode/encode | `png` |
 | Sprite compiler | `pawprint-sprite` (in-tree crate) |
 | Embedded asset bundle codec | `postcard` (serde, `alloc` only) |
-| Windows | `windows` (windows-rs); `windows-sys` for the hostname call |
+| Windows | `windows-sys` (raw Win32 bindings, no COM wrappers needed): window, GDI, DPI, named pipes, session id, hostname |
 | macOS | `objc2`, `objc2-foundation`, `objc2-app-kit` |
 | X11 | `x11rb` 0.14 (pure Rust; features `shape`, `xfixes`, `randr`) |
 | Wayland | `smithay-client-toolkit` 0.21 (`default-features = false, features = ["calloop"]`: the default `xkbcommon` feature links libxkbcommon), `wayland-client` 0.31 (no features: `system`/`dlopen` load libwayland and `log` compiles a C shim), `wayland-protocols`, `wayland-protocols-wlr`, `wayland-protocols-plasma`, `calloop` 0.14 |
 | Linux tray | `ksni` 0.3 (`default-features = false, features = ["blocking", "async-io"]`, which avoids tokio) over `zbus` 5 (`default-features = false, features = ["async-io", "blocking-api"]`; ksni 0.3 needs zbus 5, and zbus 6 has no `blocking` module); `zbus` also carries the Plan B presenter protocol |
-| Logging | `log` + a minimal file logger |
+| Logging | `log` + a minimal file logger (`pawprint::logger`: 1 MB cap, one rotation; dependencies log at info and above only) |
+| IPC encoding | `serde_json` |
+| Unix calls | `libc`: `localtime_r` (the local hour, `Now::local_hour`), `setsid` (detached start), `getuid`. Windows uses `GetLocalTime` from `windows-sys`. |
 
 No hashing, PRNG, font, or image-scaling crates: those are small, frozen,
 and in-tree.
@@ -756,13 +787,41 @@ instance lock, and it is keyed by **graphical session**, not by user:
 | Platform | Session key | Endpoint |
 |---|---|---|
 | Windows | `ProcessIdToSessionId` | Named pipe `\\.\pipe\pawprint-<user>-<sid>` |
-| macOS | GUI security session (`SessionGetInfo`) | Unix socket `$TMPDIR/pawprint/<asid>.sock` |
+| macOS | GUI security session (`SessionGetInfo` audit session id; a session without window server access, such as SSH, has no key) | Unix socket `$TMPDIR/pawprint/asid-<id>.sock` (`TMPDIR` unset: the per-user temporary directory from `confstr(_CS_DARWIN_USER_TEMP_DIR)`) |
 | Linux Wayland | `WAYLAND_DISPLAY` | `$XDG_RUNTIME_DIR/pawprint/wayland-<name>.sock` |
 | Linux X11 | `DISPLAY` | `$XDG_RUNTIME_DIR/pawprint/x11-<display>.sock` |
 
-Startup: try to connect. If a live instance answers `status`, exit 0 with
-"already running". If the socket exists but nobody answers, remove it and
-continue. Sockets are created mode `0600` in a `0700` directory.
+On Linux the key comes from the environment alone, `WAYLAND_DISPLAY` first,
+so a terminal in the session finds its badge without probing any display
+server. GNOME on Wayland keys on `WAYLAND_DISPLAY` even though the badge
+draws through XWayland. The X11 key keeps host and display number and drops
+the screen (`:0`, `:0.0`, and `unix:0` are all `x11-0`; `localhost:10.0` is
+`x11-localhost_10`). An absolute `WAYLAND_DISPLAY` has its `/` replaced.
+
+Startup (`instance::claim`): bind the endpoint. If it already exists and a
+live instance answers `status`, print "already running" and exit 0. If
+nobody answers, it is stale (a crashed badge): remove it and bind again.
+Binding first means two badges started at once can't both win. Sockets are
+created mode `0600` in a `0700` directory that must belong to the user. A
+clean exit removes the socket.
+
+The session key and the transport are the only platform parts:
+`instance::session_key()` per OS, and `ipc::Transport` (`bind`, `accept`,
+`connect`, `remove_stale`), with `ipc::unix::UnixSocket` for Linux and
+macOS and `ipc::windows::NamedPipe` for Windows. `bind` must fail with
+`AddrInUse` while the endpoint exists; that is what makes it a lock.
+
+The Windows key is `<user>-<session id>` (`GetUserNameW`, with `\` replaced
+by `_`). The first pipe instance is created with
+`FILE_FLAG_FIRST_PIPE_INSTANCE`, which fails with "access denied" when the
+name exists; that maps to `AddrInUse`. The server connects one instance at a
+time and creates the next before handing a connected one to the IPC thread,
+so the name exists for as long as the badge runs and vanishes when it dies
+(`remove_stale` has nothing to do). The pipe has the default DACL: full
+control for the creating user, SYSTEM, and administrators, read-only for
+everyone else, so only they can write a request; `PIPE_REJECT_REMOTE_CLIENTS`
+refuses network clients. Pipe reads have no timeout (only those users can
+connect).
 
 ### 10.5 IPC protocol
 
@@ -775,9 +834,15 @@ Newline-delimited JSON, one request and one response per connection:
 ```
 
 Commands: `status`, `move`, `reset-position`, `reload`, `quit`. `status`
-returns the same fields `pawprint status` prints. Unknown `v` → error
-response. The CLI and the badge always come from the same binary, so the
-protocol carries no compatibility shims beyond the version check.
+returns the same fields `pawprint status` prints, under `"status"`: `pid`,
+`backend`, `session`, `display`, `rect` (`[x, y, w, h]`, physical),
+`scale`, `mascot`, `label`, `position`, `position_source`, `size`,
+`moving`. `move` answers `no target display` when there is nothing to move.
+`quit` answers before the badge exits. Unknown `v`, unknown commands, and
+malformed lines get an error response. Either side gives up after 5
+seconds, and a request line is at most 4 KiB. The CLI and the badge always
+come from the same binary, so the protocol carries no compatibility shims
+beyond the version check.
 
 ### 10.6 Code sharing (DRY)
 
@@ -828,6 +893,8 @@ What is shared, and by whom:
 | X11 backend | `pawprint::backend::x11` | Native X11 **and** GNOME via XWayland (profile flag) |
 | `calloop` event loop, `ksni` tray, Linux scale helpers | `pawprint::backend::linux` | X11, Wayland, GNOME |
 | Detach / single-instance startup | `pawprint::instance` | All platforms (only the session-key function differs) |
+| The shell around `Badge`: effects, state saving, reloads, status, log | `pawprint::shell` | All backends |
+| Doctor report and the shared checks | `pawprint::doctor` | All platforms; each backend adds its own section |
 
 ---
 
@@ -859,7 +926,19 @@ Each backend must deliver the same **contract**, using the shared pieces in
   - `WS_EX_TOOLWINDOW` keeps it out of the taskbar and Alt-Tab.
   - `WS_EX_NOACTIVATE` prevents activation. Also handle `WM_MOUSEACTIVATE` →
     `MA_NOACTIVATE`.
-- Show with `ShowWindow(SW_SHOWNOACTIVATE)`.
+- Show with `ShowWindow(SW_SHOWNOACTIVATE)`, once the window has both a
+  place and a frame. `Place` is `SetWindowPos(HWND_TOPMOST, ..,
+  SWP_NOACTIVATE)`, which re-asserts topmost every time; `Present` copies the
+  shared frame into the DIB section and calls `UpdateLayeredWindow` with no
+  destination point, so it never moves the window.
+- The loop (`backend::windows::run`): drain the message queue, hand the
+  events `wndproc` recorded and the queued IPC requests to the shell, `tick`,
+  then `MsgWaitForMultipleObjects(QS_ALLINPUT)` with `Shell::timeout()`. The
+  IPC thread queues each request on a channel and wakes the loop with
+  `PostMessageW(WM_APP)`. `wndproc` only records core events in a
+  thread-local queue: Win32 calls such as `SetWindowPos` send messages
+  synchronously, and this keeps the shell from being re-entered. `WM_CLOSE`
+  and `WM_QUIT` quit cleanly.
 - Never call `SetWindowDisplayAffinity`. `WDA_EXCLUDEFROMCAPTURE` would hide
   the badge from Parsec, Apollo, and Jump.
 
@@ -873,16 +952,42 @@ first thing in `run`. Handle `WM_DPICHANGED`.
 `EnumDisplayMonitors` + `GetMonitorInfoW` (`MONITORINFOF_PRIMARY`, `rcWork`
 for the usable area). Re-layout on `WM_DISPLAYCHANGE`, `WM_DPICHANGED`, and
 `WM_SETTINGCHANGE` with `SPI_SETWORKAREA`. Re-assert `HWND_TOPMOST` after each
-display change.
+display change. The scale is `GetDpiForMonitor(MDT_EFFECTIVE_DPI)` ÷ 96. A
+display's name is its GDI device name without the `\\.\` prefix
+(`DISPLAY1`), which is what `display = "..."` matches and `doctor` lists.
+`WM_DPICHANGED`'s suggested rectangle is ignored: the core places the badge.
 
 #### 11.1.4 Move mode
 
-Clear `WS_EX_TRANSPARENT`, return `HTCAPTION` from `WM_NCHITTEST` for native
-dragging, and save on `WM_EXITSIZEMOVE`. Constrain to the work area in
-`WM_MOVING`. For keyboard nudging, `SetForegroundWindow` is not guaranteed;
-nudging works when Windows grants focus.
+Clear `WS_EX_TRANSPARENT` so the badge takes the pointer, and report the drag
+to the core like every other backend (no `HTCAPTION` native drag, which would
+move the window outside the core's constraint, snap, and save):
+
+- `WM_LBUTTONDOWN` → `SetCapture`, `DragStart`; `WM_MOUSEMOVE` while
+  captured → `DragMove`; `WM_LBUTTONUP` → `DragEnd`, `ReleaseCapture`. Losing
+  the capture (`WM_CAPTURECHANGED`, e.g. Alt+Tab) also ends the drag.
+- Positions come from `GetCursorPos`, which is in physical desktop pixels
+  under per-monitor v2, not from `lParam`: the window moves under the
+  pointer, so window-relative coordinates would run away (compare F7).
+- The core constrains, snaps, and saves, and answers with `Place`.
+- Hit testing is per pixel: fully transparent pixels pass the pointer
+  through even in move mode, so the drag starts on the mascot or the crate.
+  The class cursor is the four-way move arrow, shown only in move mode.
+- Keys: `WM_KEYDOWN` arrows, Enter, and Escape, with Shift from
+  `GetKeyState`. The keyboard needs the foreground, which Windows gives a
+  background process only with permission: `pawprint move` calls
+  `AllowSetForegroundWindow(ASFW_ANY)` first (it runs in the foreground
+  terminal), and the badge calls `SetForegroundWindow` on entering move mode
+  and hands the foreground back to the previous window when it ends. Where
+  Windows refuses, dragging still works. A click never activates the badge
+  (`WS_EX_NOACTIVATE`, `MA_NOACTIVATE`).
 
 #### 11.1.5 Tray and autostart
+
+*M4.* The loop is ready for the tray: its callback message goes next to
+`WM_APP` in `wndproc`, which turns menu choices into `Event::Command(..)` like
+any other recorded event, and `TaskbarCreated` re-adds the icon after
+Explorer restarts. `Effect::SetTray` is already routed to the shell.
 
 - Tray: `Shell_NotifyIconW` with the mascot's rest frame as a 16/32-pixel
   icon. Menu: **Move**, **Size ▸ 32/64/128**, **Animation ▸ Idle/Static**,
@@ -903,6 +1008,14 @@ the same code (two `[[bin]]` targets with one shared `main`):
 - `pawprintw.exe` (`#![windows_subsystem = "windows"]`): the badge, and the
   autostart target.
 
+The code is the `pawprint` library crate (`src/lib.rs`, `pawprint::main`);
+`src/main.rs` and `src/bin/pawprintw.rs` are three-line wrappers. On other
+systems `pawprintw` builds as a stub that points at `pawprint`. Bare
+`pawprint` starts the `pawprintw.exe` next to it, falling back to itself,
+after marking its own stdio handles non-inheritable (FW8). A GUI-subsystem process still writes to stdout and stderr handles it
+inherits, so `pawprintw run --verbose` with redirected output logs to that
+file.
+
 #### 11.1.7 Known limits
 
 - Exclusive-fullscreen games and the secure desktop (UAC, lock screen) cover
@@ -914,26 +1027,60 @@ the same code (two `[[bin]]` targets with one shared `main`):
 
 ### 11.2 macOS
 
+Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
+`objc2-app-kit`, `objc2-quartz-core`, `objc2-core-graphics`, and `dispatch2`.
+
 - `NSApplication` with activation policy **Accessory**, set at runtime, so
   there is no Dock icon and no app menu. No `.app` bundle is needed.
-- `NSPanel`, style mask `borderless | nonactivatingPanel`, `isOpaque = false`,
+- `NSPanel` (a subclass whose only override is `canBecomeKeyWindow = YES`,
+  since borderless windows otherwise refuse key status), style mask
+  `borderless | nonactivatingPanel`, `isOpaque = false`,
   `backgroundColor = clear`, `hasShadow = false`,
-  `ignoresMouseEvents = true`, `level = .statusBar`, `collectionBehavior =
-  canJoinAllSpaces | stationary | fullScreenAuxiliary | ignoresCycle`,
-  `hidesOnDeactivate = false`.
-- Content: a layer-backed `NSView` whose `CALayer.contents` is a `CGImage`
-  of the scaled badge, with `magnificationFilter = nearest`.
+  `ignoresMouseEvents = true`, `level = .statusBar` (window layer 25),
+  `collectionBehavior = canJoinAllSpaces | stationary | fullScreenAuxiliary
+  | ignoresCycle`, `hidesOnDeactivate = false`. It is ordered in with
+  `orderFrontRegardless` at the first `Place`, never made key or main
+  outside move mode.
+- Content: a layer-**hosting** `NSView` (our own `CALayer`, set before
+  `wantsLayer`) whose `contents` is a `CGImage` of the scaled badge, with
+  `magnificationFilter = nearest`. The frame's premultiplied BGRA bytes are
+  `kCGImageAlphaPremultipliedFirst | kCGImageByteOrder32Little` (F30),
+  tagged with the panel screen's color space so the pixels reach the screen
+  unconverted, as on Windows and Linux. Contents and frame changes run with
+  `CATransaction.disableActions`, so nothing cross-fades.
 - **Do not** set `sharingType = .none`. The default (`.readOnly`) keeps the
   badge visible to Screen Sharing, VNC, and Jump.
 - Displays: `NSScreen.screens`; the primary is `screens[0]` (the one with the
-  menu bar, by Cocoa convention). Usable area = `visibleFrame`. Note that
-  Cocoa's origin is bottom-left, so convert in one place. Re-layout on
-  `NSApplicationDidChangeScreenParametersNotification`. Scale =
-  `backingScaleFactor`.
-- Move mode: `ignoresMouseEvents = false`, track `mouseDown`/`mouseDragged`/
-  `mouseUp` in the view, move with `setFrameOrigin`, and save on `mouseUp`.
-  Make the panel key (`becomesKeyOnlyIfNeeded`) for arrow-key nudging.
-- Menu bar: `NSStatusItem` with the same menu as the Windows tray.
+  menu bar, by Cocoa convention). Usable area = `visibleFrame`. Scale =
+  `backingScaleFactor`. Name = `localizedName`. Re-layout on
+  `NSApplicationDidChangeScreenParametersNotification`.
+- Coordinates: Cocoa's desktop is in points with a bottom-left origin on the
+  primary screen; `backend::macos::Desktop` is the one place that converts
+  to and from the core's physical top-left pixels. Inside a screen, one
+  point is `backingScaleFactor` pixels, so rects round-trip exactly. Screen
+  origins are spread by the largest scale, so with mixed scales the screens
+  keep their arrangement and never overlap in physical space.
+- Event loop: `nextEventMatchingMask(any, untilDate: deadline,
+  NSDefaultRunLoopMode)` waits for the next event or `Shell::timeout()`.
+  The IPC thread and the screen-change observer wake it by posting an
+  application-defined `NSEvent` from the main dispatch queue. Every event
+  the badge doesn't consume goes to `NSApplication.sendEvent`, so a status
+  item's menu (M4) works without changing the loop (while a menu is open,
+  AppKit tracks it in its own loop, and IPC answers wait until it closes).
+- Move mode: `ignoresMouseEvents = false` and `makeKeyWindow` (a
+  non-activating panel takes the keyboard without activating the app, so the
+  frontmost app stays frontmost). Left-button down on the panel, dragged,
+  and up are reported to the core as `DragStart/Move/End` at
+  `NSEvent.mouseLocation` in physical pixels; the window server keeps
+  sending drags to the app outside the panel. Arrow keys (Shift for 10),
+  Return/Enter, and Escape arrive as `keyDown` (`kVK_*` codes); other keys
+  are swallowed so nothing beeps. On leaving move mode a key panel is
+  ordered out and back in, which returns the keyboard to the active app.
+- Session: `SessionGetInfo(callerSecuritySession)` from Security.framework
+  (a three-line FFI; no binding crate covers `AuthSession.h`) gives the audit
+  session id for the endpoint ([10.4](#104-single-instance-per-graphical-session))
+  and whether the session has window server access (`doctor` shows both).
+- Menu bar: `NSStatusItem` with the same menu as the Windows tray (M4).
 - Autostart: `~/Library/LaunchAgents/io.github.nealhardesty.pawprint.plist`
   with `ProgramArguments = [<path>/pawprint, run]`, `RunAtLoad = true`,
   `LimitLoadToSessionType = Aqua` (GUI sessions only), and
@@ -963,6 +1110,13 @@ the same code (two `[[bin]]` targets with one shared `main`):
   `XRaiseWindow` it after map and after display changes.
 - Click-through: XFixes `SetWindowShapeRegion(ShapeInput, empty region)`.
   Move mode sets the input region to the badge rectangle.
+- Reparenting window managers can frame even a DOCK window. Openbox does,
+  and copies the bounding shape to the frame but not the input shape, so
+  the frame would catch the clicks (F32). The backend watches
+  `ReparentNotify` and sets the same input shape on its frame.
+- `WM_NORMAL_HINTS` carries a user-specified position and size, so window
+  managers place the window where the core put it. `WM_CLASS` is
+  `pawprint`, `Pawprint`; the title is `PAWPRINT`.
 
 #### 11.3.2 Transparency with or without a compositor
 
@@ -973,7 +1127,10 @@ the same code (two `[[bin]]` targets with one shared `main`):
   badge's alpha mask. Because all art is binary-alpha ([4.5](#45-pixel-rules)),
   the result is pixel-identical to the composited version.
 - Rebuild the visual path when the compositor appears or disappears
-  (`SelectionNotify` / `XFixesSelectSelectionInput` on `_NET_WM_CM_S<n>`).
+  (`SelectionNotify` / `XFixesSelectSelectionInput` on `_NET_WM_CM_S<n>`):
+  the window is destroyed and recreated with the last rectangle and frame.
+  The automated tests start and stop `xcompmgr` under a running badge and
+  compare both paths pixel by pixel (F17).
 
 #### 11.3.3 Displays and drawing
 
@@ -983,44 +1140,80 @@ the same code (two `[[bin]]` targets with one shared `main`):
   property is desktop-wide, which is a known EWMH limitation with
   multi-monitor panels.
 - Scale: `Xft.dpi` from `RESOURCE_MANAGER` ÷ 96, rounded to 0.25.
-- Draw with `PutImage` (or MIT-SHM when available) into the window. Redraw on
-  `Expose`.
+- Draw with `PutImage` into the window, split into requests that fit the
+  server's maximum request size (byte-swapped for an MSB-first server).
+  Redraw on `Expose`. MIT-SHM is not used: the badge is a few kilobytes and
+  redraws a few times a minute.
 - Re-layout on RandR `ScreenChangeNotify` and `PropertyNotify` for
   `_NET_WORKAREA` and `RESOURCE_MANAGER`.
 - Move mode: `GrabPointer` on press, `ConfigureWindow` on motion, ungrab and
-  save on release. Arrow keys work through `GrabKeyboard` while in move mode.
+  save on release. Arrow keys work through `GrabKeyboard` while in move mode
+  (keycodes from `GetKeyboardMapping`, refreshed on `MappingNotify`); if
+  another client holds the keyboard, dragging still works.
+- The X11 connection is a `calloop` fd source; events that `x11rb` buffers
+  while waiting for replies are drained after every loop iteration.
+- `x11rb` connects through the filesystem socket or TCP, not the Linux
+  abstract socket namespace (F33). Every desktop X server creates the
+  filesystem socket.
 
 ### 11.4 Linux Wayland (KDE Plasma 6)
 
 - Required globals: `wl_compositor`, `wl_shm`, `zwlr_layer_shell_v1`.
-  Optional: `wp_fractional_scale_manager_v1`, `wp_viewporter`,
-  `kde_output_order_v1`.
-- Surface: layer `overlay`, namespace `pawprint`, anchors from the position
-  anchor (for example `top | right`), margins from the offset,
-  `exclusive_zone = 0`, `keyboard_interactivity = none`.
+  Optional: `wp_viewporter`, `kde_output_order_v1`.
+- Surface: layer `overlay`, namespace `pawprint`, `exclusive_zone = 0`,
+  `keyboard_interactivity = none`, and an **empty** input region at all
+  times (click-through, F4).
   - `exclusive_zone = 0` makes the compositor place the surface clear of
-    panels' exclusive zones, so margins are relative to the usable area.
-- Click-through: `wl_surface.set_input_region` with an **empty** region.
-  Move mode sets the input region to the badge rectangle and switches
-  `keyboard_interactivity` to `on_demand`.
+    panels' exclusive zones, so margins are relative to the usable area (F3).
+- **Coordinates.** The core works in physical desktop pixels, but Wayland
+  never tells a client where anything is. An output's bounds are its
+  xdg-output logical position and size times its scale. Its usable area
+  comes from a **work-area probe**: an unmapped layer surface per output,
+  anchored to all four edges with `exclusive_zone = 0` and size 0 × 0, which
+  the compositor configures to the size left over by panels. Only the size
+  is known, so the usable area is placed at the output's origin.
+- **Placement.** The badge is anchored to the edges nearest it, using the
+  core's own 3 × 3 rule (`layout::snap`), with margins measured from those
+  edges (centered axes anchor left or top). The compositor applies margins
+  from the real usable area, so the badge lands right even though its
+  position inside the output isn't known.
 - Primary output: Wayland has no core concept of a primary output. On
   Plasma, `kde_output_order_v1` lists outputs in priority order, and the
-  first is the primary. Elsewhere use the configured `display` name, a single
-  output, or let the compositor choose (null output).
-- The output of a layer surface is fixed at creation. Changing the target
-  display means destroying and recreating the surface.
-- Scaling: with fractional-scale + viewporter, render a buffer at
-  `P` × art size and set the viewport destination to the logical size.
-  Without them, use integer `wl_surface.set_buffer_scale`.
-- Buffers: `wl_shm` `ARGB8888`, which is premultiplied. Double-buffered, and
-  reallocated only when the size changes.
-- Move mode drag: on button press, record the pointer position. Wayland's
-  implicit grab keeps delivering motion to the surface while the button is
-  held, even outside it. Compute the absolute position as
-  `surface origin (from margins) + surface-local pointer`, update the margins,
-  and commit **(verify)**. If a compositor drops motion outside the surface,
-  fall back to temporarily anchoring a transparent full-output surface for
-  the drag.
+  first is the primary. Elsewhere: the configured `display` name, a single
+  output, or else the first output by position (not the null output, which
+  would leave the core without a usable area to lay out in).
+- The output of a layer surface is fixed at creation (F5). The badge is
+  recreated when its rectangle moves to another output, when its output
+  goes away, and when the compositor closes it.
+- Scaling: the scale is the output's physical mode over its xdg-output
+  logical size, rounded to 1/120, which equals the compositor's fractional
+  scale, so `wp_fractional_scale_v1` adds nothing. With `wp_viewporter`, the
+  buffer is the core's physical frame and the viewport destination is its
+  logical size. Without it, `wl_surface.set_buffer_scale` with the integer
+  output scale (1 when the frame isn't divisible by it).
+- Buffers: `wl_shm` `ARGB8888`, which is premultiplied, from a slot pool
+  that reuses released buffers. Place, present, and move-mode changes are
+  collected and committed once per loop iteration.
+- **Move mode** uses a **catcher**: a transparent layer surface on the
+  badge's output, anchored to all four edges (so it covers the usable area),
+  with `keyboard_interactivity = exclusive`. It takes every click in the
+  usable area until move mode ends. Its surface-local coordinates, times
+  the scale, from the usable area's origin, are exactly the core's
+  coordinates, so a press on the badge rectangle starts a drag, and motion
+  and release follow it. The catcher's buffer is one transparent pixel
+  stretched by the viewport (a full-size buffer without one).
+  - Why not drag the badge surface itself: the implicit grab does deliver
+    motion outside the surface, but sway reports positions relative to
+    where the surface was **at the press**, so moving the surface under the
+    pointer made the drag run away (F7). The catcher never moves.
+  - Why exclusive: with `on_demand`, arrow keys would need a click on the
+    badge first, and a click ends move mode. Exclusive keyboard focus is the
+    Wayland equivalent of the X11 keyboard grab, held at most 30 seconds.
+- Keys: the backend binds `wl_keyboard` without libxkbcommon and reads the
+  compositor's keymap just far enough to find the keycodes of Left, Right,
+  Up, Down, Return, KP_Enter, and Escape, so virtual keyboards with their
+  own keymaps (remote desktop servers, `wtype`) work. Without a usable
+  keymap it falls back to the evdev codes. Shift is XKB modifier 0.
 - Tray: StatusNotifierItem via `ksni`. Plasma supports it natively.
 
 ### 11.5 GNOME Wayland (Ubuntu)
@@ -1050,6 +1243,16 @@ Differences from [11.3](#113-linux-x11):
 | Scaling | Crisp at 100% and integer scales. With **fractional scaling** (offered in Ubuntu's Settings → Displays), Mutter renders XWayland windows at 1× and upscales them, which blurs pixel art. GNOME 47+ fixes this with Mutter's `xwayland-native-scaling` experimental feature (F28). `pawprint doctor` detects the situation and prints the exact `gsettings` command. |
 | Tray | Ubuntu ships the AppIndicator/KStatusNotifierItem extension enabled, so the shared `ksni` tray works. Upstream GNOME has no tray, so the CLI is the interface there and `doctor` says so (F29). |
 | Autostart | XDG autostart, same as every Linux desktop |
+
+In code, the profile is a flag on the X11 backend that forces the ARGB
+visual; everything else in the table is the plain X11 path, which already
+behaves that way under Mutter. `status` reports the backend as
+`x11 (gnome profile)`. The fractional-scaling check in `doctor` reads the
+monitor scales from Wayland (physical mode over xdg-output logical size),
+reads `org.gnome.mutter experimental-features` with `gsettings`, and, when
+a monitor is fractional and `xwayland-native-scaling` is off, prints the
+`gsettings set` command with the current features plus that one, or says
+that GNOME 46 has no fix (use 100% or 200%).
 
 #### 11.5.2 Remote sessions on GNOME
 
@@ -1546,7 +1749,7 @@ pawprint/
 ├── crates/
 │   ├── pawprint-core/        # pure logic + build.rs asset embedding; no OS deps
 │   ├── pawprint-sprite/      # sprite source compiler (build.rs, runtime, pawdev)
-│   └── pawprint/             # binary: cli, ipc, instance, autostart, backend/{windows,macos,linux,x11,wayland}
+│   └── pawprint/             # lib + bins pawprint, pawprintw (Windows): cli, ipc, instance, autostart, backend/{windows,macos,linux,x11,wayland}
 ├── tools/
 │   └── pawdev/               # dev-only binary: check-assets, contact-sheet, art import/export, golden, package, publish
 ├── assets/
@@ -1629,6 +1832,10 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
 | `clean` | Remove `target/` and `dist/` |
 | `check-all-targets` | `cargo check` of the whole workspace for every release target, from any OS (needs no linkers) |
 | `spike-f22` | Rebuild the F22 spike ([14.4](#144-static-linux-binaries)) for x86_64 and aarch64 musl |
+| `test-x11` | Linux: the X11 backend under Xvfb, bare, with `xcompmgr`, and with `openbox` ([16.1.1](#1611-display-server-tests-linux)) |
+| `test-wayland` | Linux: the Wayland backend under headless sway ([16.1.1](#1611-display-server-tests-linux)) |
+| `test-linux-display` | Both of the above (what the Linux display CI job runs) |
+| `test-windows-display` | Windows: the real badge on this desktop ([16.1.3](#1613-desktop-test-windows)); a `windows-latest` CI job runs it |
 
 Targets whose features don't exist yet stop with
 `make <target>: not implemented yet (Mx)` from `pawdev todo`, naming the
@@ -1774,6 +1981,77 @@ and user mascots are in separate directories and are never touched except by
 - **Sprite compiler:** layer ops, bases and recolors, templates, props, and
   PNG import/export round-trips.
 - **Shared move mode and layout** driven through `FakeSurface`.
+- **Shell pieces:** backend selection (§3.2), scale helpers, the IPC
+  protocol and a real socket round trip, session keys, log rotation, and the
+  Wayland keymap reader.
+
+#### 16.1.1 Display-server tests (Linux)
+
+`make test-x11` and `make test-wayland` run the real `pawprint run` against
+real display servers and check the screen. They are `#[ignore]`d in
+`make test` because they need the servers installed; a separate Linux CI
+job installs them (`xvfb xcompmgr openbox sway swaybg grim foot wtype`) and
+runs `make test-linux-display`. Each test gets its own HOME and runtime
+directory and fails with the badge's log.
+
+| Suite | Session | What is asserted |
+|---|---|---|
+| X11 | Xvfb, no WM, no compositor | override-redirect, depth 24 (shaped); DOCK type and ABOVE/STICKY/SKIP_* state; screen pixels equal `pawprint render` on opaque pixels and the backdrop on transparent ones; an XTest click on the label reaches the window below; in move mode a drag moves the badge, saves the snapped anchor and offset, and is pixel-exact at the new spot; arrow keys, Shift, Enter, and Escape; a `_NET_WORKAREA` change and an `Xft.dpi` change re-lay it out |
+| X11 | Xvfb + `xcompmgr` started and stopped under a running badge | the window is rebuilt as 32-bit ARGB and back; pixel-exact and click-through in both |
+| X11 | Xvfb + `openbox` | a managed DOCK, at the requested position, above a normal window mapped later, clicks pass through to that window (F32), drag works |
+| X11 | GNOME-like environment (`XDG_CURRENT_DESKTOP=GNOME`, no layer-shell) | the `gnome` profile is chosen, ARGB, keyed on `WAYLAND_DISPLAY` |
+| X11 | Xvfb | single instance: a second `run` and bare `pawprint` say "already running"; after a crash the stale socket is replaced; bare `pawprint` detaches; `quit` removes the socket |
+| Wayland | headless sway, pixman renderer, `swaybg` backdrop | layer surface pixel-exact at top-right (via `grim`); a virtual-pointer click on the badge focuses the `foot` window under it; in move mode the click is taken |
+| Wayland | headless sway | move-mode drag far outside the badge (F7) saves the right position and is pixel-exact; `wtype` arrow keys, Enter, Escape with exclusive keyboard |
+| Wayland | headless sway + `swaybar` | the badge sits below the bar's exclusive zone (F3), pixel-exact |
+| Wayland | headless sway | output mode change; scale 2 crisp (every opaque pixel exact); scale 1.5 sized 96 px and placed right (crispness at fractional scales is an owner check, F34) |
+
+What these can't show stays in the manual checks below and the facts ledger:
+real Plasma and GNOME, real input devices, and remote clients.
+
+#### 16.1.2 GUI-session test (macOS)
+
+`make test-macos-display` runs the real `pawprint run` in the logged-in
+desktop (a CI job runs it on `macos-latest`, whose job runs inside an
+auto-logged-in GUI session, FM3). It is `#[ignore]`d in `make test` and
+uses its own HOME and `TMPDIR`. It asks the window server
+(`CGWindowListCopyWindowInfo`) about the badge's window and asserts:
+status level (layer 25), the frame `status` reports, read-only sharing
+(F12), an Accessory app that is never frontmost or active (also in move
+mode), one badge per session, `status`/`move`/`reload`/`reset-position`/
+`quit` over the socket, a clean exit that removes the socket, and that
+the SystemConfiguration hostname equals `scutil --get`. With Screen
+Recording permission it compares every opaque badge pixel in a
+`screencapture` with `pawprint render` (scale 1 only); with Accessibility
+permission it drags the badge with posted mouse events and checks the
+saved, snapped position (and that it survives a restart), an arrow nudge,
+Enter, and Escape. Without a permission, that check prints `SKIP` and why.
+Click-through, Spaces, full-screen apps, and Retina scales stay owner
+checks ([16.2](#162-backend-smoke-checks-manual-per-backend-every-release)).
+
+#### 16.1.3 Desktop test (Windows)
+
+`make test-windows-display` runs `pawprintw.exe run --verbose` (stderr to a
+file) on the current desktop and checks it with Win32 calls from the test
+(`crates/pawprint/tests/windows.rs`). The test's own windows run on a thread
+that keeps dispatching messages, so they never stall the shell's
+synchronous broadcasts, and a watchdog fails the test after two minutes. It is `#[ignore]`d in `make test`; a
+`windows-latest` CI job runs it. It refuses to start while a badge runs in
+the session, and restores the user's state file afterwards.
+Win32 known folders can't be redirected, so it uses the real profile.
+
+| Check | How |
+|---|---|
+| Styles | `GetWindowLongPtrW`: `WS_POPUP`; `LAYERED`, `TRANSPARENT`, `TOPMOST`, `TOOLWINDOW`, `NOACTIVATE`; no `APPWINDOW`; never the foreground window |
+| Placement | top-right of the primary work area, 16 logical px in; `GetWindowRect` equals `status` |
+| Topmost and pixels | a normal solid window shown *after* the badge covers the work area; a `BitBlt` with `CAPTUREBLT` of the badge equals `pawprint render` on opaque pixels and the backdrop on transparent ones (at scale 1) |
+| Click-through | `WindowFromPoint` skips the badge, and a `SendInput` click on the label reaches the window below |
+| Move mode | `pawprint move` clears `TRANSPARENT`; `WindowFromPoint` finds the badge on the art and the backdrop on a transparent pixel; a `SendInput` drag moves it, saves the position, and is pixel-exact; arrow keys and Enter when Windows grants the foreground |
+| Work area | an app bar docked at the top (40 px) moves the badge down 40 px, and back when it goes (FW5) |
+| IPC and instances | `status`, `move`, `reset-position`, `quit` over the pipe; a second `run` says "already running"; bare `pawprint` starts `pawprintw.exe` detached |
+
+Pixel, click, drag, and key checks are skipped, with a message, when the
+session has no visible desktop (the capture shows one flat color).
 
 ### 16.2 Backend smoke checks (manual, per backend, every release)
 
@@ -1838,21 +2116,21 @@ true instead.
 |---|---|---|---|
 | F1 | `winit`'s `WindowLevel::AlwaysOnTop` is unsupported on Wayland, and winit has no layer-shell. | Own backends; layer-shell on Wayland | Documented |
 | F2 | GNOME/Mutter does not implement `zwlr_layer_shell_v1`; Plasma (KWin) and wlroots compositors do. | GNOME supported through XWayland (11.5) | Documented |
-| F3 | Layer-shell `exclusive_zone = 0` places a surface clear of other surfaces' exclusive zones (panels). | Margins are relative to the usable area | Documented (verify on Plasma) |
-| F4 | An empty `wl_surface` input region makes the surface click-through. | Wayland click-through | Documented |
+| F3 | Layer-shell `exclusive_zone = 0` places a surface clear of other surfaces' exclusive zones (panels). An unmapped, four-edge-anchored 0 × 0 surface is configured to the usable area's size. | Margins are relative to the usable area; work-area probes | **Confirmed on sway 1.9** (`make test-wayland`, swaybar at the top); verify on Plasma |
+| F4 | An empty `wl_surface` input region makes the surface click-through. | Wayland click-through | **Confirmed on sway 1.9** (a click on the badge focuses the window under it); verify on Plasma |
 | F5 | A layer surface's output can't change after creation. | Recreate the surface on display change | Documented |
 | F6 | Wayland has no core "primary output"; Plasma exposes order via `kde_output_order_v1`. | Primary detection on Plasma | Documented (verify) |
-| F7 | Wayland implicit pointer grab delivers motion outside the surface while a button is held. | Small-surface drag in move mode | **Verify** |
-| F8 | `WS_EX_LAYERED | WS_EX_TRANSPARENT` makes a window click-through; `UpdateLayeredWindow` needs premultiplied BGRA. | Windows backend | Documented |
+| F7 | Wayland implicit pointer grab delivers motion outside the surface while a button is held. **But** sway 1.9 reports those positions relative to where the surface was at the press, not where it is after it moves, so dragging the badge surface by its own pointer events runs away. | Move mode uses a still, full-area catcher surface instead (11.4) | **Refuted as a drag method on sway 1.9** (motion outside: confirmed; coordinates: press-relative). Catcher drag confirmed on sway; verify on Plasma |
+| F8 | `WS_EX_LAYERED | WS_EX_TRANSPARENT` makes a window click-through; `UpdateLayeredWindow` needs premultiplied BGRA. | Windows backend | **Confirmed on windows-latest** (`make test-windows-display`: a `SendInput` click on the badge reaches the window below; the screen equals `pawprint render` pixel for pixel; see FW1–FW2) |
 | F9 | `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)` hides a window from capture-based remote tools. | Never call it | Documented |
 | F10 | `Local\` kernel objects and HKCU Run entries are per logon session; RDP sessions are separate sessions. | Per-session instance; autostart covers RDP | Documented |
-| F11 | GUI-subsystem Windows exes have no usable stdout; console exes flash a window at logon. | Ship `pawprint.exe` + `pawprintw.exe` | Documented |
-| F12 | macOS windows default to `sharingType = .readOnly`; `.none` hides them from capture. | Leave the default | Documented |
-| F13 | macOS `gethostname()` can reflect a network-assigned name; `LocalHostName` is stable. | Hostname source order | Documented |
+| F11 | GUI-subsystem Windows exes have no usable stdout; console exes flash a window at logon. | Ship `pawprint.exe` + `pawprintw.exe` | Documented. Refined by FW4: a GUI-subsystem process does write to stdout/stderr handles it *inherits* (redirected to a file or pipe); it has no console of its own |
+| F12 | macOS windows default to `sharingType = .readOnly`; `.none` hides them from capture. | Leave the default | **Confirmed** for the default (macOS 26.7 on `macos-latest`: the panel's `kCGWindowSharingState` is 1, read-only, and `screencapture` sees it pixel-exact); `.none` hiding it is documented |
+| F13 | macOS `gethostname()` can reflect a network-assigned name; `LocalHostName` is stable. | Hostname source order | Documented; the SystemConfiguration read equals `scutil --get` (FM4) |
 | F14 | `curl` downloads don't get `com.apple.quarantine`; browser downloads do. | curl installer avoids Gatekeeper prompts | Documented (verify) |
 | F15 | Apple Silicon requires signed arm64 code; ad-hoc signing suffices for local execution. | Re-sign after `lipo` | **Verify** |
 | F16 | `LimitLoadToSessionType = Aqua` restricts a LaunchAgent to GUI sessions. | No badge attempts in SSH sessions | Documented |
-| F17 | X11 ARGB transparency needs a compositing manager (`_NET_WM_CM_S<n>` owner). Without one, the Shape extension's bounding mask gives 1-bit transparency. | Binary alpha + shape fallback | Documented |
+| F17 | X11 ARGB transparency needs a compositing manager (`_NET_WM_CM_S<n>` owner). Without one, the Shape extension's bounding mask gives 1-bit transparency. | Binary alpha + shape fallback | **Confirmed** (Xvfb with and without `xcompmgr`, switched live; both pixel-identical to `pawprint render`) |
 | F18 | xrdp and Xvnc sessions are X11 even when the console runs Wayland. | X11 backend covers Linux RDP/VNC sessions | Documented |
 | F19 | macOS ships GNU Make 3.81. | Makefile stays 3.81-compatible | Documented |
 | F20 | GNU Make on Windows uses `sh.exe` if found on `PATH`, else `cmd.exe`. | Single-command recipes | Documented |
@@ -1867,6 +2145,37 @@ true instead.
 | F29 | Ubuntu enables the AppIndicator/KStatusNotifierItem extension by default; upstream GNOME has no tray. | Tray on Ubuntu; CLI-only on upstream GNOME | Documented |
 | F30 | Premultiplied little-endian ARGB8888 (bytes B, G, R, A) is accepted by `UpdateLayeredWindow`, X11 32-bit ARGB visuals, `wl_shm` `ARGB8888`, and `CGImage` (premultiplied-first, 32-bit little-endian). | One pixel format for every backend | Documented |
 | F31 | GNOME sessions set `DISPLAY` and start Xwayland on demand, including releases without an X11 session. | GNOME path needs nothing installed | Documented (verify on Ubuntu 26.04) |
+| F32 | Openbox reparents even `_NET_WM_WINDOW_TYPE_DOCK` windows into a frame and copies the client's bounding shape to it, but not its input shape, so the frame swallows clicks. | The X11 backend sets its input shape on its frame too (11.3.1) | **Confirmed** (openbox 3.6 under Xvfb) |
+| F33 | `x11rb` 0.14 connects through the `/tmp/.X11-unix` socket or TCP, not the abstract socket namespace. Where `/tmp/.X11-unix` is read-only (WSLg), a test Xvfb listens on abstract sockets only. | Tests run Xvfb with `-listen tcp`; real X servers always create the filesystem socket | **Confirmed** |
+| F34 | Headless sway 1.9 with the pixman renderer filters the whole output at fractional scales (even swaybg's solid color comes out uneven); about 85% of the badge's pixels at 1.5 were exact. At integer scales every pixel is exact. | Fractional-scale crispness can't be judged there | **Confirmed on headless sway**; crispness at 125%/150% is an owner check on Plasma |
+| F35 | wlroots `keyboard_interactivity = exclusive` on an overlay layer surface sends it the keys at once; virtual keyboards (`wtype`, remote-desktop servers) send keycodes from their own keymaps. | Exclusive keyboard in move mode; keycodes read from the keymap (11.4) | **Confirmed on sway 1.9**; verify on Plasma |
+
+**macOS facts (M1 macOS backend).** Learned on GitHub's `macos-latest`
+runner (macOS 26.7.2, Apple Silicon, one 1024 × 768 "Apple Virtual"
+display at scale 1, auto-logged-in GUI session) by `make test-macos-display`.
+
+| # | Fact | Consequence | Status |
+|---|---|---|---|
+| FM1 | The `CGImage` part of F30 holds: premultiplied BGRA bytes as `kCGImageAlphaPremultipliedFirst \| kCGImageByteOrder32Little`, tagged with the screen's color space, on a nearest-filter layer, reach the screen unchanged. | One pixel format on macOS too | **Confirmed** (every opaque pixel of the badge in a `screencapture` equals `pawprint render`) |
+| FM2 | A borderless non-activating `NSPanel` at `NSStatusWindowLevel` in an Accessory app shows as window layer 25 at exactly the requested frame, the app has `activationPolicy = accessory`, and neither showing it nor `makeKeyWindow` in move mode makes it frontmost or active. | Contract items 2–4 on macOS (11.2) | **Confirmed** on the runner; Spaces, full-screen apps, and Mission Control are owner checks |
+| FM3 | GitHub's macOS runner job runs inside the auto-logged-in GUI login: `SessionGetInfo` reports an audit session with window server access, `screencapture` captures other apps' windows, and `CGPreflightPostEventAccess` is true, so synthetic drags and keys reach the panel. | The backend is tested end to end in CI (11.2, 16.1) | **Confirmed** |
+| FM4 | `HostName` from the SystemConfiguration preferences path `/System/System`, else `SCDynamicStoreCopyLocalHostName`, equals `scutil --get HostName`/`LocalHostName`. (The runner's is a generated `sat12-…-FE304CC6C67E.local`.) | No `scutil` subprocess (5.1) | **Confirmed** |
+| FM5 | Posted mouse events reach a panel that just stopped ignoring the mouse; drags keep arriving outside the panel while the button is held, and `NSEvent.mouseLocation` tracks them in global points. | Move-mode drag without a pointer grab (11.2) | **Confirmed** on the runner |
+
+**Windows facts (M1 Windows backend).** Learned on GitHub's `windows-latest` runner
+(Windows Server, an interactive desktop at 1024 × 768, scale 1, the taskbar
+taking the bottom 48 px) through `make test-windows-display`.
+
+| # | Fact | Consequence | Status |
+|---|---|---|---|
+| FW1 | A layered window drawn with `UpdateLayeredWindow` hit-tests per pixel: fully transparent pixels pass the pointer through even without `WS_EX_TRANSPARENT`. | In move mode the drag starts on the mascot or the crate, not on the empty corners (11.1.4) | **Confirmed** (`WindowFromPoint` finds the window below on a transparent pixel in move mode) |
+| FW2 | `BitBlt` from the screen DC includes layered windows only with `CAPTUREBLT`. | The test captures with `SRCCOPY | CAPTUREBLT` | **Confirmed** |
+| FW3 | A normal window shown and activated after the badge stays below it (`WS_EX_TOPMOST`), and a `WS_EX_NOACTIVATE` window is never made foreground by showing, placing, or redrawing it. | Contract items 2 and 3 | **Confirmed** |
+| FW4 | A GUI-subsystem exe writes to inherited stdout/stderr: `pawprintw.exe run --verbose` with stderr redirected to a file logs there. | The test reads the badge's log from its stderr file | **Confirmed** |
+| FW5 | `SPI_SETWORKAREA` from an ordinary process returns success but leaves the work area unchanged while Explorer runs. An app bar (`SHAppBarMessage` `ABM_NEW` + `ABM_SETPOS`) does shrink it, and the shell then broadcasts `WM_SETTINGCHANGE` with `SPI_SETWORKAREA`. | The test simulates a taskbar with an app bar | **Confirmed** (the badge re-lays out to the 40 px smaller work area and back) |
+| FW6 | `AllowSetForegroundWindow(ASFW_ANY)` from the process running `pawprint move`, then `SetForegroundWindow` in the badge, gives the badge the keyboard when that process may set the foreground. | Arrow-key nudging works from a terminal (11.1.4) | **Confirmed on the runner**; verify from Windows Terminal and conhost on a desktop |
+| FW7 | `CreateNamedPipeW` with `FILE_FLAG_FIRST_PIPE_INSTANCE` fails with `ERROR_ACCESS_DENIED` when the name exists, and a pipe name vanishes when its last server handle closes. | The pipe is the instance lock; no stale endpoints (10.4) | **Confirmed** (`make test` on windows-latest; the desktop test's crash-free restarts) |
+| FW8 | `std::process::Command` on Windows creates children with handle inheritance on, so a child inherits every inheritable handle, including the parent's own redirected stdout and stderr, even when its stdio is set to null. | Bare `pawprint` marks its stdio handles non-inheritable before starting the detached badge; otherwise `pawprint \| more` or a script capturing its output would wait until the badge quits | **Confirmed** (the desktop test hung until this was fixed) |
 
 ---
 
