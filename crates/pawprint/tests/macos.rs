@@ -485,7 +485,12 @@ fn badge_in_a_gui_session() {
     assert!(code.success(), "exit {code}\n{}", env.log());
     assert_eq!(env.pawprint(&["status"]).status.code(), Some(4));
     let sockets = std::fs::read_dir(env.runtime().join("pawprint"))
-        .map(|d| d.count())
+        // The `.lock` file stays by design (SPEC §10.4); only the socket goes.
+        .map(|d| {
+            d.flatten()
+                .filter(|e| e.path().extension().is_some_and(|x| x == "sock"))
+                .count()
+        })
         .unwrap_or(0);
     assert_eq!(sockets, 0, "quit removes the socket");
 }
