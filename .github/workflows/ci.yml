@@ -74,6 +74,11 @@ jobs:
       - name: make test-macos-display
         run: make test-macos-display
 
+      # The power budget (SPEC §7.2) from the universal release binary.
+      - name: make power-check
+        if: always()
+        run: make power-check POWER_SECONDS=150
+
       - name: pawprint doctor
         if: always()
         run: make doctor

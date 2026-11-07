@@ -22,7 +22,7 @@ commands:
   building-blocks          docs/building-blocks.png: accents, props, bases x templates
   art-export <id>          out/art/<id>/: a PNG per layer and variant, plus frames.png
   art-import <id> <png>    print a PNG layer as a [layers] table in <id>'s glyphs
-  power-check [seconds]    measure the release badge against SPEC §7.2 (Linux: Xvfb; Windows: this desktop)
+  power-check [seconds]    measure the release badge against SPEC §7.2 (Linux: Xvfb; macOS, Windows: this desktop)
   todo <target> <milestone> report a make target that is not implemented yet
   clean-dist               remove dist/";
 

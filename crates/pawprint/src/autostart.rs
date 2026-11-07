@@ -3,8 +3,7 @@
 //! command the detached start uses (`instance::badge_exe`).
 //!
 //! Linux: an XDG autostart entry. Windows: the HKCU `Run` value (SPEC
-//! §11.1.5). macOS (LaunchAgent) is a hook for its backend to fill in
-//! (SPEC §11.2).
+//! §11.1.5). macOS: a LaunchAgent (SPEC §11.2).
 
 use std::path::PathBuf;
 
@@ -12,7 +11,6 @@ use crate::{CmdResult, exit, instance};
 
 /// Whether this user's login starts the badge.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))] // until Windows and macOS land
 pub enum State {
     /// On: where the entry lives and the command it runs.
     On {
@@ -23,7 +21,6 @@ pub enum State {
 }
 
 /// The command line an autostart entry runs.
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 fn command_line() -> Result<(PathBuf, String), String> {
     let exe = instance::badge_exe().map_err(|e| format!("cannot find this executable: {e}"))?;
     Ok((exe, "run".to_string()))
@@ -44,6 +41,9 @@ pub fn cli(action: crate::Toggle) -> CmdResult {
                 "{}",
                 if was == State::Off {
                     "Autostart was already off."
+                } else if cfg!(target_os = "macos") {
+                    "Autostart is off. A badge launchd started at login has stopped; `pawprint` \
+                     starts one now."
                 } else {
                     "Autostart is off. PAWPRINT keeps running until `pawprint quit` or logout."
                 }
@@ -268,25 +268,191 @@ mod run_key {
     }
 }
 
-/// Hook for the macOS backend:
-/// `~/Library/LaunchAgents/io.github.nealhardesty.pawprint.plist`
-/// (SPEC §11.2 lists its keys).
-#[cfg(not(any(target_os = "linux", windows)))]
-mod platform {
+#[cfg(target_os = "macos")]
+use launchd as platform;
+
+/// macOS: `~/Library/LaunchAgents/io.github.nealhardesty.pawprint.plist`,
+/// loaded into this login's `gui/<uid>` domain at once and by launchd at
+/// every GUI login (`LimitLoadToSessionType = Aqua`, F16). launchd restarts
+/// a crashed badge but not one that quit (`KeepAlive = { SuccessfulExit =
+/// false }`); `pawprint run` exits 0 when a badge already runs.
+#[cfg(target_os = "macos")]
+mod launchd {
+    use std::path::{Path, PathBuf};
+    use std::process::{Command, Output};
+
     use super::State;
 
-    const NOT_YET: &str = "autostart: not implemented on this platform yet (see ROADMAP.md M4)";
+    const LABEL: &str = "io.github.nealhardesty.pawprint";
+
+    fn plist_path() -> Result<PathBuf, String> {
+        let base = directories::BaseDirs::new().ok_or("cannot find the home directory")?;
+        Ok(base
+            .home_dir()
+            .join("Library/LaunchAgents")
+            .join(format!("{LABEL}.plist")))
+    }
+
+    fn escape(s: &str) -> String {
+        s.replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+    }
+
+    fn unescape(s: &str) -> String {
+        s.replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&amp;", "&")
+    }
+
+    pub fn plist(args: &[&str]) -> String {
+        let args: String = args
+            .iter()
+            .map(|a| format!("\n        <string>{}</string>", escape(a)))
+            .collect();
+        format!(
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{LABEL}</string>
+    <key>ProgramArguments</key>
+    <array>{args}
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+</dict>
+</plist>
+"#
+        )
+    }
+
+    /// `ProgramArguments` from a plist this module wrote, as one line.
+    pub fn command(text: &str) -> String {
+        let array = text
+            .split_once("<key>ProgramArguments</key>")
+            .and_then(|(_, rest)| rest.split_once("</array>"))
+            .map_or("", |(array, _)| array);
+        let args: Vec<String> = array
+            .split("<string>")
+            .skip(1)
+            .filter_map(|s| s.split_once("</string>"))
+            .map(|(arg, _)| unescape(arg))
+            .map(|a| {
+                if a.contains(char::is_whitespace) {
+                    format!("\"{a}\"")
+                } else {
+                    a
+                }
+            })
+            .collect();
+        if args.is_empty() {
+            "(no ProgramArguments)".into()
+        } else {
+            args.join(" ")
+        }
+    }
+
+    fn domain() -> String {
+        // SAFETY: getuid has no preconditions.
+        format!("gui/{}", unsafe { libc::getuid() })
+    }
+
+    fn launchctl(args: &[&str]) -> Result<Output, String> {
+        Command::new("/bin/launchctl")
+            .args(args)
+            .output()
+            .map_err(|e| format!("cannot run launchctl: {e}"))
+    }
+
+    /// Whether launchd has the agent loaded in this login.
+    fn loaded() -> bool {
+        launchctl(&["print", &format!("{}/{LABEL}", domain())]).is_ok_and(|o| o.status.success())
+    }
 
     pub fn status() -> Result<State, String> {
-        Err(NOT_YET.into())
+        let path = plist_path()?;
+        match std::fs::read_to_string(&path) {
+            Ok(text) => Ok(State::On {
+                command: format!(
+                    "{}{}",
+                    command(&text),
+                    if loaded() {
+                        ""
+                    } else {
+                        " (not loaded now; launchd loads it at the next login)"
+                    }
+                ),
+                entry: path,
+            }),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(State::Off),
+            Err(e) => Err(format!("cannot read {}: {e}", path.display())),
+        }
     }
 
+    /// Write the agent and load it now, which starts a badge (or finds the
+    /// running one and exits). An agent that is already loaded stays as it
+    /// is; one that can't load now (an SSH login) still loads at the next
+    /// GUI login.
     pub fn enable() -> Result<State, String> {
-        Err(NOT_YET.into())
+        let (exe, arg) = super::command_line()?;
+        let path = plist_path()?;
+        write(&path, &exe, &arg)?;
+        if !loaded() {
+            let out = launchctl(&["bootstrap", &domain(), &path.to_string_lossy()])?;
+            if !out.status.success() {
+                log::warn!(
+                    "launchctl bootstrap: {}",
+                    String::from_utf8_lossy(&out.stderr).trim()
+                );
+            }
+        }
+        status()
     }
 
+    fn write(path: &Path, exe: &Path, arg: &str) -> Result<(), String> {
+        let fail = |e: std::io::Error| format!("cannot write {}: {e}", path.display());
+        if let Some(dir) = path.parent() {
+            std::fs::create_dir_all(dir).map_err(fail)?;
+        }
+        std::fs::write(path, plist(&[&exe.to_string_lossy(), arg])).map_err(fail)
+    }
+
+    /// Unload the agent (which stops a badge it started) and remove it.
     pub fn disable() -> Result<(), String> {
-        Err(NOT_YET.into())
+        if loaded() {
+            launchctl(&["bootout", &format!("{}/{LABEL}", domain())])?;
+        }
+        let path = plist_path()?;
+        match std::fs::remove_file(&path) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                Err(format!("cannot remove {}: {e}", path.display()))
+            }
+            _ => Ok(()),
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn plist_round_trips_its_command() {
+            let text = plist(&["/Users/a b/bin/paw&print", "run"]);
+            assert!(text.contains("<string>/Users/a b/bin/paw&amp;print</string>"));
+            assert!(text.contains("<key>LimitLoadToSessionType</key>\n    <string>Aqua</string>"));
+            assert_eq!(command(&text), "\"/Users/a b/bin/paw&print\" run");
+        }
     }
 }
 

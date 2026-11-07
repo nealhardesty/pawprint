@@ -909,6 +909,7 @@ name = "pawdev"
 version = "0.1.0"
 dependencies = [
  "gif",
+ "libc",
  "pawprint-core",
  "pawprint-sprite",
  "toml",

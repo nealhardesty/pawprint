@@ -9,6 +9,8 @@ use crate::{CmdResult, doctor::Report, ipc};
 mod linux;
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(target_os = "macos")]
+mod menubar;
 #[cfg(target_os = "linux")]
 mod sni;
 #[cfg(target_os = "linux")]

@@ -23,6 +23,19 @@
 //! running count of every switch to the thread). Win32 known folders can't be
 //! redirected, so it uses this user's config file and restores it, and the
 //! state file, afterwards.
+//!
+//! On macOS it runs in the logged-in desktop with its own HOME and TMPDIR,
+//! menu-bar item included, from a universal binary (`lipo` of the arm64 and
+//! x86_64 release builds, the shipping shape). Everything comes from
+//! `proc_pid_rusage`, the counters `top` and `powermetrics` read, with no
+//! root needed: CPU is user + system time; wakeups are interrupt wakeups
+//! (`powermetrics`' "Intr Wakeups"; package-idle wakeups, which Activity
+//! Monitor shows, are a subset and are printed too); memory is the lifetime
+//! peak and current physical footprint (Activity Monitor's "Memory") and the
+//! resident size. AppKit's own threads wake and spend CPU in every Cocoa
+//! process, so on macOS the whole-process static rows and idle CPU are
+//! reported, not failed, and "idle over static", what animating adds, is
+//! judged against the idle budget (SPEC §7.2).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -52,9 +65,14 @@ struct Sample {
     peak_mb: f64,
     rss_mb: f64,
     threads: usize,
+    /// macOS: package-idle wakeups so far (a subset of the switches entry).
+    idle_wakeups: Option<u64>,
 }
 
 fn sample(pid: u32) -> Result<Sample, String> {
+    #[cfg(target_os = "macos")]
+    return mac::sample(pid);
+    #[allow(unreachable_code)]
     if cfg!(windows) {
         sample_windows(pid)
     } else {
@@ -114,6 +132,7 @@ fn sample_windows(pid: u32) -> Result<Sample, String> {
         peak_mb: peak / 1048576.0,
         rss_mb: rss / 1048576.0,
         threads: threads as usize,
+        idle_wakeups: None,
     })
 }
 
@@ -143,6 +162,7 @@ fn sample_linux(pid: u32) -> Result<Sample, String> {
         peak_mb: peak as f64 / 1024.0,
         rss_mb: rss as f64 / 1024.0,
         threads: threads(pid),
+        idle_wakeups: None,
     })
 }
 
@@ -175,6 +195,85 @@ fn ticks_per_second() -> f64 {
         .unwrap_or(100.0)
 }
 
+#[cfg(target_os = "macos")]
+mod mac {
+    use std::collections::BTreeMap;
+
+    use super::Sample;
+
+    fn rusage(pid: u32) -> Result<libc::rusage_info_v4, String> {
+        // SAFETY: rusage_info_v4 is plain data; proc_pid_rusage fills it.
+        let mut info: libc::rusage_info_v4 = unsafe { std::mem::zeroed() };
+        let buf = (&raw mut info).cast::<libc::rusage_info_t>();
+        // SAFETY: buf points at a rusage_info_v4, the size of flavor V4.
+        match unsafe { libc::proc_pid_rusage(pid as i32, libc::RUSAGE_INFO_V4, buf) } {
+            0 => Ok(info),
+            _ => Err(format!(
+                "the badge is gone: {}",
+                std::io::Error::last_os_error()
+            )),
+        }
+    }
+
+    /// CPU times come in Mach time units (ticks of 125/3 ns on Apple
+    /// Silicon, nanoseconds on Intel).
+    fn mach_seconds(t: u64) -> f64 {
+        #[repr(C)]
+        struct Timebase {
+            numer: u32,
+            denom: u32,
+        }
+        unsafe extern "C" {
+            fn mach_timebase_info(info: *mut Timebase) -> i32;
+        }
+        let mut tb = Timebase { numer: 0, denom: 0 };
+        // SAFETY: tb is a valid out-parameter.
+        unsafe { mach_timebase_info(&mut tb) };
+        t as f64 * f64::from(tb.numer) / f64::from(tb.denom.max(1)) / 1e9
+    }
+
+    fn threads(pid: u32) -> usize {
+        // SAFETY: proc_taskinfo is plain data; proc_pidinfo fills it.
+        let mut task: libc::proc_taskinfo = unsafe { std::mem::zeroed() };
+        let size = std::mem::size_of::<libc::proc_taskinfo>() as i32;
+        // SAFETY: task is `size` bytes, as PROC_PIDTASKINFO asks.
+        let n = unsafe {
+            libc::proc_pidinfo(
+                pid as i32,
+                libc::PROC_PIDTASKINFO,
+                0,
+                (&raw mut task).cast(),
+                size,
+            )
+        };
+        if n == size {
+            task.pti_threadnum as usize
+        } else {
+            0
+        }
+    }
+
+    /// Memory is the physical footprint; wakeups are interrupt wakeups, as
+    /// one running count.
+    pub fn sample(pid: u32) -> Result<Sample, String> {
+        let r = rusage(pid)?;
+        let mb = |b: u64| b as f64 / 1048576.0;
+        Ok(Sample {
+            cpu_seconds: mach_seconds(r.ri_user_time + r.ri_system_time),
+            switches: BTreeMap::from([(0, r.ri_interrupt_wkups)]),
+            peak_mb: mb(r.ri_lifetime_max_phys_footprint),
+            rss_mb: mb(r.ri_phys_footprint),
+            threads: threads(pid),
+            idle_wakeups: Some(r.ri_pkg_idle_wkups),
+        })
+    }
+
+    /// Resident size, for the record next to the footprint.
+    pub fn resident_mb(pid: u32) -> f64 {
+        rusage(pid).map_or(0.0, |r| r.ri_resident_size as f64 / 1048576.0)
+    }
+}
+
 struct Session {
     dir: PathBuf,
     display: String,
@@ -190,8 +289,41 @@ impl Session {
         if cfg!(windows) {
             Session::desktop(cli)
         } else {
-            Session::xvfb()
+            Session::private()
         }
+    }
+
+    /// A private HOME and runtime directory, removed on drop.
+    fn private_dir() -> Result<PathBuf, String> {
+        let dir = std::env::temp_dir().join(format!("pawprint-power-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        for sub in ["home", "run"] {
+            std::fs::create_dir_all(dir.join(sub)).map_err(|e| e.to_string())?;
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(dir.join("run"), std::fs::Permissions::from_mode(0o700))
+                .map_err(|e| e.to_string())?;
+        }
+        Ok(dir)
+    }
+
+    /// Linux: a private Xvfb session. macOS: the logged-in desktop with a
+    /// private HOME and TMPDIR.
+    fn private() -> Result<Session, String> {
+        if cfg!(target_os = "macos") {
+            let dir = Session::private_dir()?;
+            return Ok(Session {
+                config: dir.join("home/Library/Application Support/pawprint/config.toml"),
+                dir,
+                display: String::new(),
+                bus: None,
+                _servers: Vec::new(),
+                restore: Vec::new(),
+            });
+        }
+        Session::xvfb()
     }
 
     /// Windows: the current desktop and this user's own files.
@@ -239,17 +371,7 @@ impl Session {
     }
 
     fn xvfb() -> Result<Session, String> {
-        let dir = std::env::temp_dir().join(format!("pawprint-power-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        for sub in ["home", "run"] {
-            std::fs::create_dir_all(dir.join(sub)).map_err(|e| e.to_string())?;
-        }
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(dir.join("run"), std::fs::Permissions::from_mode(0o700))
-                .map_err(|e| e.to_string())?;
-        }
+        let dir = Session::private_dir()?;
         let n = (150..250)
             .find(|n| !Path::new(&format!("/tmp/.X{n}-lock")).exists())
             .ok_or("no free X display number")?;
@@ -311,12 +433,17 @@ impl Session {
         cmd.env_clear()
             .env("PATH", std::env::var("PATH").unwrap_or_default())
             .env("HOME", self.dir.join("home"))
-            .env("XDG_RUNTIME_DIR", self.dir.join("run"))
-            .env("DISPLAY", &self.display)
             .env("PAWPRINT_HOSTNAME", "owl")
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null());
+        // The IPC endpoint's directory (SPEC §10.4).
+        if cfg!(target_os = "macos") {
+            cmd.env("TMPDIR", self.dir.join("run"));
+        } else {
+            cmd.env("XDG_RUNTIME_DIR", self.dir.join("run"))
+                .env("DISPLAY", &self.display);
+        }
         if let Some(bus) = &self.bus {
             cmd.env("DBUS_SESSION_BUS_ADDRESS", bus);
         }
@@ -354,6 +481,9 @@ struct Run {
     peak_mb: f64,
     rss_mb: f64,
     threads: usize,
+    idle_wakeups: Option<u64>,
+    /// macOS: resident size next to the footprint.
+    resident_mb: Option<f64>,
 }
 
 /// The binaries: the badge (`pawprintw.exe` on Windows) and the CLI.
@@ -398,12 +528,54 @@ fn measure(session: &Session, exes: &Exes, config: &str, seconds: u64) -> Result
         peak_mb: after.peak_mb,
         rss_mb: after.rss_mb,
         threads: after.threads,
+        idle_wakeups: after
+            .idle_wakeups
+            .zip(before.idle_wakeups)
+            .map(|(a, b)| a - b),
+        #[cfg(target_os = "macos")]
+        resident_mb: Some(mac::resident_mb(pid)),
+        #[cfg(not(target_os = "macos"))]
+        resident_mb: None,
     })
 }
 
+fn cargo(root: &Path, args: &[&str]) -> Result<(), String> {
+    let status = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()))
+        .args(args)
+        .current_dir(root)
+        .status()
+        .map_err(|e| e.to_string())?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("cargo {} failed", args.join(" ")))
+    }
+}
+
+/// macOS: the arm64 and x86_64 release builds joined with `lipo`.
+fn universal(root: &Path) -> Result<PathBuf, String> {
+    let targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"];
+    let mut args = vec!["build", "--release", "--package", "pawprint"];
+    targets.iter().for_each(|t| args.extend(["--target", t]));
+    cargo(root, &args)?;
+    let out = root.join("target/power/pawprint");
+    std::fs::create_dir_all(root.join("target/power")).map_err(|e| e.to_string())?;
+    let status = Command::new("lipo")
+        .arg("-create")
+        .args(targets.map(|t| root.join("target").join(t).join("release/pawprint")))
+        .arg("-output")
+        .arg(&out)
+        .status()
+        .map_err(|e| format!("cannot run lipo: {e}"))?;
+    if !status.success() {
+        return Err("lipo -create failed".into());
+    }
+    Ok(out)
+}
+
 pub fn power_check(root: &Path, seconds: Option<&str>) -> Result<(), String> {
-    if !cfg!(any(target_os = "linux", windows)) {
-        return Err("make power-check: Linux and Windows only for now".into());
+    if !cfg!(any(target_os = "linux", target_os = "macos", windows)) {
+        return Err("make power-check: Linux, macOS, and Windows only".into());
     }
     let seconds: u64 = seconds
         .map(|s| {
@@ -413,21 +585,21 @@ pub fn power_check(root: &Path, seconds: Option<&str>) -> Result<(), String> {
         .transpose()?
         .unwrap_or(120);
     println!("building the release binary...");
-    let status = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()))
-        .args(["build", "--release", "--package", "pawprint"])
-        .current_dir(root)
-        .status()
-        .map_err(|e| e.to_string())?;
-    if !status.success() {
-        return Err("cargo build --release failed".into());
-    }
     let release = root.join("target/release");
-    let exes = if cfg!(windows) {
+    let exes = if cfg!(target_os = "macos") {
+        let exe = universal(root)?;
+        Exes {
+            badge: exe.clone(),
+            cli: exe,
+        }
+    } else if cfg!(windows) {
+        cargo(root, &["build", "--release", "--package", "pawprint"])?;
         Exes {
             badge: release.join("pawprintw.exe"),
             cli: release.join("pawprint.exe"),
         }
     } else {
+        cargo(root, &["build", "--release", "--package", "pawprint"])?;
         Exes {
             badge: release.join("pawprint"),
             cli: release.join("pawprint"),
@@ -438,7 +610,7 @@ pub fn power_check(root: &Path, seconds: Option<&str>) -> Result<(), String> {
     let cli_mb = size_mb(&exes.cli).map_err(|e| e.to_string())?;
 
     let session = Session::start(&exes.cli)?;
-    let place = if cfg!(windows) {
+    let place = if cfg!(any(windows, target_os = "macos")) {
         "this desktop"
     } else if session.bus.is_some() {
         "Xvfb + session bus"
@@ -449,20 +621,39 @@ pub fn power_check(root: &Path, seconds: Option<&str>) -> Result<(), String> {
     let idle = measure(&session, &exes, "", seconds)?;
     let stat = measure(&session, &exes, "animation = \"static\"\n", seconds)?;
 
+    let mac = cfg!(target_os = "macos");
     let mut failures = Vec::new();
+    let mut noted = false;
+    // macOS: whole-process rows that include AppKit's threads are reported,
+    // not failed (see the module comment).
+    let system =
+        |metric: &str| mac && (metric.ends_with("static mode") || metric == "CPU, idle mode");
     let mut row = |metric: &str, value: String, budget: &str, ok: bool| {
-        println!(
-            "  {metric:<30}{value:<26}{budget:<24}{}",
-            if ok { "ok" } else { "OVER" }
-        );
-        if !ok {
-            failures.push(metric.to_string());
+        let status = match (ok, system(metric)) {
+            (true, _) => "ok",
+            (false, false) => "OVER",
+            (false, true) => "over*",
+        };
+        println!("  {metric:<30}{value:<34}{budget:<24}{status}");
+        match status {
+            "OVER" => failures.push(metric.to_string()),
+            "over*" => noted = true,
+            _ => {}
         }
     };
     println!(
-        "\n  {:<30}{:<26}{:<24}",
+        "\n  {:<30}{:<34}{:<24}",
         "metric", "measured", "budget (SPEC §7.2)"
     );
+    let wakeups = |r: &Run| {
+        format!(
+            "{} in {} s{}",
+            r.switches,
+            r.seconds,
+            r.idle_wakeups
+                .map_or(String::new(), |i| format!(" ({i} pkg idle)"))
+        )
+    };
     row(
         "startup to visible",
         format!("{} ms", idle.startup.as_millis()),
@@ -475,9 +666,20 @@ pub fn power_check(root: &Path, seconds: Option<&str>) -> Result<(), String> {
         &format!("< {IDLE_CPU_BUDGET}%"),
         idle.cpu_percent < IDLE_CPU_BUDGET,
     );
+    if mac {
+        // AppKit's threads cost the same in both modes, so idle minus
+        // static is what animating costs.
+        let animating = idle.cpu_percent - stat.cpu_percent;
+        row(
+            "CPU, idle over static",
+            format!("{animating:.4}% of a core"),
+            &format!("< {IDLE_CPU_BUDGET}%"),
+            animating < IDLE_CPU_BUDGET,
+        );
+    }
     row(
         "wakeups, idle mode",
-        format!("{} in {} s", idle.switches, idle.seconds),
+        wakeups(&idle),
         "one per frame or rest",
         true,
     );
@@ -489,18 +691,32 @@ pub fn power_check(root: &Path, seconds: Option<&str>) -> Result<(), String> {
     );
     row(
         "wakeups, static mode",
-        format!("{} in {} s", stat.switches, stat.seconds),
+        wakeups(&stat),
         "zero",
         stat.switches == 0,
     );
     let peak = idle.peak_mb.max(stat.peak_mb);
     row(
-        "resident memory (peak)",
+        if mac {
+            "memory footprint (peak)"
+        } else {
+            "resident memory (peak)"
+        },
         format!("{peak:.1} MB (now {:.1} MB)", idle.rss_mb),
         &format!("< {RSS_BUDGET_MB} MB"),
         peak < RSS_BUDGET_MB,
     );
-    let (binary, value) = if cfg!(windows) {
+    if let Some(resident) = idle.resident_mb {
+        row(
+            "resident size",
+            format!("{resident:.1} MB"),
+            "(shared pages count)",
+            true,
+        );
+    }
+    let (binary, value) = if mac {
+        ("binary size (universal)", format!("{binary_mb:.1} MB"))
+    } else if cfg!(windows) {
         (
             "binary size (pawprintw.exe)",
             format!("{binary_mb:.1} MB (pawprint.exe {cli_mb:.1} MB)"),
@@ -515,6 +731,15 @@ pub fn power_check(root: &Path, seconds: Option<&str>) -> Result<(), String> {
         binary_mb.max(cli_mb) < BINARY_BUDGET_MB,
     );
     println!("  {:<30}{}", "threads", idle.threads);
+    if mac {
+        println!("  (wakeups are interrupt wakeups)");
+    }
+    if noted {
+        println!(
+            "  * includes AppKit's threads; the badge's loop receives no event \
+             in static mode (SPEC §7.2); reported, not failed"
+        );
+    }
     if failures.is_empty() {
         println!("\npower check: within budget");
         Ok(())

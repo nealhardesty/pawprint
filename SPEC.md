@@ -585,8 +585,7 @@ after the first frame is flushed.
 
 The first run found 39 wakeups in 20 s in static mode: an idle `blocking`
 pool thread that zbus leaves behind and that, from `blocking` 1.7, never
-exits (F36). Pinning `blocking` 1.6.2 removed them. macOS numbers are
-still to measure (ROADMAP M4).
+exits (F36). Pinning `blocking` 1.6.2 removed them.
 
 **Windows** (`make power-check` on Windows, run by the `windows-display` CI
 job on `windows-latest`, 150 s per mode): the release `pawprintw.exe`
@@ -611,7 +610,37 @@ files afterwards.
 
 The first Windows run summed every thread's counter and went backwards
 when a short-lived loader thread exited between samples, so wakeups are
-counted per thread id on both systems.
+counted per thread id on Linux and Windows.
+
+**macOS**: `make power-check` runs the universal release binary (`lipo` of
+the arm64 and x86_64 builds) in the logged-in desktop with its own HOME and
+TMPDIR, menu-bar item included, 150 s per mode in CI. Counters come from
+`proc_pid_rusage` (what `top` and `powermetrics` read; no root): CPU is
+user + system time (Mach units converted with `mach_timebase_info`),
+wakeups are interrupt wakeups with package-idle wakeups in parentheses,
+memory is the physical footprint (Activity Monitor's "Memory").
+
+| Metric (macOS 26.6 on `macos-latest`, Apple Silicon VM, M4; three runs) | Measured | Budget |
+|---|---|---|
+| Startup to visible | 198, 240, 211 ms (cold CI runner) | < 300 ms |
+| CPU, idle mode, whole process | 0.047%, 0.152%, 0.051% of a core | < 0.1% |
+| CPU, idle over static (animating) | 0.016%, 0.076%, −0.011% of a core (inside the noise) | < 0.1% |
+| Wakeups, idle mode | 383, 417, 379 in 150 s (75, 249, 119 package-idle) | deadlines only |
+| CPU, static mode | 0.032%, 0.077%, 0.062% of a core (AppKit's threads) | 0% |
+| Wakeups, static mode | 346, 368, 383 in 150 s (53, 266, 262 package-idle); **the badge's loop: 0** | zero |
+| Memory footprint | 15.7, 16.8, 16.8 MB peak (resident size 45 to 54 MB, mostly shared framework pages) | < 30 MB |
+| Binary size | 8.0 to 8.1 MB universal (arm64 + x86_64, 100 mascots) | < 15 MB |
+| Threads | 4 to 5 | — |
+
+In static mode the main thread sleeps in `nextEventMatchingMask` and
+receives no event at all (each wakeup is logged at debug level, and
+`make test-macos-display` asserts none in 15 s; FM7). The remaining
+wakeups and CPU belong to AppKit's and the system's own threads in every
+Cocoa process, varied from run to run (77 to 358 in 20 s, with or without
+the menu-bar item), and the shared VM makes them swing between runs, so
+`power-check` reports the whole-process static rows and idle CPU as
+`over*` rather than failing on them, and judges **idle over static**, what
+animating adds, against the idle budget.
 
 ---
 
@@ -1016,10 +1045,10 @@ What is shared, and by whom:
 | Animation scheduler, `next_deadline()` | `pawprint-core::anim` | All backends |
 | Compositor, integer scaler, font | `pawprint-core::render` | All backends, `render`, `preview`, golden tests |
 | **One pixel format**: premultiplied little-endian ARGB8888 (bytes B, G, R, A) plus a 1-bit mask | `pawprint-core::render` | Windows `UpdateLayeredWindow`, X11 32-bit visual, `wl_shm` `ARGB8888`, macOS `CGImage`, presenter extension (F30); the mask feeds the X11 shape fallback |
-| Tray menu model (items, checks, actions) | `pawprint-core::menu` | Windows tray, macOS menu bar, `ksni` |
+| Tray menu model (items, checks, actions) | `pawprint-core::menu` | Windows tray, macOS menu bar (`backend::menubar`), `ksni` |
 | Sprite compiler | `pawprint-sprite` crate | `build.rs`, runtime user mascots, `pawdev`, `pawprint mascot check` |
 | IPC protocol and server loop | `pawprint::ipc` | Unix-socket transport shared by Linux and macOS; named-pipe transport on Windows |
-| Autostart interface (`on`/`off`/`status`) | `pawprint::autostart` | Three small implementations behind one interface (Linux XDG and Windows HKCU `Run` done; macOS is a hook returning "not implemented on this platform yet") |
+| Autostart interface (`on`/`off`/`status`) | `pawprint::autostart` | Three small implementations behind one interface: Linux XDG entry, Windows HKCU `Run`, macOS LaunchAgent |
 | Config edits (`set`, `unset`, tray choices, `config init`) | `pawprint-core::config_edit` | CLI, `Shell::menu` |
 | X11 backend | `pawprint::backend::x11` | Native X11 **and** GNOME via XWayland (profile flag) |
 | `calloop` event loop, Linux scale helpers | `pawprint::backend::linux` | X11, Wayland, GNOME |
@@ -1225,10 +1254,10 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   keep their arrangement and never overlap in physical space.
 - Event loop: `nextEventMatchingMask(any, untilDate: deadline,
   NSDefaultRunLoopMode)` waits for the next event or `Shell::timeout()`.
-  The IPC thread and the screen-change observer wake it by posting an
+  The IPC thread, menu choices, and the screen-change observer wake it by posting an
   application-defined `NSEvent` from the main dispatch queue. Every event
-  the badge doesn't consume goes to `NSApplication.sendEvent`, so a status
-  item's menu (M4) works without changing the loop (while a menu is open,
+  the badge doesn't consume goes to `NSApplication.sendEvent`, so the status
+  item's menu runs from there (while a menu is open,
   AppKit tracks it in its own loop, and IPC answers wait until it closes).
 - Move mode: `ignoresMouseEvents = false` and `makeKeyWindow` (a
   non-activating panel takes the keyboard without activating the app, so the
@@ -1243,14 +1272,44 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   (a three-line FFI; no binding crate covers `AuthSession.h`) gives the audit
   session id for the endpoint ([10.4](#104-single-instance-per-graphical-session))
   and whether the session has window server access (`doctor` shows both).
-- Menu bar (*M4, to do*): `NSStatusItem` with the same menu, from the same
-  `shell::Tray` / `Shell::menu` pair as the Windows tray (11.1.5).
+- Menu bar (`backend::menubar`, the `shell::Tray`): a square
+  `NSStatusItem`, created after `finishLaunching` and attached with
+  `Shell::set_tray` after `Shell::start`. Its button image is the 32 × 32
+  rest frame in an 18-point box with a 1-point margin, as two bitmaps
+  (36 px at 2x, the art 1:1; 18 px at 1x, every other art pixel), so AppKit
+  never interpolates; it is colorful, so not a template image. The tooltip
+  is the tray tooltip. The `NSMenu` is rebuilt from `TrayState.menu` on
+  every change: an item with children is a submenu, `checked` is the
+  item's state checkmark, and each command item's tag indexes a command
+  list held by one target object (`PawprintMenuTarget`). Its `choose:`
+  action only queues `Inbox::Menu(command)` on the channel IPC uses and
+  wakes the loop, which calls `Shell::menu`. `tray = false` removes the
+  item; turning it back on creates a new one.
+- Preview (`pawprint preview`): the same loop without IPC or menu-bar item.
+  The app is **Regular** (a Dock icon and a place in the app switcher, so
+  the window can be found again) and the window an ordinary `NSWindow`,
+  titled "PAWPRINT preview", closable and miniaturizable, at the normal
+  level, taking mouse and keyboard. It is made key and the app activated
+  at the first `Place` (`activateIgnoringOtherApps`, since `activate` needs
+  macOS 14). The core's rect is the content rect; the frame adds the title
+  bar. Escape (`kVK_Escape`) or `NSWindowWillCloseNotification` sends
+  `Command::Quit`.
 - Autostart: `~/Library/LaunchAgents/io.github.nealhardesty.pawprint.plist`
   with `ProgramArguments = [<path>/pawprint, run]`, `RunAtLoad = true`,
-  `LimitLoadToSessionType = Aqua` (GUI sessions only), and
+  `LimitLoadToSessionType = Aqua` (GUI sessions only),
   `KeepAlive = { SuccessfulExit = false }` (restart on crash, not on
-  `pawprint quit`). macOS 13+ shows a "Background Items Added" notification
-  and lists the agent in System Settings → General → Login Items.
+  `pawprint quit`; `pawprint run` exits 0 when a badge already runs, so a
+  login with a running badge doesn't loop), and `ProcessType = Interactive`.
+  `autostart on` writes it and, unless the agent is already loaded, loads
+  it now with `launchctl bootstrap gui/<uid> <plist>`, which starts the
+  badge (a failure, e.g. from an SSH login, is logged; the agent still
+  loads at the next GUI login). `off` runs `launchctl bootout
+  gui/<uid>/io.github.nealhardesty.pawprint`, which stops a badge launchd
+  started, and removes the file. `status` reads the file's
+  `ProgramArguments` and says whether launchd has the agent loaded
+  (`launchctl print`). macOS 13+ shows a "Background Items Added"
+  notification and lists the agent in System Settings → General → Login
+  Items.
 - Gatekeeper: binaries fetched with `curl` don't get the
   `com.apple.quarantine` attribute, so curl-installed binaries run without a
   prompt. Browser downloads are quarantined. The README documents
@@ -2260,8 +2319,22 @@ Recording permission it compares every opaque badge pixel in a
 `screencapture` with `pawprint render` (scale 1 only); with Accessibility
 permission it drags the badge with posted mouse events and checks the
 saved, snapped position (and that it survives a restart), an arrow nudge,
-Enter, and Escape. Without a permission, that check prints `SKIP` and why.
-Click-through, Spaces, full-screen apps, and Retina scales stay owner
+Enter, and Escape, and chooses **Size ▸ 32** from the menu-bar item (a
+posted click opens it, posted arrow keys walk it, Return chooses), which
+must shrink the badge and write `size = 32` into `[hosts.owl]`. The
+menu-bar item must go with `tray = false` and come back: it is found as
+the menu-bar window (layer 25 along the top of the screen, whoever owns
+it; Control Center on macOS 26, FM6) that turning `tray` off removes. `autostart on` must write the LaunchAgent (checked with
+`plutil -lint` and for every key), load it (`launchctl print
+gui/<uid>/io.github.nealhardesty.pawprint` succeeds and shows the badge it
+started), and `off` must boot it out, stop that badge, and remove the file
+(skipped if the agent is already loaded for the user). `pawprint preview
+owl` must open a Regular app's window titled "PAWPRINT preview" at layer 0,
+160 points wide (128 + 2 × 16), without a menu-bar item, in front of other
+normal windows (by window-server order), that Escape and then its close
+button (pressed through Accessibility, FM9) each end with exit 0. In
+static mode the badge's loop must not wake for 15 s (one debug line per
+wakeup; FM7). Without a permission, that check prints `SKIP` and why. Click-through, Spaces, full-screen apps, and Retina scales stay owner
 checks ([16.2](#162-backend-smoke-checks-manual-per-backend-every-release)).
 
 #### 16.1.3 Desktop test (Windows)
@@ -2366,8 +2439,8 @@ true instead.
 | F12 | macOS windows default to `sharingType = .readOnly`; `.none` hides them from capture. | Leave the default | **Confirmed** for the default (macOS 26.7 on `macos-latest`: the panel's `kCGWindowSharingState` is 1, read-only, and `screencapture` sees it pixel-exact); `.none` hiding it is documented |
 | F13 | macOS `gethostname()` can reflect a network-assigned name; `LocalHostName` is stable. | Hostname source order | Documented; the SystemConfiguration read equals `scutil --get` (FM4) |
 | F14 | `curl` downloads don't get `com.apple.quarantine`; browser downloads do. | curl installer avoids Gatekeeper prompts | Documented (verify) |
-| F15 | Apple Silicon requires signed arm64 code; ad-hoc signing suffices for local execution. | Re-sign after `lipo` | **Verify** |
-| F16 | `LimitLoadToSessionType = Aqua` restricts a LaunchAgent to GUI sessions. | No badge attempts in SSH sessions | Documented |
+| F15 | Apple Silicon requires signed arm64 code; ad-hoc signing suffices for local execution. | Re-sign after `lipo` | **Partly confirmed**: a `lipo -create` universal binary of two linker-signed (ad hoc) slices runs on Apple Silicon without re-signing (`make power-check` on `macos-latest`). Downloaded (quarantined) binaries and `codesign --verify` are still to check in M5 |
+| F16 | `LimitLoadToSessionType = Aqua` restricts a LaunchAgent to GUI sessions. | No badge attempts in SSH sessions | Documented; an Aqua agent bootstrapped into `gui/<uid>` from the GUI session loads and starts the badge (`make test-macos-display`). The SSH side is unverified |
 | F17 | X11 ARGB transparency needs a compositing manager (`_NET_WM_CM_S<n>` owner). Without one, the Shape extension's bounding mask gives 1-bit transparency. | Binary alpha + shape fallback | **Confirmed** (Xvfb with and without `xcompmgr`, switched live; both pixel-identical to `pawprint render`) |
 | F18 | xrdp and Xvnc sessions are X11 even when the console runs Wayland. | X11 backend covers Linux RDP/VNC sessions | Documented |
 | F19 | macOS ships GNU Make 3.81. | Makefile stays 3.81-compatible | Documented |
@@ -2402,6 +2475,10 @@ display at scale 1, auto-logged-in GUI session) by `make test-macos-display`.
 | FM3 | GitHub's macOS runner job runs inside the auto-logged-in GUI login: `SessionGetInfo` reports an audit session with window server access, `screencapture` captures other apps' windows, and `CGPreflightPostEventAccess` is true, so synthetic drags and keys reach the panel. | The backend is tested end to end in CI (11.2, 16.1) | **Confirmed** |
 | FM4 | `HostName` from the SystemConfiguration preferences path `/System/System`, else `SCDynamicStoreCopyLocalHostName`, equals `scutil --get HostName`/`LocalHostName`. (The runner's is a generated `sat12-…-FE304CC6C67E.local`.) | No `scutil` subprocess (5.1) | **Confirmed** |
 | FM5 | Posted mouse events reach a panel that just stopped ignoring the mouse; drags keep arriving outside the panel while the button is held, and `NSEvent.mouseLocation` tracks them in global points. | Move-mode drag without a pointer grab (11.2) | **Confirmed** on the runner |
+| FM6 | On macOS 26 an `NSStatusItem`'s window belongs to **Control Center**, not the app: `CGWindowListCopyWindowInfo` lists it as an `Item-0` window at layer 25 along the top of the screen, owned by Control Center's pid. A posted click on it opens the app's `NSMenu`, posted arrow keys walk the menu and its submenus, and Return chooses. | The test finds the item by turning `tray` off and on, and drives the menu with posted input (16.1.2) | **Confirmed** on the runner (macOS 26.6) |
+| FM7 | In static mode the badge's main thread sleeps in `nextEventMatchingMask` with no event for as long as measured, but the process still shows a few interrupt wakeups a second and about 0.03% CPU from AppKit's and the system's own threads, with or without the menu-bar item. | The static-mode budget holds for the badge's loop; the process-wide numbers are reported, not failed (7.2) | **Confirmed** on the runner |
+| FM8 | `NSEvent.subtype` raises an Objective-C exception for event types without a subtype (mouse and key events), which aborts a Rust process. | Never read `subtype` on arbitrary events | **Confirmed** (a diagnostic log line did it) |
+| FM9 | A posted click in a titled window's title bar that misses the traffic lights drags the window. The close button's inset differs between releases (macOS 26 has a 32-point title bar). | The test presses the preview's close button through Accessibility (`AXCloseButton` via System Events), not by coordinates | **Confirmed** on the runner |
 
 **Windows facts (M1 Windows backend).** Learned on GitHub's `windows-latest` runner
 (Windows Server, an interactive desktop at 1024 × 768, scale 1, the taskbar
