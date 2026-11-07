@@ -127,16 +127,12 @@ impl Shell {
 
     /// True for `pawprint preview`: backends open a normal, focusable,
     /// closable window instead of the overlay.
-    // Windows and macOS call these once their tray and preview land (M4).
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     pub fn is_preview(&self) -> bool {
         self.preview
     }
 
     /// Attach the platform's tray. It is shown at once if the core already
     /// described it.
-    // Windows and macOS call these once their tray and preview land (M4).
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     pub fn set_tray(&mut self, mut tray: Box<dyn Tray>) {
         if let Some(state) = &self.tray_state {
             tray.show(state);
@@ -169,8 +165,6 @@ impl Shell {
     /// effect through a reload, so they survive restarts (SPEC §8.6). If the
     /// config can't be written they still apply until the badge restarts.
     /// Everything else is the same command IPC sends.
-    // Windows and macOS call these once their tray and preview land (M4).
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     pub fn menu(&mut self, surface: &mut impl Surface, command: Command) {
         log::info!("tray: {command:?}");
         let edit = match command {

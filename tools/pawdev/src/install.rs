@@ -341,41 +341,24 @@ impl Case<'_> {
                 Some(run),
             );
         }
-        // macOS autostart lands separately; until then the installer must warn
-        // and carry on, and either outcome passes there. Windows must be on.
+        // Windows (HKCU Run) and macOS (LaunchAgent): ask the binary.
         let status = self.pawprint(exe, &["autostart", "status"]);
-        if status.ok || cfg!(windows) {
-            let on = status.text.starts_with("on:") && status.text.contains("pawprint");
-            self.check(
-                on,
-                &format!("autostart status: {}", status.text.trim()),
-                Some(run),
-            )
-        } else {
-            self.check(
-                run.text.contains("autostart"),
-                "autostart is not available on this OS yet, and the installer warned",
-                Some(run),
-            )?;
-            self.note(format!(
-                "autostart not available here: {}",
-                status.text.trim()
-            ));
-            Ok(())
-        }
+        let on = status.ok && status.text.starts_with("on:") && status.text.contains("pawprint");
+        self.check(
+            on,
+            &format!("autostart status: {}", status.text.trim()),
+            Some(run),
+        )
     }
 
-    /// No autostart entry: the XDG file on Linux; on Windows, what the
-    /// packaged binary reports (the entry is per user, not per install).
+    /// No autostart entry: the XDG file on Linux; on Windows and macOS, what
+    /// the packaged binary reports (the entry is per user, not per install).
     fn autostart_off(&mut self, run: &Run, what: &str) -> Result<(), String> {
         if let Some(entry) = self.layout.autostart.clone() {
             return self.check(!entry.exists(), what, Some(run));
         }
-        if cfg!(windows) {
-            let status = self.pawprint(self.probe, &["autostart", "status"]);
-            return self.check(status.ok && status.text.starts_with("off"), what, Some(run));
-        }
-        Ok(())
+        let status = self.pawprint(self.probe, &["autostart", "status"]);
+        self.check(status.ok && status.text.starts_with("off"), what, Some(run))
     }
 
     #[cfg(windows)]

@@ -18,3 +18,7 @@ flate2 = "1"
 sha2 = "0.11"
 tar = { version = "0.4", default-features = false }
 zip = { version = "9", default-features = false, features = ["deflate-flate2", "time"] }
+
+# `make power-check` on macOS reads proc_pid_rusage.
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"

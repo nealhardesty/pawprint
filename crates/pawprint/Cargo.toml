@@ -44,7 +44,7 @@ zbus = { version = "5", default-features = false, features = ["async-io", "block
 block2 = "0.6"
 dispatch2 = { version = "0.3", default-features = false, features = ["std", "objc2"] }
 objc2 = "0.6"
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "objc2-core-foundation", "objc2-quartz-core", "block2", "objc2-core-graphics", "NSApplication", "NSColor", "NSColorSpace", "NSEvent", "NSGraphics", "NSGraphicsContext", "NSPanel", "NSResponder", "NSRunningApplication", "NSScreen", "NSView", "NSWindow"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "objc2-core-foundation", "objc2-quartz-core", "block2", "objc2-core-graphics", "NSApplication", "NSBitmapImageRep", "NSButton", "NSCell", "NSColor", "NSColorSpace", "NSControl", "NSEvent", "NSGraphics", "NSGraphicsContext", "NSImage", "NSImageRep", "NSMenu", "NSMenuItem", "NSPanel", "NSResponder", "NSRunningApplication", "NSScreen", "NSStatusBar", "NSStatusBarButton", "NSStatusItem", "NSView", "NSWindow"] }
 objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFString", "CFData", "CFCGTypes"] }
 objc2-core-graphics = { version = "0.3", default-features = false, features = ["std", "objc2", "CGColorSpace", "CGDataProvider", "CGImage"] }
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "block2", "NSArray", "NSDate", "NSEnumerator", "NSGeometry", "NSNotification", "NSObjCRuntime", "NSOperation", "NSProcessInfo", "NSRunLoop", "NSString", "NSThread"] }

@@ -1,11 +1,13 @@
 //! macOS backend (SPEC §11.2): an accessory app with one borderless,
 //! non-activating `NSPanel` at status level, on every Space, showing the
-//! frame as a `CGImage` on a nearest-neighbor layer.
+//! frame as a `CGImage` on a nearest-neighbor layer, and a menu-bar item
+//! (`menubar`). `pawprint preview` runs the same loop in a normal window.
 //!
 //! The loop pulls events with `nextEventMatchingMask` until the core's next
-//! deadline. IPC requests and screen changes wake it by posting an
-//! application-defined event from the main queue. Every other event goes
-//! back to `NSApplication::sendEvent`, so a status item (M4) works as is.
+//! deadline. IPC requests, menu choices, and screen changes wake it by
+//! posting an application-defined event from the main queue. Every other
+//! event goes back to `NSApplication::sendEvent`, which also runs the
+//! menu-bar item's menu.
 
 use std::ptr::NonNull;
 use std::sync::Arc;
@@ -15,12 +17,14 @@ use std::sync::mpsc;
 use block2::RcBlock;
 use dispatch2::DispatchQueue;
 use objc2::rc::Retained;
+use objc2::runtime::AnyObject;
 use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
     NSApplication, NSApplicationActivationPolicy,
     NSApplicationDidChangeScreenParametersNotification, NSBackingStoreType, NSColor, NSEvent,
     NSEventMask, NSEventModifierFlags, NSEventType, NSPanel, NSResponder, NSScreen,
     NSStatusWindowLevel, NSView, NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask,
+    NSWindowWillCloseNotification,
 };
 use objc2_core_foundation::{CFData, CFRetained, CFType};
 use objc2_core_graphics::{
@@ -29,20 +33,40 @@ use objc2_core_graphics::{
 };
 use objc2_foundation::{
     NSDate, NSDefaultRunLoopMode, NSNotification, NSNotificationCenter, NSObject, NSPoint,
-    NSProcessInfo, NSRect, NSSize,
+    NSProcessInfo, NSRect, NSSize, NSString, ns_string,
 };
 use objc2_quartz_core::{CALayer, CATransaction, kCAFilterNearest};
-use pawprint_core::badge::Event;
+use pawprint_core::badge::{Command, Event};
 use pawprint_core::config::Backend;
 use pawprint_core::geom::{PhysicalRect, Point};
 use pawprint_core::movemode::{Key, KeyCode};
 use pawprint_core::render::Frame;
 use pawprint_core::surface::{DisplayInfo, Surface, select_display};
 
+use super::menubar::MenuBar;
 use crate::shell::Shell;
 use crate::{CmdResult, doctor::Report, exit, instance, ipc};
 
-pub fn run(mut shell: Shell, listener: ipc::Listener) -> CmdResult {
+pub fn run(shell: Shell, listener: ipc::Listener) -> CmdResult {
+    drive(shell, Some(listener))
+}
+
+/// `pawprint preview` (SPEC §9): the same loop without IPC or a menu-bar
+/// item, in a normal titled window (`Mac::new` with `shell.is_preview()`).
+/// The shell centers the badge, cycles every action, and draws it on a
+/// backdrop with a margin; Esc or closing the window quits.
+pub fn preview(shell: Shell) -> CmdResult {
+    drive(shell, None)
+}
+
+/// What wakes the loop besides AppKit: IPC requests and menu-bar choices.
+pub enum Inbox {
+    Ipc(ipc::Incoming),
+    Menu(Command),
+}
+
+/// The badge's loop. `listener` is `None` for a preview.
+fn drive(mut shell: Shell, listener: Option<ipc::Listener>) -> CmdResult {
     let mtm = MainThreadMarker::new().ok_or_else(|| {
         (
             exit::ERROR,
@@ -54,47 +78,78 @@ pub fn run(mut shell: Shell, listener: ipc::Listener) -> CmdResult {
         log::warn!("backend = \"{configured}\" does not exist on macOS; using macos");
     }
     shell.set_backend("macos");
+    let preview = shell.is_preview();
 
     let app = NSApplication::sharedApplication(mtm);
-    // No Dock icon, no app menu, never the active app (SPEC §11.2).
-    app.setActivationPolicy(NSApplicationActivationPolicy::Accessory);
+    // The badge: no Dock icon, no app menu, never the active app (SPEC
+    // §11.2). A preview is an ordinary app with a Dock icon, so it can be
+    // found and switched to like any window.
+    app.setActivationPolicy(if preview {
+        NSApplicationActivationPolicy::Regular
+    } else {
+        NSApplicationActivationPolicy::Accessory
+    });
     app.finishLaunching();
-    let mut mac = Mac::new(mtm);
+    let mut mac = Mac::new(mtm, preview);
     shell.start(&mut mac);
 
     let (tx, rx) = mpsc::channel();
-    ipc::serve(listener, move |incoming| {
-        let sent = tx.send(incoming).is_ok();
-        if sent {
-            wake();
-        }
-        sent
-    });
+    if let Some(listener) = listener {
+        shell.set_tray(Box::new(MenuBar::new(mtm, tx.clone())));
+        ipc::serve(listener, move |incoming| {
+            let sent = tx.send(Inbox::Ipc(incoming)).is_ok();
+            if sent {
+                wake();
+            }
+            sent
+        });
+    }
     let screens_changed = Arc::new(AtomicBool::new(false));
-    let flag = screens_changed.clone();
-    let block = RcBlock::new(move |_: NonNull<NSNotification>| {
-        flag.store(true, Ordering::Relaxed);
-        wake();
-    });
-    // SAFETY: the block only touches an atomic and posts to the main queue,
-    // so it is fine on any thread; the observer lives until `run` returns.
-    let _observer = unsafe {
-        NSNotificationCenter::defaultCenter().addObserverForName_object_queue_usingBlock(
-            Some(NSApplicationDidChangeScreenParametersNotification),
-            None,
-            None,
-            &block,
-        )
+    let closed = Arc::new(AtomicBool::new(false));
+    let center = NSNotificationCenter::defaultCenter();
+    let observe = |name: &NSString, object: Option<&AnyObject>, flag: &Arc<AtomicBool>| {
+        let flag = flag.clone();
+        let block = RcBlock::new(move |_: NonNull<NSNotification>| {
+            flag.store(true, Ordering::Relaxed);
+            wake();
+        });
+        // SAFETY: the block only touches an atomic and posts to the main
+        // queue, so it is fine on any thread; the observer lives until
+        // `drive` returns.
+        unsafe {
+            center.addObserverForName_object_queue_usingBlock(Some(name), object, None, &block)
+        }
+    };
+    // SAFETY: both are valid notification names.
+    let _observers = unsafe {
+        [
+            observe(
+                NSApplicationDidChangeScreenParametersNotification,
+                None,
+                &screens_changed,
+            ),
+            observe(
+                NSWindowWillCloseNotification,
+                Some(mac.window.as_ref()),
+                &closed,
+            ),
+        ]
     };
 
     loop {
-        while let Ok(incoming) = rx.try_recv() {
-            shell.request(&mut mac, incoming);
+        while let Ok(inbox) = rx.try_recv() {
+            match inbox {
+                Inbox::Ipc(incoming) => shell.request(&mut mac, incoming),
+                Inbox::Menu(command) => shell.menu(&mut mac, command),
+            }
         }
         if screens_changed.swap(false, Ordering::Relaxed) {
             mac.read_screens();
             let displays = mac.displays.clone();
             shell.handle(&mut mac, Event::DisplaysChanged(displays));
+        }
+        if closed.swap(false, Ordering::Relaxed) {
+            shell.handle(&mut mac, Event::Command(Command::Quit));
         }
         if shell.done() {
             return Ok(());
@@ -105,12 +160,22 @@ pub fn run(mut shell: Shell, listener: ipc::Listener) -> CmdResult {
         };
         // SAFETY: the default run loop mode is a valid mode.
         let mode = unsafe { NSDefaultRunLoopMode };
-        if let Some(event) = app.nextEventMatchingMask_untilDate_inMode_dequeue(
+        let event = app.nextEventMatchingMask_untilDate_inMode_dequeue(
             NSEventMask::Any,
             Some(&until),
             mode,
             true,
-        ) {
+        );
+        // One line per wakeup (with --verbose), so tests can see the loop
+        // sleep through static mode.
+        log::debug!(
+            "macos: woke for {}",
+            event.as_ref().map_or("the deadline".into(), |e| format!(
+                "event type {}",
+                e.r#type().0
+            ))
+        );
+        if let Some(event) = event {
             match mac.translate(&event) {
                 Translated::Event(e) => shell.handle(&mut mac, e),
                 Translated::Swallow => {}
@@ -123,7 +188,7 @@ pub fn run(mut shell: Shell, listener: ipc::Listener) -> CmdResult {
 
 /// Wake the loop from any thread: the main queue posts an
 /// application-defined event, which ends `nextEventMatchingMask`.
-fn wake() {
+pub(super) fn wake() {
     DispatchQueue::main().exec_async(|| {
         let mtm = MainThreadMarker::new().expect("the main queue runs on the main thread");
         let event = NSEvent::otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2(
@@ -272,41 +337,73 @@ enum Translated {
 
 struct Mac {
     mtm: MainThreadMarker,
-    panel: Retained<NSPanel>,
+    /// The badge panel, or the preview's titled window.
+    window: Retained<NSWindow>,
     layer: Retained<CALayer>,
     desktop: Desktop,
     displays: Vec<DisplayInfo>,
+    preview: bool,
     shown: bool,
     interactive: bool,
     dragging: bool,
 }
 
+/// The badge: a borderless, non-activating, click-through panel at status
+/// level on every Space.
+fn badge_panel(mtm: MainThreadMarker, rect: NSRect) -> Retained<NSWindow> {
+    let style = NSWindowStyleMask::Borderless | NSWindowStyleMask::NonactivatingPanel;
+    // SAFETY: NSPanel's designated initializer, with matching types.
+    let panel: Retained<BadgePanel> = unsafe {
+        msg_send![BadgePanel::alloc(mtm), initWithContentRect: rect, styleMask: style,
+            backing: NSBackingStoreType::Buffered, defer: false]
+    };
+    let panel = Retained::into_super(Retained::into_super(panel));
+    panel.setOpaque(false);
+    panel.setBackgroundColor(Some(&NSColor::clearColor()));
+    panel.setHasShadow(false);
+    panel.setIgnoresMouseEvents(true);
+    panel.setLevel(NSStatusWindowLevel);
+    panel.setCollectionBehavior(
+        NSWindowCollectionBehavior::CanJoinAllSpaces
+            | NSWindowCollectionBehavior::Stationary
+            | NSWindowCollectionBehavior::FullScreenAuxiliary
+            | NSWindowCollectionBehavior::IgnoresCycle,
+    );
+    panel.setHidesOnDeactivate(false);
+    // sharingType stays at its default, readOnly, so screen sharing and
+    // remote tools see the badge (F12).
+    panel
+}
+
+/// `pawprint preview`: an ordinary titled, closable window at the normal
+/// level, which takes the mouse and the keyboard.
+fn preview_window(mtm: MainThreadMarker, rect: NSRect) -> Retained<NSWindow> {
+    let style =
+        NSWindowStyleMask::Titled | NSWindowStyleMask::Closable | NSWindowStyleMask::Miniaturizable;
+    // SAFETY: NSWindow's designated initializer, with matching types.
+    let window = unsafe {
+        NSWindow::initWithContentRect_styleMask_backing_defer(
+            NSWindow::alloc(mtm),
+            rect,
+            style,
+            NSBackingStoreType::Buffered,
+            false,
+        )
+    };
+    window.setTitle(ns_string!("PAWPRINT preview"));
+    window
+}
+
 impl Mac {
-    fn new(mtm: MainThreadMarker) -> Mac {
+    fn new(mtm: MainThreadMarker, preview: bool) -> Mac {
         let rect = NSRect::new(NSPoint::ZERO, NSSize::new(1.0, 1.0));
-        let style = NSWindowStyleMask::Borderless | NSWindowStyleMask::NonactivatingPanel;
-        // SAFETY: NSPanel's designated initializer, with matching types.
-        let panel: Retained<BadgePanel> = unsafe {
-            msg_send![BadgePanel::alloc(mtm), initWithContentRect: rect, styleMask: style,
-                backing: NSBackingStoreType::Buffered, defer: false]
+        let window = if preview {
+            preview_window(mtm, rect)
+        } else {
+            badge_panel(mtm, rect)
         };
-        let panel = Retained::into_super(panel);
         // SAFETY: we keep our own reference, so closing must not release it.
-        unsafe { panel.setReleasedWhenClosed(false) };
-        panel.setOpaque(false);
-        panel.setBackgroundColor(Some(&NSColor::clearColor()));
-        panel.setHasShadow(false);
-        panel.setIgnoresMouseEvents(true);
-        panel.setLevel(NSStatusWindowLevel);
-        panel.setCollectionBehavior(
-            NSWindowCollectionBehavior::CanJoinAllSpaces
-                | NSWindowCollectionBehavior::Stationary
-                | NSWindowCollectionBehavior::FullScreenAuxiliary
-                | NSWindowCollectionBehavior::IgnoresCycle,
-        );
-        panel.setHidesOnDeactivate(false);
-        // sharingType stays at its default, readOnly, so screen sharing and
-        // remote tools see the badge (F12).
+        unsafe { window.setReleasedWhenClosed(false) };
 
         // A layer-hosting view: the layer is ours, not AppKit's.
         let layer = CALayer::new();
@@ -315,14 +412,15 @@ impl Mac {
         let view = NSView::initWithFrame(NSView::alloc(mtm), rect);
         view.setLayer(Some(&layer));
         view.setWantsLayer(true);
-        panel.setContentView(Some(&view));
+        window.setContentView(Some(&view));
 
         let mut mac = Mac {
             mtm,
-            panel,
+            window,
             layer,
             desktop: Desktop::default(),
             displays: Vec::new(),
+            preview,
             shown: false,
             interactive: false,
             dragging: false,
@@ -340,11 +438,17 @@ impl Mac {
         if kind == NSEventType::ApplicationDefined {
             return Translated::Swallow;
         }
+        if self.preview
+            && kind == NSEventType::KeyDown
+            && key_code(event.keyCode()) == Some(KeyCode::Escape)
+        {
+            return Translated::Event(Event::Command(Command::Quit));
+        }
         if !self.interactive {
             return Translated::Pass;
         }
         let at = || self.desktop.point_to_physical(NSEvent::mouseLocation());
-        let ours = event.windowNumber() == self.panel.windowNumber();
+        let ours = event.windowNumber() == self.window.windowNumber();
         log::debug!(
             "macos: event {} in window {} (ours: {ours})",
             kind.0,
@@ -376,7 +480,7 @@ impl Mac {
     /// The color space of the panel's screen, so pixels reach the screen
     /// unconverted, as on Windows and Linux.
     fn color_space(&self) -> Option<CFRetained<CGColorSpace>> {
-        let screen = self.panel.screen()?;
+        let screen = self.window.screen()?;
         let space = screen.colorSpace()?.CGColorSpace()?;
         Some(space.into())
     }
@@ -397,7 +501,7 @@ fn key_code(code: u16) -> Option<KeyCode> {
 
 /// The frame as a `CGImage`: premultiplied BGRA is premultiplied-first
 /// alpha in 32-bit little-endian words (F30).
-fn cg_image(frame: &Frame, space: &CGColorSpace) -> Option<CFRetained<CGImage>> {
+pub(super) fn cg_image(frame: &Frame, space: &CGColorSpace) -> Option<CFRetained<CGImage>> {
     let data = CFData::from_bytes(&frame.bgra);
     let provider = CGDataProvider::with_cf_data(Some(&data))?;
     let info = CGBitmapInfo::from_bits_retain(
@@ -446,7 +550,8 @@ impl Surface for Mac {
         CATransaction::begin();
         CATransaction::setDisableActions(true);
         // One image pixel per backing pixel.
-        self.layer.setContentsScale(self.panel.backingScaleFactor());
+        self.layer
+            .setContentsScale(self.window.backingScaleFactor());
         // SAFETY: a CGImage is valid layer contents.
         unsafe { self.layer.setContents(Some(image.as_ref())) };
         CATransaction::commit();
@@ -455,43 +560,40 @@ impl Surface for Mac {
     fn place(&mut self, rect: PhysicalRect) {
         CATransaction::begin();
         CATransaction::setDisableActions(true);
-        self.panel
-            .setFrame_display(self.desktop.rect_to_cocoa(rect), true);
+        // `rect` is the content; a preview's frame adds its title bar.
+        let frame = self
+            .window
+            .frameRectForContentRect(self.desktop.rect_to_cocoa(rect));
+        self.window.setFrame_display(frame, true);
         CATransaction::commit();
         if !self.shown {
-            self.panel.orderFrontRegardless();
             self.shown = true;
+            if self.preview {
+                self.window.makeKeyAndOrderFront(None);
+                // `activate` needs macOS 14; the badge supports 13.
+                #[allow(deprecated)]
+                NSApplication::sharedApplication(self.mtm).activateIgnoringOtherApps(true);
+            } else {
+                self.window.orderFrontRegardless();
+            }
         }
     }
 
     fn set_interactive(&mut self, on: bool) {
         self.interactive = on;
         self.dragging = false;
-        self.panel.setIgnoresMouseEvents(!on);
+        self.window.setIgnoresMouseEvents(!on);
         if on {
             // A non-activating panel takes the keyboard without activating
             // the app, so the frontmost app stays frontmost.
-            self.panel.makeKeyWindow();
-        } else if self.panel.isKeyWindow() {
+            self.window.makeKeyWindow();
+        } else if self.window.isKeyWindow() {
             // Give the keyboard back: ordering the key window out lets the
             // active app's window take it again.
-            self.panel.orderOut(None);
-            self.panel.orderFrontRegardless();
+            self.window.orderOut(None);
+            self.window.orderFrontRegardless();
         }
     }
-}
-
-/// `pawprint preview` (SPEC §9). Hook for M4: run the same loop as [`run`]
-/// without IPC, with the window made normal while `shell.is_preview()`:
-/// focusable, closable, with a title, not topmost, not click-through; Esc
-/// and closing send `Command::Quit`. The shell already centers the badge,
-/// cycles every action, and draws it on a backdrop with a margin.
-pub fn preview(shell: Shell) -> CmdResult {
-    let _ = shell;
-    Err((
-        crate::exit::ERROR,
-        "preview: not implemented on this platform yet (see ROADMAP.md M4)".into(),
-    ))
 }
 
 pub fn doctor(report: &mut Report) {
@@ -534,7 +636,10 @@ pub fn doctor(report: &mut Report) {
         _ => Vec::new(),
     };
     report.displays(&displays, select_display(&displays, "primary"));
-    report.row("menu bar item", "arrives in M4");
+    report.row(
+        "menu bar item",
+        "NSStatusItem with the badge menu (`tray = false` hides it)",
+    );
 }
 
 #[cfg(test)]

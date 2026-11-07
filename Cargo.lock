@@ -1005,6 +1005,7 @@ version = "0.1.0"
 dependencies = [
  "flate2",
  "gif",
+ "libc",
  "pawprint-core",
  "pawprint-sprite",
  "sha2",

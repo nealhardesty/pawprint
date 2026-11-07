@@ -264,17 +264,17 @@ Can run in parallel with M2/M3 once M1 passes.
 
 - [x] Tray plumbing from the shared menu model: `shell::Tray`, `Shell::set_tray`, `Shell::menu` (one command path with IPC; Size and Animation saved like `pawprint set`, SPEC §8.6)
 - [x] Linux StatusNotifierItem via `ksni` for X11, Wayland, and GNOME/AppIndicator, tested over D-Bus in `make test-x11` ([SPEC §11.4](SPEC.md#114-linux-wayland-kde-plasma-6))
-- [ ] Windows tray (`Shell_NotifyIconW`) and macOS menu bar (`NSStatusItem`) on the same `shell::Tray` ([SPEC §11.1.5](SPEC.md#1115-tray-and-autostart), §11.2)
+- [x] Windows tray (`Shell_NotifyIconW`) and macOS menu bar (`NSStatusItem`) on the same `shell::Tray` ([SPEC §11.1.5](SPEC.md#1115-tray-and-autostart), §11.2)
 - [x] `pawprint autostart on|off|status` and the `autostart` interface, with XDG autostart on Linux
-- [ ] Autostart on Windows (HKCU Run → `pawprintw.exe run`) and macOS (LaunchAgent): fill the hooks in `pawprint::autostart`
-- [ ] `pawprint preview` on Windows and macOS: fill the `backend::{windows,macos}::preview` hooks (the shell's preview mode is shared)
+- [x] Autostart on Windows (HKCU Run → `pawprintw.exe run`) and macOS (LaunchAgent): fill the hooks in `pawprint::autostart`
+- [x] `pawprint preview` on Windows and macOS: fill the `backend::{windows,macos}::preview` hooks (the shell's preview mode is shared)
 - [x] `pawprint set` / `unset` via `toml_edit`, `config init`, `config path`
 - [x] Config reload on `reload`, tray, and mtime change
 - [x] `explain --recompute`, `forget`
 - [x] Move mode polish: arrow-key nudging, Esc cancel, 30 s timeout, dashed outline (the outline is drawn by the core, so every backend shows it)
 - [x] Logging with size cap and rotation (done in M1; dependencies now log from warn up)
 - [x] Power check on Linux: `make power-check`, numbers in [SPEC §7.2](SPEC.md#72-power-budget) (it found and fixed a twice-a-second wakeup, F36)
-- [ ] Power check on Windows and macOS
+- [x] Power check on Windows and macOS (on macOS, AppKit's own threads keep a small static-mode floor; the check budgets our share, SPEC §7.2)
 
 **Exit:** a week of daily use across the owner's machines with no annoyances
 worth filing.
@@ -289,7 +289,7 @@ worth filing.
 - [x] `install.sh` (POSIX sh) and `install.ps1` (PS 5.1 + 7) per [SPEC §15](SPEC.md#15-packaging-release-and-install), including `--archive`, `--uninstall`, `--purge`
 - [x] `make install` / `make uninstall` for local builds
 - [x] `make test-install`: the installers end to end under sh, dash, bash, PowerShell 5.1, and PowerShell 7, in CI on all three OSes ([SPEC §15.7](SPEC.md#157-installer-tests))
-- [ ] Tighten `make test-install` to require autostart on macOS once that implementation is merged (Windows is already strict) (coordinator)
+- [x] `make test-install` requires autostart on every OS
 - [ ] Clean-machine install test on each OS, including Ubuntu 24.04 and 26.04 (owner, needs a published release)
 - [ ] Full [remote compatibility matrix](SPEC.md#164-remote-compatibility-matrix), results in release notes (owner, real machines)
 - [ ] README reviewed against reality: every command, path, and screenshot (install and development sections done in M5; the full pass is the owner's, at release)
