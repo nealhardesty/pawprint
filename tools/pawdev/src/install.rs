@@ -46,6 +46,10 @@ impl Shell {
     fn command(&self, root: &Path, opts: &[Opt]) -> Command {
         let mut cmd = Command::new(&self.exe);
         if self.powershell() {
+            // A PSModulePath inherited from PowerShell 7 (a CI step's shell)
+            // hides Windows PowerShell 5.1's own modules (Get-FileHash);
+            // without it, each shell builds its default.
+            cmd.env_remove("PSModulePath");
             cmd.args([
                 "-NoProfile",
                 "-NonInteractive",
@@ -363,16 +367,18 @@ impl Case<'_> {
 
     #[cfg(windows)]
     fn user_path_has(&self, dir: &Path) -> bool {
-        let out = Command::new("powershell")
-            .args([
-                "-NoProfile",
-                "-Command",
-                "[Environment]::GetEnvironmentVariable('Path','User')",
-            ])
+        // `reg query` prints the raw value on one line:
+        //     Path    REG_EXPAND_SZ    C:\a;C:\b
+        let out = Command::new("reg")
+            .args(["query", "HKCU\\Environment", "/v", "Path"])
             .output()
             .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
             .unwrap_or_default();
-        out.trim().split(';').any(|p| Path::new(p) == dir)
+        out.lines()
+            .filter_map(|l| l.split_once("REG_").map(|(_, rest)| rest))
+            .filter_map(|rest| rest.split_once("    ").map(|(_, value)| value.trim()))
+            .flat_map(|value| value.split(';'))
+            .any(|p| Path::new(p) == dir)
     }
 
     fn scenario(&mut self) -> Result<(), String> {
@@ -562,7 +568,7 @@ pub fn test_install() -> Result<(), String> {
         return Err("no shell found to run the installer".into());
     }
     let mut results = Vec::new();
-    let mut failure = None;
+    let mut failures = 0;
     for shell in &shells {
         // Under /tmp on Unix: macOS's $TMPDIR is long, and the badge's IPC
         // socket inside the home must fit in 104 bytes.
@@ -612,15 +618,18 @@ pub fn test_install() -> Result<(), String> {
                 let _ = case.installer(&[Opt::Uninstall], "good", &[]);
                 let alt: [(&str, &Path); 1] = [("PAWPRINT_PREFIX", &case.layout.alt_dir)];
                 let _ = case.installer(&[Opt::Uninstall], "good", &alt);
+                println!("    FAIL: {e}");
                 results.push(format!("  {:<12} FAIL", shell.name));
-                failure.get_or_insert(e);
+                failures += 1;
             }
         }
     }
     println!("\ninstaller tests:\n{}", results.join("\n"));
-    match failure {
-        Some(e) => Err(e),
-        None => Ok(()),
+    match failures {
+        0 => Ok(()),
+        n => Err(format!(
+            "installer tests: {n} shell(s) failed (details above)"
+        )),
     }
 }
 
