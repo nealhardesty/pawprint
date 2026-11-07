@@ -1,0 +1,242 @@
+# Gray cat on cat-sit: a plush, solid blue-gray shorthair. A pear-shaped
+# head with full jowls, softly rounded ears, puffy pale whisker pads, a
+# slate nose, and wide-set copper eyes. Silver tipping (`S`) flecks the
+# coat. The thick tail is `tail.curl` in the signature: a question-mark hook.
+# `eyes.squint` is the contented half-closed look; `eyes.cross` is for the
+# sparkle that lands on its nose.
+id = "cat-gray"
+name = "Gray Cat"
+category = "cats-dogs"
+aliases = ["graycat", "greycat", "bluecat"]
+accent = "slate"
+extends = "cat-sit"
+
+[palette]
+"l" = "grey-2"      # fur light
+"f" = "grey-3"      # fur
+"F" = "grey-4"      # fur shadow
+"S" = "grey-1"      # NEW: silver tipping
+"w" = "grey-2"      # whisker pads
+"M" = "grey-4"      # mouth lines
+"e" = "orange-2"    # iris (copper)
+"h" = "white"       # eye glint
+"n" = "grey-4"      # nose
+"p" = "pink-2"      # inner ear and mouth
+
+[layers.tail]
+at = [25, 7]
+grid = """
+.kkk.
+klSfk
+klffk
+klfFk
+klfFk
+klfFk
+klfFk
+klfFk
+klfFk
+klfFk
+klfFk
+klfFk
+klfFk
+"""
+
+[layers."tail.flick"]
+at = [24, 6]
+grid = """
+.kkk..
+klSfk.
+kllffk
+.klfFk
+.klfFk
+.klfFk
+.klfFk
+.klfFk
+.klfFk
+.klfFk
+.klfFk
+.klfFk
+.klfFk
+.klfFk
+"""
+
+# The signature curl: the tip hooks over into a question mark.
+[layers."tail.curl"]
+at = [25, 1]
+grid = """
+.kkkk.
+klSfFk
+kfkkfk
+kfk.kk
+kfk...
+klfk..
+klfFk.
+klfFk.
+klfFk.
+klfFk.
+klfFk.
+klfFk.
+klfFk.
+klfFk.
+klfFk.
+klfFk.
+klfFk.
+klfFk.
+klfFk.
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klfffffffffffffFFk..
+.klfffffffffffffffFFk.
+klfffSffffffffffffFFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# Pear-shaped: 18 px across the brow, 22 px across the jowls, with puffy whisker pads.
+[layers.head]
+at = [5, 4]
+grid = """
+......kkkkkkkkkk......
+....kkllSSllllffkk....
+...kllffffffffffFFk...
+..klfffffffffffffFFk..
+.klfffffffffffffffFFk.
+.klfffffffffffffffFFk.
+.klfffffffffffffffFFk.
+klffffffffffffffffFFFk
+klfffffwwwwwwwwfffFFFk
+klffffwwwwMMwwwwffFFFk
+klfffwwwwMwwMwwwwfFFFk
+.kfffffwwwwwwwwfffFFk.
+...kkFFFFFFFFFFFFkk...
+"""
+
+# Medium ears with softly rounded tips.
+[layers.ears]
+at = [6, 1]
+grid = """
+.kk..............kk.
+klfk............kfFk
+klpfk..........kfpFk
+klppfk........kfppFk
+klppff........ffppFk
+klf..............fFk
+"""
+
+[layers."ears.flick"]
+at = [6, 1]
+grid = """
+.................kk.
+.kk.............kfFk
+klfk...........kfpFk
+klpfk.........kfppFk
+klppff........ffppFk
+klppff...........fFk
+"""
+
+# Wide-set copper eyes.
+[layers.eyes]
+at = [10, 9]
+grid = """
+he........he
+ek........ek
+"""
+
+[layers."eyes.closed"]
+at = [10, 10]
+grid = """
+kk........kk
+"""
+
+[layers."eyes.left"]
+at = [9, 9]
+grid = """
+eh........eh
+ke........ke
+"""
+
+[layers."eyes.right"]
+at = [11, 9]
+grid = """
+he........he
+ek........ek
+"""
+
+[layers."eyes.happy"]
+at = [9, 9]
+grid = """
+.kk........kk.
+k..k......k..k
+"""
+
+[layers."eyes.squint"]
+at = [10, 9]
+grid = """
+kk........kk
+ee........ee
+"""
+
+[layers."eyes.cross"]
+at = [10, 9]
+grid = """
+he........eh
+ek........ke
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "double-blink"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the tail curls into a hook and the eyes squint, pleased.
+[[actions]]
+name = "curl-squint"
+weight = 4
+frames = [
+  { ops = ["tail=curl"], ms = 300 },
+  { ops = ["tail=curl", "eyes=squint"], ms = 1200 },
+  { ops = ["tail=curl", "eyes=closed"], ms = 300 },
+  { ops = ["tail=curl", "eyes=squint"], ms = 700 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a sparkle drifts down and lands on its nose. It goes cross-eyed,
+# winds up, and sneezes it away.
+[[actions]]
+name = "sparkle-sneeze"
+weight = 1
+frames = [
+  { ops = ["eyes=right", "prop:sparkle@20,0"], ms = 400 },
+  { ops = ["prop:sparkle@16,4"], ms = 400 },
+  { ops = ["eyes=cross", "prop:sparkle@13,9"], ms = 1000 },
+  { ops = ["eyes=closed", "head+0,-1", "prop:sparkle@13,8"], ms = 350 },
+  { ops = ["eyes=closed", "all+0,1", "prop:puff@11,13"], ms = 220 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

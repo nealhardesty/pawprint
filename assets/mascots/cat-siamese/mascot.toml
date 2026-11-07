@@ -1,0 +1,251 @@
+# Siamese cat on cat-sit. A slim cream cat with a wedge-shaped head and big,
+# wide-set ears that flare outward. Dark seal points: a diamond face mask
+# that fades at its edges, dark ears, dark paws, and a long, slender dark
+# tail. Blue eyes, pupils turned slightly in. `eyes.stare` is the
+# round-eyed stare of the signature; `mouth.open` is a small round meow.
+id = "cat-siamese"
+name = "Siamese Cat"
+category = "cats-dogs"
+aliases = ["siamese"]
+accent = "sky"
+extends = "cat-sit"
+
+[palette]
+"l" = "white"       # fur light
+"f" = "cream"       # fur
+"F" = "brown-1"     # fur shadow (warm fawn)
+"w" = "white"       # chest
+"M" = "brown-3"     # mouth lines on the mask
+"q" = "brown-2"     # NEW: point, fading edge
+"Q" = "brown-3"     # NEW: point, light
+"P" = "brown-4"     # NEW: seal point
+"e" = "blue-2"      # iris
+"h" = "white"       # eye glint
+"n" = "brown-3"     # nose
+"p" = "pink-2"      # inner ear and mouth
+
+[layers.tail]
+at = [25, 7]
+grid = """
+.kk..
+kQPk.
+kQPk.
+.kQPk
+.kQPk
+.kQPk
+.kQPk
+.kQPk
+.kQPk
+.kQPk
+.kQPk
+.kQPk
+.kQPk
+"""
+
+[layers."tail.flick"]
+at = [24, 6]
+grid = """
+.kk...
+kQPk..
+.kQPk.
+..kQPk
+..kQPk
+..kQPk
+..kQPk
+..kQPk
+..kQPk
+..kQPk
+..kQPk
+..kQPk
+..kQPk
+..kQPk
+"""
+
+# Slim: 18 px wide, with a narrow neck under the wedge.
+[layers.body]
+at = [7, 14]
+grid = """
+..klfffffffffFFk..
+.klffffffffffFFFk.
+klffffffffffffFFFk
+klffffwwwwwwffFFFk
+klffffwwwwwwffFFFk
+klfffffwwwwfffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+klffffffffffffFFFk
+"""
+
+# A wedge: wide across the brow, tapering to a narrow chin, with the seal
+# mask spreading from the forehead around the eyes and down the muzzle.
+[layers.head]
+at = [6, 4]
+grid = """
+....kkkkkkkkkkkk....
+..kkllllllffffffkk..
+.kllffffffffffffFFk.
+klfffffffqqffffffFFk
+klffffffqQQqfffffFFk
+klfqQPPPPPPPPPPQqFFk
+klqQPPPPPPPPPPPPQqFk
+.kqQPPPPPPPPPPPPQqk.
+.kfqQPPPPPPPPPPQqFk.
+..kfqQPPPMMPPPQqFk..
+...kqQPPMPPMPPQqk...
+....kqQPPPPPPQqk....
+.....kkQQQQQQkk.....
+"""
+
+# Big ears set wide and flaring outward, dark all over.
+[layers.ears]
+at = [2, 0]
+grid = """
+.k........................k.
+.kPk....................kPk.
+kQPPk..................kPPPk
+kQpPPk................kPPpPk
+kQppPPk..............kPPppPk
+.kQppPPP............PPPppPk.
+..kQpPPP............PPPpPk..
+...kQPP..............PPPk...
+"""
+
+[layers."ears.flick"]
+at = [1, 0]
+grid = """
+...........................k.
+.k.......................kPk.
+.kPk....................kPPPk
+kQPPk..................kPPpPk
+kQpPPk................kPPppPk
+kQppPPk..............PPPppPk.
+.kQppPPP.............PPPpPk..
+..kQpPPP..............PPPk...
+...kQPP......................
+"""
+
+# Blue eyes, pupils turned in.
+[layers.eyes]
+at = [10, 9]
+grid = """
+hee......hee
+eek......kee
+"""
+
+[layers."eyes.closed"]
+at = [10, 10]
+grid = """
+qqq......qqq
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+grid = """
+hee......hee
+kee......kee
+"""
+
+[layers."eyes.right"]
+at = [10, 9]
+grid = """
+hee......hee
+eek......eek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.q........q.
+q.q......q.q
+"""
+
+# The signature stare: round, wide-open eyes with pinpoint pupils.
+[layers."eyes.stare"]
+at = [10, 8]
+grid = """
+.he......he.
+eke......eke
+.ee......ee.
+"""
+
+[layers.nose]
+at = [15, 12]
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [15, 11]
+grid = """
+nn
+"""
+
+# A small round meow.
+[layers."mouth.open"]
+at = [14, 13]
+grid = """
+.kk.
+kppk
+.kk.
+"""
+
+# Dark seal-point paws.
+[layers.paws]
+at = [10, 17]
+grid = """
+.QQQ....QQQ.
+QPPPQ..QPPPQ
+kPQPk..kPQPk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a long, round-eyed blue stare, then two silent meows.
+[[actions]]
+name = "silent-meow"
+weight = 4
+frames = [
+  { ops = ["eyes=stare"], ms = 1000 },
+  { ops = ["eyes=stare", "head+0,-1", "+mouth.open"], ms = 450 },
+  { ops = ["eyes=stare"], ms = 400 },
+  { ops = ["eyes=stare", "head+0,-1", "+mouth.open"], ms = 450 },
+  { ops = ["eyes=stare"], ms = 500 },
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: the meow is not silent after all. It throws its head back and
+# sings, then stares as if nothing happened.
+[[actions]]
+name = "aria"
+weight = 1
+frames = [
+  { ops = ["eyes=closed", "head+0,-1"], ms = 250 },
+  { ops = ["eyes=closed", "head+0,-2", "+mouth.open", "prop:note@23,7"], ms = 450 },
+  { ops = ["eyes=closed", "head+0,-2", "+mouth.open", "prop:note@24,4", "prop:note@19,0"], ms = 550 },
+  { ops = ["eyes=happy", "head+0,-1", "+mouth.open", "prop:note@25,1"], ms = 500 },
+  { ops = ["eyes=stare"], ms = 900 },
+  { ops = [], ms = 250 },
+]
