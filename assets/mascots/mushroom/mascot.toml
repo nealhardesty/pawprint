@@ -1,0 +1,214 @@
+# Mushroom, a bespoke oddball: a fly agaric with its spotted red cap pulled
+# down to its eyebrows and a face on its stem. The signature squashes the
+# cap down and pops it up, puffing spores; the rare one watches a tiny
+# mushroom sprout out of the crate beside it, then duck back in.
+id = "mushroom"
+name = "Mushroom"
+category = "oddballs"
+aliases = ["shroom", "fungus"]
+accent = "cranberry"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "red-1"       # cap light
+"f" = "red-2"       # cap
+"F" = "brown-4"     # cap shadow
+"w" = "white"       # cap spots, stem light, eye highlight
+"g" = "brown-1"     # gills under the cap rim, stem shadow
+"m" = "cream"       # stem
+"p" = "pink-1"      # blush
+"y" = "amber"       # spores
+
+# The stem runs up under the cap, so the cap can lift without a gap.
+[layers.stem]
+at = [9, 4]
+grid = """
+kmmmmmmmmmmmmk
+kmmmmmmmmmmmmk
+kmmmmmmmmmmmmk
+kmmmmmmmmmmmmk
+kggggggggggggk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+kwmmmmmmmmmmgk
+"""
+
+[layers.blush]
+at = [10, 11]
+grid = """
+pp........pp
+"""
+
+[layers.eyes]
+at = [12, 9]
+grid = """
+wk....wk
+kk....kk
+"""
+
+[layers."eyes.closed"]
+at = [12, 10]
+grid = """
+kk....kk
+"""
+
+[layers."eyes.left"]
+at = [11, 9]
+grid = """
+wk....wk
+kk....kk
+"""
+
+[layers."eyes.right"]
+at = [13, 9]
+grid = """
+wk....wk
+kk....kk
+"""
+
+[layers."eyes.happy"]
+at = [11, 9]
+grid = """
+.kk....kk.
+k..k..k..k
+"""
+
+[layers.mouth]
+at = [14, 12]
+grid = """
+k..k
+.kk.
+"""
+
+# The cap, drawn over the top of the stem. Its rim shows the gills.
+[layers.cap]
+at = [2, 0]
+grid = """
+..........kkkkkkkk..........
+.......kkkllllwwwlkkk.......
+.....kklllfffwwwwfffFkk.....
+...kkllffffffffffffwwwFkk...
+..klwwwwffffffffffwwwwwfFk..
+.klwwwwwffffwwfffffwwwffFFk.
+klfwwwffffffffFFFFFFFFFFFFFk
+kggggggggggggggggggggggggggk
+.kkkkkk..............kkkkkk.
+"""
+
+# Spores drifting off the cap (hidden at rest).
+[layers."spores.a"]
+at = [0, 0]
+grid = """
+................................
+.....yy..................yy.....
+................................
+..yy........................yy..
+................................
+"""
+
+[layers."spores.b"]
+at = [0, 0]
+grid = """
+...yy..................yy.......
+...........................yy...
+.yy.............................
+................................
+yy............................yy
+"""
+
+# A tiny mushroom that grows out of the crate on the left (hidden at rest;
+# offsets push it down behind the crate front).
+[layers."sprout.up"]
+at = [0, 10]
+grid = """
+...kkk...
+.kkllfkk.
+klwwfffFk
+kkkkkkkkk
+.kmmmmgk.
+.kmkmkgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+.kmmmmgk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the cap squashes down over the eyes, pops up, and puffs spores.
+[[actions]]
+name = "cap-bounce"
+weight = 4
+frames = [
+  { ops = ["cap+0,1", "eyes=closed"], ms = 200 },
+  { ops = ["cap+0,-2"], ms = 120 },
+  { ops = ["cap+0,-1", "+spores.a"], ms = 220 },
+  { ops = ["+spores.b"], ms = 300 },
+  { ops = ["cap+0,-1"], ms = 100 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a tiny mushroom sprouts out of the crate, gets a happy look, hops,
+# and ducks back in.
+[[actions]]
+name = "sprout"
+weight = 1
+frames = [
+  { ops = ["eyes=left"], ms = 400 },
+  { ops = ["eyes=left", "+sprout.up", "sprout+0,8"], ms = 300 },
+  { ops = ["eyes=left", "+sprout.up", "sprout+0,4"], ms = 200 },
+  { ops = ["eyes=left", "+sprout.up"], ms = 500 },
+  { ops = ["eyes=happy", "+sprout.up"], ms = 700 },
+  { ops = ["eyes=happy", "+sprout.up", "sprout+0,-1"], ms = 140 },
+  { ops = ["eyes=happy", "+sprout.up"], ms = 300 },
+  { ops = ["eyes=left", "+sprout.up", "sprout+0,5"], ms = 120 },
+  { ops = ["eyes=left"], ms = 400 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,279 @@
+# Robot, a bespoke oddball: a little tin robot in copper-orange plate, hands
+# hooked over the rim, with glowing eyes in a dark visor, a grille mouth,
+# bolt ears, and an antenna light. The signature blinks the antenna and
+# swivels the face from side to side; the rare one is a happy double beep
+# with a note. At night it goes into standby, its antenna ticking slowly.
+id = "robot"
+name = "Robot"
+category = "oddballs"
+aliases = ["bot", "droid"]
+accent = "slate"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "orange-1"    # plate light
+"f" = "orange-2"    # plate
+"F" = "orange-3"    # plate shadow, rivets
+"g" = "grey-1"      # steel
+"d" = "grey-3"      # steel shadow, grille slots, neck
+"s" = "grey-4"      # visor
+"e" = "blue-1"      # eye glow
+"w" = "white"       # glints
+"r" = "red-1"       # antenna light
+"R" = "red-2"       # antenna light shadow, open mouth
+"p" = "pink-1"      # cheek lights
+
+# Neck and torso; the torso continues behind the crate front.
+[layers."body"]
+grid = """
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+............kddddddk............
+.......kkkkkddddddddkkkkk.......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+"""
+
+# The head: a rounded box with rivets.
+[layers."head"]
+grid = """
+................................
+................................
+................................
+................................
+................................
+.......kkkkkkkkkkkkkkkkkk.......
+......klllllllllllllllllfk......
+.....klfFffffffffffffffFfFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....kFFFFFFFFFFFFFFFFFFFFk.....
+......kkkkkkkkkkkkkkkkkkkk......
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+[layers.antenna]
+at = [14, 0]
+follows = "head"
+grid = """
+.kk.
+kwrk
+krRk
+.kk.
+.kk.
+"""
+
+[layers."antenna.off"]
+at = [14, 0]
+follows = "head"
+grid = """
+.kk.
+kgdk
+kddk
+.kk.
+.kk.
+"""
+
+[layers.ears]
+at = [2, 9]
+follows = "head"
+grid = """
+.kk......................kk.
+kgd......................gdk
+kgd......................gdk
+.kk......................kk.
+"""
+
+[layers.visor]
+at = [8, 8]
+follows = "head"
+grid = """
+.ssssssssssssss.
+ssssssssssssssss
+ssssssssssssssss
+.ssssssssssssss.
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "visor"
+grid = """
+we......we
+ee......ee
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "visor"
+grid = """
+ee......ee
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "visor"
+grid = """
+we......we
+ee......ee
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "visor"
+grid = """
+we......we
+ee......ee
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "visor"
+grid = """
+.ee......ee.
+e..e....e..e
+"""
+
+[layers.blush]
+at = [8, 12]
+follows = "head"
+grid = """
+pp............pp
+"""
+
+[layers.mouth]
+at = [12, 13]
+follows = "head"
+grid = """
+dddddddd
+dgdggdgd
+"""
+
+[layers."mouth.open"]
+at = [12, 12]
+follows = "head"
+grid = """
+.dddddd.
+dRRRRRRd
+.dddddd.
+"""
+
+# Hands hooked over the rim.
+[layers.paws]
+at = [6, 16]
+grid = """
+kk.kk..........kk.kk
+kgkgk..........kgkdk
+kgggk..........kggdk
+kdddk..........kdddk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "hop"
+weight = 2
+
+# Signature: the antenna light blinks twice, then the face swivels right,
+# then left, and back.
+[[actions]]
+name = "swivel"
+weight = 4
+frames = [
+  { ops = ["antenna=off"], ms = 150 },
+  { ops = [], ms = 150 },
+  { ops = ["antenna=off"], ms = 150 },
+  { ops = [], ms = 200 },
+  { ops = ["visor+1,0", "mouth+1,0", "blush+1,0"], ms = 100 },
+  { ops = ["visor+2,0", "mouth+2,0", "blush+2,0", "eyes=right"], ms = 700 },
+  { ops = ["visor+1,0", "mouth+1,0", "blush+1,0"], ms = 100 },
+  { ops = ["visor+-1,0", "mouth+-1,0", "blush+-1,0"], ms = 100 },
+  { ops = ["visor+-2,0", "mouth+-2,0", "blush+-2,0", "eyes=left"], ms = 700 },
+  { ops = ["visor+-1,0", "mouth+-1,0", "blush+-1,0"], ms = 100 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a happy double beep, with a note.
+[[actions]]
+name = "beep"
+weight = 1
+frames = [
+  { ops = ["eyes=happy"], ms = 200 },
+  { ops = ["eyes=happy", "mouth=open", "antenna=off", "all+0,-1", "prop:note@25,1"], ms = 160 },
+  { ops = ["eyes=happy", "mouth=open", "prop:note@25,0"], ms = 300 },
+  { ops = ["eyes=happy", "antenna=off", "prop:note@25,0"], ms = 160 },
+  { ops = ["eyes=happy", "mouth=open", "all+0,-1", "prop:note@25,0"], ms = 160 },
+  { ops = ["eyes=happy", "mouth=open", "prop:note@25,0"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Night: standby. Eyes dim, and the antenna light ticks slowly.
+[[actions]]
+name = "standby"
+weight = 3
+when = "night"
+frames = [
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = ["eyes=closed", "antenna=off"], ms = 800 },
+  { ops = ["eyes=closed"], ms = 150 },
+  { ops = ["eyes=closed", "antenna=off"], ms = 900 },
+  { ops = ["eyes=closed"], ms = 150 },
+  { ops = ["eyes=closed", "antenna=off"], ms = 600 },
+  { ops = ["eyes=closed"], ms = 300 },
+]
