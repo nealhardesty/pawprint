@@ -978,8 +978,9 @@ time and creates the next before handing a connected one to the IPC thread,
 so the name exists for as long as the badge runs and vanishes when it dies
 (`remove_stale` has nothing to do). Every instance gets an explicit
 security descriptor, `O:<user>D:P(A;;GA;;;<user>)(A;;GA;;;SY)` (the user SID
-from `GetTokenInformation(TokenUser)`, built with
-`ConvertStringSecurityDescriptorToSecurityDescriptorW`): owned by the user,
+from `GetTokenInformation(TokenUser)`, built with `InitializeAcl`,
+`AddAccessAllowedAce`, and `SetSecurityDescriptor*`, not parsed from SDDL,
+see FW12): owned by the user,
 and a protected DACL that lets only the user and SYSTEM open the pipe or add
 an instance to it. No other account, anonymous included, can even open it
 for reading. `PIPE_REJECT_REMOTE_CLIENTS` refuses network clients.
@@ -2726,6 +2727,7 @@ taking the bottom 48 px) through `make test-windows-display`.
 | FW9 | `Shell_NotifyIconGetRect` returns a newly added notification icon's rectangle on the runner (`[797, 720, 32, 48]`, in the taskbar below the 720-px work area): new icons are shown, not hidden in the overflow. | The desktop test finds the tray icon directly; a no-op `NIM_MODIFY` is its fallback where an icon sits in the overflow | **Confirmed** |
 | FW10 | Another process can read and drive a menu shown by `TrackPopupMenu`: `FindWindowExW("#32768")` + `MN_GETHMENU` give its `HMENU`, `GetMenuStringW`, `GetMenuState`, `GetSubMenu`, and `GetMenuItemRect(NULL, ..)` work on it, and `SendInput` clicks choose items (`TPM_RETURNCMD` returns the id). | The tray menu is tested end to end with real clicks (16.1.3) | **Confirmed** |
 | FW11 | Windows keeps a `WS_CAPTION \| WS_SYSMENU \| WS_MINIMIZEBOX` window at least `SM_CXMIN` wide: a 96-px client area came out 120 px at 96 DPI. | The preview widens about its center and centers the frame on its backdrop brush (11.1.1) | **Confirmed** |
+| FW12 | `ConvertStringSecurityDescriptorToSecurityDescriptorW` leaves the process with extra threads: building the pipe's descriptor from SDDL took the idle badge from 2 threads to 4 and from 0 to 2 wakeups in 150 s of static mode. | The descriptor is built with the plain ACL calls (10.4) | **Confirmed** (`make power-check` on windows-latest) |
 
 ---
 

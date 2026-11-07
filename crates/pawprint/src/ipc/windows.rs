@@ -29,17 +29,18 @@ use std::time::Instant;
 
 use windows_sys::Win32::Foundation::{
     ERROR_ACCESS_DENIED, ERROR_BROKEN_PIPE, ERROR_IO_PENDING, ERROR_PIPE_BUSY,
-    ERROR_PIPE_CONNECTED, ERROR_SUCCESS, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE,
-    LocalFree, WAIT_TIMEOUT,
+    ERROR_PIPE_CONNECTED, ERROR_SUCCESS, GENERIC_ALL, GENERIC_READ, GENERIC_WRITE, HANDLE,
+    INVALID_HANDLE_VALUE, LocalFree, WAIT_TIMEOUT,
 };
-use windows_sys::Win32::Security::Authorization::{
-    ConvertSidToStringSidW, ConvertStringSecurityDescriptorToSecurityDescriptorW, GetSecurityInfo,
-    SDDL_REVISION_1, SE_KERNEL_OBJECT,
-};
+use windows_sys::Win32::Security::Authorization::{GetSecurityInfo, SE_KERNEL_OBJECT};
 use windows_sys::Win32::Security::{
-    EqualSid, GetTokenInformation, OWNER_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, PSID,
-    SECURITY_ATTRIBUTES, TOKEN_QUERY, TOKEN_USER, TokenUser,
+    ACL, ACL_REVISION, AddAccessAllowedAce, CreateWellKnownSid, EqualSid, GetTokenInformation,
+    InitializeAcl, InitializeSecurityDescriptor, OWNER_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR,
+    PSID, SE_DACL_PROTECTED, SECURITY_ATTRIBUTES, SECURITY_DESCRIPTOR,
+    SetSecurityDescriptorControl, SetSecurityDescriptorDacl, SetSecurityDescriptorOwner,
+    TOKEN_QUERY, TOKEN_USER, TokenUser, WinLocalSystemSid,
 };
+
 use windows_sys::Win32::Storage::FileSystem::{
     CreateFileW, FILE_FLAG_FIRST_PIPE_INSTANCE, FILE_FLAG_OVERLAPPED, OPEN_EXISTING,
     PIPE_ACCESS_DUPLEX, ReadFile, SECURITY_IDENTIFICATION, SECURITY_SQOS_PRESENT, WriteFile,
@@ -58,6 +59,9 @@ use windows_sys::Win32::UI::WindowsAndMessaging::AllowSetForegroundWindow;
 use super::{Stream, TIMEOUT, Transport};
 
 pub struct NamedPipe;
+
+/// winnt.h's `SECURITY_DESCRIPTOR_REVISION` (not worth a windows-sys feature).
+const SECURITY_DESCRIPTOR_REVISION: u32 = 1;
 
 /// The server side: the pipe name and the instance waiting for a client.
 #[derive(Debug)]
@@ -124,21 +128,6 @@ impl User {
         // SAFETY: GetTokenInformation filled `buf` with a TOKEN_USER.
         unsafe { (*self.buf.as_ptr().cast::<TOKEN_USER>()).User.Sid }
     }
-
-    /// The SID as `S-1-5-21-…`.
-    fn sid_string(&self) -> io::Result<String> {
-        let mut text = null_mut();
-        // SAFETY: a valid SID; the string is LocalAlloc'd and freed below.
-        unsafe {
-            if ConvertSidToStringSidW(self.sid(), &mut text) == 0 {
-                return Err(io::Error::last_os_error());
-            }
-            let len = (0..).take_while(|&i| *text.add(i) != 0).count();
-            let s = String::from_utf16_lossy(std::slice::from_raw_parts(text, len));
-            LocalFree(text.cast());
-            Ok(s)
-        }
-    }
 }
 
 /// A `LocalAlloc`'d security descriptor.
@@ -151,27 +140,73 @@ impl Drop for Descriptor {
     }
 }
 
-/// Owned by this user; only this user and SYSTEM may open the pipe.
-fn private_descriptor() -> io::Result<Descriptor> {
-    let sid = User::current()?.sid_string()?;
-    let sddl: Vec<u16> = format!("O:{sid}D:P(A;;GA;;;{sid})(A;;GA;;;SY)")
-        .encode_utf16()
-        .chain([0])
-        .collect();
-    let mut sd = null_mut();
-    // SAFETY: `sddl` is NUL-terminated; `sd` receives a LocalAlloc'd copy.
-    let ok = unsafe {
-        ConvertStringSecurityDescriptorToSecurityDescriptorW(
-            sddl.as_ptr(),
-            SDDL_REVISION_1,
-            &mut sd,
-            null_mut(),
-        )
-    };
-    if ok == 0 {
-        return Err(io::Error::last_os_error());
+/// The pipe's security descriptor: owned by this user, and a protected
+/// DACL that grants this user and SYSTEM `GENERIC_ALL` and nobody else
+/// (`O:<user>D:P(A;;GA;;;<user>)(A;;GA;;;SY)`). Built with the plain ACL
+/// calls rather than from SDDL: parsing SDDL asks LSA about domain aliases,
+/// which leaves RPC threads behind that wake the idle badge.
+struct PrivateDescriptor {
+    // The descriptor points into these heap buffers, which never move.
+    _user: User,
+    _system: Vec<u64>,
+    _acl: Vec<u64>,
+    sd: Box<SECURITY_DESCRIPTOR>,
+}
+
+impl PrivateDescriptor {
+    fn new() -> io::Result<PrivateDescriptor> {
+        let user = User::current()?;
+        let fail = |ok: i32| {
+            if ok == 0 {
+                Err(io::Error::last_os_error())
+            } else {
+                Ok(())
+            }
+        };
+        // SECURITY_MAX_SID_SIZE is 68 bytes; two ACEs of at most 12 + 68.
+        let mut system = vec![0u64; 9];
+        let mut acl = vec![0u64; 24];
+        let mut sd = Box::new(SECURITY_DESCRIPTOR::default());
+        let sd_ptr: PSECURITY_DESCRIPTOR = (&raw mut *sd).cast();
+        let acl_ptr = acl.as_mut_ptr().cast::<ACL>();
+        let mut len = (system.len() * 8) as u32;
+        // SAFETY: every buffer is as large as the call is told; the
+        // descriptor keeps pointers into `user`, `system`, and `acl`,
+        // which live as long as it does.
+        unsafe {
+            fail(CreateWellKnownSid(
+                WinLocalSystemSid,
+                null_mut(),
+                system.as_mut_ptr().cast(),
+                &mut len,
+            ))?;
+            fail(InitializeAcl(acl_ptr, (acl.len() * 8) as u32, ACL_REVISION))?;
+            for sid in [user.sid(), system.as_mut_ptr().cast()] {
+                fail(AddAccessAllowedAce(acl_ptr, ACL_REVISION, GENERIC_ALL, sid))?;
+            }
+            fail(InitializeSecurityDescriptor(
+                sd_ptr,
+                SECURITY_DESCRIPTOR_REVISION,
+            ))?;
+            fail(SetSecurityDescriptorOwner(sd_ptr, user.sid(), 0))?;
+            fail(SetSecurityDescriptorDacl(sd_ptr, 1, acl_ptr, 0))?;
+            fail(SetSecurityDescriptorControl(
+                sd_ptr,
+                SE_DACL_PROTECTED,
+                SE_DACL_PROTECTED,
+            ))?;
+        }
+        Ok(PrivateDescriptor {
+            _user: user,
+            _system: system,
+            _acl: acl,
+            sd,
+        })
     }
-    Ok(Descriptor(sd))
+
+    fn as_ptr(&self) -> PSECURITY_DESCRIPTOR {
+        (&raw const *self.sd).cast_mut().cast()
+    }
 }
 
 /// One end of the pipe, in overlapped mode, with the event its I/O waits on.
@@ -285,10 +320,10 @@ fn instance(name: &[u16], first: bool) -> io::Result<Pipe> {
             0
         };
     let mode = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
-    let sd = private_descriptor()?;
+    let sd = PrivateDescriptor::new()?;
     let attributes = SECURITY_ATTRIBUTES {
         nLength: size_of::<SECURITY_ATTRIBUTES>() as u32,
-        lpSecurityDescriptor: sd.0,
+        lpSecurityDescriptor: sd.as_ptr(),
         bInheritHandle: 0,
     };
     // SAFETY: `name` is NUL-terminated; `attributes` and its descriptor
@@ -437,7 +472,10 @@ mod tests {
     use super::*;
     use crate::ipc::{self, CallError, Request, Response};
     use std::time::Duration;
-    use windows_sys::Win32::Security::Authorization::ConvertSecurityDescriptorToStringSecurityDescriptorW;
+    use windows_sys::Win32::Security::Authorization::{
+        ConvertSecurityDescriptorToStringSecurityDescriptorW,
+        ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
+    };
     use windows_sys::Win32::Security::DACL_SECURITY_INFORMATION;
 
     fn endpoint(tag: &str) -> std::path::PathBuf {
@@ -490,34 +528,18 @@ mod tests {
         );
     }
 
-    /// Only this user and SYSTEM may open the pipe, and this user owns it.
-    #[test]
-    fn the_pipe_is_private() {
-        let endpoint = endpoint("dacl");
-        let _listener = NamedPipe::bind(&endpoint).unwrap();
-        let client = raw_client(&endpoint);
-        let mut sd = null_mut();
-        let info = OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION;
-        // SAFETY: as in `check_owner`; the string is freed below.
-        let sddl = unsafe {
-            let code = GetSecurityInfo(
-                client.as_raw_handle(),
-                SE_KERNEL_OBJECT,
-                info,
-                null_mut(),
-                null_mut(),
-                null_mut(),
-                null_mut(),
-                &mut sd,
-            );
-            assert_eq!(code, ERROR_SUCCESS);
-            let _sd = Descriptor(sd);
-            let mut text = null_mut();
+    const OWNER_AND_DACL: u32 = OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION;
+
+    /// `sd`'s owner and DACL as SDDL, with the system's aliases (`LA`, `BA`).
+    fn to_sddl(sd: PSECURITY_DESCRIPTOR) -> String {
+        let mut text = null_mut();
+        // SAFETY: a valid descriptor; the string is LocalAlloc'd and freed.
+        unsafe {
             assert_ne!(
                 ConvertSecurityDescriptorToStringSecurityDescriptorW(
                     sd,
                     SDDL_REVISION_1,
-                    info,
+                    OWNER_AND_DACL,
                     &mut text,
                     null_mut()
                 ),
@@ -527,12 +549,47 @@ mod tests {
             let s = String::from_utf16_lossy(std::slice::from_raw_parts(text, len));
             LocalFree(text.cast());
             s
+        }
+    }
+
+    /// Only this user and SYSTEM may open the pipe, and this user owns it.
+    #[test]
+    fn the_pipe_is_private() {
+        let endpoint = endpoint("dacl");
+        let _listener = NamedPipe::bind(&endpoint).unwrap();
+        let client = raw_client(&endpoint);
+        let mut sd = null_mut();
+        // SAFETY: as in `check_owner`.
+        let code = unsafe {
+            GetSecurityInfo(
+                client.as_raw_handle(),
+                SE_KERNEL_OBJECT,
+                OWNER_AND_DACL,
+                null_mut(),
+                null_mut(),
+                null_mut(),
+                null_mut(),
+                &mut sd,
+            )
         };
-        let sid = User::current().unwrap().sid_string().unwrap();
+        assert_eq!(code, ERROR_SUCCESS);
+        let actual = Descriptor(sd);
+        // What we asked for, written the way the system writes it back
+        // (generic access mapped to the pipe's FA).
+        let want = PrivateDescriptor::new().unwrap();
+        let want = to_sddl(want.as_ptr());
+        println!("pipe descriptor {want}");
         assert_eq!(
-            sddl,
-            format!("O:{sid}D:P(A;;FA;;;{sid})(A;;FA;;;SY)"),
+            to_sddl(actual.0),
+            want.replace(";GA;", ";FA;"),
             "owner and DACL"
+        );
+        let user = to_sddl(actual.0);
+        let owner = &user[2..user.find("D:").unwrap()];
+        assert_eq!(
+            user,
+            format!("O:{owner}D:P(A;;FA;;;{owner})(A;;FA;;;SY)"),
+            "this user and SYSTEM only"
         );
     }
 
@@ -586,7 +643,7 @@ mod tests {
         let name = wide(&endpoint);
         let sddl: Vec<u16> = "O:BAD:(A;;GA;;;WD)".encode_utf16().chain([0]).collect();
         let mut sd = null_mut();
-        // SAFETY: as in `private_descriptor` and `instance`.
+        // SAFETY: as in `instance`; the descriptor outlives the call.
         let handle = unsafe {
             assert_ne!(
                 ConvertStringSecurityDescriptorToSecurityDescriptorW(
