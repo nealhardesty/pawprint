@@ -1,8 +1,8 @@
-# Shiba Inu on dog-sit. Small, thick triangular ears set wide, fluffy cream
-# cheeks (urajiro) that flare past the skull, cream eyebrow dots, and the
-# curled tail: a fluffy ring over the right of its back. `eyes.smug` and
-# `mouth.smile` make the side-eye smile; `mouth.scream` is for the rare
-# shiba scream.
+# Shiba Inu on dog-sit. Thick upright ears, an orange bridge running down
+# to a big dog nose between fluffy cream cheeks (urajiro), cream eyebrow
+# dots, an open shiba smile at rest, and the curled tail: a fluffy ring over
+# the right of its back. `eyes.smug` and `mouth.smile` (a closed smirk) make
+# the side-eye smile; `mouth.scream` is for the rare shiba scream.
 id = "dog-shiba"
 name = "Shiba Inu"
 category = "cats-dogs"
@@ -71,7 +71,8 @@ klfffffffffffffffffFFk
 klfffffffffffffffffFFk
 """
 
-# A round head; the cream cheeks flare out wider than the skull.
+# The cream cheeks flare past the skull; an orange bridge runs down to the
+# nose, and shadow edges the muzzle so it reads as a dog's snout.
 [layers.head]
 at = [5, 4]
 grid = """
@@ -81,35 +82,38 @@ grid = """
 ..kllwwlffffffwwfFFk..
 .klllffffffffffffffFk.
 .klfffffffffffffffFFk.
-kllffwwffffffffwwffFFk
-klfwwwwwwwwwwwwwwwwfFk
-kwwwwwwwwwwwwwwwwwwwwk
-.kwwwwwwwMMwwwwwwwwMk.
-..kMwwwwMwwwwMwwwwMk..
-...kkMwwwwwwwwwwMkk...
+klfwwwwffffffffwwwwFFk
+kwwwwwwMwffffwMwwwwwFk
+kwwwwwwMwwwwwwMwwwwwFk
+.kwwwwwMwwwwwwMwwwwMk.
+..kMwwwMwwwwwwMwwwMk..
+...kkMMwwwwwwwwMMkk...
 .....kkkMMMMMMkkk.....
 """
 
-# Small, thick triangles set wide on the skull, cream inside.
+# Thick upright triangles, cream inside.
 [layers.ears]
-at = [6, 2]
+at = [6, 0]
 grid = """
 .kk..............kk.
-kllk............kFFk
-klwlk..........kFwFk
-klwwlk........kFwwFk
-klwwff........ffwwFk
+klfk............kfFk
+klwfk..........kfwFk
+klwwfk........kfwwFk
+klwwwfk......kfwwwFk
+klwwwff......ffwwwFk
+kllfff........fffFFk
 """
 
 [layers."ears.flick"]
-at = [6, 1]
+at = [6, 0]
 grid = """
-..................kk
-.kk..............kFk
-kllk............kFwk
-klwlk..........kFwFk
-klwwlk........kFwwFk
-klwwff........ffwwFk
+.kk.................
+klfk.............kk.
+klwfk...........kfFk
+klwwfk.........kfwFk
+klwwwfk.......kfwwFk
+klwwwff......ffwwwFk
+kllfff........fffFFk
 """
 
 # Half-lidded, pupils slid to one side: the smug side-eye.
@@ -142,6 +146,16 @@ grid = """
 .MMMM......MMMM.
 MwwwwM....MwwwwM
 kwMwMk....kwMwMk
+"""
+
+# The open shiba smile, tongue showing, at rest.
+[layers.mouth]
+at = [13, 13]
+follows = "head"
+grid = """
+k.kk.k
+.kppk.
+..kk..
 """
 
 [[actions]]

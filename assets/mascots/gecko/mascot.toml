@@ -10,6 +10,8 @@ category = "critters"
 aliases = ["lizard"]
 accent = "moss"
 extends = "critter"
+# Template props (doze's zzz) go top-left, clear of the face on the right.
+prop_offset = [-19, 0]
 
 [palette]
 "l" = "yellow-1"    # skin light

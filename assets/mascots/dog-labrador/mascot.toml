@@ -10,6 +10,7 @@ accent = "honey"
 extends = "dog-sit"
 
 [palette]
+"h" = "grey-3"      # catchlight: white would vanish into the light fur at 1x
 "l" = "yellow-1"    # coat light
 "f" = "orange-1"    # yellow coat
 "F" = "yellow-2"    # coat shadow

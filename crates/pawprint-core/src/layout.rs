@@ -231,7 +231,7 @@ pub fn font_scale(label_size: LabelSize, size: u32, display_scale: f64) -> u32 {
 }
 
 /// The label strip on the crate front, in art pixels: x, y, width, height.
-pub const STRIP: (u32, u32, u32, u32) = (2, 22, 28, 8);
+pub const STRIP: (u32, u32, u32, u32) = (2, 22, 28, 9);
 
 /// Nameplate dimensions in font pixels, from the crate art.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -477,7 +477,8 @@ mod tests {
 
     #[test]
     fn short_labels_sit_on_the_strip() {
-        // 64 px, medium: strip is 56 x 16 physical, "OWL" is 34 x 14.
+        // 64 px, medium: strip is 56 x 18 physical, "OWL" is 34 x 14, so it
+        // clears the rail above and the outline below by 2 px.
         let l = badge_layout(64, Some(3), LabelSize::Auto, Anchor::TopRight, 1.0, PLATE);
         assert_eq!(
             (l.width, l.height, l.art_scale, l.font_scale),
@@ -485,15 +486,14 @@ mod tests {
         );
         let label = l.label.unwrap();
         assert_eq!(label.placement, Placement::Strip);
-        assert_eq!(label.text, Point::new(4 + (56 - 34) / 2, 44 + 1));
-        // 32 px, small: 4 characters fit (23 <= 28), 5 do not (29).
-        assert_eq!(
-            badge_layout(32, Some(4), LabelSize::Auto, Anchor::TopRight, 1.0, PLATE)
-                .label
-                .unwrap()
-                .placement,
-            Placement::Strip
-        );
+        assert_eq!(label.text, Point::new(4 + (56 - 34) / 2, 44 + 2));
+        // 32 px, small: 4 characters fit (23 <= 28), 5 do not (29), and the
+        // 7-row glyphs sit one row clear of the rail in the 9-row strip.
+        let small = badge_layout(32, Some(4), LabelSize::Auto, Anchor::TopRight, 1.0, PLATE)
+            .label
+            .unwrap();
+        assert_eq!(small.placement, Placement::Strip);
+        assert_eq!(small.text, Point::new(2 + (28 - 23) / 2, 22 + 1));
         assert_eq!(
             badge_layout(128, Some(9), LabelSize::Auto, Anchor::TopRight, 1.0, PLATE)
                 .label

@@ -12,6 +12,8 @@ category = "birds"
 aliases = ["goose"]
 accent = "ice"
 extends = "bird-water"
+# Template props sit over the back, below the raised wingtips.
+prop_offset = [-5, -1]
 rest = ["body", "head", "eyes", "bill"]
 
 [palette]

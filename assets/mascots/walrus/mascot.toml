@@ -15,7 +15,7 @@ extends = "pinniped"
 "F" = "brown-3"     # hide shadow
 "w" = "orange-1"    # whisker pads and chest
 "M" = "brown-2"     # bristle follicles, pad crease
-"v" = "white"       # whiskers
+"v" = "grey-2"      # whiskers: mid-grey reads on light and dark desktops
 "t" = "white"       # NEW: tusk
 "T" = "grey-1"      # NEW: tusk shadow
 

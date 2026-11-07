@@ -10,6 +10,8 @@ category = "aquatic"
 aliases = ["puffer", "fugu"]
 accent = "marigold"
 extends = "sea-creature"
+# Template props go top-left, clear of the face on the right.
+prop_offset = [-19, -1]
 
 # Side-on, so the base fins are left out: the tail fan is drawn in the head.
 rest = ["body", "head", "eyes", "water"]

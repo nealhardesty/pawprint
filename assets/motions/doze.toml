@@ -6,7 +6,7 @@ when = "night"
 frames = [
   { ops = ["eyes=closed"], ms = 400 },
   { ops = ["eyes=closed", "prop:zzz@21,5"], ms = 600 },
-  { ops = ["eyes=closed", "prop:zzz@22,3", "all+0,1"], ms = 700 },
-  { ops = ["eyes=closed", "prop:zzz@23,1", "all+0,1"], ms = 700 },
+  { ops = ["eyes=closed", "prop:zzz@21,3", "all+0,1"], ms = 700 },
+  { ops = ["eyes=closed", "prop:zzz@21,1", "all+0,1"], ms = 700 },
   { ops = ["eyes=closed"], ms = 400 },
 ]

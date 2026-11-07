@@ -11,6 +11,7 @@ accent = "ice"
 extends = "bear"
 
 [palette]
+"h" = "grey-3"      # catchlight: white would vanish into the light fur at 1x
 "l" = "white"       # fur light
 "f" = "cream"       # fur
 "F" = "blue-1"      # fur shadow: icy

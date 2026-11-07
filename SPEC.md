@@ -235,8 +235,8 @@ All art is authored at **1× in art pixels** and scaled by an integer factor.
 | Badge canvas (without nameplate) | 32 × 32 |
 | Mascot frame | 32 × 32, drawn at (0, 0) |
 | Crate back rim | rows 18–19 |
-| Crate front | rows 20–31 (12 rows), full width; the mascot is hidden behind it |
-| Label strip on crate front | rows 22–29, columns 2–29 (28 × 8 usable) |
+| Crate front | rows 20–31 (12 rows), full width; the mascot is hidden behind it: outline (20), top rail (21), label strip, outline (31) |
+| Label strip on crate front | rows 22–30, columns 2–29 (28 × 9 usable) |
 | Outline | 1 art-pixel dark outline around the crate for contrast on any wallpaper |
 
 Mascot art should keep its face and silhouette in rows 0–19 so it "peeks out"
@@ -287,8 +287,13 @@ and remote-client scaling (roadmap M2) and adjusted here.
    badge grows inward from its anchored corner.
 
 The label fits the strip when its width (`6n − 1` font pixels for `n`
-characters) and height (7) times the font scale fit the strip's 28 × 8 art
-pixels times the art scale. The nameplate is drawn in **font pixels**, so it
+characters) and height (7) times the font scale fit the strip's 28 × 9 art
+pixels times the art scale. On the strip the text is centered both ways
+(rounding down). The strip is 9 rows, two more than a glyph, so the text
+clears the top rail and the bottom outline by at least one art pixel's worth
+at every preset: 1 px at 32 (small), 2 px at 64 (medium), 11 px at 128
+(medium). The nameplate's cream face is also 9 font pixels tall, so text sits
+the same way there. The nameplate is drawn in **font pixels**, so it
 scales with `label_size`, not `size`: `plate-left`, then `plate-mid` once per
 text column, then `plate-right` (all from `crate.toml`), with the text right
 after `plate-left` and centered vertically. Under the crate, the plate is
@@ -1337,6 +1342,7 @@ accent = "violet"
 fallback = true                     # eligible for the deterministic fallback (default true)
 nocturnal = true                    # prefers `when = "night"` actions after dark (default false)
 extends = "bird-perched"            # optional base
+prop_offset = [0, 0]                # optional: moves template props, see 12.4 (default [0, 0])
 
 # Glyph → master palette color. Base role glyphs are remapped here.
 [palette]
@@ -1443,7 +1449,11 @@ Details the compiler enforces:
   layer and doesn't set `follows`, it keeps the base layer's. `follows`
   affects offsets only, not visibility.
 - Props are drawn after the mascot (and after `flipx`) at mascot
-  coordinates; `all+` does not move them.
+  coordinates; `all+` does not move them. **`prop_offset = [dx, dy]`** adds
+  to the position of every prop a *motion template* draws, and never to the
+  `prop:` ops in the mascot's own actions. A base may set it; a mascot's own
+  value replaces the base's. PNG mascots can't use templates, so they can't
+  set it. Props are clipped to the frame, so keep the moved props inside it.
 - `ms` defaults to 200 and `weight` to 5. A template action takes the
   template's `weight` and `when` unless the mascot's `[[actions]]` entry sets
   its own, and `name` defaults to the template's name.
@@ -1508,8 +1518,11 @@ The launch template set:
 That is 17 template files (`look-left` and `look-right` are separate). `doze`
 sets `when = "night"`. `peek` holds at `all+0,9`, so mascot rows 0–10 show
 over the rim: eyes belong in rows 8–10. Props in templates land in the top
-right (`zzz` from x 21, `bang` at x 26, `question` at x 24, `heart` at x 22),
-so keep that corner for them where the silhouette allows.
+right (`zzz` rising at x 21, `bang` at x 26, `question` at x 24, `heart` at
+x 22), so keep that corner for them where the silhouette allows. When it
+can't (a side-on animal facing right, a wide cap, a spout), set
+`prop_offset` to move every template prop to the mascot's emptiest corner:
+whale, dolphin, pufferfish, gecko, swan, mushroom, cactus, and teapot do.
 
 ### 12.5 Animation extras that cost nothing at runtime
 
@@ -1688,7 +1701,14 @@ reads as fur, not as a hole in the outline.
 - **Eyes:** 2 × 2 with a 1 px `white` highlight for big-eyed mascots, 1 × 2
   for small ones. Eyes are the main source of expression, so give every
   mascot `eyes.closed` and, where it fits, `eyes.left`, `eyes.right`, and
-  `eyes.happy`.
+  `eyes.happy`. On light fur (white, cream, pale yellow) a white highlight
+  merges with the fur and the eye reads as a dash at 1×, so those mascots
+  map the `h` role to `grey-3`: a solid dot at 1×, a soft catchlight when
+  large. On black fur, use a light iris or tan brow points so the eye shows.
+- **Whiskers and bristles that stick out past the silhouette** have no
+  outline, so they use a mid tone (`grey-2`, as on the walrus and seal) that
+  reads on both light and dark desktops. White ones vanish on a light
+  desktop.
 - **Interact with the crate.** Paws, flippers, beaks, and tails over the rim
   make a mascot feel like it lives there.
 - **Exaggerate the defining feature:** moose paddle antlers and dewlap; elk
@@ -2295,7 +2315,7 @@ brief for each mascot's main idle action.
 | ID | Extra aliases | Accent | Signature action |
 |---|---|---|---|
 | ★ `owl` | owls, hoot | violet | One slow blink, then a sideways head turn |
-| `crow` | raven, corvid | charcoal | Tilts its head, caws silently |
+| `crow` | raven, corvid | sky | Tilts its head, caws silently |
 | `puffin` | — | brick | Bill clacks, little hop |
 | `penguin` | — | ice | Waddle-shuffle, flipper flap |
 | `kiwi` | — | moss | Long beak probes the crate |
