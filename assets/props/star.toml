@@ -1,0 +1,21 @@
+# A gold five-point star. 9x9; drawn with `prop:star@x,y`
+# (x, y is where the top-left lands).
+name = "star"
+grid = """
+....k....
+...kwk...
+.kkwwykk.
+kwwwwyyyk
+.kwwyyyk.
+..kyyyk..
+.kyykyok.
+.kyk.kok.
+..k...k..
+"""
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"w" = "yellow-1"
+"y" = "yellow-2"
+"o" = "orange-2"

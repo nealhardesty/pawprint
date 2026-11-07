@@ -1,0 +1,19 @@
+# A plump seed or nut. 6x7; drawn with `prop:seed@x,y`
+# (x, y is where the top-left lands).
+name = "seed"
+grid = """
+.kkkk.
+kkllkk
+kllssk
+klsssk
+kssSSk
+kksSkk
+.kkkk.
+"""
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "brown-1"
+"s" = "brown-2"
+"S" = "brown-3"

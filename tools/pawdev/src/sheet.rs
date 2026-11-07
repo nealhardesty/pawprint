@@ -360,13 +360,15 @@ pub fn building_blocks(root: &Path) -> Result<(), String> {
     const LEFT: u32 = 104;
     const ROW_H: u32 = 64 + 10;
     let cols = 1 + motions.len() as u32;
-    let width = PAD * 2 + LEFT + cols * COL_W;
+    const PROP_K: u32 = 4;
+    const PROP_H: u32 = 12 * PROP_K;
+    let width = (PAD * 2 + LEFT + cols * COL_W).max(PAD * 2 + 16 * 72);
     let violet = b.accents[0].1;
 
     // Section heights.
     let title_h = 14 + 6 + 7 + 16;
     let accents_h = HEAD_H + 64 + 7 + 6 + 16;
-    let props_h = HEAD_H + 40 + 7 + 6 + 16;
+    let props_h = HEAD_H + PROP_H + 7 + 6 + 16;
     let grid_h = HEAD_H + 7 + 6 + bases.len() as u32 * ROW_H;
     let height = PAD * 2 + title_h + accents_h + props_h + grid_h;
     let mut img = RgbaImage::new(width, height);
@@ -381,7 +383,7 @@ pub fn building_blocks(root: &Path) -> Result<(), String> {
     text(&mut img, "PAWPRINT BUILDING BLOCKS", PAD, y, 2, INK);
     text(
         &mut img,
-        "CRATE ACCENTS, PROPS, AND EVERY BASE WITH EVERY MOTION TEMPLATE (KEY FRAME, 2X)",
+        "CRATE ACCENTS, PROPS, AND EVERY BASE WITH EVERY MOTION TEMPLATE (MOST-CHANGED FRAME, 2X)",
         PAD,
         y + 20,
         1,
@@ -412,31 +414,31 @@ pub fn building_blocks(root: &Path) -> Result<(), String> {
     }
     y += 64 + 7 + 6 + 16;
 
-    // Props at 2×, bottom-aligned.
-    heading(&mut img, "PROPS (2X)", y);
+    // Props at 4×, bottom-aligned.
+    heading(&mut img, "PROPS (4X)", y);
     y += HEAD_H;
     let mut x = PAD;
     for (name, _) in &b.library.props {
         let p = &lib_prop(&lib, name);
-        let big = scale(p, 2);
+        let big = scale(p, PROP_K);
         let w = big.width.max(text_width(name, 1));
         blit(
             &mut img,
             &big,
             x + (w - big.width) / 2,
-            y + 40 - big.height.min(40),
+            y + PROP_H - big.height.min(PROP_H),
         );
         text(
             &mut img,
             name,
             x + (w - text_width(name, 1)) / 2,
-            y + 40 + 6,
+            y + PROP_H + 6,
             1,
             INK,
         );
         x += w + 18;
     }
-    y += 40 + 7 + 6 + 16;
+    y += PROP_H + 7 + 6 + 16;
 
     // Bases × templates.
     heading(

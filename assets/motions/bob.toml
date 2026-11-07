@@ -1,0 +1,9 @@
+# Motion template (SPEC §12.4). Use it with `use = "bob"` in [[actions]].
+name = "bob"
+summary = "Whole body dips 1 px and returns"
+needs = []
+frames = [
+  { ops = ["all+0,1"], ms = 260 },
+  { ops = [], ms = 120 },
+  { ops = ["all+0,1"], ms = 200 },
+]

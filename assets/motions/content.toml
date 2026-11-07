@@ -1,0 +1,10 @@
+# Motion template (SPEC §12.4). Use it with `use = "content"` in [[actions]].
+name = "content"
+summary = "Happy eyes and a floating heart"
+needs = ["eyes.happy"]
+frames = [
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = ["eyes=happy", "prop:heart@22,3"], ms = 600 },
+  { ops = ["eyes=happy", "prop:heart@22,1"], ms = 600 },
+  { ops = ["eyes=happy"], ms = 300 },
+]

@@ -1,10 +1,16 @@
 # The shared crate (SPEC §4.1-4.2), drawn in accent shades so any accent
 # tints it. Back rim: rows 18-19 behind the mascot. Front: rows 20-31 in front
-# of it, with the cream label strip at rows 22-29, columns 2-29.
+# of it, with the cream label strip at rows 22-29, columns 2-29. The strip
+# stays plain cream: the label is stenciled onto it at any font scale.
 #
-# The nameplate (used when the label doesn't fit the strip) is drawn in font
-# pixels: plate-left, then plate-mid once per text column, then plate-right.
-# Text starts right after plate-left and is centered vertically.
+# Glyphs: k ink outline, 3 lit wood (top, left), 2 wood, 1 shaded wood
+# (bottom, right, inside), n and o nail heads (ink) on the top and bottom
+# rails, s cream label.
+#
+# The nameplate (used when the label doesn't fit the strip) is a board
+# nailed under or beside the crate, drawn in font pixels: plate-left, then
+# plate-mid once per text column, then plate-right. Text starts right after
+# plate-left and is centered vertically.
 
 [palette]
 "." = "clear"
@@ -12,47 +18,52 @@
 "1" = "accent-shadow"
 "2" = "accent"
 "3" = "accent-highlight"
+"n" = "ink"
+"o" = "ink"
 "s" = "cream"
 
+# The far wall seen over the front: a lit top edge, then its shaded inside
+# face, split into two planks.
 [layers.back]
 at = [0, 18]
 grid = """
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-k111111111111111111111111111111k
+k31111111111111k111111111111111k
 """
 
+# Corner posts, a top rail with a seam and nails, the label, a bottom rail.
 [layers.front]
 at = [0, 20]
 grid = """
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-k333333333333333333333333333333k
+k3n33332233333323333333223333n2k
+k3ssssssssssssssssssssssssssss1k
+k3ssssssssssssssssssssssssssss1k
 k2ssssssssssssssssssssssssssss1k
 k2ssssssssssssssssssssssssssss1k
 k2ssssssssssssssssssssssssssss1k
 k2ssssssssssssssssssssssssssss1k
 k2ssssssssssssssssssssssssssss1k
 k2ssssssssssssssssssssssssssss1k
-k2ssssssssssssssssssssssssssss1k
-k2ssssssssssssssssssssssssssss1k
-k111111111111111111111111111111k
+k2o11111111221112112211111111o1k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 """
 
 [layers.plate-left]
 grid = """
-kkk
-k33
-k2s
-k2s
-k2s
-k2s
-k2s
-k2s
-k2s
-k2s
-k2s
-k11
-kkk
+kkkk
+k3n3
+k3ss
+k3ss
+k2ss
+k2ss
+k2ss
+k2ss
+k2ss
+k2ss
+k2ss
+k2o1
+kkkk
 """
 
 [layers.plate-mid]
@@ -74,17 +85,17 @@ k
 
 [layers.plate-right]
 grid = """
-kkk
-33k
-s1k
-s1k
-s1k
-s1k
-s1k
-s1k
-s1k
-s1k
-s1k
-11k
-kkk
+kkkk
+3n3k
+ss1k
+ss1k
+ss1k
+ss1k
+ss1k
+ss1k
+ss1k
+ss1k
+ss1k
+1o1k
+kkkk
 """

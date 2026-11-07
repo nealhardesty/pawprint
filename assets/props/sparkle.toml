@@ -1,0 +1,18 @@
+# A four-point twinkle. 7x7; drawn with `prop:sparkle@x,y`
+# (x, y is where the top-left lands).
+name = "sparkle"
+grid = """
+...k...
+..kyk..
+.kkykk.
+kyywyyk
+.kkykk.
+..kyk..
+...k...
+"""
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"w" = "white"
+"y" = "yellow-1"

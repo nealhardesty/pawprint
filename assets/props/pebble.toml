@@ -1,0 +1,17 @@
+# A smooth grey pebble. 6x5; drawn with `prop:pebble@x,y`
+# (x, y is where the top-left lands).
+name = "pebble"
+grid = """
+.kkkk.
+kklgkk
+klggGk
+kgGGGk
+kkkkkk
+"""
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "grey-1"
+"g" = "grey-2"
+"G" = "grey-3"

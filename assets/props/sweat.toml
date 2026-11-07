@@ -1,0 +1,19 @@
+# A worried sweat drop. 5x7; drawn with `prop:sweat@x,y`
+# (x, y is where the top-left lands).
+name = "sweat"
+grid = """
+.kkk.
+.kbk.
+kkbkk
+kbwbk
+kbbBk
+kkBkk
+.kkk.
+"""
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"w" = "white"
+"b" = "blue-1"
+"B" = "blue-2"

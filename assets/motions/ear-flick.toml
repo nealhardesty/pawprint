@@ -1,0 +1,9 @@
+# Motion template (SPEC §12.4). Use it with `use = "ear-flick"` in [[actions]].
+name = "ear-flick"
+summary = "One ear twitches"
+needs = ["ears.flick"]
+frames = [
+  { ops = ["ears=flick"], ms = 120 },
+  { ops = [], ms = 140 },
+  { ops = ["ears=flick"], ms = 120 },
+]
