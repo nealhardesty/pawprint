@@ -134,6 +134,26 @@ impl X {
         None
     }
 
+    fn badge_mapped_within(&self, limit: Duration) -> Option<Window> {
+        let start = Instant::now();
+        while start.elapsed() < limit {
+            if let Some(w) = self.badge()
+                && self
+                    .conn
+                    .get_window_attributes(w)
+                    .ok()?
+                    .reply()
+                    .ok()?
+                    .map_state
+                    == MapState::VIEWABLE
+            {
+                return Some(w);
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        None
+    }
+
     fn mapped_badge(&self) -> Window {
         wait_for("a mapped badge window", || {
             let w = self.badge()?;
@@ -403,22 +423,32 @@ fn window_manager_keeps_the_dock_above_and_in_place() {
         )
         .unwrap();
     x.conn.clear_area(false, x.root, 0, 0, 0, 0).unwrap();
-    let _wm = env.spawn("openbox", &["--sm-disable"]);
+    let mut wm = env.spawn("openbox", &["--sm-disable"]);
+    // Openbox announces itself (_NET_SUPPORTING_WM_CHECK) before it has
+    // finished starting; _NET_WORKAREA comes once it manages the screen.
     wait_for("openbox", || {
-        let check = x.atom("_NET_SUPPORTING_WM_CHECK");
-        let r = x
-            .conn
-            .get_property(false, x.root, check, AtomEnum::WINDOW, 0, 1)
-            .ok()?
-            .reply()
-            .ok()?;
-        (r.value_len > 0).then_some(())
+        let set = |name: &str| {
+            let r = x
+                .conn
+                .get_property(false, x.root, x.atom(name), AtomEnum::ANY, 0, 1)
+                .ok()?
+                .reply()
+                .ok()?;
+            (r.value_len > 0).then_some(())
+        };
+        set("_NET_SUPPORTING_WM_CHECK")?;
+        set("_NET_WORKAREA")
     });
     // Low enough to sit on the client area of the window below, under its
     // title bar.
     env.write_config("offset = [16, 100]");
     let _badge = env.run_badge();
-    let win = x.mapped_badge();
+    let win = x.badge_mapped_within(std::time::Duration::from_secs(10)).unwrap_or_else(|| {
+        let w = x.badge();
+        let state = w.and_then(|w| x.conn.get_window_attributes(w).ok()?.reply().ok()).map(|a| a.map_state);
+        let parent = w.and_then(|w| x.conn.query_tree(w).ok()?.reply().ok()).map(|t| t.parent);
+        panic!("badge {w:?} not viewable: state {state:?}, parent {parent:?}, openbox exited: {:?}", wm.exited())
+    });
     let attrs = x.conn.get_window_attributes(win).unwrap().reply().unwrap();
     assert!(
         !attrs.override_redirect,
