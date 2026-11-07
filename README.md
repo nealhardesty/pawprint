@@ -40,7 +40,8 @@ on Wayland, and GNOME on Wayland (Ubuntu 24.04 LTS and newer).
 > `config init`, `forget`, and `preview`, plus `pawprint`, `run`, `move`,
 > `reset-position`, `reload`, `quit`, `status`, `doctor`, and the
 > backend-free commands (`explain`, `list`, `render`, `paths`,
-> `mascot export`, `mascot check`, `--version`). **Windows** and **macOS** run the badge too (no tray icon,
+> `mascot export`, `mascot check`, `--version`). **Windows** runs the badge
+> with its tray icon, `autostart`, and `preview` too. **macOS** runs the badge (no tray icon,
 > autostart, or preview window yet). There are no
 > release builds or installers yet, so build from source
 > (see [Development](#development)). All 100 mascots are drawn, and your
@@ -251,7 +252,7 @@ restart; `pawprint unset <key>` takes one back out. Because they go into
 this host's own section, they win over patterns and top-level settings, and
 copying the file to another machine doesn't carry them over.
 
-The tray menu (Linux today; Windows and macOS soon): **Move**,
+The tray menu (Linux and Windows today; macOS soon): **Move**,
 **Size ▸ 32/64/128**, **Animation ▸ Idle/Static**, **Reset position**,
 **Reload config**, **Quit**. Set `tray = false` to hide it.
 
@@ -442,14 +443,14 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make help` | List targets (what `make` on its own runs) |
 | `make build` | Debug build |
 | `make run` | Build and run the badge in the foreground (`ARGS="--verbose"` passes flags) |
-| `make preview MASCOT=owl` | Open a window with one mascot cycling through all its animations (`SIZE=64` for another size; Linux today) |
-| `make power-check` | Linux: build the release badge and measure startup time, CPU and wakeups in idle and static mode, memory, and binary size under Xvfb against the power budget (`POWER_SECONDS=120` per mode) |
+| `make preview MASCOT=owl` | Open a window with one mascot cycling through all its animations (`SIZE=64` for another size; Linux and Windows today) |
+| `make power-check` | Build the release badge and measure startup time, CPU and wakeups in idle and static mode, memory, and binary size against the power budget (`POWER_SECONDS=120` per mode). Linux: under Xvfb. Windows: on your desktop, with your config file swapped out and restored; a CI job runs it on `windows-latest` |
 | `make test` | Unit tests, golden image tests, and mascot catalog validation |
 | `make test-x11` | Linux: run the badge under Xvfb (bare, with the `xcompmgr` compositor, with the `openbox` window manager) and check its pixels, click-through, move mode and its outline, single instance, the tray menu over a private D-Bus, `set`/`unset` and reloads, and the preview window |
 | `make test-wayland` | Linux: run the badge under headless Sway and check placement, click-through, move mode, panels, output changes, and the preview window from screenshots |
 | `make test-linux-display` | Both display-server suites (a separate CI job runs this) |
 | `make test-macos-display` | macOS: run the badge in your logged-in desktop and check its window level, placement, IPC, and (with Screen Recording and Accessibility granted to the terminal) pixels, drag, and keys; a CI job runs it on `macos-latest` |
-| `make test-windows-display` | Windows: run `pawprintw.exe` on this desktop and check its window styles, top-right placement, topmost, click-through, a real move-mode drag, work-area changes, the named pipe, and its pixels on screen (a separate CI job runs this on `windows-latest`) |
+| `make test-windows-display` | Windows: run `pawprintw.exe` on this desktop and check its window styles, top-right placement, topmost, click-through, a real move-mode drag, work-area changes, the named pipe, its pixels on screen, the tray icon and a real click through its menu, `autostart` writing the `Run` value, and the preview window (a separate CI job runs this on `windows-latest`). It restores your state file, config file, and autostart value afterwards |
 | `make check-assets` | Validate the mascot catalog only |
 | `make lint` | Format check and clippy (warnings are errors) |
 | `make fmt` | Format the code |

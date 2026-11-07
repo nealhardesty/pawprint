@@ -1,6 +1,7 @@
-//! `make power-check` (SPEC §7.2): run the release badge in a private Xvfb
-//! session and measure it against the power budget. Linux only: it reads
-//! `/proc`.
+//! `make power-check` (SPEC §7.2): run the release badge and measure it
+//! against the power budget. Linux: in a private Xvfb session, reading
+//! `/proc`. Windows: on the current desktop, reading the process through
+//! PowerShell (`Get-Process` and the raw thread performance counters).
 //!
 //! - startup to visible: process start until `pawprint status` reports a
 //!   placed badge (the loop answers only after the first frame is flushed);
@@ -8,13 +9,22 @@
 //!   `/proc/<pid>/stat`;
 //! - wakeups: voluntary context switches of every thread, from
 //!   `/proc/<pid>/task/*/status` (each one is a thread going to sleep after
-//!   having woken up);
+//!   having woken up), counted per thread so a thread that exits during the
+//!   window doesn't make the total go backwards;
 //! - resident memory: `VmHWM` (peak) and `VmRSS`;
 //! - binary size of the release build.
 //!
 //! A private `dbus-daemon` (if installed) gives the badge a session bus,
 //! so the tray's thread is part of the measurement, as on a desktop.
+//!
+//! On Windows the same numbers come from `Get-Process` (`TotalProcessorTime`,
+//! `PeakWorkingSet64`, `WorkingSet64`, `Threads`) and each thread's raw
+//! `ContextSwitchesPersec` counter (`Win32_PerfRawData_PerfProc_Thread`, a
+//! running count of every switch to the thread). Win32 known folders can't be
+//! redirected, so it uses this user's config file and restores it, and the
+//! state file, afterwards.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
@@ -35,11 +45,79 @@ impl Drop for Kill {
 }
 
 struct Sample {
-    cpu_ticks: u64,
-    switches: u64,
+    cpu_seconds: f64,
+    /// Context switches so far, per thread id. A thread that exits takes
+    /// its count with it, so wakeups are counted per thread (below).
+    switches: BTreeMap<u64, u64>,
+    peak_mb: f64,
+    rss_mb: f64,
+    threads: usize,
 }
 
 fn sample(pid: u32) -> Result<Sample, String> {
+    if cfg!(windows) {
+        sample_windows(pid)
+    } else {
+        sample_linux(pid)
+    }
+}
+
+/// Context switches made between two samples by the threads alive at the
+/// second (a thread that started in between counts from zero).
+fn wakeups(before: &Sample, after: &Sample) -> u64 {
+    after
+        .switches
+        .iter()
+        .map(|(tid, n)| n.saturating_sub(before.switches.get(tid).copied().unwrap_or(0)))
+        .sum()
+}
+
+/// One PowerShell call: CPU time (100 ns ticks), peak and current working
+/// set, thread count, then `<thread id> <context switches>` per thread.
+fn sample_windows(pid: u32) -> Result<Sample, String> {
+    let script = format!(
+        "$p = Get-Process -Id {pid} -ErrorAction Stop; \
+         \"$($p.TotalProcessorTime.Ticks) $($p.PeakWorkingSet64) $($p.WorkingSet64) $($p.Threads.Count)\"; \
+         Get-CimInstance Win32_PerfRawData_PerfProc_Thread -Filter 'IDProcess={pid}' | \
+         ForEach-Object {{ \"$($_.IDThread) $($_.ContextSwitchesPersec)\" }}"
+    );
+    let out = Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .output()
+        .map_err(|e| format!("cannot run powershell: {e}"))?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let mut lines = text.lines();
+    let f: Vec<f64> = lines
+        .next()
+        .unwrap_or("")
+        .split_whitespace()
+        .filter_map(|v| v.parse().ok())
+        .collect();
+    let switches: BTreeMap<u64, u64> = lines
+        .filter_map(|l| {
+            let (tid, n) = l.trim().split_once(' ')?;
+            Some((tid.parse().ok()?, n.parse().ok()?))
+        })
+        .collect();
+    let [ticks, peak, rss, threads] = f[..] else {
+        return Err(format!(
+            "the badge is gone, or its counters are unreadable: {text}{}",
+            String::from_utf8_lossy(&out.stderr)
+        ));
+    };
+    if switches.is_empty() {
+        return Err(format!("no thread counters for the badge: {text}"));
+    }
+    Ok(Sample {
+        cpu_seconds: ticks / 1e7,
+        switches,
+        peak_mb: peak / 1048576.0,
+        rss_mb: rss / 1048576.0,
+        threads: threads as usize,
+    })
+}
+
+fn sample_linux(pid: u32) -> Result<Sample, String> {
     let stat = std::fs::read_to_string(format!("/proc/{pid}/stat"))
         .map_err(|e| format!("the badge is gone: {e}"))?;
     // Fields after the parenthesized command name; utime and stime are
@@ -51,16 +129,20 @@ fn sample(pid: u32) -> Result<Sample, String> {
         .map(|v| v.parse().unwrap_or(0))
         .collect();
     let cpu_ticks = f[10] + f[11];
-    let mut switches = 0;
+    let mut switches = BTreeMap::new();
     for task in std::fs::read_dir(format!("/proc/{pid}/task")).map_err(|e| e.to_string())? {
-        let status =
-            std::fs::read_to_string(task.map_err(|e| e.to_string())?.path().join("status"))
-                .unwrap_or_default();
-        switches += field(&status, "voluntary_ctxt_switches:").unwrap_or(0);
+        let task = task.map_err(|e| e.to_string())?;
+        let status = std::fs::read_to_string(task.path().join("status")).unwrap_or_default();
+        let tid = task.file_name().to_string_lossy().parse().unwrap_or(0);
+        switches.insert(tid, field(&status, "voluntary_ctxt_switches:").unwrap_or(0));
     }
+    let (peak, rss) = memory_kb(pid);
     Ok(Sample {
-        cpu_ticks,
+        cpu_seconds: cpu_ticks as f64 / ticks_per_second(),
         switches,
+        peak_mb: peak as f64 / 1024.0,
+        rss_mb: rss as f64 / 1024.0,
+        threads: threads(pid),
     })
 }
 
@@ -98,10 +180,65 @@ struct Session {
     display: String,
     bus: Option<String>,
     _servers: Vec<Kill>,
+    config: PathBuf,
+    /// Windows: this user's files as they were, put back on drop.
+    restore: Vec<(PathBuf, Option<Vec<u8>>)>,
 }
 
 impl Session {
-    fn start() -> Result<Session, String> {
+    fn start(cli: &Path) -> Result<Session, String> {
+        if cfg!(windows) {
+            Session::desktop(cli)
+        } else {
+            Session::xvfb()
+        }
+    }
+
+    /// Windows: the current desktop and this user's own files.
+    fn desktop(cli: &Path) -> Result<Session, String> {
+        let mut session = Session {
+            dir: PathBuf::new(),
+            display: String::new(),
+            bus: None,
+            _servers: Vec::new(),
+            config: PathBuf::new(),
+            restore: Vec::new(),
+        };
+        if session
+            .command(cli)
+            .arg("status")
+            .status()
+            .map_err(|e| e.to_string())?
+            .code()
+            != Some(4)
+        {
+            return Err(
+                "a badge is already running in this session; `pawprint quit` it first".into(),
+            );
+        }
+        let out = session
+            .command(cli)
+            .arg("paths")
+            .stdout(Stdio::piped())
+            .output()
+            .map_err(|e| e.to_string())?;
+        let paths = String::from_utf8_lossy(&out.stdout);
+        let path = |name: &str| {
+            paths
+                .lines()
+                .find(|l| l.split_whitespace().next() == Some(name))
+                .map(|l| PathBuf::from(l[name.len()..].trim()))
+                .ok_or(format!("`pawprint paths` has no {name} line"))
+        };
+        session.config = path("config")?;
+        for p in [path("config")?, path("state")?] {
+            let saved = std::fs::read(&p).ok();
+            session.restore.push((p, saved));
+        }
+        Ok(session)
+    }
+
+    fn xvfb() -> Result<Session, String> {
         let dir = std::env::temp_dir().join(format!("pawprint-power-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         for sub in ["home", "run"] {
@@ -153,15 +290,24 @@ impl Session {
             });
         std::thread::sleep(Duration::from_millis(500));
         Ok(Session {
+            config: dir.join("home/.config/pawprint/config.toml"),
             dir,
             display: format!("127.0.0.1:{n}"),
             bus,
             _servers: servers,
+            restore: Vec::new(),
         })
     }
 
     fn command(&self, exe: &Path) -> Command {
         let mut cmd = Command::new(exe);
+        if cfg!(windows) {
+            cmd.env("PAWPRINT_HOSTNAME", "owl")
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null());
+            return cmd;
+        }
         cmd.env_clear()
             .env("PATH", std::env::var("PATH").unwrap_or_default())
             .env("HOME", self.dir.join("home"))
@@ -188,7 +334,15 @@ impl Session {
 
 impl Drop for Session {
     fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.dir);
+        for (path, saved) in &self.restore {
+            let _ = match saved {
+                Some(bytes) => std::fs::write(path, bytes),
+                None => std::fs::remove_file(path),
+            };
+        }
+        if !self.dir.as_os_str().is_empty() {
+            let _ = std::fs::remove_dir_all(&self.dir);
+        }
     }
 }
 
@@ -202,19 +356,26 @@ struct Run {
     threads: usize,
 }
 
-fn measure(session: &Session, exe: &Path, config: &str, seconds: u64) -> Result<Run, String> {
-    let config_dir = session.dir.join("home/.config/pawprint");
-    std::fs::create_dir_all(&config_dir).map_err(|e| e.to_string())?;
-    std::fs::write(config_dir.join("config.toml"), config).map_err(|e| e.to_string())?;
+/// The binaries: the badge (`pawprintw.exe` on Windows) and the CLI.
+struct Exes {
+    badge: PathBuf,
+    cli: PathBuf,
+}
+
+fn measure(session: &Session, exes: &Exes, config: &str, seconds: u64) -> Result<Run, String> {
+    if let Some(dir) = session.config.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(&session.config, config).map_err(|e| e.to_string())?;
     let started = Instant::now();
     let badge = Kill(
         session
-            .command(exe)
+            .command(&exes.badge)
             .arg("run")
             .spawn()
-            .map_err(|e| format!("cannot start {}: {e}", exe.display()))?,
+            .map_err(|e| format!("cannot start {}: {e}", exes.badge.display()))?,
     );
-    while !session.placed(exe) {
+    while !session.placed(&exes.cli) {
         if started.elapsed() > Duration::from_secs(10) {
             return Err("the badge did not appear within 10 s".into());
         }
@@ -229,22 +390,20 @@ fn measure(session: &Session, exe: &Path, config: &str, seconds: u64) -> Result<
     std::thread::sleep(Duration::from_secs(seconds));
     let after = sample(pid)?;
     let elapsed = t0.elapsed().as_secs_f64();
-    let (peak, rss) = memory_kb(pid);
-    let cpu = (after.cpu_ticks - before.cpu_ticks) as f64 / ticks_per_second();
     Ok(Run {
         startup,
-        cpu_percent: cpu / elapsed * 100.0,
-        switches: after.switches - before.switches,
+        cpu_percent: (after.cpu_seconds - before.cpu_seconds) / elapsed * 100.0,
+        switches: wakeups(&before, &after),
         seconds,
-        peak_mb: peak as f64 / 1024.0,
-        rss_mb: rss as f64 / 1024.0,
-        threads: threads(pid),
+        peak_mb: after.peak_mb,
+        rss_mb: after.rss_mb,
+        threads: after.threads,
     })
 }
 
 pub fn power_check(root: &Path, seconds: Option<&str>) -> Result<(), String> {
-    if !cfg!(target_os = "linux") {
-        return Err("make power-check: Linux only for now (it reads /proc)".into());
+    if !cfg!(any(target_os = "linux", windows)) {
+        return Err("make power-check: Linux and Windows only for now".into());
     }
     let seconds: u64 = seconds
         .map(|s| {
@@ -262,20 +421,33 @@ pub fn power_check(root: &Path, seconds: Option<&str>) -> Result<(), String> {
     if !status.success() {
         return Err("cargo build --release failed".into());
     }
-    let exe = root.join("target/release/pawprint");
-    let binary_mb = std::fs::metadata(&exe).map_err(|e| e.to_string())?.len() as f64 / 1e6;
-
-    let session = Session::start()?;
-    println!(
-        "measuring {seconds} s in idle mode, then {seconds} s in static mode (Xvfb{})...",
-        if session.bus.is_some() {
-            " + session bus"
-        } else {
-            ""
+    let release = root.join("target/release");
+    let exes = if cfg!(windows) {
+        Exes {
+            badge: release.join("pawprintw.exe"),
+            cli: release.join("pawprint.exe"),
         }
-    );
-    let idle = measure(&session, &exe, "", seconds)?;
-    let stat = measure(&session, &exe, "animation = \"static\"\n", seconds)?;
+    } else {
+        Exes {
+            badge: release.join("pawprint"),
+            cli: release.join("pawprint"),
+        }
+    };
+    let size_mb = |p: &Path| std::fs::metadata(p).map(|m| m.len() as f64 / 1e6);
+    let binary_mb = size_mb(&exes.badge).map_err(|e| e.to_string())?;
+    let cli_mb = size_mb(&exes.cli).map_err(|e| e.to_string())?;
+
+    let session = Session::start(&exes.cli)?;
+    let place = if cfg!(windows) {
+        "this desktop"
+    } else if session.bus.is_some() {
+        "Xvfb + session bus"
+    } else {
+        "Xvfb"
+    };
+    println!("measuring {seconds} s in idle mode, then {seconds} s in static mode ({place})...");
+    let idle = measure(&session, &exes, "", seconds)?;
+    let stat = measure(&session, &exes, "animation = \"static\"\n", seconds)?;
 
     let mut failures = Vec::new();
     let mut row = |metric: &str, value: String, budget: &str, ok: bool| {
@@ -328,11 +500,19 @@ pub fn power_check(root: &Path, seconds: Option<&str>) -> Result<(), String> {
         &format!("< {RSS_BUDGET_MB} MB"),
         peak < RSS_BUDGET_MB,
     );
+    let (binary, value) = if cfg!(windows) {
+        (
+            "binary size (pawprintw.exe)",
+            format!("{binary_mb:.1} MB (pawprint.exe {cli_mb:.1} MB)"),
+        )
+    } else {
+        ("binary size (release, glibc)", format!("{binary_mb:.1} MB"))
+    };
     row(
-        "binary size (release, glibc)",
-        format!("{binary_mb:.1} MB"),
+        binary,
+        value,
         &format!("< {BINARY_BUDGET_MB} MB"),
-        binary_mb < BINARY_BUDGET_MB,
+        binary_mb.max(cli_mb) < BINARY_BUDGET_MB,
     );
     println!("  {:<30}{}", "threads", idle.threads);
     if failures.is_empty() {

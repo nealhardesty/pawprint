@@ -2,9 +2,9 @@
 //! implementation per platform. Every entry runs `<badge exe> run`, the same
 //! command the detached start uses (`instance::badge_exe`).
 //!
-//! Linux: an XDG autostart entry. Windows (HKCU `Run`) and macOS
-//! (LaunchAgent) are hooks for their backends to fill in (SPEC §11.1.5,
-//! §11.2).
+//! Linux: an XDG autostart entry. Windows: the HKCU `Run` value (SPEC
+//! §11.1.5). macOS (LaunchAgent) is a hook for its backend to fill in
+//! (SPEC §11.2).
 
 use std::path::PathBuf;
 
@@ -174,12 +174,104 @@ mod xdg {
     }
 }
 
-/// Hooks for the Windows and macOS backends. Windows: the
-/// `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` value `pawprint` =
-/// `"<dir>\pawprintw.exe" run` (`command_line` already picks pawprintw.exe).
-/// macOS: `~/Library/LaunchAgents/io.github.nealhardesty.pawprint.plist`
+#[cfg(windows)]
+use run_key as platform;
+
+/// Windows: the `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` value
+/// `pawprint` = `"<dir>\pawprintw.exe" run`. HKCU Run entries run at every
+/// interactive logon, RDP logons included (F10).
+#[cfg(windows)]
+mod run_key {
+    use std::path::PathBuf;
+    use std::ptr::null_mut;
+
+    use windows_sys::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_SUCCESS, WIN32_ERROR};
+    use windows_sys::Win32::System::Registry::{
+        HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ, RegDeleteKeyValueW, RegGetValueW, RegSetKeyValueW,
+    };
+
+    use super::State;
+
+    const KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
+    const VALUE: &str = "pawprint";
+
+    fn wide(s: &str) -> Vec<u16> {
+        s.encode_utf16().chain([0]).collect()
+    }
+
+    fn entry() -> PathBuf {
+        PathBuf::from(format!(r"HKCU\{KEY}\{VALUE}"))
+    }
+
+    fn fail(what: &str, code: WIN32_ERROR) -> String {
+        let e = std::io::Error::from_raw_os_error(code as i32);
+        format!("cannot {what} {}: {e}", entry().display())
+    }
+
+    pub fn status() -> Result<State, String> {
+        let (key, value) = (wide(KEY), wide(VALUE));
+        let mut buf = vec![0u16; 1024];
+        let mut bytes = (buf.len() * 2) as u32;
+        // SAFETY: `buf` holds `bytes` bytes; RRF_RT_REG_SZ NUL-terminates.
+        let code = unsafe {
+            RegGetValueW(
+                HKEY_CURRENT_USER,
+                key.as_ptr(),
+                value.as_ptr(),
+                RRF_RT_REG_SZ,
+                null_mut(),
+                buf.as_mut_ptr().cast(),
+                &mut bytes,
+            )
+        };
+        match code {
+            ERROR_SUCCESS => {
+                let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
+                Ok(State::On {
+                    entry: entry(),
+                    command: String::from_utf16_lossy(&buf[..len]),
+                })
+            }
+            ERROR_FILE_NOT_FOUND => Ok(State::Off),
+            code => Err(fail("read", code)),
+        }
+    }
+
+    pub fn enable() -> Result<State, String> {
+        let (exe, arg) = super::command_line()?;
+        let command = wide(&format!("\"{}\" {arg}", exe.display()));
+        let (key, value) = (wide(KEY), wide(VALUE));
+        // SAFETY: `command` is NUL-terminated and its size is given in bytes.
+        let code = unsafe {
+            RegSetKeyValueW(
+                HKEY_CURRENT_USER,
+                key.as_ptr(),
+                value.as_ptr(),
+                REG_SZ,
+                command.as_ptr().cast(),
+                (command.len() * 2) as u32,
+            )
+        };
+        if code != ERROR_SUCCESS {
+            return Err(fail("write", code));
+        }
+        status()
+    }
+
+    pub fn disable() -> Result<(), String> {
+        let (key, value) = (wide(KEY), wide(VALUE));
+        // SAFETY: NUL-terminated strings.
+        match unsafe { RegDeleteKeyValueW(HKEY_CURRENT_USER, key.as_ptr(), value.as_ptr()) } {
+            ERROR_SUCCESS | ERROR_FILE_NOT_FOUND => Ok(()),
+            code => Err(fail("remove", code)),
+        }
+    }
+}
+
+/// Hook for the macOS backend:
+/// `~/Library/LaunchAgents/io.github.nealhardesty.pawprint.plist`
 /// (SPEC §11.2 lists its keys).
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", windows)))]
 mod platform {
     use super::State;
 

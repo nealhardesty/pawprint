@@ -31,7 +31,7 @@ run: ## Build and run the badge in the foreground; ARGS="..." passes arguments
 preview: ## Open a window cycling through a mascot's actions: make preview MASCOT=owl SIZE=128
 	$(CARGO) run --package pawprint -- preview $(MASCOT) --size $(SIZE)
 
-power-check: ## Linux: measure the release badge under Xvfb against the power budget (SPEC 7.2); POWER_SECONDS=120 per mode
+power-check: ## Measure the release badge against the power budget (SPEC 7.2): Linux under Xvfb, Windows on this desktop; POWER_SECONDS=120 per mode
 	$(PAWDEV) power-check $(POWER_SECONDS)
 
 test: ## Unit tests, golden render tests, and asset validation
