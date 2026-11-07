@@ -81,6 +81,11 @@ fn drive_in_pool(mut shell: Shell, listener: Option<ipc::Listener>) -> CmdResult
             "the badge must run on the main thread".to_string(),
         )
     })?;
+    // The objc runtime names threads by pthread_self in its warnings; the
+    // GUI-session test checks this one's (OBJC_DEBUG_MISSING_POOLS).
+    // SAFETY: pthread_self has no preconditions.
+    log::debug!("macos: main thread {:#x}", unsafe { libc::pthread_self() }
+        as usize);
     let configured = shell.configured_backend();
     if !matches!(configured, Backend::Auto | Backend::Macos) {
         log::warn!("backend = \"{configured}\" does not exist on macOS; using macos");

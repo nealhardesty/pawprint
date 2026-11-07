@@ -1302,7 +1302,9 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   autoreleased objects, so setup runs inside an `autoreleasepool` and every
   turn of the loop inside one of its own. The GUI-session test runs the
   badge with `OBJC_DEBUG_MISSING_POOLS=YES` and fails on any "MISSING
-  POOLS" line in its log.
+  POOLS" line for the main thread (whose `pthread_self` the badge logs).
+  AppKit's own helper threads leak a few objects at startup and when the
+  status item is created (FM10).
 - Event loop: `nextEventMatchingMask(any, untilDate: deadline,
   NSDefaultRunLoopMode)` waits for the next event or `Shell::timeout()`.
   The IPC thread, menu choices, and the screen-change observer wake it by posting an
@@ -2705,6 +2707,7 @@ display at scale 1, auto-logged-in GUI session) by `make test-macos-display`.
 | FM7 | In static mode the badge's main thread sleeps in `nextEventMatchingMask` with no event for as long as measured, but the process still shows a few interrupt wakeups a second and about 0.03% CPU from AppKit's and the system's own threads, with or without the menu-bar item. | The static-mode budget holds for the badge's loop; the process-wide numbers are reported, not failed (7.2) | **Confirmed** on the runner |
 | FM8 | `NSEvent.subtype` raises an Objective-C exception for event types without a subtype (mouse and key events), which aborts a Rust process. | Never read `subtype` on arbitrary events | **Confirmed** (a diagnostic log line did it) |
 | FM9 | A posted click in a titled window's title bar that misses the traffic lights drags the window. The close button's inset differs between releases (macOS 26 has a 32-point title bar). | The test presses the preview's close button through Accessibility (`AXCloseButton` via System Events), not by coordinates | **Confirmed** on the runner |
+| FM10 | An `NSApplication` run without `NSApplicationMain` has no autorelease pool on its main thread: with `OBJC_DEBUG_MISSING_POOLS=YES` every turn of the loop logged leaked events, dates, images, and menu objects (thousands per minute of the GUI-session test). AppKit's own secondary threads also leak a few hundred small objects (sets, arrays, strings, `NSXPCInterface`) at launch and when a status item is created, outside any code the badge runs. | Pools around setup and each loop turn (11.2); the test checks the main thread only | **Confirmed** on the runner (macOS 26) |
 
 **Windows facts (M1 Windows backend).** Learned on GitHub's `windows-latest` runner
 (Windows Server, an interactive desktop at 1024 × 768, scale 1, the taskbar

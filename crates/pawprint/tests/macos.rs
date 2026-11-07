@@ -486,11 +486,19 @@ fn badge_in_a_gui_session() {
         std::thread::sleep(Duration::from_millis(50));
     };
     assert!(code.success(), "exit {code}\n{}", env.log());
+    // The badge's main thread drains every object it autoreleases. AppKit's
+    // own helper threads leak a few at startup and when the menu-bar item
+    // is created; those aren't the badge's to fix.
     let log = env.log();
-    assert!(
-        !log.contains("MISSING POOLS"),
-        "objects autoreleased without a pool:\n{log}"
-    );
+    let main = log
+        .lines()
+        .find_map(|l| l.split("macos: main thread ").nth(1))
+        .expect("the badge logs its main thread with --verbose");
+    let leaks = log
+        .lines()
+        .filter(|l| l.contains(&format!("MISSING POOLS: ({main})")))
+        .count();
+    assert_eq!(leaks, 0, "objects autoreleased without a pool:\n{log}");
     assert_eq!(env.pawprint(&["status"]).status.code(), Some(4));
     let sockets = std::fs::read_dir(env.runtime().join("pawprint"))
         .map(|d| d.count())
