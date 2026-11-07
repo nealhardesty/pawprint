@@ -41,6 +41,15 @@ impl Drop for Env {
     fn drop(&mut self) {
         if std::thread::panicking() {
             eprintln!("test files kept in {}", self.dir.display());
+            // CI only shows the output, so print the tail of every log.
+            for entry in std::fs::read_dir(&self.dir).into_iter().flatten().flatten() {
+                let path = entry.path();
+                if path.extension().is_some_and(|e| e == "log") {
+                    let text = std::fs::read_to_string(&path).unwrap_or_default();
+                    let tail = &text[text.len().saturating_sub(3000)..];
+                    eprintln!("--- {} ---\n{tail}", path.display());
+                }
+            }
         } else {
             let _ = std::fs::remove_dir_all(&self.dir);
         }
