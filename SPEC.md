@@ -235,8 +235,8 @@ All art is authored at **1× in art pixels** and scaled by an integer factor.
 | Badge canvas (without nameplate) | 32 × 32 |
 | Mascot frame | 32 × 32, drawn at (0, 0) |
 | Crate back rim | rows 18–19 |
-| Crate front | rows 20–31 (12 rows), full width; the mascot is hidden behind it |
-| Label strip on crate front | rows 22–29, columns 2–29 (28 × 8 usable) |
+| Crate front | rows 20–31 (12 rows), full width; the mascot is hidden behind it: outline (20), top rail (21), label strip, outline (31) |
+| Label strip on crate front | rows 22–30, columns 2–29 (28 × 9 usable) |
 | Outline | 1 art-pixel dark outline around the crate for contrast on any wallpaper |
 
 Mascot art should keep its face and silhouette in rows 0–19 so it "peeks out"
@@ -287,8 +287,13 @@ and remote-client scaling (roadmap M2) and adjusted here.
    badge grows inward from its anchored corner.
 
 The label fits the strip when its width (`6n − 1` font pixels for `n`
-characters) and height (7) times the font scale fit the strip's 28 × 8 art
-pixels times the art scale. The nameplate is drawn in **font pixels**, so it
+characters) and height (7) times the font scale fit the strip's 28 × 9 art
+pixels times the art scale. On the strip the text is centered both ways
+(rounding down). The strip is 9 rows, two more than a glyph, so the text
+clears the top rail and the bottom outline by at least one art pixel's worth
+at every preset: 1 px at 32 (small), 2 px at 64 (medium), 11 px at 128
+(medium). The nameplate's cream face is also 9 font pixels tall, so text sits
+the same way there. The nameplate is drawn in **font pixels**, so it
 scales with `label_size`, not `size`: `plate-left`, then `plate-mid` once per
 text column, then `plate-right` (all from `crate.toml`), with the text right
 after `plate-left` and centered vertically. Under the crate, the plate is
