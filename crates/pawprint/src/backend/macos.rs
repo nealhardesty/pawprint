@@ -445,6 +445,8 @@ impl Surface for Mac {
         // No implicit cross-fade: a new frame replaces the old one at once.
         CATransaction::begin();
         CATransaction::setDisableActions(true);
+        // One image pixel per backing pixel.
+        self.layer.setContentsScale(self.panel.backingScaleFactor());
         // SAFETY: a CGImage is valid layer contents.
         unsafe { self.layer.setContents(Some(image.as_ref())) };
         CATransaction::commit();
