@@ -1,0 +1,168 @@
+# Tiger on big-cat. No mane (it's left out of `rest`), so the head stands
+# clear of the frame, unlike the lion's. Bright orange fur with black
+# stripes on the forehead, temples, and cheeks (drawn into the head), white
+# brows and muzzle, a ringed tail with a black tip, and striped paws. The
+# signature is a long stretch, paws pushed out along the rim, into a huge
+# yawn; the rare one spots its own tail and pounces on it.
+id = "tiger"
+name = "Tiger"
+category = "mammals"
+aliases = []
+accent = "marigold"
+extends = "big-cat"
+
+# Maneless: every slot but the mane.
+rest = ["tail", "body", "head", "ears", "eyes", "nose", "paws"]
+
+[palette]
+"l" = "orange-1"    # fur light
+"f" = "orange-2"    # fur
+"F" = "orange-3"    # fur shadow
+"w" = "white"       # muzzle, brows, chest
+"M" = "grey-1"      # mouth lines
+"d" = "fur-black"   # NEW: stripes
+"e" = "yellow-2"    # iris
+"n" = "pink-2"      # nose
+"p" = "pink-2"      # inner ear, mouth
+
+[layers.tail]
+at = [25, 11]
+grid = """
+.kkk.
+kdddk
+kdddk
+.kfk.
+.kdk.
+.kfk.
+.kdk.
+kfFk.
+kdFk.
+"""
+
+[layers."tail.flick"]
+at = [25, 10]
+grid = """
+..kkk.
+.kdddk
+.kdddk
+.kfk..
+.kdk..
+.kfk..
+.kdk..
+kfFk..
+kdFk..
+kfFk..
+"""
+
+[layers.body]
+at = [4, 14]
+grid = """
+....klffffffffffffFk....
+...klfffffffffffffFFk...
+.kklffffffwwwwffffffFkk.
+kldffffffwwwwwwffffffdFk
+klffffffwwwwwwwwfffffFFk
+kldffffffwwwwwwffffffdFk
+klffffffffwwwwfffffffFFk
+kldfffffffffffffffffffdk
+klffffffffffffffffffffFk
+kldfffffffffffffffffffdk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+"""
+
+[layers.head]
+at = [5, 4]
+grid = """
+.....kkkkkkkkkkkk.....
+...kklllllddlllffkk...
+..kllffdffddffdffFFk..
+.klfffffdfddfdffffFFk.
+.kddffwwffffffwwffddk.
+.kldffffffffffffffdFk.
+.kddffffffffffffffddk.
+.klffffwwwwwwwwffffFk.
+kldffwwwwwwwwwwwwffdFk
+klddwwwwwMMwwwwwwwddFk
+kldfwwwMwwwwMwwwwffdFk
+.kfFfwwwwwwwwwwwwfFFk.
+...kkFFwwwwwwwwFFkk...
+"""
+
+[layers."mouth.yawn"]
+at = [13, 14]
+follows = "head"
+grid = """
+kkkkkk
+kwkkwk
+kppppk
+kppppk
+.kkkk.
+"""
+
+[layers.paws]
+at = [7, 17]
+grid = """
+.FFFFF......FFFFF.
+FlldlfF....FldllfF
+klFlFlk....klFlFlk
+"""
+
+# Stretched out along the rim, claws forward.
+[layers."paws.stretch"]
+at = [2, 17]
+grid = """
+.FFFFF................FFFFF.
+FlldlfF..............FldllfF
+kwFwFwk..............kwFwFwk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "tail-flick"
+weight = 4
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: pushes its paws out along the rim, stretches up, and yawns
+# enormously.
+[[actions]]
+name = "stretch-yawn"
+weight = 4
+frames = [
+  { ops = ["paws=stretch"], ms = 250 },
+  { ops = ["paws=stretch", "head+0,-1", "eyes=closed"], ms = 300 },
+  { ops = ["paws=stretch", "head+0,-2", "eyes=closed", "+mouth.open"], ms = 250 },
+  { ops = ["paws=stretch", "head+0,-2", "eyes=closed", "mouth=yawn"], ms = 1100 },
+  { ops = ["paws=stretch", "head+0,-1", "eyes=closed"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 400 },
+]
+
+# Rare: notices its own tail twitching, crouches, and pounces on it.
+[[actions]]
+name = "tail-pounce"
+weight = 1
+frames = [
+  { ops = ["eyes=right", "tail=flick"], ms = 400 },
+  { ops = ["eyes=right"], ms = 200 },
+  { ops = ["eyes=right", "tail=flick"], ms = 200 },
+  { ops = ["eyes=right", "all+0,2"], ms = 500 },
+  { ops = ["eyes=right", "all+0,3", "tail=flick"], ms = 300 },
+  { ops = ["eyes=closed", "all+2,-2"], ms = 150 },
+  { ops = ["eyes=happy", "all+1,0", "prop:sparkle@24,2"], ms = 800 },
+  { ops = ["eyes=happy"], ms = 300 },
+]

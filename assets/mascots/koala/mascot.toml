@@ -1,0 +1,224 @@
+# Koala on bear. Soft grey fur, enormous round fluffy ears with white tufts
+# filling them, small dark eyes, and the koala's big glossy black spoon nose
+# down the middle of the face; a white chin and chest. `paws.hug` drapes
+# both arms along the crate rim for the signature: it hugs the edge and
+# dozes off. The rare one is a eucalyptus snack.
+id = "koala"
+name = "Koala"
+category = "mammals"
+aliases = []
+accent = "sky"
+extends = "bear"
+
+[palette]
+"l" = "grey-1"      # fur light
+"f" = "grey-2"      # fur
+"F" = "grey-3"      # fur shadow
+"w" = "white"       # ear tufts, chin, chest
+"M" = "grey-3"      # mouth lines
+"n" = "fur-black"   # nose
+"h" = "white"       # eye and nose glint
+"p" = "pink-2"      # mouth inside
+
+[layers.body]
+at = [4, 14]
+grid = """
+....klffffffffffffFk....
+..kklfffffffffffffFFkk..
+.klfffffffwwwwfffffffFk.
+klffffffwwwwwwwwffffFFFk
+klffffffwwwwwwwwffffFFFk
+klffffffwwwwwwwwffffFFFk
+klfffffffwwwwwwfffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+"""
+
+# Huge round ears full of white fluff.
+[layers.ears]
+at = [0, 2]
+follows = "head"
+grid = """
+..kkkkk..................kkkkk..
+.kllfffk................kfffffk.
+klwwwwffk..............kffwwwwfk
+kwwwwwwfk..............kfwwwwwwk
+kwwwwwwfk..............kfwwwwwwk
+kwwwwwwfk..............kfwwwwwwk
+klwwwwfFk..............kFfwwwwfk
+.kfffFFk................kFFfffk.
+..kkkkk..................kkkkk..
+"""
+
+[layers."ears.flick"]
+at = [0, 2]
+follows = "head"
+grid = """
+..kkkkk.........................
+.kllfffk.................kkkkk..
+klwwwwffk...............kfffffk.
+kwwwwwwfk..............kffwwwwfk
+kwwwwwwfk..............kfwwwwwwk
+kwwwwwwfk..............kfwwwwwwk
+klwwwwfFk..............kfwwwwwwk
+.kfffFFk...............kFfwwwwfk
+..kkkkk.................kFFfffk.
+.........................kkkkk..
+"""
+
+[layers.head]
+at = [6, 4]
+grid = """
+....kkkkkkkkkkkk....
+..kkllllllllllffkk..
+.kllfffffffffffffFk.
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+.kffffffMwwMfffffFk.
+..kFFfffwwwwfffFFk..
+...kkFFFFFFFFFFkk...
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+# The big spoon nose, with a glint.
+[layers.nose]
+at = [14, 9]
+follows = "head"
+grid = """
+.nn.
+nhnn
+nnnn
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 8]
+follows = "head"
+grid = """
+.nn.
+nhnn
+nnnn
+nnnn
+.nn.
+"""
+
+[layers."mouth.open"]
+at = [14, 14]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+[layers.paws]
+at = [7, 17]
+grid = """
+.FFFFF......FFFFF.
+FlllllF....FfffffF
+kFfFfFk....kFfFfFk
+"""
+
+# Both arms draped along the rim, hugging the crate.
+[layers."paws.hug"]
+at = [0, 16]
+grid = """
+..kkkkkkkk............kkkkkkkk..
+.klllllllfk..........kffffffffk.
+kllffffffFk..........kFffffffffk
+kFfFfffffFk..........kFfffffFfFk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: drapes both arms over the crate edge, rests its chin, dozes.
+[[actions]]
+name = "hug-doze"
+weight = 4
+frames = [
+  { ops = ["paws=hug"], ms = 300 },
+  { ops = ["paws=hug", "head+0,1", "eyes=happy"], ms = 400 },
+  { ops = ["paws=hug", "head+0,2", "eyes=closed"], ms = 800 },
+  { ops = ["paws=hug", "head+0,2", "eyes=closed", "prop:zzz@21,3"], ms = 900 },
+  { ops = ["paws=hug", "head+0,2", "eyes=closed", "prop:zzz@22,1"], ms = 800 },
+  { ops = ["paws=hug", "head+0,1"], ms = 300 },
+]
+
+# Rare: a eucalyptus leaf, munched slowly and with great contentment.
+[[actions]]
+name = "eucalyptus"
+weight = 1
+frames = [
+  { ops = ["eyes=right", "prop:leaf@20,10"], ms = 500 },
+  { ops = ["+mouth.open", "prop:leaf@16,12"], ms = 300 },
+  { ops = ["eyes=happy", "prop:leaf@16,13"], ms = 300 },
+  { ops = ["eyes=happy", "+mouth.open", "prop:leaf@16,14"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = ["eyes=happy", "+mouth.open"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 700 },
+]

@@ -1,0 +1,222 @@
+# Wolf, bespoke (no base). A grey timber wolf: tall pointed ears, a broad
+# head with white cheek ruffs and a white mask around a long pointed muzzle
+# (grey down the bridge), a black nose, amber eyes, and a white chest. The
+# signature is the quiet howl, head tilted up; the rare one is a moment of
+# puppy: ears flat, tongue out, a heart.
+id = "wolf"
+name = "Wolf"
+category = "mammals"
+aliases = []
+accent = "slate"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "grey-1"      # fur light
+"f" = "grey-2"      # fur
+"F" = "grey-3"      # fur shadow
+"w" = "white"       # mask, cheeks, chest
+"M" = "grey-1"      # mouth line
+"e" = "amber"       # iris
+"n" = "fur-black"   # nose
+"p" = "pink-2"      # inner ears, mouth, tongue
+
+[layers.body]
+at = [4, 14]
+grid = """
+....kkffffffffffffkk....
+..kklffffwwwwwwffffFkk..
+.klfffffwwwwwwwwffffFFk.
+klfffffwwwwwwwwwwfffFFFk
+klffffffwwwwwwwwffffFFFk
+klfffffffwwwwwwfffffFFFk
+klffffffffwwwwffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+"""
+
+# Tall pointed ears.
+[layers.ears]
+at = [8, 0]
+follows = "head"
+grid = """
+k..............k
+kk............kk
+klk..........kFk
+klpk........kpFk
+klppk......kppFk
+kflppk....kppfFk
+"""
+
+[layers."ears.flick"]
+at = [8, 0]
+follows = "head"
+grid = """
+k...............
+kk..............
+klk...........kk
+klpk.........kFk
+klppk.......kpFk
+kflppk....kkppFk
+"""
+
+# Ears flattened back, for the puppy moment.
+[layers."ears.flat"]
+at = [5, 3]
+follows = "head"
+grid = """
+kkkk..............kkkk
+kllppk..........kppFFk
+.kkkkk..........kkkkk.
+"""
+
+[layers.head]
+at = [7, 4]
+grid = """
+...kkkkkkkkkkkk...
+.kkllllllllllffkk.
+kllffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+kwwwwffffffffwwwwk
+kwwwwwffffffwwwwwk
+.kwwwwffffffwwwwk.
+..kwwwwwwwwwwwwk..
+...kwwwMMMMwwwk...
+....kkwwwwwwkk....
+.....kkkkkkkk.....
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+ek......ke
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [11, 8]
+follows = "head"
+grid = """
+ke......ke
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [11, 8]
+follows = "head"
+grid = """
+ek......ek
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [14, 12]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 11]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+# The howl: a round open mouth.
+[layers."mouth.open"]
+at = [14, 14]
+follows = "head"
+grid = """
+kkkk
+kppk
+.kk.
+"""
+
+[layers."mouth.pant"]
+at = [14, 14]
+follows = "head"
+grid = """
+kMMk
+kppk
+.pp.
+.kk.
+"""
+
+[layers.paws]
+at = [8, 17]
+grid = """
+.FFFFF......FFFFF.
+FlllllF....FfffffF
+kfFfFfk....kfFfFfk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a quiet howl, eyes closed and head tilted up.
+[[actions]]
+name = "howl"
+weight = 4
+frames = [
+  { ops = ["head+0,-1", "eyes=closed"], ms = 250 },
+  { ops = ["head+0,-2", "eyes=closed", "+mouth.open"], ms = 400 },
+  { ops = ["head+0,-2", "eyes=closed", "+mouth.open", "prop:note@23,3"], ms = 700 },
+  { ops = ["head+0,-2", "eyes=closed", "+mouth.open", "prop:note@24,1"], ms = 700 },
+  { ops = ["head+0,-1", "eyes=closed", "prop:note@25,0"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a moment of puppy. Ears flat, tongue out, a heart.
+[[actions]]
+name = "puppy"
+weight = 1
+frames = [
+  { ops = ["ears=flat", "eyes=happy"], ms = 300 },
+  { ops = ["ears=flat", "eyes=happy", "+mouth.pant", "all+0,-1"], ms = 200 },
+  { ops = ["ears=flat", "eyes=happy", "+mouth.pant"], ms = 200 },
+  { ops = ["ears=flat", "eyes=happy", "+mouth.pant", "prop:heart@22,3"], ms = 600 },
+  { ops = ["ears=flat", "eyes=happy", "+mouth.pant", "prop:heart@22,1"], ms = 600 },
+  { ops = ["eyes=happy"], ms = 300 },
+]

@@ -1,0 +1,141 @@
+# Monkey on primate. The base is already monkey-shaped, so this one leans
+# into the personality: a spiky tuft of hair on top (`tuft`, following the
+# head), big pink-lined ears, a tan heart-shaped face, and long arms on the
+# rim. `paws.scratch` raises the right arm over the head for the signature
+# scratch-and-grin (`mouth.grin` shows a row of white teeth). The rare one
+# is a banana, eaten in two bites.
+id = "monkey"
+name = "Monkey"
+category = "mammals"
+aliases = ["ape", "chimp"]
+accent = "copper"
+extends = "primate"
+
+[palette]
+"l" = "brown-2"     # fur light
+"f" = "brown-3"     # fur
+"F" = "brown-4"     # fur shadow
+"w" = "brown-1"     # face, chest, and hands
+"M" = "brown-2"     # mouth line, nostrils
+"h" = "white"       # eye glint, teeth
+"p" = "pink-2"      # inner ear, mouth
+"y" = "yellow-1"    # NEW: banana
+"Y" = "yellow-2"    # NEW: banana shadow
+"c" = "cream"       # NEW: banana flesh
+
+# A spiky tuft of hair, swept to one side.
+[layers.tuft]
+at = [13, 0]
+follows = "head"
+grid = """
+.k..k.
+klkklk
+kfllfk
+.kffk.
+"""
+
+# Right arm up, scratching the top of the head.
+[layers."paws.scratch"]
+at = [3, 2]
+grid = """
+...............kkkk.......
+..............kwMwwk......
+..............kwwwwfk.....
+...............kkkffk.....
+..................kffk....
+...................kffk...
+....................kffk..
+.....................kffk.
+......................kfFk
+......................kfFk
+.....................kffFk
+.kk..................kfFk.
+klfk......................
+klfFk.....................
+kfffk.....................
+kwwwwk....................
+kwwMwMk...................
+.kwkwk....................
+"""
+
+[layers."mouth.grin"]
+at = [12, 12]
+follows = "head"
+grid = """
+kkkkkkkk
+khhhhhhk
+.kkkkkk.
+"""
+
+# A banana, held upright in the right hand, then bitten.
+[layers."banana.held"]
+at = [21, 9]
+grid = """
+....kk
+...kFk
+..kyYk
+.kyyYk
+kyyYk.
+kyyYk.
+kyyYk.
+kyyYk.
+.kyyYk
+..kkkk
+"""
+
+[layers."banana.bitten"]
+at = [21, 9]
+grid = """
+......
+......
+......
+.kkkkk
+kccYk.
+kyyYk.
+kyyYk.
+kyyYk.
+.kyyYk
+..kkkk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: scratches the top of its head, thinks, and grins.
+[[actions]]
+name = "scratch-grin"
+weight = 4
+frames = [
+  { ops = ["paws=scratch", "eyes=left"], ms = 300 },
+  { ops = ["paws=scratch", "eyes=left", "paws+0,1"], ms = 150 },
+  { ops = ["paws=scratch", "eyes=left"], ms = 150 },
+  { ops = ["paws=scratch", "eyes=left", "paws+0,1"], ms = 150 },
+  { ops = ["paws=scratch", "eyes=right"], ms = 400 },
+  { ops = ["eyes=happy", "+mouth.grin"], ms = 1000 },
+  { ops = ["eyes=happy"], ms = 200 },
+]
+
+# Rare: produces a banana, takes two big bites, and is very happy about it.
+[[actions]]
+name = "banana"
+weight = 1
+frames = [
+  { ops = ["+banana.held", "eyes=right"], ms = 600 },
+  { ops = ["+banana.held", "head+1,0", "+mouth.open"], ms = 250 },
+  { ops = ["+banana.bitten", "eyes=happy"], ms = 400 },
+  { ops = ["+banana.bitten", "head+1,0", "+mouth.open"], ms = 250 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = ["eyes=happy", "+mouth.grin"], ms = 800 },
+]

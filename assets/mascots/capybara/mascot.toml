@@ -1,0 +1,229 @@
+# Capybara, bespoke (no base). The calmest animal in the crate: a big,
+# blocky, flat-topped head that fills most of the frame, tiny round ears on
+# the top corners, small eyes set high and wide, a deep square snout (outlined in
+# shadow) with nostrils on the front, and a little mouth. `eyes.calm` is half-closed.
+# The signature sinks into deep calm while a leaf lands on its head; the
+# rare one is the hot spring: water up to the chin, steam, and a yuzu
+# balanced on top.
+id = "capybara"
+name = "Capybara"
+category = "mammals"
+aliases = ["capy"]
+accent = "honey"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "brown-1"     # fur light
+"f" = "brown-2"     # fur
+"F" = "brown-3"     # fur shadow
+"d" = "brown-4"     # nostrils, mouth, toes
+"h" = "white"       # eye glint
+"y" = "yellow-1"    # yuzu
+"Y" = "yellow-2"    # yuzu shadow
+"g" = "green-2"     # yuzu leaf
+"b" = "blue-1"      # hot spring ripples
+"B" = "blue-2"      # hot spring
+
+[layers.body]
+at = [3, 14]
+grid = """
+...kkffffffffffffffffkk...
+.kklffffffffffffffffffFkk.
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+"""
+
+[layers.ears]
+at = [6, 2]
+follows = "head"
+grid = """
+.kk..............kk.
+klfk............kfFk
+kffk............kfFk
+"""
+
+[layers."ears.flick"]
+at = [6, 2]
+follows = "head"
+grid = """
+.kk.................
+klfk.............kk.
+kffk............kfFk
+"""
+
+# The big, blocky head.
+[layers.head]
+at = [5, 4]
+grid = """
+...kkkkkkkkkkkkkkkk...
+.kkllllllllllllllffkk.
+kllfffffffffffffffffFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfFFFFFFFFFFFFFFFfFFk
+klFllllllllllllllFFFFk
+klFffffffffffffffFFFFk
+klFffffffffffffffFFFFk
+.kFffffffffffffffFFFk.
+..kFFFFFFFFFFFFFFFFk..
+...kkkkkkkkkkkkkkkk...
+"""
+
+[layers.eyes]
+at = [9, 8]
+follows = "head"
+grid = """
+hk..........hk
+kk..........kk
+"""
+
+[layers."eyes.calm"]
+at = [9, 8]
+follows = "head"
+grid = """
+FF..........FF
+kk..........kk
+"""
+
+[layers."eyes.closed"]
+at = [9, 9]
+follows = "head"
+grid = """
+kk..........kk
+"""
+
+[layers."eyes.left"]
+at = [8, 8]
+follows = "head"
+grid = """
+hk..........hk
+kk..........kk
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk..........hk
+kk..........kk
+"""
+
+[layers."eyes.happy"]
+at = [8, 8]
+follows = "head"
+grid = """
+.kk..........kk.
+k..k........k..k
+"""
+
+[layers.nose]
+at = [12, 12]
+follows = "head"
+grid = """
+dd....dd
+"""
+
+[layers."nose.sniff"]
+at = [12, 11]
+follows = "head"
+grid = """
+dd....dd
+"""
+
+[layers.lips]
+at = [14, 14]
+follows = "head"
+grid = """
+.dd.
+d..d
+"""
+
+[layers.paws]
+at = [7, 17]
+grid = """
+.kkkkk........kkkkk.
+kfffffk......kfffffk
+kdfdfdk......kdfdfdk
+"""
+
+# Hot spring water, up to the chin.
+[layers."water.bath"]
+at = [2, 15]
+grid = """
+.bb.bbb.bb.bbb.bb.bbb.bb.bb.
+BBbBBBBBBbBBBBBBBbBBBBBbBBBB
+BBBBBBbBBBBBBbBBBBBBbBBBBBBB
+BBbBBBBBBBBBBBBBbBBBBBBBBbBB
+BBBBBBBBBbBBBBBBBBBBBBBBBBBB
+"""
+
+# A yuzu balanced on its head.
+[layers."yuzu.top"]
+at = [12, 0]
+follows = "head"
+grid = """
+....kgg.
+..kkkk..
+.kyyyyk.
+kyyyyyYk
+kyyyyYYk
+.kkkkkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 5
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the eyes half-close in deep calm, and a leaf drifts down and
+# settles on its head. It does not react.
+[[actions]]
+name = "deep-calm"
+weight = 5
+frames = [
+  { ops = ["eyes=calm"], ms = 500 },
+  { ops = ["eyes=calm", "prop:leaf@22,0"], ms = 400 },
+  { ops = ["eyes=calm", "prop:leaf@18,0"], ms = 400 },
+  { ops = ["eyes=calm", "prop:leaf@14,0"], ms = 1300 },
+  { ops = ["eyes=closed", "prop:leaf@14,0"], ms = 600 },
+  { ops = ["eyes=calm"], ms = 400 },
+]
+
+# Rare: the hot spring. Water to the chin, steam rising, a yuzu on top.
+[[actions]]
+name = "hot-spring"
+weight = 1
+frames = [
+  { ops = ["-paws", "+water.bath", "eyes=calm"], ms = 400 },
+  { ops = ["-paws", "+water.bath", "+yuzu.top", "eyes=calm", "prop:steam@3,7"], ms = 700 },
+  { ops = ["-paws", "+water.bath", "+yuzu.top", "eyes=closed", "prop:steam@3,5", "prop:steam@22,8"], ms = 900 },
+  { ops = ["-paws", "+water.bath", "+yuzu.top", "eyes=closed", "prop:steam@22,6"], ms = 900 },
+  { ops = ["-paws", "+water.bath", "eyes=calm"], ms = 400 },
+]
