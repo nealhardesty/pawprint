@@ -792,6 +792,24 @@ fn gnome_profile_through_xwayland() {
 
 #[test]
 #[ignore = "needs Xvfb; run `make test-x11`"]
+fn a_refused_request_does_not_end_the_badge() {
+    let mut env = Env::new("x11-refused");
+    let x = X::start(&mut env);
+    let mut badge = env.run_badge();
+    let win = x.mapped_badge();
+    env.wait_rect([1200, 16, 64, 64]);
+    // Another client destroys the window, so move mode's keyboard grab
+    // (a request with a reply) gets BadWindow.
+    x.conn.destroy_window(win).unwrap();
+    x.conn.sync().unwrap();
+    env.ok(&["move"]);
+    env.ok(&["status"]);
+    assert!(badge.exited().is_none(), "{}", env.log());
+    assert!(env.log().contains("request failed"), "{}", env.log());
+}
+
+#[test]
+#[ignore = "needs Xvfb; run `make test-x11`"]
 fn single_instance_and_detached_start() {
     let mut env = Env::new("x11-instance");
     let x = X::start(&mut env);
