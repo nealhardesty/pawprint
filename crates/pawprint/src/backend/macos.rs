@@ -16,7 +16,7 @@ use std::sync::mpsc;
 
 use block2::RcBlock;
 use dispatch2::DispatchQueue;
-use objc2::rc::Retained;
+use objc2::rc::{Retained, autoreleasepool};
 use objc2::runtime::AnyObject;
 use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
@@ -66,7 +66,15 @@ pub enum Inbox {
 }
 
 /// The badge's loop. `listener` is `None` for a preview.
-fn drive(mut shell: Shell, listener: Option<ipc::Listener>) -> CmdResult {
+///
+/// Without `NSApplicationMain` nothing drains autoreleased objects (events,
+/// dates, images), so setup runs in a pool and each turn of the loop in a
+/// pool of its own.
+fn drive(shell: Shell, listener: Option<ipc::Listener>) -> CmdResult {
+    autoreleasepool(|_| drive_in_pool(shell, listener))
+}
+
+fn drive_in_pool(mut shell: Shell, listener: Option<ipc::Listener>) -> CmdResult {
     let mtm = MainThreadMarker::new().ok_or_else(|| {
         (
             exit::ERROR,
@@ -136,54 +144,67 @@ fn drive(mut shell: Shell, listener: Option<ipc::Listener>) -> CmdResult {
         ]
     };
 
-    loop {
-        while let Ok(inbox) = rx.try_recv() {
-            match inbox {
-                Inbox::Ipc(incoming) => shell.request(&mut mac, incoming),
-                Inbox::Menu(command) => shell.menu(&mut mac, command),
-            }
+    while !autoreleasepool(|_| turn(&app, &mut shell, &mut mac, &rx, &screens_changed, &closed)) {}
+    Ok(())
+}
+
+/// One turn of the badge's loop: hand what arrived to the shell, then wait
+/// for the next event or deadline. True once the shell is done.
+fn turn(
+    app: &NSApplication,
+    shell: &mut Shell,
+    mac: &mut Mac,
+    rx: &mpsc::Receiver<Inbox>,
+    screens_changed: &AtomicBool,
+    closed: &AtomicBool,
+) -> bool {
+    while let Ok(inbox) = rx.try_recv() {
+        match inbox {
+            Inbox::Ipc(incoming) => shell.request(mac, incoming),
+            Inbox::Menu(command) => shell.menu(mac, command),
         }
-        if screens_changed.swap(false, Ordering::Relaxed) {
-            mac.read_screens();
-            let displays = mac.displays.clone();
-            shell.handle(&mut mac, Event::DisplaysChanged(displays));
-        }
-        if closed.swap(false, Ordering::Relaxed) {
-            shell.handle(&mut mac, Event::Command(Command::Quit));
-        }
-        if shell.done() {
-            return Ok(());
-        }
-        let until = match shell.timeout() {
-            Some(t) => NSDate::dateWithTimeIntervalSinceNow(t.as_secs_f64()),
-            None => NSDate::distantFuture(),
-        };
-        // SAFETY: the default run loop mode is a valid mode.
-        let mode = unsafe { NSDefaultRunLoopMode };
-        let event = app.nextEventMatchingMask_untilDate_inMode_dequeue(
-            NSEventMask::Any,
-            Some(&until),
-            mode,
-            true,
-        );
-        // One line per wakeup (with --verbose), so tests can see the loop
-        // sleep through static mode.
-        log::debug!(
-            "macos: woke for {}",
-            event.as_ref().map_or("the deadline".into(), |e| format!(
-                "event type {}",
-                e.r#type().0
-            ))
-        );
-        if let Some(event) = event {
-            match mac.translate(&event) {
-                Translated::Event(e) => shell.handle(&mut mac, e),
-                Translated::Swallow => {}
-                Translated::Pass => app.sendEvent(&event),
-            }
-        }
-        shell.tick(&mut mac);
     }
+    if screens_changed.swap(false, Ordering::Relaxed) {
+        mac.read_screens();
+        let displays = mac.displays.clone();
+        shell.handle(mac, Event::DisplaysChanged(displays));
+    }
+    if closed.swap(false, Ordering::Relaxed) {
+        shell.handle(mac, Event::Command(Command::Quit));
+    }
+    if shell.done() {
+        return true;
+    }
+    let until = match shell.timeout() {
+        Some(t) => NSDate::dateWithTimeIntervalSinceNow(t.as_secs_f64()),
+        None => NSDate::distantFuture(),
+    };
+    // SAFETY: the default run loop mode is a valid mode.
+    let mode = unsafe { NSDefaultRunLoopMode };
+    let event = app.nextEventMatchingMask_untilDate_inMode_dequeue(
+        NSEventMask::Any,
+        Some(&until),
+        mode,
+        true,
+    );
+    // One line per wakeup (with --verbose), so tests can see the loop
+    // sleep through static mode.
+    log::debug!(
+        "macos: woke for {}",
+        event.as_ref().map_or("the deadline".into(), |e| format!(
+            "event type {}",
+            e.r#type().0
+        ))
+    );
+    if let Some(event) = event {
+        match mac.translate(&event) {
+            Translated::Event(e) => shell.handle(mac, e),
+            Translated::Swallow => {}
+            Translated::Pass => app.sendEvent(&event),
+        }
+    }
+    shell.tick(mac);
+    false
 }
 
 /// Wake the loop from any thread: the main queue posts an
@@ -502,12 +523,15 @@ fn key_code(code: u16) -> Option<KeyCode> {
 /// The frame as a `CGImage`: premultiplied BGRA is premultiplied-first
 /// alpha in 32-bit little-endian words (F30).
 pub(super) fn cg_image(frame: &Frame, space: &CGColorSpace) -> Option<CFRetained<CGImage>> {
+    let (w, h) = (frame.width as usize, frame.height as usize);
+    if frame.bgra.len() < w * h * 4 {
+        return None;
+    }
     let data = CFData::from_bytes(&frame.bgra);
     let provider = CGDataProvider::with_cf_data(Some(&data))?;
     let info = CGBitmapInfo::from_bits_retain(
         CGImageByteOrderInfo::Order32Little.0 | CGImageAlphaInfo::PremultipliedFirst.0,
     );
-    let (w, h) = (frame.width as usize, frame.height as usize);
     // SAFETY: the provider holds w * h * 4 bytes; a null decode array is allowed.
     unsafe {
         CGImage::new(

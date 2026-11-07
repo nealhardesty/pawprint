@@ -619,12 +619,30 @@ fn autostart_round_trip() {
     );
     assert!(env.ok(&["doctor"]).contains("run at login"));
     // The agent runs `pawprint run`, which stays up: no badge ran before.
-    let pid = wait_for("launchd to start the badge", || {
+    let agent_pid = || {
         launchctl_print()?
             .lines()
             .find_map(|l| l.trim().strip_prefix("pid = ")?.parse::<i32>().ok())
-    });
+    };
+    let pid = wait_for("launchd to start the badge", agent_pid);
     eprintln!("autostart: launchd started the badge as pid {pid}");
+
+    // `on` again with the same plist leaves the loaded agent alone; with a
+    // changed one (a stale install path) it reloads it, so launchd runs the
+    // new command.
+    env.ok(&["autostart", "on"]);
+    assert_eq!(agent_pid(), Some(pid), "an unchanged agent is not reloaded");
+    std::fs::write(
+        &plist,
+        text.replace("<string>run</string>", "<string>stale</string>"),
+    )
+    .unwrap();
+    env.ok(&["autostart", "on"]);
+    assert_eq!(std::fs::read_to_string(&plist).unwrap(), text);
+    let pid = wait_for("launchd to restart the badge", || {
+        agent_pid().filter(|&p| p != pid)
+    });
+    eprintln!("autostart: the changed agent was reloaded (badge pid {pid})");
 
     let off = env.ok(&["autostart", "off"]);
     assert!(off.contains("Autostart is off"), "{off}");

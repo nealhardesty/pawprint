@@ -402,30 +402,49 @@ mod launchd {
 
     /// Write the agent and load it now, which starts a badge (or finds the
     /// running one and exits). An agent that is already loaded stays as it
-    /// is; one that can't load now (an SSH login) still loads at the next
-    /// GUI login.
+    /// is unless its plist changed (a new install path), which launchd only
+    /// reads on load, so it is unloaded and loaded again. One that can't
+    /// load now (an SSH login) still loads at the next GUI login.
     pub fn enable() -> Result<State, String> {
         let (exe, arg) = super::command_line()?;
         let path = plist_path()?;
-        write(&path, &exe, &arg)?;
-        if !loaded() {
-            let out = launchctl(&["bootstrap", &domain(), &path.to_string_lossy()])?;
-            if !out.status.success() {
-                log::warn!(
-                    "launchctl bootstrap: {}",
-                    String::from_utf8_lossy(&out.stderr).trim()
-                );
-            }
+        let changed = write(&path, &exe, &arg)?;
+        let mut load = !loaded();
+        if !load && changed {
+            run_logged(&["bootout", &format!("{}/{LABEL}", domain())])?;
+            load = true;
+        }
+        if load {
+            run_logged(&["bootstrap", &domain(), &path.to_string_lossy()])?;
         }
         status()
     }
 
-    fn write(path: &Path, exe: &Path, arg: &str) -> Result<(), String> {
+    /// Run launchctl; a failure is logged, not fatal.
+    fn run_logged(args: &[&str]) -> Result<(), String> {
+        let out = launchctl(args)?;
+        if !out.status.success() {
+            log::warn!(
+                "launchctl {}: {}",
+                args[0],
+                String::from_utf8_lossy(&out.stderr).trim()
+            );
+        }
+        Ok(())
+    }
+
+    /// Write the plist; true when its content changed.
+    fn write(path: &Path, exe: &Path, arg: &str) -> Result<bool, String> {
         let fail = |e: std::io::Error| format!("cannot write {}: {e}", path.display());
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir).map_err(fail)?;
         }
-        std::fs::write(path, plist(&[&exe.to_string_lossy(), arg])).map_err(fail)
+        let text = plist(&[&exe.to_string_lossy(), arg]);
+        if std::fs::read_to_string(path).is_ok_and(|old| old == text) {
+            return Ok(false);
+        }
+        std::fs::write(path, text).map_err(fail)?;
+        Ok(true)
     }
 
     /// Unload the agent (which stops a badge it started) and remove it.
