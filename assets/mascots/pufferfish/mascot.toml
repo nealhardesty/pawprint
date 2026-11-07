@@ -1,0 +1,214 @@
+# Pufferfish, on sea-creature. A small, round, spiky yellow fish seen
+# side-on, facing right: a cream belly, freckles on its back, a striped
+# orange tail fan, and a puckered orange mouth. The whole fish is the head.
+# `head.puff` is the inflated spiky ball with a big startled eye drawn in
+# (so `-eyes`); `head.huge` is the rare over-inflation, a ball too big for
+# the crate that shivers before it lets the air out in a puff.
+id = "pufferfish"
+name = "Pufferfish"
+category = "aquatic"
+aliases = ["puffer", "fugu"]
+accent = "marigold"
+extends = "sea-creature"
+
+# Side-on, so the base fins are left out: the tail fan is drawn in the head.
+rest = ["body", "head", "eyes", "water"]
+
+[palette]
+"l" = "yellow-1"    # skin light
+"f" = "yellow-2"    # skin
+"F" = "orange-3"    # skin shadow
+"w" = "cream"       # belly
+"s" = "brown-3"     # NEW: freckles
+"o" = "orange-2"    # NEW: lips and tail
+"O" = "orange-3"    # NEW: tail stripes
+"p" = "red-2"       # mouth inside
+
+[layers.body]
+at = [12, 16]
+grid = """
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+kwwwwwwwwk
+"""
+
+[layers.head]
+at = [0, 5]
+grid = """
+...............k..k.............
+..........k..kkkkkkkk..k........
+...........kkllllffffkk.........
+...kk.....klllffsffffffk.k......
+...kok...kllffffffffffffk.......
+...kOokk.klfffsffffffffffk......
+...koOoookffffffffsffffffok.....
+...kOokk.kfffffffffffffFFpok....
+...kok...kwwwwwwwwwwwwwwwok.....
+...kk.....kwwwwwwwwwwwwwk.......
+.........k.kkwwwwwwwwwkk.k......
+.............kkkkkkkkk..........
+"""
+
+[layers."head.puff"]
+at = [0, 0]
+grid = """
+.......k......kkkkkk......k.....
+........k..kkklffffskkk..k......
+.........kklllfffffffffkk.......
+........kllllffsfffffffffk......
+.......kllllffffffffsfffffk.....
+......klllfsffffffffffkkksfk....
+......kllfffffffsffffkwhkkfk....
+.kk..kllfffffffffffffkwkkkffkkk.
+.kok.klfffffsfffffffffkkkfsfk...
+.kOokkfffffffffffsffffffffffok..
+.kooOkffsfffffffffffffsfffffpok.
+.kOokkwwwwwwwwwwwwwwwwwwwwwwok..
+.kok.kwwwwwwwwwwwwwwwwwwwwwwkkk.
+.kk...kwwwwwwwwwwwwwwwwwwwwk....
+......kwwwwwwwwwwwwwwwwwwwwk....
+.......kwwwwwwwwwwwwwwwwwwk.....
+........kwwwwwwwwwwwwwwwwk......
+.........kkwwwwwwwwwwwwkk.......
+........k..kkkwwwwwwkkk..k......
+.......k......kkkkkk......k.....
+..............k....k............
+..............k....k............
+"""
+
+[layers."head.huge"]
+at = [0, 0]
+grid = """
+......k..kkkkkkkkkkkkkk..k......
+.......kkllllffffffsfffkk.......
+......klllllffffffffffffsk......
+.....kllllfffffsffffffffffk.....
+....kllllfffffffffffsfkkkffk....
+...kllllfffsfffffffffkwhkkffk...
+kkkllllfffffffffsffffkwkkkfffkkk
+..kllffsfffffffffffffskkkffffk..
+..klffffffffsfffffffffffffsffk..
+..ksfffffffffffffsfffffffffffk..
+..kfffffsfffffffffffffsffffffok.
+..kffffffffffsfffffffffffffffpok
+..kwwwwwwwwwwwwwwwwwwwwwwwwwwok.
+..kwwwwwwwwwwwwwwwwwwwwwwwwwwk..
+kkkwwwwwwwwwwwwwwwwwwwwwwwwwwkkk
+...kwwwwwwwwwwwwwwwwwwwwwwwwk...
+....kwwwwwwwwwwwwwwwwwwwwwwk....
+.....kwwwwwwwwwwwwwwwwwwwwk.....
+......kwwwwwwwwwwwwwwwwwwk......
+.......kkwwwwwwwwwwwwwwkk.......
+......k..kkwwwwwwwwwwkk..k......
+.....k.....kkkkkkkkkk.....k.....
+............k......k............
+............k......k............
+"""
+
+[layers.eyes]
+at = [18, 9]
+grid = """
+.kk.
+khkk
+kkkk
+.kk.
+"""
+
+[layers."eyes.closed"]
+at = [18, 11]
+grid = """
+kkkk
+"""
+
+[layers."eyes.left"]
+at = [17, 9]
+grid = """
+.kk.
+khkk
+kkkk
+.kk.
+"""
+
+[layers."eyes.right"]
+at = [19, 9]
+grid = """
+.kk.
+khkk
+kkkk
+.kk.
+"""
+
+[layers."eyes.happy"]
+at = [18, 10]
+grid = """
+.kk.
+k..k
+"""
+
+[layers."mouth.open"]
+at = [25, 10]
+grid = """
+kk.
+kpk
+kpk
+kk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a gulp, fins fluttering, then it puffs up into a spiky ball,
+# holds, and lets the air out again.
+[[actions]]
+name = "inflate"
+weight = 4
+frames = [
+  { ops = ["+mouth.open"], ms = 150 },
+  { ops = ["eyes=closed"], ms = 150 },
+  { ops = ["head=puff", "-eyes"], ms = 1100 },
+  { ops = ["head=puff", "-eyes", "head+0,1"], ms = 250 },
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it keeps going, past the crate edges, shivers, and pops back small
+# with a puff of air.
+[[actions]]
+name = "over-inflate"
+weight = 1
+frames = [
+  { ops = ["head=puff", "-eyes"], ms = 400 },
+  { ops = ["head=huge", "-eyes"], ms = 300 },
+  { ops = ["head=huge", "-eyes", "all+1,0", "prop:sweat@27,1"], ms = 90 },
+  { ops = ["head=huge", "-eyes", "all+-1,0", "prop:sweat@27,1"], ms = 90 },
+  { ops = ["head=huge", "-eyes", "all+1,0", "prop:sweat@27,2"], ms = 90 },
+  { ops = ["head=huge", "-eyes", "prop:sweat@27,2"], ms = 400 },
+  { ops = ["eyes=closed", "+mouth.open", "prop:puff@20,4"], ms = 250 },
+  { ops = ["eyes=happy", "prop:puff@21,2"], ms = 400 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,161 @@
+# Frog, on critter. The base's frog, made a proper one: darker spots on its
+# back, big golden eyes with wide black pupils up in the eye bumps, and a
+# pale throat sac (`throat.puff`) that balloons for the signature ribbit.
+# The rare action is a fly (`fly.buzz`) that buzzes in from the corner and
+# gets caught by a long, sticky tongue (`tongue.long`).
+id = "frog"
+name = "Frog"
+category = "critters"
+aliases = ["toad"]
+accent = "moss"
+extends = "critter"
+
+[palette]
+"l" = "green-1"     # skin light
+"f" = "green-2"     # skin
+"F" = "green-3"     # skin shadow, mouth line, nostrils
+"s" = "green-3"     # NEW: spots
+"w" = "yellow-1"    # throat and belly
+"W" = "cream"       # NEW: throat sac
+"q" = "blue-1"      # NEW: fly wings
+"e" = "amber"       # iris
+"p" = "pink-2"      # mouth and tongue
+
+[layers.head]
+at = [4, 4]
+grid = """
+.....kkkk......kkkk.....
+....kllffk....kffFFk....
+...klffffFk..kffffFFk...
+..klfffffffkkfffffffFk..
+..klffsffffffffffsffFk..
+.klfffffsffffsffffsfFFk.
+klffsfffffffffffffffffFk
+kFffffffffffffffffffffFk
+kfFFFFFFFFFFFFFFFFFFFFfk
+kwwwwwwwwwwwwwwwwwwwwwwk
+.kwwwwwwwwwwwwwwwwwwwwk.
+..wwwwwwwwwwwwwwwwwwww..
+"""
+
+# Golden eyes with a wide, frog-like pupil.
+[layers.eyes]
+at = [8, 5]
+grid = """
+.eeee......eeee.
+ehkkee....ehkkee
+.eeee......eeee.
+"""
+
+[layers."eyes.closed"]
+at = [8, 5]
+grid = """
+.ffff......ffff.
+kkkkkk....kkkkkk
+.ffff......ffff.
+"""
+
+[layers."eyes.left"]
+at = [8, 5]
+grid = """
+.eeee......eeee.
+hkkeee....hkkeee
+.eeee......eeee.
+"""
+
+[layers."eyes.right"]
+at = [8, 5]
+grid = """
+.eeee......eeee.
+eeehkk....eeehkk
+.eeee......eeee.
+"""
+
+[layers."eyes.happy"]
+at = [8, 5]
+grid = """
+.kkkk......kkkk.
+kffffk....kffffk
+.ffff......ffff.
+"""
+
+[layers."throat.puff"]
+at = [10, 12]
+grid = """
+...kkkkkk...
+.kkWWWWWWkk.
+kWhWWWWWWWWk
+kWWWWWWWWWWk
+.kWWWWWWWWk.
+..kkkkkkkk..
+"""
+
+# The long tongue, from the middle of the mouth up to the top-right corner.
+[layers."tongue.long"]
+at = [15, 3]
+follows = "head"
+grid = """
+..........kk.
+.........kppk
+........kppk.
+.......kppk..
+......kppk...
+....kkppk....
+...kppkk.....
+.kkppk.......
+.kppk........
+kppk.........
+"""
+
+# A fly: a black body with two pale blue wings.
+[layers."fly.buzz"]
+at = [26, 2]
+grid = """
+q.q
+kkk
+.k.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "hop"
+weight = 3
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the throat balloons twice, and a ribbit floats up.
+[[actions]]
+name = "ribbit"
+weight = 4
+frames = [
+  { ops = ["+throat.puff"], ms = 250 },
+  { ops = [], ms = 150 },
+  { ops = ["+throat.puff", "prop:note@23,2"], ms = 400 },
+  { ops = ["+throat.puff", "eyes=happy", "prop:note@24,0"], ms = 350 },
+  { ops = ["eyes=happy"], ms = 200 },
+  { ops = [], ms = 150 },
+]
+
+# Rare: a fly buzzes in from the corner; the tongue shoots out and gets it.
+[[actions]]
+name = "fly-catch"
+weight = 1
+frames = [
+  { ops = ["+fly.buzz", "fly+2,0", "eyes=right"], ms = 250 },
+  { ops = ["+fly.buzz", "fly+-1,2", "eyes=right"], ms = 250 },
+  { ops = ["+fly.buzz", "fly+1,1", "eyes=right"], ms = 250 },
+  { ops = ["+fly.buzz", "eyes=right"], ms = 300 },
+  { ops = ["+mouth.open", "+tongue.long"], ms = 120 },
+  { ops = ["+mouth.open", "+tongue.out"], ms = 100 },
+  { ops = ["eyes=closed", "head+0,1"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 150 },
+]

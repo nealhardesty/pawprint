@@ -1,0 +1,103 @@
+# Bee, on bug. The base's bumblebee, made fluffier and sweeter: a fuzzy
+# crown tuft (`fuzz`), rosy cheeks, and buzz lines (`buzz.a`, `buzz.b`) at
+# its sides for the signature hover with wings open. The rare action is a
+# waggle dance that ends in a heart.
+id = "bee"
+name = "Bee"
+category = "critters"
+aliases = ["bumblebee", "honeybee"]
+accent = "marigold"
+extends = "bug"
+
+[palette]
+"c" = "pink-1"      # NEW: cheeks
+"m" = "blue-1"      # wing shade
+
+[layers.head]
+at = [7, 4]
+grid = """
+....kkkkkkkkkk....
+..kklllllFFFFFkk..
+.klllffffffffFFFk.
+kllffffffffffffFFk
+klffffffffffffffFk
+klffffffffffffffFk
+klcfffffffffffcfFk
+klffffffffffffffFk
+.kffffffffffffffk.
+..kkffffffffffkk..
+"""
+
+# A fluffy tuft on the crown.
+[layers.fuzz]
+at = [13, 2]
+follows = "head"
+grid = """
+.k..k.
+klkklk
+"""
+
+# Motion lines either side, in two phases.
+[layers."buzz.a"]
+at = [0, 6]
+grid = """
+kk..........................kk
+..............................
+.kk........................kk.
+..............................
+kk..........................kk
+"""
+
+[layers."buzz.b"]
+at = [0, 7]
+grid = """
+.kk........................kk.
+..............................
+kk..........................kk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: wings open, it lifts off and bobs in a buzzing hover.
+[[actions]]
+name = "hover"
+weight = 4
+frames = [
+  { ops = ["wings=open", "+buzz.a"], ms = 120 },
+  { ops = ["all+0,-1", "+buzz.b"], ms = 120 },
+  { ops = ["wings=open", "all+0,-2", "+buzz.a"], ms = 160 },
+  { ops = ["all+0,-2", "+buzz.b", "antennae=twitch"], ms = 160 },
+  { ops = ["wings=open", "all+0,-1", "+buzz.a"], ms = 160 },
+  { ops = ["all+0,-2", "+buzz.b"], ms = 160 },
+  { ops = ["wings=open", "all+0,-1", "+buzz.a"], ms = 120 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a waggle dance, swinging side to side with wings buzzing.
+[[actions]]
+name = "waggle-dance"
+weight = 1
+frames = [
+  { ops = ["wings=open", "all+-2,0", "+buzz.a"], ms = 150 },
+  { ops = ["all+2,0", "+buzz.b"], ms = 150 },
+  { ops = ["wings=open", "all+-2,0", "+buzz.a"], ms = 150 },
+  { ops = ["all+2,0", "+buzz.b"], ms = 150 },
+  { ops = ["wings=open", "all+-2,0", "+buzz.a"], ms = 150 },
+  { ops = ["all+2,0", "+buzz.b"], ms = 150 },
+  { ops = ["eyes=happy", "prop:heart@22,1"], ms = 600 },
+  { ops = ["eyes=happy"], ms = 200 },
+  { ops = [], ms = 150 },
+]

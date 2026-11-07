@@ -1,0 +1,193 @@
+# Crab, bespoke. A wide red shell with a little smile, round black eyes up
+# on stalks, two big pincers raised on either side (`claws`, +snap, +high),
+# and spiky legs gripping the rim. The signature snaps the claws and
+# scuttles sideways and back; the rare one is a little dance with notes.
+id = "crab"
+name = "Crab"
+category = "aquatic"
+aliases = []
+accent = "brick"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "blush"       # shell light
+"f" = "red-1"       # shell
+"F" = "red-2"       # shell shadow, smile, stalks
+"s" = "orange-1"    # shell freckles
+"h" = "white"       # eye highlight
+
+[layers.body]
+at = [6, 9]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllllffffkk...
+..kllffffffffffFFk..
+.klfffffffffffffFFk.
+klfffffffFffFffffffk
+klffffffffFFfffffffk
+kfssffffffffffffssFk
+.kFffffffffffffffFk.
+..kkFFFFFFFFFFFFkk..
+....kkkkkkkkkkkk....
+"""
+
+[layers.claws]
+at = [0, 2]
+grid = """
+.kk..kk..................kk..kk.
+kllk.kfk................kfk.kffk
+klfk.kfk................kfk.kffk
+klfkkkFk................kFkkkffk
+klffffFk................kFfffffk
+.klfffFk................kFffffk.
+..kffFk..................kFffk..
+...kfFk..................kFfk...
+...kffk..................kffk...
+....kfFk................kFfk....
+.....kfFk..............kFfk.....
+"""
+
+[layers."claws.snap"]
+at = [0, 2]
+grid = """
+................................
+.kkkkk....................kkkkk.
+kllffFk..................kFffffk
+klfkkkFk................kFkkkffk
+klffffFk................kFfffffk
+.klfffFk................kFffffk.
+..kffFk..................kFffk..
+...kfFk..................kFfk...
+...kffk..................kffk...
+....kfFk................kFfk....
+.....kfFk..............kFfk.....
+"""
+
+[layers."claws.high"]
+at = [0, 0]
+grid = """
+.kk..kk..................kk..kk.
+kllk.kfk................kfk.kffk
+klfk.kfk................kfk.kffk
+klfkkkFk................kFkkkffk
+klffffFk................kFfffffk
+.klfffFk................kFffffk.
+..kffFk..................kFffk..
+...kfFk..................kFfk...
+....kfk..................kfk....
+....kffk................kffk....
+.....kfk................kfk.....
+.....kffk..............kffk.....
+......kfk..............kfk......
+"""
+
+[layers.legs]
+at = [0, 16]
+grid = """
+......k..................k......
+....kkFk................kFkk....
+..kkFkk..................kkFkk..
+.kFkk......................kkFk.
+"""
+
+
+[layers.stalks]
+at = [11, 7]
+grid = """
+kFk....kFk
+kFk....kFk
+"""
+
+[layers.eyes]
+at = [11, 4]
+grid = """
+hkk....hkk
+kkk....kkk
+kkk....kkk
+"""
+
+[layers."eyes.closed"]
+at = [11, 6]
+grid = """
+kkk....kkk
+"""
+
+[layers."eyes.left"]
+at = [10, 4]
+grid = """
+hkk......hkk
+kkkk....kkkk
+kkk......kkk
+"""
+
+[layers."eyes.right"]
+at = [10, 4]
+grid = """
+.hkk....hkk.
+.kkkk..kkkk.
+..kkk..kkk..
+"""
+
+[layers."eyes.happy"]
+at = [11, 5]
+grid = """
+.k......k.
+k.k....k.k
+"""
+
+[layers."mouth.open"]
+at = [14, 13]
+grid = """
+kkkk
+kFFk
+.kk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "startle"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: two quick claw snaps, then a scuttle sideways and back.
+[[actions]]
+name = "snap-step"
+weight = 4
+frames = [
+  { ops = ["claws=snap"], ms = 120 },
+  { ops = [], ms = 120 },
+  { ops = ["claws=snap"], ms = 120 },
+  { ops = [], ms = 200 },
+  { ops = ["all+1,0"], ms = 110 },
+  { ops = ["all+2,0", "claws=snap"], ms = 250 },
+  { ops = ["all+1,0"], ms = 110 },
+  { ops = [], ms = 110 },
+  { ops = ["all+-1,0"], ms = 110 },
+  { ops = ["all+-2,0", "claws=snap"], ms = 250 },
+  { ops = ["all+-1,0"], ms = 110 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: claws up, a happy little side-to-side dance with notes.
+[[actions]]
+name = "dance"
+weight = 1
+frames = [
+  { ops = ["claws=high", "eyes=happy", "prop:note@13,-2"], ms = 250 },
+  { ops = ["claws=high", "eyes=happy", "all+-2,0", "prop:note@12,-3"], ms = 250 },
+  { ops = ["claws=snap", "eyes=happy", "prop:note@14,-1"], ms = 250 },
+  { ops = ["claws=high", "eyes=happy", "all+2,0", "prop:note@13,-2"], ms = 250 },
+  { ops = ["claws=snap", "eyes=happy"], ms = 250 },
+  { ops = ["claws=high", "eyes=happy", "all+0,-1"], ms = 300 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,191 @@
+# Tortoise, on critter, in profile facing left. A high, domed green shell
+# with brown seams between the scutes and a yellow rim (`shell`, a new slot
+# drawn last, so the head can slide in under it), a round tan head on a
+# long neck, and stumpy elephant legs with white claws on the rim.
+# The signature pulls the head in and lets it slowly re-emerge; the rare one
+# catches a falling leaf and munches it.
+id = "tortoise"
+name = "Tortoise"
+category = "critters"
+aliases = ["turtle"]
+accent = "pine"
+extends = "critter"
+
+[palette]
+"l" = "orange-1"    # skin light
+"f" = "brown-1"     # skin
+"F" = "brown-2"     # skin shadow, mouth line, nostrils
+"q" = "green-1"     # NEW: shell light
+"g" = "green-2"     # NEW: shell
+"G" = "green-3"     # NEW: shell shadow
+"B" = "brown-3"     # NEW: seams between the scutes
+"r" = "yellow-2"    # NEW: shell rim
+"R" = "orange-3"    # NEW: seams on the rim
+"w" = "yellow-1"    # plastron
+"W" = "yellow-2"    # NEW: plastron seams
+"m" = "white"       # NEW: claws
+"p" = "pink-2"      # mouth
+
+[layers.body]
+at = [9, 15]
+grid = """
+kwwwwwwwwwwwwwwwwwwkFk
+kwwwwwwwwwwwwwwwwwwkk.
+kWWWWWWWWWWWWWWWWWWk..
+kwwwwwwwwwwwwwwwwwwk..
+kwwwwwwwwwwwwwwwwwwk..
+kwwwwwwwwwwwwwwwwwwk..
+kwwwwwwwwwwwwwwwwwwk..
+kwwwwwwwwwwwwwwwwwwk..
+kwwwwwwwwwwwwwwwwwwk..
+kwwwwwwwwwwwwwwwwwwk..
+kwwwwwwwwwwwwwwwwwwk..
+kwwwwwwwwwwwwwwwwwwk..
+kwwwwwwwwwwwwwwwwwwk..
+kwwwwwwwwwwwwwwwwwwk..
+kwwwwwwwwwwwwwwwwwwk..
+kwwwwwwwwwwwwwwwwwwk..
+kwwwwwwwwwwwwwwwwwwk..
+"""
+
+[layers.head]
+at = [1, 7]
+grid = """
+..kkkkk......
+.kllllffk....
+kllffffffkkk.
+klffffffffffk
+kfffffffffffk
+kfFFFFFfffffk
+.kwwwwwFFFFFk
+..kkkkkFFFFFk
+.......kkkkkk
+"""
+
+[layers.feet]
+at = [8, 15]
+grid = """
+.kfffk........kfffk.
+.klffk........klffk.
+.klFfk........klFfk.
+kllfffk......kllfffk
+kmkmkmk......kmkmkmk
+"""
+
+[layers.shell]
+at = [7, 3]
+grid = """
+.......kkkkkkkkk.......
+....kkkqqBqqqqBqkkk....
+...kggqqgBqqggBqqggk...
+..kggqgggBggggBgggGGk..
+.kggqggggBggggBggggGGk.
+.kBBBBBBBBBBBBBBBBBBBk.
+.kqqqBqqgggBqqgggBqqGk.
+.kgggBgggggBgggggBggGk.
+.kggGBggggGBggggGBgGGk.
+.kggGBggggGBggggGBgGGk.
+krrRrRrrRrrRrrRrrRrrRrk
+krrrrRrrrrrRrrrrrRrrrrk
+.kkkkkkkkkkkkkkkkkkkkk.
+"""
+
+
+[layers.eyes]
+at = [3, 9]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.closed"]
+at = [3, 10]
+grid = """
+kk
+"""
+
+[layers."eyes.left"]
+at = [2, 9]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.right"]
+at = [4, 9]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.happy"]
+at = [2, 9]
+grid = """
+.kk.
+k..k
+"""
+
+[layers.nose]
+at = [2, 11]
+grid = """
+F
+"""
+
+[layers."nose.sniff"]
+at = [2, 10]
+grid = """
+F
+"""
+
+[layers."mouth.open"]
+at = [2, 12]
+grid = """
+kkkkkk
+kppppk
+.kkkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the head pulls into the shell, waits, and slowly comes back
+# out, peeking both ways first.
+[[actions]]
+name = "retract"
+weight = 4
+frames = [
+  { ops = ["eyes=closed", "head+3,0"], ms = 120 },
+  { ops = ["head+9,0"], ms = 800 },
+  { ops = ["head+5,0"], ms = 500 },
+  { ops = ["head+3,0", "eyes=left"], ms = 500 },
+  { ops = ["head+1,0", "eyes=right"], ms = 500 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: a leaf flutters down; the tortoise catches it and munches it up.
+[[actions]]
+name = "leaf-munch"
+weight = 1
+frames = [
+  { ops = ["prop:leaf@6,-3", "eyes=right"], ms = 300 },
+  { ops = ["prop:leaf@3,0", "eyes=right"], ms = 300 },
+  { ops = ["prop:leaf@1,4", "+mouth.open"], ms = 300 },
+  { ops = ["prop:leaf@0,8"], ms = 200 },
+  { ops = ["eyes=happy", "+mouth.open"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 200 },
+  { ops = ["eyes=happy", "+mouth.open"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

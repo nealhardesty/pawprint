@@ -1,0 +1,185 @@
+# Seal, on pinniped. A grey harbour seal: a round, earless head and body
+# freckled with dark spots, huge glossy black eyes, a pale muzzle with
+# whiskers, and flippers on the rim. `paws.up` and `paws.clap` raise the
+# flippers for the signature clap. The rare action tosses in a little
+# orange fish (`fish.swim`) and gulps it down.
+id = "seal"
+name = "Seal"
+category = "aquatic"
+aliases = []
+accent = "slate"
+extends = "pinniped"
+
+[palette]
+"l" = "grey-1"      # hide light
+"f" = "grey-2"      # hide
+"F" = "grey-3"      # hide shadow
+"s" = "grey-4"      # NEW: spots
+"w" = "cream"       # muzzle and chest
+"M" = "grey-1"      # whisker spots, mouth
+"o" = "orange-2"    # NEW: fish
+"O" = "orange-3"    # NEW: fish shadow
+
+[layers.body]
+at = [4, 14]
+grid = """
+.....klffffffffffFk.....
+...kklffffsffffffFFkk...
+.kklfsffffffffffffsfFkk.
+klsffffffwwwwwwffffffFFk
+klffffffwwwwwwwwffffsFFk
+klffffffwwwwwwwwfffffFFk
+klfsffffwwwwwwwwfffffFFk
+klffffffwwwwwwwwfffffFFk
+klffffffwwwwwwwwfffffFFk
+klffffffwwwwwwwwfffffFFk
+klffffffwwwwwwwwfffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+"""
+
+[layers.head]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllllllffkk...
+..kllffsffffsffFFk..
+.klfsfffffsfffsffFk.
+.klffffffffffffffFk.
+klffffffffffffffffFk
+klsfffffffffffffffFk
+klffffwwwwwwwwffffFk
+klfffwwMwwwwMwwfffFk
+klfffwMwMwwMwMwfffFk
+.kfffwwwwMMwwwwffFk.
+..kFFfwwwwwwwwfFFk..
+...kkFFFFFFFFFFkk...
+"""
+
+# Big glossy eyes, three pixels across.
+[layers.eyes]
+at = [10, 8]
+grid = """
+hkk......hkk
+kkk......kkk
+kkk......kkk
+"""
+
+[layers."eyes.closed"]
+at = [10, 9]
+grid = """
+kkk......kkk
+"""
+
+[layers."eyes.left"]
+at = [9, 8]
+grid = """
+hkk......hkk
+kkk......kkk
+kkk......kkk
+"""
+
+[layers."eyes.right"]
+at = [11, 8]
+grid = """
+hkk......hkk
+kkk......kkk
+kkk......kkk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+grid = """
+.k........k.
+k.k......k.k
+"""
+
+# Flippers raised for the clap: apart, then pressed together.
+[layers."paws.up"]
+at = [8, 13]
+grid = """
+...kk......kk...
+..kllk....kffk..
+..klFk....kFfk..
+..kffk....kffk..
+.klfk......kffk.
+.kffk......kfFk.
+kffk........kfFk
+kffk........kfFk
+kkk..........kkk
+"""
+
+[layers."paws.clap"]
+at = [8, 13]
+grid = """
+......kkkk......
+.....kllffk.....
+....klfkkfFk....
+....kffk.kfk....
+...kffk..kffk...
+..klfk....kffk..
+.kffk......kfFk.
+kffk........kfFk
+kkk..........kkk
+"""
+
+# A little orange fish for the rare snack, facing left.
+[layers."fish.swim"]
+at = [22, 1]
+grid = """
+..kkkk.k
+.kooookk
+kokoooOk
+.kOOOOkk
+..kkkk.k
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: flippers up, three happy claps, and back down on the rim.
+[[actions]]
+name = "clap"
+weight = 4
+frames = [
+  { ops = ["paws=up"], ms = 200 },
+  { ops = ["paws=clap", "eyes=happy"], ms = 130 },
+  { ops = ["paws=up", "eyes=happy"], ms = 130 },
+  { ops = ["paws=clap", "eyes=happy"], ms = 130 },
+  { ops = ["paws=up", "eyes=happy"], ms = 130 },
+  { ops = ["paws=clap", "eyes=happy", "head+0,-1"], ms = 400 },
+  { ops = ["paws=up"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a fish arcs in from the top corner, and the seal catches it.
+[[actions]]
+name = "fish-snack"
+weight = 1
+frames = [
+  { ops = ["+fish.swim", "eyes=right"], ms = 300 },
+  { ops = ["+fish.swim", "fish+-4,-1", "eyes=right"], ms = 160 },
+  { ops = ["+fish.swim", "fish+-7,3", "head+0,-1", "+mouth.open"], ms = 160 },
+  { ops = ["+fish.swim", "fish+-9,8", "head+0,-1", "+mouth.open"], ms = 160 },
+  { ops = ["head+0,-1", "eyes=closed"], ms = 300 },
+  { ops = ["eyes=happy", "prop:heart@22,1"], ms = 700 },
+  { ops = ["eyes=happy"], ms = 200 },
+  { ops = [], ms = 200 },
+]
