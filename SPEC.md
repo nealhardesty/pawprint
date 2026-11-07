@@ -1342,6 +1342,7 @@ accent = "violet"
 fallback = true                     # eligible for the deterministic fallback (default true)
 nocturnal = true                    # prefers `when = "night"` actions after dark (default false)
 extends = "bird-perched"            # optional base
+prop_offset = [0, 0]                # optional: moves template props, see 12.4 (default [0, 0])
 
 # Glyph → master palette color. Base role glyphs are remapped here.
 [palette]
@@ -1448,7 +1449,11 @@ Details the compiler enforces:
   layer and doesn't set `follows`, it keeps the base layer's. `follows`
   affects offsets only, not visibility.
 - Props are drawn after the mascot (and after `flipx`) at mascot
-  coordinates; `all+` does not move them.
+  coordinates; `all+` does not move them. **`prop_offset = [dx, dy]`** adds
+  to the position of every prop a *motion template* draws, and never to the
+  `prop:` ops in the mascot's own actions. A base may set it; a mascot's own
+  value replaces the base's. PNG mascots can't use templates, so they can't
+  set it. Props are clipped to the frame, so keep the moved props inside it.
 - `ms` defaults to 200 and `weight` to 5. A template action takes the
   template's `weight` and `when` unless the mascot's `[[actions]]` entry sets
   its own, and `name` defaults to the template's name.
@@ -1513,8 +1518,11 @@ The launch template set:
 That is 17 template files (`look-left` and `look-right` are separate). `doze`
 sets `when = "night"`. `peek` holds at `all+0,9`, so mascot rows 0–10 show
 over the rim: eyes belong in rows 8–10. Props in templates land in the top
-right (`zzz` from x 21, `bang` at x 26, `question` at x 24, `heart` at x 22),
-so keep that corner for them where the silhouette allows.
+right (`zzz` rising at x 21, `bang` at x 26, `question` at x 24, `heart` at
+x 22), so keep that corner for them where the silhouette allows. When it
+can't (a side-on animal facing right, a wide cap, a spout), set
+`prop_offset` to move every template prop to the mascot's emptiest corner:
+whale, dolphin, pufferfish, gecko, swan, mushroom, cactus, and teapot do.
 
 ### 12.5 Animation extras that cost nothing at runtime
 
