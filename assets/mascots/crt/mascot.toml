@@ -6,7 +6,7 @@
 id = "crt"
 name = "CRT"
 category = "oddballs"
-aliases = ["monitor", "tv", "terminal"]
+aliases = []
 accent = "charcoal"
 
 [palette]

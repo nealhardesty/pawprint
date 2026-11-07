@@ -15,7 +15,7 @@ ANIMATED ?=
 TARGETS = x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows-msvc
 
 .DEFAULT_GOAL := help
-.PHONY: help build run preview test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden contact-sheet building-blocks palette art-export art-import ci release package publish install uninstall doctor clean check-all-targets spike-f22
+.PHONY: help build run preview test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden golden-hosts contact-sheet building-blocks palette art-export art-import ci release package publish install uninstall doctor clean check-all-targets spike-f22
 
 help: ## List targets
 	@$(PAWDEV) help $(firstword $(MAKEFILE_LIST))
@@ -59,6 +59,9 @@ fmt: ## Format the code
 
 golden: ## Regenerate golden images after an intentional rendering change
 	$(PAWDEV) golden
+
+golden-hosts: ## Recompute the catalog stability fixture (hostname to mascot) after an intentional catalog change
+	$(PAWDEV) golden-hosts
 
 contact-sheet: ## Render every mascot, labels hidden, grouped by base, into docs/gallery.png (ANIMATED=1 adds docs/gallery.gif)
 	$(PAWDEV) contact-sheet $(if $(ANIMATED),--animated)

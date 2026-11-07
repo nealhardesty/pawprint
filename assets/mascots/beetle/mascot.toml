@@ -7,7 +7,7 @@
 id = "beetle"
 name = "Beetle"
 category = "critters"
-aliases = ["bug"]
+aliases = []
 accent = "pine"
 extends = "bug"
 

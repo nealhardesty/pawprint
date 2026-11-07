@@ -5,7 +5,7 @@
 id = "dog-labrador"
 name = "Labrador"
 category = "cats-dogs"
-aliases = ["dog", "lab", "labrador"]
+aliases = ["dog", "labrador"]
 accent = "honey"
 extends = "dog-sit"
 
