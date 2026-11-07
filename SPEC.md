@@ -559,6 +559,30 @@ shows which one is in effect.
 The event loop blocks on OS events with a timeout equal to the next animation
 deadline. There is no fixed tick.
 
+**Measured** with `make power-check` (Linux): the release build runs
+under Xvfb with a private session bus (so the tray's threads count), first
+in idle and then in static mode, 180 s each. CPU is `utime + stime` from
+`/proc/<pid>/stat`; wakeups are the voluntary context switches of every
+thread (`/proc/<pid>/task/*/status`); startup is process start until
+`pawprint status` reports a placed badge, which the loop answers only
+after the first frame is flushed.
+
+| Metric (Linux X11, M4) | Measured | Budget |
+|---|---|---|
+| Startup to visible | 16 ms (9 ms on a warm run) | < 300 ms |
+| CPU, idle mode | 0.011% of a core | < 0.1% |
+| Wakeups, idle mode | 49 in 180 s (each action's frames plus one per rest) | deadlines only |
+| CPU, static mode | 0.000% | 0% |
+| Wakeups, static mode | **0 in 180 s** | zero |
+| Resident memory | 12.2 MB peak | < 30 MB |
+| Binary size | 7.1 MB (glibc release build, 100 mascots; the musl build is M5) | < 15 MB |
+| Threads | 5 (loop, IPC, tray service, D-Bus reactor, and one idle) | — |
+
+The first run found 39 wakeups in 20 s in static mode: an idle `blocking`
+pool thread that zbus leaves behind and that, from `blocking` 1.7, never
+exits (F36). Pinning `blocking` 1.6.2 removed them. Windows and macOS
+numbers are still to measure (ROADMAP M4).
+
 ---
 
 ## 8. Configuration

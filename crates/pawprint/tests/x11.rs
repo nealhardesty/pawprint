@@ -490,6 +490,9 @@ fn bare_server_shaped_override_redirect_and_move_mode() {
     ] {
         assert!(state.contains(&x.atom(s)), "{s}");
     }
+    // No session bus: no tray, and doctor says so.
+    let doctor = env.ok(&["doctor"]);
+    assert!(doctor.contains("no tray"), "{doctor}");
     // Transparent through the bounding shape, pixel for pixel.
     assert_badge_at(&x.capture(), &expected, 1200, 16, BACKGROUND);
 
@@ -770,6 +773,25 @@ fn tray_menu_and_config_edits_reach_the_badge() {
     assert!(icons[0].2.chunks(4).any(|p| p[0] == 255), "an opaque pixel");
     let (_, _, title, _): ToolTip = bus.property(&item, "ToolTip");
     assert_eq!(title, "PAWPRINT: OWL (owl)");
+
+    let doctor = env.ok(&["doctor"]);
+    assert!(
+        doctor.contains("StatusNotifierItem host available"),
+        "{doctor}"
+    );
+
+    // Autostart: an XDG entry that runs this binary.
+    assert!(env.ok(&["autostart", "status"]).starts_with("off"));
+    env.ok(&["autostart", "on"]);
+    let entry =
+        std::fs::read_to_string(env.home().join(".config/autostart/pawprint.desktop")).unwrap();
+    assert!(
+        entry.contains(&format!("Exec={} run\n", env!("CARGO_BIN_EXE_pawprint"))),
+        "{entry}"
+    );
+    assert!(env.ok(&["doctor"]).contains("run at login"));
+    env.ok(&["autostart", "off"]);
+    assert!(env.ok(&["autostart", "status"]).starts_with("off"));
 
     // The shared menu, checked where the settings are.
     assert!(bus.find(&item, &["Size", "64"]).1);
