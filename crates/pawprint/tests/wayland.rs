@@ -358,6 +358,31 @@ fn move_mode_drags_with_the_implicit_grab_and_nudges() {
 
 #[test]
 #[ignore = "needs sway, swaybg, grim; run `make test-wayland`"]
+fn a_named_display_gets_the_badge_and_doctor_marks_it() {
+    let mut env = Env::new("wl-display");
+    let sway = Sway::start(&mut env, "");
+    sway.msg(&env, &["create_output"]); // HEADLESS-2, right of HEADLESS-1
+    env.write_config("display = \"HEADLESS-2\"\n");
+    let _badge = env.run_badge();
+    env.wait_rect([1280 + 1200, 16, 64, 64]);
+    assert!(env.ok(&["status"]).contains("HEADLESS-2"));
+    let expected = env.expected(64);
+    let screen = wait_for("the badge on HEADLESS-2", || {
+        let s = sway.grab(&env);
+        (s.width == 2560 && s.px(2480 + 32, 16 + 44)[..3] == expected.px(32, 44)[..3]).then_some(s)
+    });
+    assert_badge_at(&screen, &expected, 2480, 16, BACKGROUND);
+    // doctor marks the configured display, not the first one.
+    let doctor = env.ok(&["doctor"]);
+    let marked: Vec<&str> = doctor.lines().filter(|l| l.ends_with("<- badge")).collect();
+    assert!(
+        marked.len() == 1 && marked[0].contains("HEADLESS-2"),
+        "{doctor}"
+    );
+}
+
+#[test]
+#[ignore = "needs sway, swaybg, grim; run `make test-wayland`"]
 fn panels_shift_the_badge_into_the_usable_area() {
     // swaybar takes an exclusive zone at the top (F3).
     let (env, sway, _pointer, _badge) = badge_session(

@@ -22,7 +22,7 @@ use pawprint_core::menu::{MenuItem, TrayState};
 use pawprint_core::movemode::{Key, KeyCode};
 use pawprint_core::render::Frame;
 use pawprint_core::sprite::RgbaImage;
-use pawprint_core::surface::{DisplayInfo, Surface, select_display};
+use pawprint_core::surface::{DisplayInfo, Surface};
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, SIZE, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::{
     AC_SRC_ALPHA, AC_SRC_OVER, BI_RGB, BITMAPINFO, BITMAPINFOHEADER, BLENDFUNCTION, BeginPaint,
@@ -892,7 +892,7 @@ pub fn doctor(report: &mut Report) {
         "never excluded from screen capture, so remote tools show the badge",
     );
     let displays = monitors();
-    report.displays(&displays, select_display(&displays, "primary"));
+    report.displays(&displays);
     report.row("tray", "notification area icon (Shell_NotifyIconW)");
 }
 

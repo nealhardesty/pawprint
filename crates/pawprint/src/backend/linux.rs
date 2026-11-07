@@ -6,7 +6,7 @@ use calloop::EventLoop;
 use calloop::channel::{self, Event as ChannelEvent};
 use pawprint_core::badge::Command;
 use pawprint_core::config::Backend;
-use pawprint_core::surface::{DisplayInfo, Surface, select_display};
+use pawprint_core::surface::{DisplayInfo, Surface};
 
 use super::{sni, wayland, x11};
 use crate::doctor::Report;
@@ -289,17 +289,7 @@ pub fn doctor(report: &mut Report) {
         }
     }
 
-    let paths = crate::paths::Paths::detect();
-    let configured = paths
-        .map(|p| {
-            crate::commands::load_config(&p)
-                .0
-                .top
-                .backend
-                .unwrap_or_default()
-        })
-        .unwrap_or_default();
-    let selection = select(configured, &env);
+    let selection = select(crate::doctor::settings().backend.value, &env);
     report.section("Backend");
     match selection.choice {
         Some(c) => report.row("backend", c.to_string()),
@@ -317,7 +307,7 @@ pub fn doctor(report: &mut Report) {
         Some(Choice::X11 { .. }) => x11::doctor(report),
         None => Vec::new(),
     };
-    report.displays(&displays, select_display(&displays, "primary"));
+    report.displays(&displays);
     if env.gnome() {
         gnome_scaling(report);
     }
@@ -390,15 +380,7 @@ fn gnome_scaling(report: &mut Report) {
 /// Without one the badge runs without a tray and says nothing; this is
 /// where the user finds out.
 fn tray(report: &mut Report, env: &Env) {
-    let short = pawprint_core::host::short_name(&crate::hostname::detect().unwrap_or_default());
-    let enabled = crate::paths::Paths::detect().is_none_or(|p| {
-        crate::commands::load_config(&p)
-            .0
-            .effective(&short, &Default::default())
-            .tray
-            .value
-    });
-    if !enabled {
+    if !crate::doctor::settings().tray.value {
         report.row("tray", "off (tray = false in config)");
         return;
     }

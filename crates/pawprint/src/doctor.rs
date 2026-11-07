@@ -1,7 +1,8 @@
 //! `pawprint doctor` (SPEC §9): the shared checks, then the platform's own
 //! (`backend::doctor`).
 
-use pawprint_core::surface::DisplayInfo;
+use pawprint_core::config::{Layer, Settings};
+use pawprint_core::surface::{DisplayInfo, select_display};
 
 use crate::paths::Paths;
 use crate::{CmdResult, backend, commands, instance, shell};
@@ -23,10 +24,13 @@ impl Report {
         self.lines.push(format!("  {key:<20}{}", value.as_ref()));
     }
 
-    pub fn displays(&mut self, displays: &[DisplayInfo], target: Option<&DisplayInfo>) {
+    /// Every display, with the one the badge goes on (SPEC §6.2, from this
+    /// host's `display` setting) marked.
+    pub fn displays(&mut self, displays: &[DisplayInfo]) {
         if displays.is_empty() {
             self.row("displays", "none found");
         }
+        let target = select_display(displays, &settings().display.value);
         for d in displays {
             let mark = if Some(d) == target { "  <- badge" } else { "" };
             self.row("display", format!("{}{mark}", shell::describe(d)));
@@ -52,6 +56,16 @@ impl Report {
             }
         }
     }
+}
+
+/// This host's effective settings from the config file, as the badge
+/// resolves them (host tables included), for the platform checks.
+pub fn settings() -> Settings {
+    let short = pawprint_core::host::short_name(&crate::hostname::detect().unwrap_or_default());
+    Paths::detect()
+        .map(|p| commands::load_config(&p).0)
+        .unwrap_or_default()
+        .effective(&short, &Layer::default())
 }
 
 pub fn run() -> CmdResult {
