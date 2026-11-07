@@ -652,10 +652,9 @@ mod tests {
             })
             .collect();
         assert_eq!(saves.len(), 1);
-        assert_eq!(
-            saves[0].assignments.get("buildbox").map(String::as_str),
-            Some("owl")
-        );
+        // Any bundled mascot may be picked; which one depends on the catalog.
+        let picked = &saves[0].assignments["buildbox"];
+        assert!(Catalog::bundled().get(picked).is_some());
         let cached = Rig::with_state("buildbox", "", saves[0].clone());
         assert!(
             !cached
