@@ -44,6 +44,7 @@ impl Sway {
         env.set("WLR_RENDERER", "pixman");
         let sway = env.spawn("sway", &["-c", config.to_str().unwrap()]);
         let runtime = env.runtime();
+        // `wayland-1` and `sway-ipc.<uid>.<pid>.sock`, not `wayland-1.lock`.
         let find = |prefix: &str, suffix: &str| {
             std::fs::read_dir(&runtime)
                 .ok()?
@@ -51,12 +52,12 @@ impl Sway {
                 .map(|e| e.path())
                 .find(|p| {
                     let n = p.file_name().unwrap().to_string_lossy().into_owned();
-                    n.starts_with(prefix) && n.ends_with(suffix)
+                    n.starts_with(prefix) && n.ends_with(suffix) && !n.ends_with(".lock")
                 })
         };
         let start = std::time::Instant::now();
         let socket = loop {
-            if let Some(s) = find("wayland-", "").filter(|p| p.extension().is_none()) {
+            if let Some(s) = find("wayland-", "") {
                 break s;
             }
             let log = std::fs::read_to_string(env.dir.join("sway.log")).unwrap_or_default();
