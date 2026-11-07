@@ -138,8 +138,14 @@ way: download/v<version>/<asset>, with latest redirecting to tag/v<version>).
         if ($r.Code -eq 0) { Write-Host $r.Text } else { Write-Warning "could not turn on autostart: $($r.Text)" }
     }
     if (-not $NoStart) {
-        $r = Invoke-Native $exe @()
-        if ($r.Code -eq 0) { Write-Host $r.Text } else { Write-Warning "the badge did not start: $($r.Text)" }
+        # Start-Process goes through ShellExecute, which passes no handles
+        # down. Called directly, the long-lived badge would inherit this
+        # shell's stdout and hold open the pipe of anything capturing it.
+        $p = Start-Process -FilePath $exe -WindowStyle Hidden -PassThru
+        $null = $p.Handle  # 5.1 loses ExitCode unless the handle is opened early
+        $p.WaitForExit()
+        if ($p.ExitCode -eq 0) { Write-Host 'PAWPRINT is running.' }
+        else { Write-Warning "the badge did not start (exit code $($p.ExitCode)); ``pawprint doctor`` explains why" }
     } elseif ($was) {
         Write-Host "The badge was stopped for the upgrade; start it again with: pawprint"
     }

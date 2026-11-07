@@ -242,21 +242,32 @@ impl Case<'_> {
         self.capture(cmd)
     }
 
+    /// Run and collect stdout and stderr through a file, not a pipe: on
+    /// Windows the badge an installer starts inherits PowerShell's own
+    /// inheritable handles (FW8, one level up), so a pipe would stay open
+    /// until the badge quits.
     fn capture(&self, mut cmd: Command) -> Run {
-        match cmd.output() {
-            Ok(out) => Run {
-                ok: out.status.success(),
-                text: format!(
-                    "{}{}",
-                    String::from_utf8_lossy(&out.stdout),
-                    String::from_utf8_lossy(&out.stderr)
-                ),
-            },
-            Err(e) => Run {
-                ok: false,
-                text: format!("cannot run {}: {e}", cmd.get_program().to_string_lossy()),
-            },
-        }
+        static RUNS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let n = RUNS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let log = self.layout.home.join(format!("output-{n}.log"));
+        let run = (|| {
+            let file = std::fs::File::create(&log)?;
+            let status = cmd
+                .stdin(std::process::Stdio::null())
+                .stdout(file.try_clone()?)
+                .stderr(file)
+                .status()?;
+            Ok::<_, std::io::Error>(Run {
+                ok: status.success(),
+                text: String::from_utf8_lossy(&std::fs::read(&log)?).into_owned(),
+            })
+        })();
+        // A badge still holding it (Windows) only keeps it from being deleted.
+        let _ = std::fs::remove_file(&log);
+        run.unwrap_or_else(|e| Run {
+            ok: false,
+            text: format!("cannot run {}: {e}", cmd.get_program().to_string_lossy()),
+        })
     }
 
     /// Run the installed (or the probe) binary in the throwaway home.

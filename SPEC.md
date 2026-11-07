@@ -1206,7 +1206,7 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
 - Apple Silicon requires every arm64 executable to carry a signature. The
   Rust toolchain ad-hoc signs at link time. After `lipo` creates the
   universal binary, `make package` re-signs it ad hoc with
-  `codesign --force -s -` **(verify)**.
+  `codesign --force -s -` (`make release` does it, then checks it; confirmed, F15).
 
 ### 11.3 Linux X11
 
@@ -2228,6 +2228,10 @@ Details that matter:
   A `WM_SETTINGCHANGE` broadcast (sent by
   `[Environment]::SetEnvironmentVariable`) tells Explorer. The current
   session's `$env:Path` is updated too.
+- The badge is started with `Start-Process` (ShellExecute), which passes
+  no handles down: started directly, the long-lived badge would inherit the
+  shell's stdout and hold open the pipe of anything capturing the
+  installer's output (CI, fleet tools) until it quits.
 - The script is ASCII only: Windows PowerShell 5.1 reads a script without
   a byte-order mark in the ANSI code page.
 
@@ -2477,7 +2481,7 @@ true instead.
 | F12 | macOS windows default to `sharingType = .readOnly`; `.none` hides them from capture. | Leave the default | **Confirmed** for the default (macOS 26.7 on `macos-latest`: the panel's `kCGWindowSharingState` is 1, read-only, and `screencapture` sees it pixel-exact); `.none` hiding it is documented |
 | F13 | macOS `gethostname()` can reflect a network-assigned name; `LocalHostName` is stable. | Hostname source order | Documented; the SystemConfiguration read equals `scutil --get` (FM4) |
 | F14 | `curl` downloads don't get `com.apple.quarantine`; browser downloads do. | curl installer avoids Gatekeeper prompts | Documented (verify) |
-| F15 | Apple Silicon requires signed arm64 code; ad-hoc signing suffices for local execution. | Re-sign after `lipo` | **Verify** |
+| F15 | Apple Silicon requires signed arm64 code; ad-hoc signing suffices for local execution. | Re-sign after `lipo` | **Confirmed** on `macos-latest` (Apple Silicon, `make test-install`): `codesign` reports "replacing existing signature" on the `lipo` output, then `codesign -v` passes, `lipo -archs` is `x86_64 arm64`, the binary runs (`aarch64-apple-darwin` slice) and so does the x86_64 slice under Rosetta; the curl-installed copy ran and started the badge with no prompt |
 | F16 | `LimitLoadToSessionType = Aqua` restricts a LaunchAgent to GUI sessions. | No badge attempts in SSH sessions | Documented |
 | F17 | X11 ARGB transparency needs a compositing manager (`_NET_WM_CM_S<n>` owner). Without one, the Shape extension's bounding mask gives 1-bit transparency. | Binary alpha + shape fallback | **Confirmed** (Xvfb with and without `xcompmgr`, switched live; both pixel-identical to `pawprint render`) |
 | F18 | xrdp and Xvnc sessions are X11 even when the console runs Wayland. | X11 backend covers Linux RDP/VNC sessions | Documented |
