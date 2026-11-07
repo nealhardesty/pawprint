@@ -2481,7 +2481,10 @@ real display servers and check the screen. They are `#[ignore]`d in
 `make test` because they need the servers installed; a separate Linux CI
 job installs them (`xvfb xcompmgr openbox sway swaybg grim foot wtype dbus`) and
 runs `make test-linux-display`. Each test gets its own HOME and runtime
-directory and fails with the badge's log.
+directory and fails with the badge's log. Xvfb picks a free display itself
+(`-displayfd`) and admits only clients with the test's cookie (`-auth`,
+never `-ac`). Child processes get SIGTERM, then SIGKILL after a second, so
+Xvfb removes its lock file.
 
 | Suite | Session | What is asserted |
 |---|---|---|
@@ -2656,7 +2659,7 @@ true instead.
 | F30 | Premultiplied little-endian ARGB8888 (bytes B, G, R, A) is accepted by `UpdateLayeredWindow`, X11 32-bit ARGB visuals, `wl_shm` `ARGB8888`, and `CGImage` (premultiplied-first, 32-bit little-endian). | One pixel format for every backend | Documented |
 | F31 | GNOME sessions set `DISPLAY` and start Xwayland on demand, including releases without an X11 session. | GNOME path needs nothing installed | Documented (verify on Ubuntu 26.04) |
 | F32 | Openbox reparents even `_NET_WM_WINDOW_TYPE_DOCK` windows into a frame and copies the client's bounding shape to it, but not its input shape, so the frame swallows clicks. | The X11 backend sets its input shape on its frame too (11.3.1) | **Confirmed** (openbox 3.6 under Xvfb) |
-| F33 | `x11rb` 0.14 connects through the `/tmp/.X11-unix` socket or TCP, not the abstract socket namespace. Where `/tmp/.X11-unix` is read-only (WSLg), a test Xvfb listens on abstract sockets only. | Tests run Xvfb with `-listen tcp`; real X servers always create the filesystem socket | **Confirmed** |
+| F33 | `x11rb` 0.14 connects through the `/tmp/.X11-unix` socket or TCP, not the abstract socket namespace. Where `/tmp/.X11-unix` is read-only (WSLg), a test Xvfb listens on abstract sockets only. | Tests (and `power-check`) run Xvfb on the filesystem socket where `/tmp/.X11-unix` is writable, else with `-listen tcp`; either way with `-auth` and a private cookie, never `-ac`. Real X servers always create the filesystem socket | **Confirmed** |
 | F34 | Headless sway 1.9 with the pixman renderer filters the whole output at fractional scales (even swaybg's solid color comes out uneven); about 85% of the badge's pixels at 1.5 were exact. At integer scales every pixel is exact. | Fractional-scale crispness can't be judged there | **Confirmed on headless sway**; crispness at 125%/150% is an owner check on Plasma |
 | F35 | wlroots `keyboard_interactivity = exclusive` on an overlay layer surface sends it the keys at once; virtual keyboards (`wtype`, remote-desktop servers) send keycodes from their own keymaps. | Exclusive keyboard in move mode; keycodes read from the keymap (11.4) | **Confirmed on sway 1.9**; verify on Plasma |
 | F36 | zbus 5 (async-io) runs its socket setup (peer credentials, the SASL zero byte) on the `blocking` crate's thread pool. From `blocking` 1.7 an idle pool thread never exits (it exits only above the thread limit) and wakes every 500 ms; 1.6 lets it exit after 500 ms idle. | `blocking` is pinned to `=1.6.2`, so the badge has zero wakeups at rest with the tray running (7.2) | **Confirmed** (`make power-check`: 39 wakeups in 20 s in static mode with 1.7.0, 0 with 1.6.2) |

@@ -9,6 +9,8 @@
 mod common;
 
 use std::collections::HashMap;
+use std::os::fd::AsRawFd;
+use std::os::unix::process::CommandExt;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -32,29 +34,57 @@ struct X {
 }
 
 impl X {
-    /// Start Xvfb on a free display. It listens on TCP so the test works
-    /// where `/tmp/.X11-unix` is read-only (x11rb can't use abstract sockets).
+    /// Start Xvfb on a display it picks itself (`-displayfd`). Only clients
+    /// with this test's cookie may connect. It listens on the filesystem
+    /// socket, or on TCP where `/tmp/.X11-unix` is read-only (WSL), since
+    /// x11rb can't use abstract sockets.
     fn start(env: &mut Env) -> X {
-        let n = (150..250)
-            .find(|n| !std::path::Path::new(&format!("/tmp/.X{n}-lock")).exists())
-            .expect("a free display number");
-        let server = env.spawn(
-            "Xvfb",
-            &[
-                &format!(":{n}"),
-                "-screen",
-                "0",
-                &format!("{W}x{H}x24"),
-                "-listen",
-                "tcp",
-                "-ac",
-                "-nolisten",
-                "unix",
-            ],
-        );
-        let display = format!("127.0.0.1:{n}");
+        let mut cookie = [0u8; 16];
+        std::io::Read::read_exact(
+            &mut std::fs::File::open("/dev/urandom").unwrap(),
+            &mut cookie,
+        )
+        .unwrap();
+        let auth = env.dir.join("Xauthority");
+        std::fs::write(&auth, xauthority(&cookie)).unwrap();
+        env.set("XAUTHORITY", auth.to_str().unwrap());
+
+        let unix = writable(std::path::Path::new("/tmp/.X11-unix"));
+        let (number, write) = std::io::pipe().unwrap();
+        let fd = write.as_raw_fd();
+        let mut cmd = env.command("Xvfb");
+        cmd.args([
+            "-displayfd",
+            &fd.to_string(),
+            "-auth",
+            auth.to_str().unwrap(),
+        ])
+        .args(["-screen", "0", &format!("{W}x{H}x24")]);
+        if unix {
+            cmd.args(["-nolisten", "tcp"]);
+        } else {
+            cmd.args(["-listen", "tcp", "-nolisten", "unix"]);
+        }
+        // SAFETY: fcntl is async-signal-safe; it keeps the pipe open across exec.
+        unsafe {
+            cmd.pre_exec(move || match libc::fcntl(fd, libc::F_SETFD, 0) {
+                -1 => Err(std::io::Error::last_os_error()),
+                _ => Ok(()),
+            });
+        }
+        let server = env.spawn_command(cmd);
+        drop(write);
+        // One line with the number, or EOF if Xvfb failed (see Xvfb.log).
+        let mut line = String::new();
+        std::io::BufRead::read_line(&mut std::io::BufReader::new(number), &mut line).unwrap();
+        let n: u32 = line.trim().parse().expect("Xvfb's display number");
+        let display = if unix {
+            format!(":{n}")
+        } else {
+            format!("127.0.0.1:{n}")
+        };
         env.set("DISPLAY", &display);
-        let (conn, screen) = wait_for("Xvfb", || x11rb::connect(Some(&display)).ok());
+        let (conn, screen) = connect(&display, &cookie).expect("a connection to Xvfb");
         let root = conn.setup().roots[screen].root;
         X {
             conn,
@@ -280,6 +310,43 @@ impl X {
 enum Prop {
     Cardinals(Vec<u32>),
     Text(String),
+}
+
+/// An Xauthority file with one MIT-MAGIC-COOKIE-1 entry for any address
+/// and display (family Wild, empty number), so it works before the
+/// display number is known. Every field is a big-endian length and bytes.
+fn xauthority(cookie: &[u8]) -> Vec<u8> {
+    let mut out = 0xffffu16.to_be_bytes().to_vec();
+    for field in [&b""[..], b"", b"MIT-MAGIC-COOKIE-1", cookie] {
+        out.extend((field.len() as u16).to_be_bytes());
+        out.extend(field);
+    }
+    out
+}
+
+fn writable(dir: &std::path::Path) -> bool {
+    let path = std::ffi::CString::new(dir.as_os_str().as_encoded_bytes()).unwrap();
+    // SAFETY: access only reads the NUL-terminated path.
+    unsafe { libc::access(path.as_ptr(), libc::W_OK) == 0 }
+}
+
+/// Connect to `display` with `cookie`; the test's own connection doesn't
+/// read XAUTHORITY, which is set for the children only.
+fn connect(display: &str, cookie: &[u8]) -> Option<(RustConnection, usize)> {
+    use x11rb::reexports::x11rb_protocol::parse_display::parse_display;
+    let parsed = parse_display(Some(display)).ok()?;
+    let screen = usize::from(parsed.screen);
+    parsed.connect_instruction().find_map(|addr| {
+        let (stream, _) = x11rb::rust_connection::DefaultStream::connect(&addr).ok()?;
+        RustConnection::connect_to_stream_with_auth_info(
+            stream,
+            screen,
+            b"MIT-MAGIC-COOKIE-1".to_vec(),
+            cookie.to_vec(),
+        )
+        .ok()
+        .map(|c| (c, screen))
+    })
 }
 
 /// What a desktop panel provides: a StatusNotifierWatcher. It records the
@@ -598,6 +665,10 @@ fn compositor_switches_to_argb_and_back() {
     drop(compositor);
     wait_for("a 24-bit badge window", || {
         x.badge().filter(|&w| x.depth(w) == Some(24) && w != win)
+    });
+    wait_for("shaped pixels", || {
+        let screen = x.capture();
+        (screen.px(1232, 60)[..3] == expected.px(32, 44)[..3]).then_some(())
     });
     assert_badge_at(&x.capture(), &expected, 1200, 16, BACKGROUND);
     drop(badge);

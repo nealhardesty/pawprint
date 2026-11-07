@@ -11,11 +11,22 @@ use std::time::{Duration, Instant};
 /// The test hostname: an owl labeled OWL.
 pub const HOST: &str = "owl";
 
-/// A child process killed when dropped.
+/// A child process stopped when dropped: asked to exit (SIGTERM, so Xvfb
+/// removes its lock file and socket), then killed if it hasn't within a
+/// second.
 pub struct Proc(pub Child);
 
 impl Drop for Proc {
     fn drop(&mut self) {
+        #[cfg(unix)]
+        if self.exited().is_none() {
+            // SAFETY: kill only sends a signal to our own child.
+            unsafe { libc::kill(self.0.id() as i32, libc::SIGTERM) };
+            let start = Instant::now();
+            while self.exited().is_none() && start.elapsed() < Duration::from_secs(1) {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+        }
         let _ = self.0.kill();
         let _ = self.0.wait();
     }
@@ -105,6 +116,7 @@ impl Env {
             "XDG_CONFIG_HOME",
             "XDG_STATE_HOME",
             "DBUS_SESSION_BUS_ADDRESS",
+            "XAUTHORITY",
         ] {
             cmd.env_remove(k);
         }
@@ -119,15 +131,21 @@ impl Env {
     }
 
     pub fn spawn(&self, program: &str, args: &[&str]) -> Proc {
-        let log = std::fs::File::create(self.dir.join(format!(
-            "{}.log",
-            Path::new(program).file_name().unwrap().to_string_lossy()
-        )))
-        .unwrap();
+        let mut cmd = self.command(program);
+        cmd.args(args);
+        self.spawn_command(cmd)
+    }
+
+    /// Start `cmd` with its output in `<program>.log`.
+    pub fn spawn_command(&self, mut cmd: Command) -> Proc {
+        let program = Path::new(cmd.get_program())
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+        let log = std::fs::File::create(self.dir.join(format!("{program}.log"))).unwrap();
         Proc(
-            self.command(program)
-                .args(args)
-                .stdin(Stdio::null())
+            cmd.stdin(Stdio::null())
                 .stdout(log.try_clone().unwrap())
                 .stderr(log)
                 .spawn()
