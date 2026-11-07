@@ -1,0 +1,143 @@
+# Base: sea-creature (SPEC §12.8). A smooth, rounded body rising out of water
+# that fills the crate: the `water` slot is drawn last, in front, so the body
+# seems to emerge from it. Members: whale, dolphin, shark, narwhal,
+# pufferfish, axolotl.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)   l f F  skin light / base / shadow
+#   w      belly and throat    e iris (unused by the default eyes)
+#   h eye highlight            p mouth inside and tongue
+#   u v V  water foam / water / deep water
+#
+# Slots, in drawing order: body, fins (front flippers at the waterline),
+# head, eyes (+closed, left, right, happy), mouth (.open only, hidden at
+# rest), water (+ripple). eyes and mouth follow head. Dip the head into the
+# water with `head+0,2`; the water stays put.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "blue-1"
+"f" = "blue-2"
+"F" = "blue-3"
+"w" = "white"
+"e" = "blue-3"
+"h" = "white"
+"p" = "pink-2"
+"u" = "blue-1"
+"v" = "teal"
+"V" = "green-3"
+
+[layers.body]
+at = [5, 16]
+grid = """
+kllfwwwwwwwwwwwwwwFffk
+klffwwwwwwwwwwwwwwFFfk
+klffwwwwwwwwwwwwwwFFfk
+klfffwwwwwwwwwwwwFFFfk
+klffffwwwwwwwwwwFFFFfk
+klfffffffffFFFFFFFFFfk
+klfffffffffFFFFFFFFFfk
+klfffffffffFFFFFFFFFfk
+klfffffffffFFFFFFFFFfk
+klfffffffffFFFFFFFFFfk
+klfffffffffFFFFFFFFFfk
+klfffffffffFFFFFFFFFfk
+klfffffffffFFFFFFFFFfk
+klfffffffffFFFFFFFFFfk
+klfffffffffFFFFFFFFFfk
+klfffffffffFFFFFFFFFfk
+"""
+
+[layers.fins]
+at = [1, 13]
+grid = """
+.kk........................kk.
+klfk......................kFfk
+kffFk....................kFFFk
+.kfFFk..................kFFFk.
+..kkFk..................kFkk..
+"""
+
+[layers.head]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllllllffkk...
+..klllffffffffffFk..
+.kllffffffffffffFFk.
+kllfffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffFffffffFffffFk
+klffwwwFFFFFFwwwffFk
+klfwwwwwwwwwwwwwwfFk
+lfwwwwwwwwwwwwwwwwfF
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk....kk.
+k..k..k..k
+"""
+
+[layers."mouth.open"]
+at = [13, 12]
+follows = "head"
+grid = """
+kkkkkk
+kppppk
+.kkkk.
+"""
+
+[layers.water]
+at = [1, 16]
+grid = """
+kkk.....kkk.....kkk.....kkk...
+kuukkkkkuuukkkkkuuukkkkkuuukkk
+kvvvuuvvvvvvuuvvvvvvuuvvvvvvuk
+kVvvvvvvVVvvvvvvVVvvvvvvVVvvvk
+"""
+
+[layers."water.ripple"]
+at = [1, 16]
+grid = """
+....kkk.....kkk.....kkk.....kk
+kkkkuuukkkkkuuukkkkkuuukkkkkuk
+kuvvvvvvuuvvvvvvuuvvvvvvuuvvvk
+kvvvVVvvvvvvVVvvvvvvVVvvvvvvVk
+"""

@@ -1395,7 +1395,7 @@ How 100 complete mascots get made:
 | Base | Body plan | Members (guide, not a rule) |
 |---|---|---|
 | `cat-sit` | Sitting cat, ears up, tail slot | All 12 cats |
-| `dog-sit` | Sitting dog; ear variants `prick`, `flop`, `fold`; snout lengths | All 12 dogs |
+| `dog-sit` | Sitting dog; floppy `ears` by default, with `ears.prick` and `ears.fold` to list in `rest` instead; snout | All 12 dogs |
 | `ungulate-head` | Head and shoulders over the crate; antler/horn slot | moose, elk, deer, bison, goat, llama |
 | `bear` | Round ears, broad muzzle, paws on rim | bear, panda, polar-bear, koala |
 | `rodent-upright` | Upright small mammal, paws to chest | marmot, chipmunk, squirrel, mouse, hamster, beaver |

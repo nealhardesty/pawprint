@@ -1,0 +1,160 @@
+# Base: bird-water (SPEC §12.8). A waddling water bird: round head on a short
+# neck, a flat wide bill, a plump body with folded wings, webbed feet on the
+# crate rim. Members: duck, swan, puffin, penguin, pelican, flamingo, heron,
+# chicken. Lengthen the neck by replacing `head` (move `eyes` and `bill`
+# with it) for swans, herons, and flamingos.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)   l f F  feathers light / base / shadow
+#   w      breast              e iris (unused by the default eyes)
+#   h eye highlight            b B    bill and feet / their shadow
+#
+# Slots, in drawing order: body, wings (+open), head, eyes (+closed, left,
+# right, happy), bill, mouth (.open only: an open bill, for yawn), feet.
+# eyes, bill, and mouth follow head.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "white"
+"f" = "cream"
+"F" = "grey-1"
+"w" = "white"
+"e" = "blue-3"
+"h" = "white"
+"b" = "orange-2"
+"B" = "orange-3"
+
+[layers.body]
+at = [3, 14]
+grid = """
+........kkkkkkkkkk........
+.....kkkllllllllffkkk.....
+...kkllllffffffffffFFkk...
+..kllllffffffffffffffFFk..
+.kllfffffffwwwwfffffffFFk.
+.klffffffwwwwwwwwffffffFk.
+klfffffwwwwwwwwwwwwfffffFk
+klffffwwwwwwwwwwwwwwffffFk
+klffffwwwwwwwwwwwwwwffffFk
+klffffwwwwwwwwwwwwwwffffFk
+klffffwwwwwwwwwwwwwwffffFk
+klfffffwwwwwwwwwwwwfffffFk
+klffffffwwwwwwwwwwffffffFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+klfffffffffffffffffffffFFk
+"""
+
+[layers.wings]
+at = [2, 17]
+grid = """
+kk........................kk
+kfFk....................kFFk
+kffFk..................kFFFk
+kffFFk................kFFFFk
+kffFFk................kFFFFk
+.kffFk................kFFFk.
+.kkfFk................kFFkk.
+...kkk................kkk...
+"""
+
+[layers."wings.open"]
+at = [0, 12]
+grid = """
+kk............................kk
+klk..........................kfk
+kfFk........................kFFk
+kffFk......................kFFFk
+.kffFk....................kFFFk.
+.kffFFk..................kFFFFk.
+..kkfFk..................kFFkk..
+....kkk..................kkk....
+"""
+
+[layers.head]
+at = [7, 3]
+grid = """
+....kkkkkkkkkk....
+..kkllllllllffkk..
+.klllffffffffffFk.
+kllffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+.kffffffffffffFFk.
+..kffffffffffFFk..
+...lffffffffffF...
+...lffffffffffF...
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+kk......kk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+kk......kk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+kk......kk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk....kk.
+k..k..k..k
+"""
+
+[layers.bill]
+at = [12, 10]
+follows = "head"
+grid = """
+.kkkkkk.
+kbbbbbbk
+kBbbbbBk
+.kkkkkk.
+"""
+
+[layers."mouth.open"]
+at = [12, 10]
+follows = "head"
+grid = """
+.kkkkkk.
+kbbbbbbk
+kkkkkkkk
+kBBBBBBk
+.kkkkkk.
+"""
+
+[layers.feet]
+at = [9, 18]
+grid = """
+.kbbbk..kbbbk.
+kbBbBbkkbBbBbk
+"""

@@ -1,0 +1,230 @@
+# Base: dog-sit (SPEC §12.8). A sitting dog with a broad light muzzle, a big
+# nose, front paws on the rim, and a short tail up the right side.
+# Members: all 12 dogs.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)    l f F  fur light / base / shadow
+#   w M    muzzle and chest light / its shadow (mouth lines, chin)
+#   s S    ears / ear shadow (darker by default; map to l/f for one-color dogs)
+#   e iris (unused by the default eyes)   h eye highlight
+#   n nose   p tongue and inner ear
+#
+# Slots, in drawing order: tail (+flick), body, head, ears (+flick, prick,
+# fold), eyes (+closed, left, right, happy), nose (+sniff), mouth (.open only,
+# hidden at rest: a panting tongue), paws. ears, eyes, nose, and mouth follow
+# head.
+#
+# Ears: the default `ears` hang floppy beside the face. A prick-eared or
+# fold-eared dog sets `rest` with "ears.prick" or "ears.fold" in place of
+# "ears", and should replace `ears.flick` with a flick of its own ear shape.
+# Snout length: replace `head` (keep the 2x2 eyes at rows 9-10) for a longer
+# or flatter muzzle.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "brown-1"
+"f" = "brown-2"
+"F" = "brown-3"
+"w" = "cream"
+"M" = "brown-2"
+"s" = "brown-3"
+"S" = "brown-4"
+"e" = "brown-3"
+"h" = "white"
+"n" = "fur-black"
+"p" = "pink-2"
+
+[layers.tail]
+at = [25, 12]
+grid = """
+..kk.
+.klk.
+.klFk
+klfFk
+kffFk
+kffFk
+kffFk
+kffFk
+"""
+
+[layers."tail.flick"]
+at = [25, 12]
+grid = """
+...kk.
+..klk.
+..klFk
+.klfFk
+kfffFk
+kffFk.
+kffFk.
+kffFk.
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klffffwwwwwwfffFFk..
+.klfffffwwwwwwffffFFk.
+klfffffwwwwwwwwffffFFk
+klfffffwwwwwwwwffffFFk
+klfffffwwwwwwwwffffFFk
+klffffffwwwwwwfffffFFk
+klfffffffwwwwffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+[layers.head]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllllllffkk...
+..kllllffffffffFFk..
+.kllffffffffffffFFk.
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffwwwwwwwwwwffFFk
+klffwwwwwwwwwwwwfFFk
+klffwwwwwMMwwwwwfFFk
+.kffwwwMwwwwMwwwFFk.
+..kFwwwwwwwwwwwwFk..
+...kkMMMMMMMMMMkk...
+"""
+
+[layers.ears]
+at = [4, 5]
+follows = "head"
+grid = """
+..kkkk............kkkk..
+.ksssSk..........kSsssk.
+kssssSk..........kSssssk
+kssssSk..........kSssssk
+kssssSk..........kSssssk
+kssssSk..........kSssssk
+kssssSk..........kSssssk
+.kssSk............kSssk.
+.kSSSk............kSSSk.
+..kkk..............kkk..
+"""
+
+[layers."ears.flick"]
+at = [3, 4]
+follows = "head"
+grid = """
+..kkkk...................
+.ksssSk............kkkk..
+kssssSk...........kSsssk.
+kssssSk...........kSssssk
+kssssSk...........kSssssk
+.kssSSk...........kSssssk
+.kSSSk............kSssssk
+..kkk.............kSssssk
+...................kSssk.
+...................kSSSk.
+....................kkk..
+"""
+
+[layers."ears.prick"]
+at = [7, 1]
+follows = "head"
+grid = """
+.kk............kk.
+klsk..........kslk
+klpsk........ksplk
+klppsk......kspplk
+klppssk....ksspplk
+"""
+
+[layers."ears.fold"]
+at = [6, 3]
+follows = "head"
+grid = """
+.kkkkk........kkkkk.
+ksssssk......ksssssk
+kssssSk......kSssssk
+kSSSSk........kSSSSk
+.kkk............kkk.
+"""
+
+[layers.eyes]
+at = [12, 9]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.closed"]
+at = [12, 10]
+follows = "head"
+grid = """
+kk....kk
+"""
+
+[layers."eyes.left"]
+at = [11, 9]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.right"]
+at = [13, 9]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.happy"]
+at = [11, 9]
+follows = "head"
+grid = """
+.kk....kk.
+k..k..k..k
+"""
+
+[layers.nose]
+at = [14, 11]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 10]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."mouth.open"]
+at = [13, 14]
+follows = "head"
+grid = """
+kkkkkk
+kppppk
+.kppk.
+"""
+
+[layers.paws]
+at = [8, 17]
+grid = """
+.FFFF......FFFF.
+FllllF....FllllF
+klFlFk....klFlFk
+"""

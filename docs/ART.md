@@ -131,7 +131,14 @@ rows 22–29 and is always plain cream: never rely on art showing there.
   outline.
 - **Sixteen colors go fast.** Ink, three fur shades, three belly shades,
   iris, glint, nose, and pink is already eleven. Props used by your actions
-  count too.
+  count too, and several bases (bear, pinniped, ungulate-head) already sit
+  at 15 with their props. Recolor onto existing glyphs before adding new
+  ones.
+- **Read the base header for its exceptions.** `dog-sit` has floppy ears by
+  default (list `ears.prick` or `ears.fold` in `rest` instead, and redraw
+  `ears.flick` to match); `big-cat`'s `mane` doesn't follow the head (a
+  tiger leaves it out of `rest`); `rodent-upright` shows its `mouth` (buck
+  teeth) at rest; `sea-creature` draws `water` last, in front.
 - **Templates stay small.** At most 2 px of movement in a template; save the
   big moves for signature actions.
 

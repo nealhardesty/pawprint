@@ -1,0 +1,206 @@
+# Base: small-quadruped (SPEC §12.8). A low, alert small mammal: big pointed
+# ears, a face that tapers to a narrow snout, white cheeks, dark socks on the
+# rim, and a bushy tail curling up the right side. Its default colors make a
+# red fox. Members: fox, raccoon, red-panda, badger, skunk, opossum,
+# hedgehog, otter.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)    l f F  fur light / base / shadow
+#   w M    cheeks, chest, and tail tip / their shadow
+#   s S    socks and ear tips: light / dark (a raccoon's mask can use them)
+#   e iris (unused by the default eyes)   h eye highlight
+#   n nose   p mouth inside
+#
+# Slots, in drawing order: tail (+flick), body, head, ears (+flick), eyes
+# (+closed, left, right, happy), nose (+sniff), mouth (.open only, hidden at
+# rest), paws. ears, eyes, nose, and mouth follow head. Round-eared members
+# (raccoon, otter, badger) replace `ears`; short-tailed ones replace `tail`.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "orange-1"
+"f" = "orange-2"
+"F" = "orange-3"
+"w" = "white"
+"M" = "grey-1"
+"s" = "grey-4"
+"S" = "fur-black"
+"e" = "amber"
+"h" = "white"
+"n" = "fur-black"
+"p" = "pink-2"
+
+[layers.tail]
+at = [23, 6]
+grid = """
+..kk...
+.kwwk..
+kwwwwk.
+kwwwwk.
+kllwlk.
+.kllfFk
+.klffFk
+.kfffFk
+.kfffFk
+kffffFk
+kfffFFk
+kfffFFk
+kffFFk.
+kfFFk..
+"""
+
+[layers."tail.flick"]
+at = [23, 6]
+grid = """
+...kk..
+..kwwk.
+.kwwwwk
+.kwwwwk
+.kllwlk
+.kllfFk
+.klffFk
+.kfffFk
+.kfffFk
+kffffFk
+kfffFFk
+kfffFFk
+kffFFk.
+kfFFk..
+"""
+
+[layers.body]
+at = [6, 13]
+grid = """
+.klffffffffffffffFk.
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klffffffffffffffffFk
+klffffffwwwwffffffFk
+klfffffwwwwwwfffffFk
+klfffffwwwwwwfffffFk
+klffffffwwwwffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+"""
+
+[layers.head]
+at = [4, 5]
+grid = """
+......kkkkkkkkkkkk......
+....kkllllllllllffkk....
+...kllffffffffffffFFk...
+..klfffffffffffffffFFk..
+..klfffffffffffffffFFk..
+..klfffffffffffffffFFk..
+.kwwffffffffffffffffwMk.
+kwwwwffffffffffffffwwwMk
+.kwwwwwffffffffffwwwwMk.
+...kwwwwwwffffwwwwwMk...
+.....kwwwwwffwwwwMk.....
+.......kwwwwwwwMk.......
+.........kkkkkk.........
+"""
+
+[layers.ears]
+at = [6, 1]
+follows = "head"
+grid = """
+kk................kk
+kSk..............kSk
+kSSk............kSSk
+kSlfk..........kflSk
+klwwfk........kfwwlk
+.kwwffF......Fffwwk.
+"""
+
+[layers."ears.flick"]
+at = [5, 1]
+follows = "head"
+grid = """
+...................kk
+kk................kSk
+kSk..............kSSk
+kSSk............kflSk
+kSlfk..........kfwwlk
+.klwfk........Fffwwk.
+..kwwffF.............
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [15, 16]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [15, 15]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."mouth.open"]
+at = [14, 17]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+[layers.paws]
+at = [9, 17]
+grid = """
+.SSS......SSS.
+SsssS....SsssS
+kSsSk....kSsSk
+"""
