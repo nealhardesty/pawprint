@@ -51,19 +51,19 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 
 [layers.plate-left]
 grid = """
-kkkk
-k3n3
-k3ss
-k3ss
-k2ss
-k2ss
-k2ss
-k2ss
-k2ss
-k2ss
-k2ss
-k2o1
-kkkk
+kkk
+k3n
+k3s
+k3s
+k2s
+k2s
+k2s
+k2s
+k2s
+k2s
+k2s
+k2o
+kkk
 """
 
 [layers.plate-mid]
@@ -85,17 +85,17 @@ k
 
 [layers.plate-right]
 grid = """
-kkkk
-3n3k
-ss1k
-ss1k
-ss1k
-ss1k
-ss1k
-ss1k
-ss1k
-ss1k
-ss1k
-1o1k
-kkkk
+kkk
+n3k
+s1k
+s1k
+s1k
+s1k
+s1k
+s1k
+s1k
+s1k
+s1k
+o1k
+kkk
 """

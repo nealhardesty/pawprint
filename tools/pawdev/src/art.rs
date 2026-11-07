@@ -205,6 +205,24 @@ mod tests {
     use super::*;
 
     #[test]
+    fn docs_examples_compile_cleanly() {
+        let lib = library(&crate::root()).unwrap();
+        let dir = crate::root().join("docs/examples");
+        let mut n = 0;
+        for entry in std::fs::read_dir(&dir).unwrap().flatten() {
+            let c = pawprint_core::sprite::compile_dir(&entry.path(), &lib, Origin::Bundled);
+            assert!(
+                c.report.is_clean(),
+                "{}: {:?}",
+                entry.path().display(),
+                c.report
+            );
+            n += 1;
+        }
+        assert!(n > 0);
+    }
+
+    #[test]
     fn palette_gpl_is_up_to_date() {
         let root = crate::root();
         let src = std::fs::read_to_string(root.join("assets/palette.toml")).unwrap();

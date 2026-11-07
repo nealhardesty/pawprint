@@ -260,7 +260,8 @@ The built-in mascots are written in a **text pixel format** instead: pixel
 grids in TOML, with shared body bases, reusable motions like `blink` and
 `duck`, and props like `zzz`. Your own mascots can use it too, and it's the
 way to contribute new built-ins. Both formats are documented in
-[SPEC.md §12](SPEC.md#12-mascot-assets).
+[SPEC.md §12](SPEC.md#12-mascot-assets), and [docs/ART.md](docs/ART.md) walks
+through drawing one on a shared body base, step by step.
 
 ---
 

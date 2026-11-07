@@ -1,0 +1,45 @@
+# A minimal mascot on a base: the worked example in docs/ART.md.
+# A test compiles this file against the bundled library, so it stays valid.
+id = "tabby"
+name = "Tabby"
+category = "cats-dogs"
+aliases = ["tabbycat"]
+accent = "marigold"
+extends = "cat-sit"
+
+# 1. Recolor: map the base's role glyphs to master palette names.
+[palette]
+"l" = "orange-1"    # fur light
+"f" = "orange-2"    # fur
+"F" = "orange-3"    # fur shadow
+"w" = "cream"       # muzzle and chest
+"M" = "orange-1"    # mouth lines on the muzzle
+"s" = "orange-3"    # NEW glyph: tabby stripes
+
+# 2. Add a layer: forehead stripes. It's a new slot, so it draws after every
+#    base layer; `follows = "head"` keeps it on the head when the head tilts.
+[layers.stripes]
+at = [13, 5]
+follows = "head"
+grid = """
+s.ss.s
+.s..s.
+"""
+
+# 3. Actions: templates from assets/motions/, then a signature of your own.
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "tail-flick"
+
+[[actions]]
+name = "slow-blink"   # signature: a slow, trusting cat blink
+weight = 4
+frames = [
+  { ops = ["eyes=closed"], ms = 600 },
+  { ops = [], ms = 300 },
+  { ops = ["eyes=closed"], ms = 900 },
+  { ops = ["eyes=happy"], ms = 400 },
+]
