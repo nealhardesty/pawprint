@@ -6,6 +6,7 @@ use calloop::EventLoop;
 use calloop::channel::{self, Event as ChannelEvent};
 use pawprint_core::badge::Command;
 use pawprint_core::config::Backend;
+use pawprint_core::movemode::KeyCode;
 use pawprint_core::surface::{DisplayInfo, Surface};
 
 use super::{sni, wayland, x11};
@@ -238,6 +239,19 @@ pub fn drive<A: App>(
         shell.tick(surface);
     }
 }
+
+/// Move mode's keys (SPEC §6.3) for both backends: the X keysym (X11 reads
+/// keysyms), its name in an XKB keymap (Wayland reads the keymap text), and
+/// the core's key.
+pub const MOVE_KEYS: [(u32, &str, KeyCode); 7] = [
+    (0xff51, "Left", KeyCode::Left),
+    (0xff52, "Up", KeyCode::Up),
+    (0xff53, "Right", KeyCode::Right),
+    (0xff54, "Down", KeyCode::Down),
+    (0xff0d, "Return", KeyCode::Enter),
+    (0xff8d, "KP_Enter", KeyCode::Enter),
+    (0xff1b, "Escape", KeyCode::Escape),
+];
 
 /// `Xft.dpi` from the X resource database string, if set.
 pub fn xft_dpi(resources: &str) -> Option<f64> {

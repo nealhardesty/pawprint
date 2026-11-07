@@ -233,16 +233,9 @@ impl Server {
         let per = usize::from(map.keysyms_per_keycode.max(1));
         let mut keys = HashMap::new();
         for (i, syms) in map.keysyms.chunks(per).enumerate() {
-            let code = match syms[0] {
-                0xff51 => KeyCode::Left,
-                0xff52 => KeyCode::Up,
-                0xff53 => KeyCode::Right,
-                0xff54 => KeyCode::Down,
-                0xff0d | 0xff8d => KeyCode::Enter,
-                0xff1b => KeyCode::Escape,
-                _ => continue,
-            };
-            keys.insert(min + i as u8, code);
+            if let Some(&(_, _, code)) = linux::MOVE_KEYS.iter().find(|k| k.0 == syms[0]) {
+                keys.insert(min + i as u8, code);
+            }
         }
         Ok(keys)
     }

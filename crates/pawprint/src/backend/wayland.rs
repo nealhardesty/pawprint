@@ -896,15 +896,7 @@ impl PointerHandler for WlApp {
 /// virtual keyboards with their own keymaps (remote desktop servers, wtype)
 /// work without libxkbcommon. Without a usable keymap, the evdev codes.
 fn move_keys(keymap: Option<&str>) -> HashMap<u32, KeyCode> {
-    let wanted = |sym: &str| match sym {
-        "Left" => Some(KeyCode::Left),
-        "Right" => Some(KeyCode::Right),
-        "Up" => Some(KeyCode::Up),
-        "Down" => Some(KeyCode::Down),
-        "Return" | "KP_Enter" => Some(KeyCode::Enter),
-        "Escape" => Some(KeyCode::Escape),
-        _ => None,
-    };
+    let wanted = |sym: &str| linux::MOVE_KEYS.iter().find(|k| k.1 == sym).map(|k| k.2);
     let parsed = keymap.map(|text| {
         // xkb_keycodes: `<LEFT> = 113;`
         let codes: HashMap<&str, u32> = text

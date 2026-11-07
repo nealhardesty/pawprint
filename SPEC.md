@@ -1035,7 +1035,15 @@ Platform code is unavoidable. Duplicated platform code is not. The rules:
    that introduces the second copy.
 3. **Each backend stays small,** around 500–800 lines including its tray and
    autostart glue. A backend growing past that is a sign that rule 1 is being
-   broken.
+   broken. Two are over, and were reviewed for it (M5): Wayland (about
+   1,050 lines) and X11 (about 880). What they share is already in
+   `backend::linux` (the loop, scale helpers, move-mode keys, doctor) and
+   `backend::sni`; the excess is protocol plumbing with no decisions in it.
+   Wayland carries sctk's handler traits (most methods empty), four kinds
+   of surface (badge, work-area probe, move-mode catcher, preview window),
+   and the keymap reader that replaces libxkbcommon (F22). X11 carries the
+   EWMH, Motif, and shape setup, the image upload split to the request
+   size, and the compositor-change rebuild.
 4. **The core has a `FakeSurface`,** so move mode, display changes, reloads,
    and animation are tested in `make test` on every OS, without a window.
 
