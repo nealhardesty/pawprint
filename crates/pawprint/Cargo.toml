@@ -12,6 +12,31 @@ publish = false
 pawprint-core.workspace = true
 clap.workspace = true
 directories.workspace = true
+log = "0.4"
+serde.workspace = true
+serde_json = "1"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+# Linux backends (SPEC §10.3). All pure Rust, so the musl build stays static
+# (F22): sctk without `xkbcommon`, wayland-client without `system`/`dlopen`/`log`.
+[target.'cfg(target_os = "linux")'.dependencies]
+calloop = "0.14"
+smithay-client-toolkit = { version = "0.21", default-features = false, features = ["calloop"] }
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }
+wayland-protocols-plasma = { version = "0.3", features = ["client"] }
+x11rb = { version = "0.14", features = ["shape", "xfixes", "randr"] }
+zbus = { version = "5", default-features = false, features = ["async-io", "blocking-api"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { workspace = true, features = ["Win32_System_SystemInformation", "Win32_Foundation"] }
+
+# Display-server tests (`make test-x11`, `make test-wayland`): they drive real
+# Xvfb and headless sway sessions, so they are `#[ignore]`d in `make test`.
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+png.workspace = true
+wayland-client = "0.31"
+wayland-protocols-wlr = { version = "0.3", features = ["client"] }
+x11rb = { version = "0.14", features = ["randr", "xtest"] }

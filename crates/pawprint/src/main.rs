@@ -1,8 +1,19 @@
 //! `pawprint`: the badge and its command-line interface (SPEC §9).
 
+// The Windows and macOS backends are stubs until they land (M1), so the
+// shared runtime they will drive is unused there. Remove with them.
+#![cfg_attr(not(target_os = "linux"), allow(dead_code))]
+
+mod backend;
+mod clock;
 mod commands;
+mod doctor;
 mod hostname;
+mod instance;
+mod ipc;
+mod logger;
 mod paths;
+mod shell;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -14,9 +25,7 @@ pub mod exit {
     pub const OK: u8 = 0;
     pub const ERROR: u8 = 1;
     pub const USAGE: u8 = 2;
-    #[allow(dead_code)] // used by `run` once backends land (M1)
     pub const NO_SESSION: u8 = 3;
-    #[allow(dead_code)]
     pub const NOT_RUNNING: u8 = 4;
 }
 
@@ -168,14 +177,20 @@ fn main() -> ExitCode {
         Err(e) => e.exit(),
     };
     let result = match cli.command {
-        None => not_yet("starting the badge", "M1"),
-        Some(Cmd::Run { .. }) => not_yet("run", "M1"),
-        Some(Cmd::Move) => not_yet("move", "M1"),
-        Some(Cmd::ResetPosition) => not_yet("reset-position", "M1"),
-        Some(Cmd::Reload) => not_yet("reload", "M4"),
-        Some(Cmd::Quit) => not_yet("quit", "M1"),
-        Some(Cmd::Status) => not_yet("status", "M1"),
-        Some(Cmd::Doctor) => not_yet("doctor", "M1"),
+        None => instance::start(),
+        Some(Cmd::Run { verbose }) => run(verbose),
+        Some(Cmd::Move) => send(ipc::Request::Move).map(|_| {
+            println!(
+                "Move mode: drag the badge, or use the arrow keys (Shift for bigger steps). \
+                 Enter saves, Esc cancels; it ends by itself after 30 seconds."
+            )
+        }),
+        Some(Cmd::ResetPosition) => send(ipc::Request::ResetPosition)
+            .map(|_| println!("Position reset to the configured one.")),
+        Some(Cmd::Reload) => send(ipc::Request::Reload).map(|_| println!("Config reloaded.")),
+        Some(Cmd::Quit) => send(ipc::Request::Quit).map(|_| println!("PAWPRINT stopped.")),
+        Some(Cmd::Status) => status(),
+        Some(Cmd::Doctor) => doctor::run(),
         Some(Cmd::Preview { .. }) => not_yet("preview", "M2"),
         Some(Cmd::Set { .. }) => not_yet("set", "M4"),
         Some(Cmd::Unset { .. }) => not_yet("unset", "M4"),
@@ -207,6 +222,89 @@ fn main() -> ExitCode {
 
 /// A command failure: exit code and message.
 pub type CmdResult = Result<(), (u8, String)>;
+
+/// `pawprint run`: the badge, in the foreground.
+fn run(verbose: bool) -> CmdResult {
+    let paths = paths::Paths::detect()
+        .ok_or((exit::ERROR, "cannot find the home directory".to_string()))?;
+    logger::init(&paths.log_file, verbose);
+    let fail = |code: u8, msg: String| {
+        log::error!("{msg}");
+        (code, msg)
+    };
+    let session = instance::session_key().map_err(|e| fail(exit::NO_SESSION, e))?;
+    let endpoint = instance::endpoint().map_err(|e| fail(exit::NO_SESSION, e))?;
+    let listener = match instance::claim(&endpoint) {
+        Ok(instance::Claim::Claimed(l)) => l,
+        Ok(instance::Claim::Running(s)) => {
+            println!(
+                "PAWPRINT is already running in this session (pid {}).",
+                s.pid
+            );
+            return Ok(());
+        }
+        Err(e) => {
+            return Err(fail(
+                exit::ERROR,
+                format!("cannot open {}: {e}", endpoint.display()),
+            ));
+        }
+    };
+    log::info!(
+        "PAWPRINT {} starting: pid {}, session {session}",
+        version(),
+        std::process::id()
+    );
+    let result = shell::Shell::new(paths, session, Default::default())
+        .and_then(|shell| backend::run(shell, listener));
+    instance::release(&endpoint);
+    result.map_err(|(code, msg)| fail(code, msg))
+}
+
+/// Send one command to this session's badge.
+fn send(request: ipc::Request) -> Result<ipc::Response, (u8, String)> {
+    let endpoint = instance::endpoint().map_err(|e| (exit::NO_SESSION, e))?;
+    match ipc::call(&endpoint, request) {
+        Ok(r) if r.ok => Ok(r),
+        Ok(r) => Err((exit::ERROR, r.error.unwrap_or_else(|| "failed".into()))),
+        Err(ipc::CallError::NotRunning) => Err((
+            exit::NOT_RUNNING,
+            "PAWPRINT is not running in this session; start it with `pawprint`".into(),
+        )),
+        Err(e) => Err((exit::ERROR, e.to_string())),
+    }
+}
+
+fn status() -> CmdResult {
+    let s = send(ipc::Request::Status)?
+        .status
+        .ok_or((exit::ERROR, "the badge sent no status".to_string()))?;
+    let rows = [
+        ("running", format!("yes, pid {}", s.pid)),
+        ("backend", s.backend),
+        ("session", s.session),
+        ("display", s.display.unwrap_or_else(|| "(none)".into())),
+        (
+            "badge",
+            match (s.rect, s.scale) {
+                (Some([x, y, w, h]), Some(scale)) => format!("{w}x{h} at {x},{y} (scale {scale})"),
+                _ => "(not placed)".into(),
+            },
+        ),
+        ("mascot", s.mascot),
+        ("label", s.label.unwrap_or_else(|| "(none)".into())),
+        ("size", s.size.to_string()),
+        (
+            "position",
+            format!("{} ({})", s.position, s.position_source),
+        ),
+        ("move mode", if s.moving { "on" } else { "off" }.into()),
+    ];
+    for (k, v) in rows {
+        println!("{k:<12}{v}");
+    }
+    Ok(())
+}
 
 fn not_yet(what: &str, milestone: &str) -> CmdResult {
     Err((
