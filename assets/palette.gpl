@@ -1,0 +1,36 @@
+GIMP Palette
+Name: PAWPRINT master palette
+Columns: 8
+# Generated from assets/palette.toml by `make palette`. Do not edit.
+ 27  27  31	ink
+247 245 239	white
+242 239 230	cream
+212 210 204	grey-1
+154 152 147	grey-2
+ 93  92  89	grey-3
+ 52  52  58	grey-4
+ 43  40  51	fur-black
+217 180 138	brown-1
+168 120  77	brown-2
+116  80  47	brown-3
+ 74  49  29	brown-4
+246 194 122	orange-1
+232 145  45	orange-2
+184  97  42	orange-3
+249 226 125	yellow-1
+226 180  60	yellow-2
+232 106  95	red-1
+178  58  58	red-2
+244 183 196	pink-1
+215 122 145	pink-2
+168 207 106	green-1
+ 95 154  63	green-2
+ 47 107  79	green-3
+191 227 242	blue-1
+ 91 155 213	blue-2
+ 47  95 143	blue-3
+179 157 219	purple-1
+110  75 158	purple-2
+ 42 140 135	teal
+240 168  48	amber
+238 154 154	blush
