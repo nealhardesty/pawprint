@@ -179,7 +179,10 @@ use run_key as platform;
 
 /// Windows: the `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` value
 /// `pawprint` = `"<dir>\pawprintw.exe" run`. HKCU Run entries run at every
-/// interactive logon, RDP logons included (F10).
+/// interactive logon, RDP logons included (F10). Settings → Apps → Startup
+/// (and Task Manager) can switch an entry off without removing it, in
+/// `Explorer\StartupApproved\Run`: `status` says so, and `on` and `off`
+/// clear that switch.
 #[cfg(windows)]
 mod run_key {
     use std::path::PathBuf;
@@ -187,13 +190,18 @@ mod run_key {
 
     use windows_sys::Win32::Foundation::{ERROR_FILE_NOT_FOUND, ERROR_SUCCESS, WIN32_ERROR};
     use windows_sys::Win32::System::Registry::{
-        HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ, RegDeleteKeyValueW, RegGetValueW, RegSetKeyValueW,
+        HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_BINARY, RRF_RT_REG_SZ, RegDeleteKeyValueW,
+        RegGetValueW, RegSetKeyValueW,
     };
 
     use super::State;
 
     const KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
     const VALUE: &str = "pawprint";
+    /// The Startup apps switch: a binary value whose first byte is odd
+    /// (0x03) when the user turned the entry off, even (0x02) when on.
+    const APPROVED: &str =
+        r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
 
     fn wide(s: &str) -> Vec<u16> {
         s.encode_utf16().chain([0]).collect()
@@ -227,14 +235,47 @@ mod run_key {
         match code {
             ERROR_SUCCESS => {
                 let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
+                let mut command = String::from_utf16_lossy(&buf[..len]);
+                if switched_off() {
+                    command.push_str(
+                        " (disabled in Startup apps; `pawprint autostart on` turns it back on)",
+                    );
+                }
                 Ok(State::On {
                     entry: entry(),
-                    command: String::from_utf16_lossy(&buf[..len]),
+                    command,
                 })
             }
             ERROR_FILE_NOT_FOUND => Ok(State::Off),
             code => Err(fail("read", code)),
         }
+    }
+
+    /// Whether the user switched the entry off in Startup apps.
+    fn switched_off() -> bool {
+        let (key, value) = (wide(APPROVED), wide(VALUE));
+        let mut buf = [0u8; 64];
+        let mut bytes = buf.len() as u32;
+        // SAFETY: `buf` holds `bytes` bytes.
+        let code = unsafe {
+            RegGetValueW(
+                HKEY_CURRENT_USER,
+                key.as_ptr(),
+                value.as_ptr(),
+                RRF_RT_REG_BINARY,
+                null_mut(),
+                buf.as_mut_ptr().cast(),
+                &mut bytes,
+            )
+        };
+        code == ERROR_SUCCESS && bytes > 0 && buf[0] & 1 == 1
+    }
+
+    /// Forget the Startup apps switch, so the entry counts as on.
+    fn clear_switch() {
+        let (key, value) = (wide(APPROVED), wide(VALUE));
+        // SAFETY: NUL-terminated strings; a missing value is fine.
+        unsafe { RegDeleteKeyValueW(HKEY_CURRENT_USER, key.as_ptr(), value.as_ptr()) };
     }
 
     pub fn enable() -> Result<State, String> {
@@ -255,11 +296,13 @@ mod run_key {
         if code != ERROR_SUCCESS {
             return Err(fail("write", code));
         }
+        clear_switch();
         status()
     }
 
     pub fn disable() -> Result<(), String> {
         let (key, value) = (wide(KEY), wide(VALUE));
+        clear_switch();
         // SAFETY: NUL-terminated strings.
         match unsafe { RegDeleteKeyValueW(HKEY_CURRENT_USER, key.as_ptr(), value.as_ptr()) } {
             ERROR_SUCCESS | ERROR_FILE_NOT_FOUND => Ok(()),
