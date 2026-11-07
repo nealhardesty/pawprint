@@ -1,0 +1,163 @@
+# Red fox, on small-quadruped. The base's own animal, sharpened: orange
+# coat, a white chin and cheeks tapering to a black nose, black-tipped
+# pointed ears, amber eyes, black socks, and a big white-tipped brush.
+# `ears.swivel` turns both ears to the right; `tail.swish` sweeps the brush
+# out wide.
+id = "fox"
+name = "Fox"
+category = "mammals"
+aliases = ["redfox"]
+accent = "brick"
+extends = "small-quadruped"
+
+[palette]
+"l" = "orange-1"    # fur light
+"f" = "orange-2"    # fur
+"F" = "orange-3"    # fur shadow
+"w" = "white"       # chin, cheeks, tail tip
+"M" = "grey-1"      # shadow on the white
+"s" = "grey-4"      # socks light
+"S" = "fur-black"   # socks and ear tips
+"e" = "amber"       # iris
+"n" = "fur-black"   # nose
+
+# A narrow white bib that continues the chin.
+[layers.body]
+at = [6, 13]
+grid = """
+.klffffffffffffffFk.
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klffffffwwwwffffffFk
+klfffffffwwfffffffFk
+klfffffffwMfffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+"""
+
+[layers."tail.swish"]
+at = [22, 7]
+grid = """
+.......kk.
+.....kkwwk
+....kwwwwk
+...kwwwwk.
+...kllwlk.
+..kllfFk..
+..klffFk..
+.kfffFk...
+.kffffFk..
+kfffFFk...
+kfffFFk...
+kffFFk....
+kfFFk.....
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+he......eh
+ek......ke
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+FF......FF
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+hee......hee
+kee......kee
+"""
+
+[layers."eyes.right"]
+at = [11, 9]
+follows = "head"
+grid = """
+eeh......eeh
+eek......eek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+# Both ears turn to listen to something off to the right.
+[layers."ears.swivel"]
+at = [6, 1]
+follows = "head"
+grid = """
+.kk................kk
+.kSk..............kSk
+.kSSk............kSSk
+kSlfk...........kflSk
+klwwfk.........kfwwlk
+.kwwffF.......FffwwkF
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 4
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: ears swivel toward a sound, then the brush swishes once.
+[[actions]]
+name = "swivel-swish"
+weight = 5
+frames = [
+  { ops = ["ears=swivel"], ms = 200 },
+  { ops = ["ears=swivel", "eyes=right"], ms = 900 },
+  { ops = ["ears=swivel", "eyes=right", "tail=swish"], ms = 220 },
+  { ops = ["eyes=right", "tail=flick"], ms = 160 },
+  { ops = [], ms = 300 },
+  { ops = ["eyes=closed"], ms = 140 },
+]
+
+# Rare: the mousing pounce. It crouches, springs, and dives nose-first into
+# the crate, then pops back up very pleased (catch not guaranteed).
+[[actions]]
+name = "mouse-pounce"
+weight = 1
+frames = [
+  { ops = ["ears=swivel", "eyes=right"], ms = 600 },
+  { ops = ["all+0,2", "ears=swivel", "eyes=closed"], ms = 400 },
+  { ops = ["all+0,-3"], ms = 120 },
+  { ops = ["all+0,-4", "tail=swish"], ms = 120 },
+  { ops = ["all+0,6", "tail=swish"], ms = 80 },
+  { ops = ["all+0,14", "prop:puff@12,14"], ms = 250 },
+  { ops = ["all+0,14"], ms = 600 },
+  { ops = ["all+0,5", "eyes=happy"], ms = 120 },
+  { ops = ["eyes=happy", "prop:sparkle@22,4"], ms = 800 },
+  { ops = [], ms = 200 },
+]

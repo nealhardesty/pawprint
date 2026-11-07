@@ -1,0 +1,275 @@
+# Badger, on small-quadruped. Low, broad, and grizzled grey, with the
+# defining face: black down both sides and one bold white stripe from the
+# nose up over the crown, white cheeks outside the black, small round
+# white-tipped ears, a stubby tail, and big black digging paws with white
+# claws. `paws.dig-a` / `.dig-b` alternate; `dirt` is what flies out.
+id = "badger"
+name = "Badger"
+category = "mammals"
+aliases = []
+accent = "charcoal"
+extends = "small-quadruped"
+
+[palette]
+"l" = "grey-1"      # fur light
+"f" = "grey-2"      # grizzled fur
+"F" = "grey-3"      # fur shadow
+"w" = "white"       # face stripe, cheeks, claws
+"M" = "grey-1"      # shadow on the white
+"s" = "grey-4"      # face and paws light
+"S" = "fur-black"   # face and paws
+"n" = "fur-black"   # nose
+"d" = "brown-2"     # NEW: dirt
+"D" = "brown-3"     # NEW: dirt shadow
+
+[layers.tail]
+at = [26, 13]
+grid = """
+.kk.
+kllk
+kfFk
+.kk.
+"""
+
+[layers."tail.flick"]
+at = [26, 12]
+grid = """
+.kk.
+kllk
+kfFk
+.kk.
+"""
+
+# Broad and low, with a black chest.
+[layers.body]
+at = [4, 13]
+grid = """
+..klffffffffffffffffFk..
+.klfffffffffffffffffFFk.
+klfffffffffffffffffffFFk
+klffffffsSSSSSSsffffffFk
+klfffffsSSSSSSSSsfffffFk
+klfffffsSSSSSSSSsfffffFk
+klffffffsSSSSSSsffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+"""
+
+# Wide, flat-topped head: one white stripe from crown to nose between two
+# black bands, with white cheeks outside them.
+[layers.head]
+at = [3, 6]
+grid = """
+.......kkkkkkkkkkkk.......
+.....kkSSSSwwwwSSSSkk.....
+....kSSSSSSwwwwSSSSSSk....
+...kwSSSSSSwwwwSSSSSSwk...
+..kwwSSSSSSwwwwSSSSSSwwk..
+.kwwwSSSSSSwwwwSSSSSSwwMk.
+kwwwwwSSSSSwwwwSSSSSwwwwMk
+kwwwwwwSSSSwwwwSSSSwwwwwMk
+.kwwwwwwSSSwwwwSSSwwwwwMk.
+..kkwwwwwSSwwwwSSwwwwMkk..
+....kkwwwwSwwwwSwwwwkk....
+......kkkkkkMMkkkkkk......
+"""
+
+[layers.ears]
+at = [5, 5]
+follows = "head"
+grid = """
+.kk................kk.
+kwwk..............kwwk
+kSSk..............kSSk
+"""
+
+[layers."ears.flick"]
+at = [5, 4]
+follows = "head"
+grid = """
+...................kk.
+.kk...............kwwk
+kwwk..............kSSk
+kSSk..................
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+wk......wk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+ss......ss
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+wk......wk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+wk......wk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.ww......ww.
+w..w....w..w
+"""
+
+[layers.nose]
+at = [14, 15]
+follows = "head"
+grid = """
+knnk
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 14]
+follows = "head"
+grid = """
+knnk
+.nn.
+"""
+
+[layers."mouth.open"]
+at = [14, 17]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+# Big black digging paws with white claws.
+[layers.paws]
+at = [7, 16]
+grid = """
+.SSSS........SSSS.
+SssssS......SssssS
+kwSwSwk....kwSwSwk
+"""
+
+[layers."paws.dig-a"]
+at = [7, 15]
+grid = """
+.SSSS.............
+SssssS............
+kwSwSwk......SSSS.
+............SssssS
+............kwSwSw
+"""
+
+[layers."paws.dig-b"]
+at = [7, 15]
+grid = """
+.............SSSS.
+............SssssS
+.SSSS.......kwSwSw
+SssssS............
+kwSwSwk...........
+"""
+
+[layers."dirt.a"]
+at = [3, 8]
+grid = """
+.kk.......................
+kddk......................
+kDDk......................
+.kk.......................
+"""
+
+[layers."dirt.b"]
+at = [24, 6]
+grid = """
+.kk.
+kddk
+kDDk
+.kk.
+"""
+
+[layers."dirt.lots"]
+at = [2, 4]
+grid = """
+.kk...................kk...
+kddk.................kddk..
+kDDk.....kk..........kDDk..
+.kk.....kddk..........kk...
+........kDDk...........kk..
+.........kk...........kddk.
+......................kDDk.
+.......................kk..
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 4
+
+[[actions]]
+use = "peek"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: hunches down and digs, flicking two crumbs of dirt out.
+[[actions]]
+name = "dig"
+weight = 5
+frames = [
+  { ops = ["all+0,1", "eyes=closed"], ms = 160 },
+  { ops = ["all+0,1", "paws=dig-a"], ms = 110 },
+  { ops = ["all+0,1", "paws=dig-b", "dirt=a"], ms = 110 },
+  { ops = ["all+0,1", "paws=dig-a", "dirt=a", "dirt+-1,-3"], ms = 110 },
+  { ops = ["all+0,1", "paws=dig-b", "dirt=b"], ms = 110 },
+  { ops = ["all+0,1", "paws=dig-a", "dirt=b", "dirt+1,-3"], ms = 110 },
+  { ops = ["paws=dig-b"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: digs so hard it tunnels clean out of sight, dirt flying, then pops
+# back up in a puff of dust.
+[[actions]]
+name = "tunnel"
+weight = 1
+frames = [
+  { ops = ["all+0,1", "paws=dig-a"], ms = 100 },
+  { ops = ["all+0,3", "paws=dig-b", "dirt=a"], ms = 100 },
+  { ops = ["all+0,6", "paws=dig-a", "dirt=lots", "dirt+0,-6"], ms = 120 },
+  { ops = ["all+0,10", "paws=dig-b", "dirt=lots", "dirt+0,-12"], ms = 120 },
+  { ops = ["all+0,14", "dirt=lots", "dirt+0,-17"], ms = 300 },
+  { ops = ["all+0,14"], ms = 900 },
+  { ops = ["all+0,3", "eyes=closed", "prop:puff@11,13"], ms = 160 },
+  { ops = ["eyes=happy", "prop:puff@12,11"], ms = 700 },
+  { ops = [], ms = 200 },
+]

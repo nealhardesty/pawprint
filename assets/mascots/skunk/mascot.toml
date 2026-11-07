@@ -1,0 +1,260 @@
+# Skunk, on small-quadruped. Glossy black with one thin white stripe up the
+# middle of the face, small round ears, a pink nose, and the defining
+# feature: a huge white-striped plume of a tail standing up on the right
+# and curling over the top. `tail.up` throws it right over the head; `stink`
+# is the little green cloud.
+id = "skunk"
+name = "Skunk"
+category = "mammals"
+aliases = []
+accent = "violet"
+extends = "small-quadruped"
+
+[palette]
+"l" = "grey-3"      # fur sheen
+"f" = "grey-4"      # fur
+"F" = "fur-black"   # fur shadow
+"w" = "white"       # stripes
+"M" = "grey-1"      # shadow on the white
+"s" = "grey-4"      # paws light
+"S" = "fur-black"   # paws
+"e" = "purple-1"    # iris
+"n" = "pink-2"      # nose
+"p" = "pink-2"      # mouth
+"g" = "green-1"     # NEW: stink
+"G" = "green-2"     # NEW: stink shadow
+
+[layers.tail]
+at = [14, 0]
+grid = """
+....kkkkkkkkkkkk..
+..kkfffffffffffkk.
+.kffwwwwwwwwwwwwFk
+kfwwwwwwwwwwwwwwFk
+kffffffffffflffwFk
+.kkkkkkkkkklffwwFk
+...........klfwwFk
+..........klffwwFk
+..........klfwwfFk
+..........klfwwfFk
+..........klfwwfFk
+..........klfwwFk.
+..........klfwwFk.
+..........klwwfFk.
+..........kfwwFk..
+..........kfwwFk..
+..........kfwwFk..
+..........kffFk...
+..........kfFk....
+..........kFk.....
+"""
+
+# Raised: the plume stands taller and spreads its tip over the head.
+[layers."tail.up"]
+at = [4, 0]
+grid = """
+....kkkkkkkkkkkkkkkkkkkkkk..
+..kkfffffffffffffffffffffkk.
+.kffwwwwwwwwwwwwwwwwwwwwwwFk
+kfwwwwwwwwwwwwwwwwwwwwwwwwFk
+kwfffffffffffffffffffflffwFk
+kwfkkkkkkkkkkkkkkkkkklffwwFk
+.kk..................klfwwFk
+....................klffwwFk
+....................klfwwfFk
+....................klfwwfFk
+....................klfwwfFk
+....................klfwwFk.
+....................klfwwFk.
+....................klwwfFk.
+....................kfwwFk..
+....................kfwwFk..
+....................kfwwFk..
+....................kffFk...
+....................kfFk....
+....................kFk.....
+"""
+
+[layers.body]
+at = [8, 13]
+grid = """
+.klffffffffffFk.
+klfffffffffffFFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+"""
+
+# A rounded black head with a thin white stripe from the crown to the nose.
+[layers.head]
+at = [6, 5]
+grid = """
+....kkkkkkkkkkkk....
+..kkllllwwwwffffkk..
+.kllffffwwwwffffFFk.
+klfffffffwwfffffffFk
+klfffffffwwfffffffFk
+klfffffffwwfffffffFk
+klfffffffffffffffFFk
+.klffffffffffffffFk.
+..klfffffffffffFFk..
+...kfffffffffffFk...
+....kfffffffffFk....
+......kffffffk......
+........kkkk........
+"""
+
+[layers.ears]
+at = [6, 3]
+follows = "head"
+grid = """
+.kk..............kk.
+kffk............kffk
+kfFk............kfFk
+"""
+
+[layers."ears.flick"]
+at = [6, 2]
+follows = "head"
+grid = """
+.................kk.
+.kk.............kffk
+kffk............kfFk
+kfFk................
+"""
+
+# Big dark eyes with purple glints, so they show on black fur.
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+eh......eh
+ek......ek
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+ll......ll
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+eh......eh
+ek......ek
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+eh......eh
+ek......ek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.ll......ll.
+l..l....l..l
+"""
+
+[layers.nose]
+at = [15, 15]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [14, 14]
+follows = "head"
+grid = """
+nnnn
+"""
+
+[layers."stink.small"]
+at = [24, 1]
+grid = """
+..gg...
+.g..G..
+..gG.g.
+.....G.
+"""
+
+[layers."stink.big"]
+at = [22, 0]
+grid = """
+...gg.....
+..g..G.gg.
+...gG.g..G
+.g....GgG.
+g.G.......
+.GgG..gg..
+.....g..G.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the tail rises and a tiny stink cloud drifts off. Oops.
+[[actions]]
+name = "tail-raise"
+weight = 4
+frames = [
+  { ops = ["tail=up"], ms = 300 },
+  { ops = ["tail=up", "eyes=right"], ms = 500 },
+  { ops = ["tail=up", "stink=small"], ms = 400 },
+  { ops = ["tail=up", "stink=small", "stink+-1,-1", "eyes=happy"], ms = 700 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the full warning dance. It stamps its front feet, drops low with
+# the plume thrown right over its head, wobbles, lets one go, and comes back
+# up looking innocent.
+[[actions]]
+name = "warning-dance"
+weight = 1
+frames = [
+  { ops = ["all+0,1"], ms = 120 },
+  { ops = [], ms = 120 },
+  { ops = ["all+0,1"], ms = 120 },
+  { ops = ["all+0,4", "tail=up", "tail+0,-4", "eyes=right"], ms = 400 },
+  { ops = ["all+1,4", "tail=up", "tail+-1,-4", "eyes=right"], ms = 200 },
+  { ops = ["all+-1,4", "tail=up", "tail+1,-4", "eyes=left"], ms = 200 },
+  { ops = ["all+0,4", "tail=up", "tail+0,-4", "stink=big", "stink+0,-4"], ms = 700 },
+  { ops = ["tail=up", "eyes=happy", "stink=big", "stink+-1,-1"], ms = 700 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = [], ms = 200 },
+]

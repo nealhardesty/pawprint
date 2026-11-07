@@ -1,0 +1,317 @@
+# House mouse, on rodent-upright. Tiny: a small grey head and body sitting
+# low in the crate, two huge round pink-lined ears, whiskers, and a thin pink
+# tail hooked up the right side. `whiskers.twitch` fans the whiskers;
+# `paws.crumb` holds a cheese crumb (and `.bit`, the last of it); `cheese`
+# is the wedge from the rare action.
+id = "mouse"
+name = "Mouse"
+category = "mammals"
+aliases = ["mice"]
+accent = "slate"
+extends = "rodent-upright"
+
+[palette]
+"l" = "grey-1"      # fur light
+"f" = "grey-2"      # fur
+"F" = "grey-3"      # fur shadow, whiskers
+"w" = "white"       # muzzle and belly
+"M" = "grey-1"      # belly shadow
+"t" = "white"       # teeth
+"n" = "pink-2"      # nose
+"p" = "pink-1"      # inner ear, mouth, tail
+"P" = "pink-2"      # NEW: tail shadow
+"c" = "yellow-1"    # NEW: cheese
+"C" = "yellow-2"    # NEW: cheese holes
+
+[layers.tail]
+at = [20, 9]
+grid = """
+....kkk..
+...kpppk.
+...kpkkPk
+....k.kPk
+......kPk
+.....kpPk
+....kpPk.
+...kpPk..
+..kpPk...
+.kpPk....
+kpPk.....
+"""
+
+[layers."tail.flick"]
+at = [20, 8]
+grid = """
+.....kkk..
+....kpppk.
+....kpkPk.
+....k.kPk.
+.......kPk
+......kpPk
+.....kpPk.
+....kpPk..
+...kpPk...
+..kpPk....
+.kpPk.....
+kpPk......
+"""
+
+[layers.body]
+at = [9, 13]
+grid = """
+..klffffffFk..
+.klfffffffFFk.
+klffwwwwwwffFk
+klfwwwwwwwwfFk
+klfwwwwwwwwfFk
+klfwwwwwwwwfFk
+klfwwwwwwwMfFk
+klfwwwwwwwMfFk
+klffwwwwwMffFk
+klffwwwwwMffFk
+klfffwwwwfffFk
+klffffffffffFk
+klffffffffffFk
+klffffffffffFk
+klffffffffffFk
+klffffffffffFk
+klffffffffffFk
+klffffffffffFk
+klffffffffffFk
+"""
+
+[layers.head]
+at = [8, 6]
+grid = """
+....kkkkkkkk....
+..kkllllllffkk..
+.kllffffffffFFk.
+klfffffffffffFFk
+klfffffffffffFFk
+klffwwffffwwffFk
+.kfwwwwwwwwwwFk.
+..kwwwwwwwwwwk..
+...kkwwwwwwkk...
+.....kkkkkk.....
+"""
+
+# Two huge round ears, set behind the head's top corners.
+[layers.ears]
+at = [2, 0]
+follows = "head"
+grid = """
+..kkkkk..............kkkkk..
+.kllllFk............kllllFk.
+kllppppFk..........kllppppFk
+klpppppFk..........klpppppFk
+klpppppFk..........klpppppFk
+klpppppFk..........klpppppFk
+kfppppFk............kpppFFk.
+.kfFFk..............kFFFFk..
+..kk..................kk....
+"""
+
+[layers."ears.flick"]
+at = [2, 0]
+follows = "head"
+grid = """
+..kkkkk.....................
+.kllllFk..............kkkkk.
+kllppppFk............kllllFk
+klpppppFk..........kllppppFk
+klpppppFk..........klpppppFk
+klpppppFk..........klpppppFk
+kfppppFk...........klpppppFk
+.kfFFk..............kppFFk..
+..kk.................kkk....
+"""
+
+# Eyes set closer together than the base's, to suit the small face.
+[layers.eyes]
+at = [12, 9]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.closed"]
+at = [12, 10]
+follows = "head"
+grid = """
+kk....kk
+"""
+
+[layers."eyes.left"]
+at = [11, 9]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.right"]
+at = [13, 9]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.happy"]
+at = [11, 9]
+follows = "head"
+grid = """
+.kk....kk.
+k..k..k..k
+"""
+
+[layers.nose]
+at = [15, 12]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [14, 11]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers.mouth]
+at = [15, 13]
+follows = "head"
+grid = """
+tt
+"""
+
+[layers."mouth.open"]
+at = [14, 13]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+[layers."mouth.nibble"]
+at = [14, 13]
+follows = "head"
+grid = """
+.tt.
+.kk.
+"""
+
+[layers.paws]
+at = [12, 16]
+grid = """
+.FF..FF.
+FffFFffF
+.FF..FF.
+"""
+
+[layers."paws.crumb"]
+at = [12, 14]
+grid = """
+...kk...
+..kcck..
+.FkcCkF.
+FffkkffF
+.FF..FF.
+"""
+
+[layers."paws.bit"]
+at = [12, 15]
+grid = """
+...kk...
+.FkcckF.
+FffkkffF
+.FF..FF.
+"""
+
+# Whiskers fan out from the muzzle; .twitch lifts them.
+[layers.whiskers]
+at = [4, 12]
+follows = "head"
+grid = """
+FFF..................FFF
+...FF..............FF...
+"""
+
+[layers."whiskers.twitch"]
+at = [4, 11]
+follows = "head"
+grid = """
+FF......................FF
+..FFF................FFF..
+"""
+
+[layers."cheese.up"]
+at = [0, 13]
+grid = """
+......kk.
+....kkcck
+..kkccCck
+kkcccccck
+kcCcccCck
+kcccccccc
+kkkkkkkkk
+"""
+
+[layers."cheese.rise"]
+at = [0, 16]
+grid = """
+......kk.
+....kkcck
+..kkccCck
+kkcccccck
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 4
+
+[[actions]]
+use = "peek"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: whiskers twitch, then it nibbles a cheese crumb down to nothing.
+[[actions]]
+name = "nibble"
+weight = 5
+frames = [
+  { ops = ["whiskers=twitch"], ms = 100 },
+  { ops = [], ms = 100 },
+  { ops = ["whiskers=twitch", "nose=sniff"], ms = 100 },
+  { ops = ["paws=crumb"], ms = 300 },
+  { ops = ["paws=crumb", "head+0,1", "mouth=nibble"], ms = 140 },
+  { ops = ["paws=crumb"], ms = 140 },
+  { ops = ["paws=bit", "head+0,1", "mouth=nibble"], ms = 140 },
+  { ops = ["paws=bit", "eyes=happy"], ms = 500 },
+  { ops = ["whiskers=twitch"], ms = 120 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a whole wedge of cheese rises over the rim. The mouse can't believe it.
+[[actions]]
+name = "cheese-wedge"
+weight = 1
+frames = [
+  { ops = ["whiskers=twitch", "nose=sniff"], ms = 200 },
+  { ops = ["cheese=rise", "eyes=left"], ms = 300 },
+  { ops = ["cheese=up", "eyes=left", "whiskers=twitch"], ms = 500 },
+  { ops = ["cheese=up", "all+0,-2", "eyes=left", "prop:bang@24,1"], ms = 300 },
+  { ops = ["cheese=up", "eyes=happy", "prop:heart@22,2"], ms = 900 },
+  { ops = ["cheese=up", "eyes=happy", "prop:heart@22,0"], ms = 600 },
+  { ops = ["cheese=rise", "eyes=happy"], ms = 200 },
+  { ops = [], ms = 200 },
+]
