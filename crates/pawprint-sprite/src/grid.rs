@@ -51,7 +51,11 @@ mod tests {
         let g = parse_grid("\n  .k.\n  kek\n\n").unwrap();
         assert_eq!((g.width, g.height), (3, 2));
         assert_eq!(g.glyphs, vec!['.', 'k', '.', 'k', 'e', 'k']);
-        assert_eq!(parse_grid(".k.\r\nkek\r\n").unwrap(), g, "CRLF line endings");
+        assert_eq!(
+            parse_grid(".k.\r\nkek\r\n").unwrap(),
+            g,
+            "CRLF line endings"
+        );
     }
 
     #[test]
