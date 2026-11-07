@@ -192,9 +192,8 @@ pub fn main() -> ExitCode {
         None => instance::start(),
         Some(Cmd::Run { verbose }) => run(verbose),
         Some(Cmd::Move) => {
-            // Let the badge take the keyboard from this terminal.
-            #[cfg(windows)]
-            backend::allow_foreground();
+            // On Windows, connecting lets the badge take the keyboard from
+            // this terminal (`ipc::windows`).
             send(ipc::Request::Move).map(|_| {
                 println!(
                     "Move mode: drag the badge, or use the arrow keys (Shift for bigger steps). \
