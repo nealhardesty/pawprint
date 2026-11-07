@@ -1,5 +1,7 @@
 //! Compile and validate every bundled asset with `pawprint-sprite`, then
-//! embed the result (SPEC §12.13). Any error or warning fails the build.
+//! embed the result (SPEC §12.13). Any error fails the build; warnings in
+//! a bundled mascot or base already count as errors (`build_bundle`, SPEC
+//! §12.11 rule 4).
 //! Catalog gates (≥100 mascots, required ids) are NOT checked here; only
 //! `make package` enforces them (SPEC §12.11 rule 9).
 

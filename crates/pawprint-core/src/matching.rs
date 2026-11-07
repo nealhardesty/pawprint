@@ -34,16 +34,6 @@ pub struct AliasTable {
 }
 
 impl AliasTable {
-    /// Build from `(id, aliases)`. Later entries win a collision, so user
-    /// mascots listed after bundled ones override them.
-    pub fn new<'a>(entries: impl IntoIterator<Item = (&'a str, &'a [String])>) -> AliasTable {
-        let mut table = AliasTable::default();
-        for (id, aliases) in entries {
-            table.insert(id, aliases);
-        }
-        table
-    }
-
     /// Add a mascot's id and aliases, replacing earlier owners. Returns the
     /// `(squashed alias, previous owner)` pairs it took from other mascots.
     pub fn insert(&mut self, id: &str, aliases: &[String]) -> Vec<(String, String)> {
@@ -124,7 +114,11 @@ pub(crate) mod tests {
             ("red-panda", vec!["firefox".into()]),
             ("cat-orange-tabby", vec!["cat".into(), "ginger".into()]),
         ];
-        AliasTable::new(entries.iter().map(|(id, a)| (*id, a.as_slice())))
+        let mut table = AliasTable::default();
+        for (id, aliases) in &entries {
+            table.insert(id, aliases);
+        }
+        table
     }
 
     #[test]
