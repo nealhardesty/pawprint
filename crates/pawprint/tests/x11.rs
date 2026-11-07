@@ -316,7 +316,16 @@ const SNI: &str = "org.kde.StatusNotifierItem";
 const MENU: &str = "com.canonical.dbusmenu";
 
 /// A dbusmenu layout node: id, properties, children.
-type Node = (i32, HashMap<String, zbus::zvariant::OwnedValue>, Vec<zbus::zvariant::OwnedValue>);
+/// An SNI pixmap: width, height, ARGB32 bytes.
+type Pixmap = (i32, i32, Vec<u8>);
+/// An SNI tooltip: icon name, pixmaps, title, description.
+type ToolTip = (String, Vec<Pixmap>, String, String);
+
+type Node = (
+    i32,
+    HashMap<String, zbus::zvariant::OwnedValue>,
+    Vec<zbus::zvariant::OwnedValue>,
+);
 
 /// A private session bus (`dbus-daemon`) with a [`Watcher`] on it.
 struct Bus {
@@ -330,14 +339,24 @@ impl Bus {
         let addr = format!("unix:path={}", env.dir.join("bus").display());
         let daemon = env.spawn(
             "dbus-daemon",
-            &["--session", "--nofork", "--nopidfile", &format!("--address={addr}")],
+            &[
+                "--session",
+                "--nofork",
+                "--nopidfile",
+                &format!("--address={addr}"),
+            ],
         );
         env.set("DBUS_SESSION_BUS_ADDRESS", &addr);
         let items = Arc::new(Mutex::new(Vec::new()));
         let conn = wait_for("dbus-daemon", || {
             zbus::blocking::connection::Builder::address(addr.as_str())
                 .ok()?
-                .serve_at("/StatusNotifierWatcher", Watcher { items: items.clone() })
+                .serve_at(
+                    "/StatusNotifierWatcher",
+                    Watcher {
+                        items: items.clone(),
+                    },
+                )
                 .ok()?
                 .name("org.kde.StatusNotifierWatcher")
                 .ok()?
@@ -365,7 +384,8 @@ impl Bus {
 
     fn has_owner(&self, name: &str) -> bool {
         let dbus = zbus::blocking::fdo::DBusProxy::new(&self.conn).unwrap();
-        dbus.name_has_owner(name.try_into().unwrap()).unwrap_or(false)
+        dbus.name_has_owner(name.try_into().unwrap())
+            .unwrap_or(false)
     }
 
     fn property<T>(&self, item: &str, name: &str) -> T
@@ -410,7 +430,10 @@ impl Bus {
             };
             node.2.iter().find_map(|child| {
                 let child = Node::try_from(child.try_clone().ok()?).ok()?;
-                let label = child.1.get("label").and_then(|v| String::try_from(v.try_clone().ok()?).ok())?;
+                let label = child
+                    .1
+                    .get("label")
+                    .and_then(|v| String::try_from(v.try_clone().ok()?).ok())?;
                 (label == *first).then(|| walk(&child, rest)).flatten()
             })
         }
@@ -741,12 +764,11 @@ fn tray_menu_and_config_edits_reach_the_badge() {
     let item = bus.item(None);
     assert_eq!(bus.property::<String>(&item, "Id"), "pawprint");
     assert_eq!(bus.property::<String>(&item, "Title"), "PAWPRINT");
-    let icons: Vec<(i32, i32, Vec<u8>)> = bus.property(&item, "IconPixmap");
+    let icons: Vec<Pixmap> = bus.property(&item, "IconPixmap");
     let sizes: Vec<(i32, i32)> = icons.iter().map(|i| (i.0, i.1)).collect();
     assert_eq!(sizes, [(32, 32), (64, 64)]);
     assert!(icons[0].2.chunks(4).any(|p| p[0] == 255), "an opaque pixel");
-    let (_, _, title, _): (String, Vec<(i32, i32, Vec<u8>)>, String, String) =
-        bus.property(&item, "ToolTip");
+    let (_, _, title, _): ToolTip = bus.property(&item, "ToolTip");
     assert_eq!(title, "PAWPRINT: OWL (owl)");
 
     // The shared menu, checked where the settings are.
@@ -768,7 +790,9 @@ fn tray_menu_and_config_edits_reach_the_badge() {
     });
     bus.click(&item, &["Animation", "Static"]);
     wait_for("animation saved", || {
-        env.config().contains("animation = \"static\"").then_some(())
+        env.config()
+            .contains("animation = \"static\"")
+            .then_some(())
     });
 
     // `pawprint set` and `unset` reach the running badge too.
@@ -818,7 +842,11 @@ fn preview_is_a_normal_window_that_cycles_and_closes() {
     let mut env = Env::new("x11-preview");
     let x = X::start(&mut env);
     x.background(false, (0, 0, W, H), BG_PIXEL);
-    assert!(!env.pawprint(&["preview", "no-such-animal"]).status.success());
+    assert!(
+        !env.pawprint(&["preview", "no-such-animal"])
+            .status
+            .success()
+    );
 
     let preview = |env: &Env| {
         env.spawn(
@@ -830,11 +858,11 @@ fn preview_is_a_normal_window_that_cycles_and_closes() {
     let win = x.mapped_badge();
     let attrs = x.conn.get_window_attributes(win).unwrap().reply().unwrap();
     assert!(!attrs.override_redirect, "a normal window");
+    assert!(x.atoms(win, "_NET_WM_WINDOW_TYPE").is_empty(), "not a dock");
     assert!(
-        x.atoms(win, "_NET_WM_WINDOW_TYPE").is_empty(),
-        "not a dock"
+        x.atoms(win, "WM_PROTOCOLS")
+            .contains(&x.atom("WM_DELETE_WINDOW"))
     );
-    assert!(x.atoms(win, "WM_PROTOCOLS").contains(&x.atom("WM_DELETE_WINDOW")));
 
     // Centered, the badge on a backdrop with a 16 px margin.
     let geo = x.conn.get_geometry(win).unwrap().reply().unwrap();

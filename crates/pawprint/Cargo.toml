@@ -27,6 +27,10 @@ libc = "0.2"
 calloop = "0.14"
 # The tray (SPEC §10.3): blocking API on async-io, so no tokio.
 ksni = { version = "0.3", default-features = false, features = ["blocking", "async-io"] }
+# Not used directly: zbus connects through `blocking`'s thread pool, and from
+# 1.7 an idle pool thread never exits and wakes twice a second, which breaks
+# the zero-wakeup budget (SPEC §7.2, F36). 1.6 lets it exit after 500 ms.
+blocking = "=1.6.2"
 smithay-client-toolkit = { version = "0.21", default-features = false, features = ["calloop"] }
 wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client", "staging"] }

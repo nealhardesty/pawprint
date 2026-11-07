@@ -192,7 +192,10 @@ mod tests {
         assert!(cfg.hosts.is_empty(), "host examples are commented out");
         // A host's table goes after the examples, at the end.
         let out = super::set(TEMPLATE, "owl", "size", "128").unwrap();
-        assert!(out.ends_with("label_case = \"upper\"\n[hosts]\n\n[hosts.owl]\nsize = 128\n"), "{out}");
+        assert!(
+            out.ends_with("label_case = \"upper\"\n[hosts]\n\n[hosts.owl]\nsize = 128\n"),
+            "{out}"
+        );
         assert_eq!(unset_host_key(&out, "owl", "size").unwrap().0, TEMPLATE);
         let from_file = cfg.effective("owl", &Layer::default());
         let defaults = Config::default().effective("owl", &Layer::default());

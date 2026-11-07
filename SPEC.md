@@ -262,9 +262,39 @@ except where the crate front art is transparent.
 Rendered with PAWPRINT's own embedded bitmap font: 5 × 7 glyphs on a 6-pixel
 advance, covering printable ASCII (0x20–0x7E). Other characters render as `?`.
 Hostnames are restricted to letters, digits, and hyphens, so they always
-render cleanly. Labels longer than 20 characters are truncated and end in `..`.
-The limit of 20 is provisional. It will be measured against real hostnames
-and remote-client scaling (roadmap M2) and adjusted here.
+render cleanly. Labels longer than 20 characters are cut **in the middle**:
+the first 9 and the last 9 characters, joined by `..`
+(`jenkins-agent-linux-07` becomes `jenkins-a..-linux-07`), because the end of
+a name is what tells one machine from the next.
+
+**Why 20, and why the middle** (measured in M4 with `pawprint render` over a
+corpus of default and fleet hostnames):
+
+| Short name (examples) | Length | Badge at 32 / 64 / 128 |
+|---|---|---|
+| `nas`, `db02` | 3–4 | 32×32 / 64×64 / 128×128: on the crate |
+| `web01`, `fedora`, `buildbox` | 5–8 | 67–85×32 / 70–106×90 / 128×128 (on the crate at 128 up to 9 characters) |
+| `prod-owl-02`, `raspberrypi`, `k8s-master-1` | 10–12 | 97–109×32 / 130–154×90 / 130–154×154 |
+| Windows defaults `DESKTOP-4F7Q2KL`, `WIN-3J8K2M4N5P6`; AWS `ip-172-31-45-201` | 15–16 | 127–133×32 / 190–202×90 / 190–202×154 |
+| macOS defaults `Johns-MacBook-Air`, `MacBook-Pro-de-Maria`; `build-agent-linux-07` | 17–20 | 139–157×32 / 214–250×90 / 214–250×154 |
+| `jenkins-agent-linux-07`, DigitalOcean `ubuntu-s-1vcpu-1gb-nyc1-01`, AKS/GKE nodes (33–35) | 22+ | cut to 20: 157×32 / 250×90 / 250×154 |
+
+- Every default hostname scheme in the corpus (Windows, macOS, AWS, Raspberry
+  Pi, typical fleet names) fits in 20, so 20 stays. A 20-character
+  nameplate is 250 px wide at 64 and 128 (the font scale is 2 at both) and
+  157 px beside a size-32 crate: noticeable but still a corner badge.
+  A lower limit would cut the Windows and macOS defaults; a higher one
+  makes the plate wider than most panels' clear corners.
+- Only names of 22+ characters are cut, and for them the end matters most:
+  cloud node names share a long prefix (`gke-prod-default-pool-…`) and differ
+  in the suffix, and fleet names end in a number. Cutting the end (the
+  provisional rule) made every node of a pool look the same. Fleets with
+  such names are better served by an explicit `label` per `[hosts]` glob.
+- Remote-client scaling: a client showing a 4K desktop in a 1080p window
+  scales by 0.5. The default font scale 2 (size ≥ 64) then lands at one
+  screen pixel per font pixel, the smallest legible size; the size-32 label
+  (font scale 1) is not legible below about 0.75. Users of scaled clients
+  should keep `size` at 64 or more or set `label_size = "large"`.
 
 **Size.** `label_size` sets the font scale independently of the mascot:
 
@@ -468,7 +498,9 @@ The badge is click-through by default. To move it, the user enters
 In move mode:
 
 1. The badge accepts the pointer and shows a 1-art-pixel dashed outline in the
-   accent color.
+   accent color: two art pixels on, two off, drawn over the edge of the badge
+   image (`movemode::draw_outline`, by the core, so every backend shows it).
+   The gaps keep the art underneath, so transparent corners stay transparent.
 2. **Drag** it anywhere on the target display. It is constrained to the
    usable area.
 3. **Release** to save. The new anchor is the ninth (3 × 3 grid) of the
@@ -630,7 +662,43 @@ buildbox = "capybara"
 The running badge reloads config when `pawprint reload` is run, when the tray
 item **Reload config** is chosen, and when the config file's modification
 time changes. The last is checked only on display or IPC events and on the
-next animation deadline, so there is no file-watch thread.
+next animation deadline, so there is no file-watch thread: `Shell::tick`,
+which runs after every wakeup of the loop, compares one `stat` with the
+modification time recorded at the last read. A static badge with no events
+therefore notices an edit at its next event (`pawprint status` is one).
+
+### 8.6 Editing the config: `set`, `unset`, and the tray
+
+`pawprint set <key> <value>`, `pawprint unset <key>`, and the tray's **Size**
+and **Animation** choices all edit the config the same way
+(`pawprint_core::config_edit`):
+
+- **Where:** the exact `[hosts."<short>"]` table for this host's short name
+  (an existing table that matches it case-insensitively, else a new one,
+  appended at the end). An exact host table outranks globs and top-level
+  keys (8.3), so the choice always takes effect, and a config copied to
+  another machine doesn't carry it over. Only `pawprint run` flags rank
+  higher.
+- **How:** with `toml_edit`, so comments, order, and formatting stay. A
+  value already in the table keeps its trailing comment. `unset` removes
+  the key, then the table if it is left empty without comments, then an
+  empty implicit `[hosts]`. A file that isn't valid TOML is left alone and
+  the command fails. The write is atomic (temporary file, then rename) and
+  goes to a symlink's target, so dotfile managers keep their link.
+- **Values** are read as TOML (`64`, `false`, `[8, 20]`, `"quoted"`) and
+  otherwise as a plain string (`otter`), then checked by the parser that
+  loads the file (`config::check_value`). `set` also resolves the host
+  with the new file and refuses values that would only produce a warning
+  (a mascot or accent that doesn't exist), before writing anything.
+- **Then:** `set` and `unset` send `reload` to this session's badge if one
+  runs. The tray writes, then reloads. If the file can't be written, a tray
+  choice still applies until the badge restarts (as a session-only
+  override) and the log says why.
+
+`pawprint config init` writes the commented template
+(`config_edit::TEMPLATE`, 8.2 with the host examples commented out and an
+empty `[hosts]` at the end, so host tables land after the examples) and
+never overwrites a file.
 
 ---
 
@@ -650,16 +718,16 @@ badge reaches the instance **in the current graphical session**.
 | `pawprint status` | Is it running? Backend, display, mascot, label, position. |
 | `pawprint explain [--host NAME] [--recompute]` | Show the hostname pipeline, each mascot rule's result, which one won and why, and the effective settings with their source. Works without a running badge. |
 | `pawprint list [--category C] [--accents]` | List mascots (id, name, category, aliases, source: bundled/user/override), or the accent palette. |
-| `pawprint preview <id> [--size N]` | Open a temporary, normal (focusable, closable) window showing that mascot cycling through all its actions. |
+| `pawprint preview <id> [--size N]` | Open a temporary, normal (focusable, closable) window showing that mascot cycling through all its actions (every action in file order, `when` ignored, 1 s apart), on a slate backdrop with a 16 px margin, centered, at size 128 by default. Esc or closing the window ends it. It uses this host's label and accent and the badge's own backend surface in preview mode; it writes nothing. |
 | `pawprint render <id> --out FILE.png [--size N] [--label TEXT] [--frame N]` | Write a badge image. Used for docs and golden tests. |
-| `pawprint set <key> <value>` | Write `<key>` into this host's `[hosts."<short>"]` table using `toml_edit` (keeps comments and formatting), then reload. Example: `pawprint set mascot otter`. |
-| `pawprint unset <key>` | Remove that key from this host's table. |
-| `pawprint forget` | Drop this host's cached fallback assignment. |
+| `pawprint set <key> <value>` | Write `<key>` into this host's `[hosts."<short>"]` table using `toml_edit` (keeps comments and formatting), then reload ([8.6](#86-editing-the-config-set-unset-and-the-tray)). Example: `pawprint set mascot otter`. Exit code 2 for an unknown key or invalid value. |
+| `pawprint unset <key>` | Remove that key from this host's table, then reload. |
+| `pawprint forget` | Drop this host's cached fallback assignment (through the running badge if there is one, which picks again and saves; else in the state file) and say what the hash picks now. A host whose mascot comes from another rule has nothing to forget. |
 | `pawprint config init` | Write a commented `config.toml` if none exists. |
 | `pawprint config path` | Print the config path. |
 | `pawprint mascot export <id> <dir>` | Write a bundled mascot to `<dir>` in the simple PNG form ([12.7](#127-png-bridges)) as a starting point for custom art. |
 | `pawprint mascot check <dir>` | Validate a custom mascot directory with the same rules as the build ([12.11](#1211-validation-rules)). |
-| `pawprint autostart on\|off\|status` | Register or remove launch at graphical login for this user. |
+| `pawprint autostart on\|off\|status` | Register or remove launch at graphical login for this user: an entry that runs `<this executable> run` (on Windows `pawprintw.exe run`). Linux: `$XDG_CONFIG_HOME/autostart/pawprint.desktop`. Windows and macOS: [11.1.5](#1115-tray-and-autostart), [11.2](#112-macos). |
 | `pawprint doctor` | Diagnose the environment: session type, chosen backend and why, compositor/WM, layer-shell, ARGB visual, compositing manager, displays with names, scales and work areas, primary detection, GNOME fractional-scaling blur (with the fix), tray availability, IPC endpoint, autostart state, config warnings. |
 | `pawprint paths` | Print every file location ([8.1](#81-files-and-locations)). |
 | `pawprint gnome-extension install\|remove` | Plan B only ([11.5.3](#1153-plan-b-the-presenter-extension)): install or remove the GNOME presenter extension. |
@@ -696,7 +764,8 @@ any OS. Each backend is a thin adapter that:
 2. translates native events into `core::badge::Event`: `Deadline`,
    `DisplaysChanged(Vec<DisplayInfo>)`, `DragStart/DragMove/DragEnd(Point)`,
    `Key(Key)`, `Command(Command)` (from IPC or the tray menu: `Move`,
-   `ResetPosition`, `Reload`, `Quit`, `SetSize(n)`, `SetAnimation(mode)`),
+   `ResetPosition`, `Reload`, `Quit`, `SetSize(n)`, `SetAnimation(mode)`,
+   `Forget`),
    and `ConfigTouched(Config)` (the shell noticed a change and re-read the
    file);
 3. executes `core::badge::Effect`s: `Present(Frame)` (already scaled),
@@ -741,10 +810,17 @@ in `pawprint::shell::Shell`:
 | `Shell::timeout()` | Before sleeping: how long the native wait may last (`None` = until an event) |
 | `Shell::tick(&mut surface)` | After every wakeup; sends `Deadline` once it has passed |
 | `Shell::done()` | After every wakeup; true after `Quit` |
+| `Shell::set_tray(Box<dyn Tray>)` | Once, to attach the platform's tray; the shell calls `Tray::show(&TrayState)` with every `SetTray` (also at once, if the core already described it) |
+| `Shell::menu(&mut surface, command)` | For each tray menu choice. Size and Animation are saved first (8.6), then everything is the same `Command` IPC sends |
+| `Shell::is_preview()` | When creating the surface: true for `pawprint preview` (a normal window) |
 
 The shell runs the surface effects through `surface::apply`, writes
-`SaveState` atomically, re-reads the config on `ReloadConfig`, logs, and
-builds the `status` answer. On Linux, `backend::linux::drive` is the whole
+`SaveState` atomically, re-reads the config on `ReloadConfig` (and when its
+modification time changes, 8.5), hands `SetTray` to the tray, logs, and
+builds the `status` answer. In preview mode it wraps the surface in an
+adapter that draws each frame on the backdrop with the margin and grows the
+window to match, writes no state, and has no IPC or tray, so a backend's
+preview is its own surface with a flag. On Linux, `backend::linux::drive` is the whole
 loop for both backends.
 
 ### 10.2 Why not winit, Tauri, or Qt
@@ -770,8 +846,8 @@ large C++ runtime for a 64-pixel image. Direct platform APIs come to four small 
 | macOS | `objc2`, `objc2-foundation`, `objc2-app-kit` |
 | X11 | `x11rb` 0.14 (pure Rust; features `shape`, `xfixes`, `randr`) |
 | Wayland | `smithay-client-toolkit` 0.21 (`default-features = false, features = ["calloop"]`: the default `xkbcommon` feature links libxkbcommon), `wayland-client` 0.31 (no features: `system`/`dlopen` load libwayland and `log` compiles a C shim), `wayland-protocols`, `wayland-protocols-wlr`, `wayland-protocols-plasma`, `calloop` 0.14 |
-| Linux tray | `ksni` 0.3 (`default-features = false, features = ["blocking", "async-io"]`, which avoids tokio) over `zbus` 5 (`default-features = false, features = ["async-io", "blocking-api"]`; ksni 0.3 needs zbus 5, and zbus 6 has no `blocking` module); `zbus` also carries the Plan B presenter protocol |
-| Logging | `log` + a minimal file logger (`pawprint::logger`: 1 MB cap, one rotation; dependencies log at info and above only) |
+| Linux tray | `ksni` 0.3 (`default-features = false, features = ["blocking", "async-io"]`, which avoids tokio) over `zbus` 5 (`default-features = false, features = ["async-io", "blocking-api"]`; ksni 0.3 needs zbus 5, and zbus 6 has no `blocking` module); `zbus` also carries the Plan B presenter protocol. `blocking` is pinned to 1.6 (F36) |
+| Logging | `log` + a minimal file logger (`pawprint::logger`: 1 MB cap, one rotation to `pawprint.log.1`; dependencies log at warn and above only, since zbus logs every D-Bus call at info) |
 | IPC encoding | `serde_json` |
 | Unix calls | `libc`: `localtime_r` (the local hour, `Now::local_hour`), `setsid` (detached start), `getuid`. Windows uses `GetLocalTime` from `windows-sys`. |
 
@@ -833,7 +909,7 @@ Newline-delimited JSON, one request and one response per connection:
 {"v":1,"ok":false,"error":"no target display"}
 ```
 
-Commands: `status`, `move`, `reset-position`, `reload`, `quit`. `status`
+Commands: `status`, `move`, `reset-position`, `reload`, `quit`, `forget`. `status`
 returns the same fields `pawprint status` prints, under `"status"`: `pid`,
 `backend`, `session`, `display`, `rect` (`[x, y, w, h]`, physical),
 `scale`, `mascot`, `label`, `position`, `position_source`, `size`,
@@ -889,9 +965,11 @@ What is shared, and by whom:
 | Tray menu model (items, checks, actions) | `pawprint-core::menu` | Windows tray, macOS menu bar, `ksni` |
 | Sprite compiler | `pawprint-sprite` crate | `build.rs`, runtime user mascots, `pawdev`, `pawprint mascot check` |
 | IPC protocol and server loop | `pawprint::ipc` | Unix-socket transport shared by Linux and macOS; named-pipe transport on Windows |
-| Autostart interface (`on`/`off`/`status`) | `pawprint::autostart` | Three small implementations behind one interface |
+| Autostart interface (`on`/`off`/`status`) | `pawprint::autostart` | Three small implementations behind one interface (Linux XDG done; Windows and macOS are hooks returning "not implemented on this platform yet") |
+| Config edits (`set`, `unset`, tray choices, `config init`) | `pawprint-core::config_edit` | CLI, `Shell::menu` |
 | X11 backend | `pawprint::backend::x11` | Native X11 **and** GNOME via XWayland (profile flag) |
-| `calloop` event loop, `ksni` tray, Linux scale helpers | `pawprint::backend::linux` | X11, Wayland, GNOME |
+| `calloop` event loop, Linux scale helpers | `pawprint::backend::linux` | X11, Wayland, GNOME |
+| StatusNotifierItem tray (`ksni`) | `pawprint::backend::sni` | X11, Wayland, GNOME |
 | Detach / single-instance startup | `pawprint::instance` | All platforms (only the session-key function differs) |
 | The shell around `Badge`: effects, state saving, reloads, status, log | `pawprint::shell` | All backends |
 | Doctor report and the shared checks | `pawprint::doctor` | All platforms; each backend adds its own section |
@@ -984,10 +1062,14 @@ move the window outside the core's constraint, snap, and save):
 
 #### 11.1.5 Tray and autostart
 
-*M4.* The loop is ready for the tray: its callback message goes next to
-`WM_APP` in `wndproc`, which turns menu choices into `Event::Command(..)` like
-any other recorded event, and `TaskbarCreated` re-adds the icon after
-Explorer restarts. `Effect::SetTray` is already routed to the shell.
+*M4, to do.* The shared half is done: implement `shell::Tray` (its `show`
+gets a `TrayState`: `visible`, `tooltip`, the menu model, and `icon`, the
+32 × 32 straight-RGBA rest frame in its crate), attach it with
+`Shell::set_tray`, and hand each menu choice to `Shell::menu(&mut window,
+command)` from the loop (never from inside `wndproc`, like every other
+recorded event). The tray's callback message goes next to `WM_APP` in
+`wndproc`, and `TaskbarCreated` re-adds the icon after Explorer restarts.
+Autostart fills the hook in `pawprint::autostart`.
 
 - Tray: `Shell_NotifyIconW` with the mascot's rest frame as a 16/32-pixel
   icon. Menu: **Move**, **Size ▸ 32/64/128**, **Animation ▸ Idle/Static**,
@@ -1080,7 +1162,8 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   (a three-line FFI; no binding crate covers `AuthSession.h`) gives the audit
   session id for the endpoint ([10.4](#104-single-instance-per-graphical-session))
   and whether the session has window server access (`doctor` shows both).
-- Menu bar: `NSStatusItem` with the same menu as the Windows tray (M4).
+- Menu bar (*M4, to do*): `NSStatusItem` with the same menu, from the same
+  `shell::Tray` / `Shell::menu` pair as the Windows tray (11.1.5).
 - Autostart: `~/Library/LaunchAgents/io.github.nealhardesty.pawprint.plist`
   with `ProgramArguments = [<path>/pawprint, run]`, `RunAtLoad = true`,
   `LimitLoadToSessionType = Aqua` (GUI sessions only), and
@@ -1214,7 +1297,21 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   Up, Down, Return, KP_Enter, and Escape, so virtual keyboards with their
   own keymaps (remote desktop servers, `wtype`) work. Without a usable
   keymap it falls back to the evdev codes. Shift is XKB modifier 0.
-- Tray: StatusNotifierItem via `ksni`. Plasma supports it natively.
+- Tray: StatusNotifierItem via `ksni` (`backend::sni`), shared with X11 and
+  GNOME. Plasma supports it natively. The item (`Id` `pawprint`, title
+  `PAWPRINT`, the tooltip from `TrayState`) shows the core's menu model
+  over `com.canonical.dbusmenu`: submenus for children, checkmark items for
+  checks. A left click opens the menu (`ItemIsMenu`), as on Windows and
+  macOS. The icon is the rest frame in its crate at 32 × 32 and 64 × 64
+  (nearest neighbor), ARGB32 in network byte order; the host scales it.
+  Menu callbacks run on ksni's thread and post the command into the
+  `calloop` channel that IPC uses (`linux::Inbox::Menu`), so both reach
+  `Shell::menu`/`Shell::request` on the loop. The tray joins after the
+  first frame is on screen, so the session bus never delays the badge. It
+  is spawned with `assume_sni_available`: without a StatusNotifierWatcher
+  it waits quietly for one (a panel that starts later or restarts); without
+  a session bus there is no tray, and `doctor` reports either case as a
+  problem. `tray = false` stops the item and a reload brings it back.
 
 ### 11.5 GNOME Wayland (Ubuntu)
 
@@ -1811,7 +1908,8 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
 | `help` (default) | List targets |
 | `build` | Debug build of `pawprint` (and `pawprintw` on Windows) |
 | `run` | Build and run the badge in the foreground; `ARGS="..."` passes arguments |
-| `preview` | Preview a mascot: `make preview MASCOT=owl` |
+| `preview` | Open a preview window: `make preview MASCOT=owl SIZE=128` (`pawprint preview`) |
+| `power-check` | Linux: measure the release badge under Xvfb against [7.2](#72-power-budget); `POWER_SECONDS=120` per mode |
 | `test` | Unit tests, golden render tests, and asset validation |
 | `check-assets` | Validate the mascot catalog only |
 | `lint` | `cargo fmt --check` and `clippy -D warnings` |
@@ -1990,7 +2088,7 @@ and user mascots are in separate directories and are never touched except by
 `make test-x11` and `make test-wayland` run the real `pawprint run` against
 real display servers and check the screen. They are `#[ignore]`d in
 `make test` because they need the servers installed; a separate Linux CI
-job installs them (`xvfb xcompmgr openbox sway swaybg grim foot wtype`) and
+job installs them (`xvfb xcompmgr openbox sway swaybg grim foot wtype dbus`) and
 runs `make test-linux-display`. Each test gets its own HOME and runtime
 directory and fails with the badge's log.
 
@@ -2005,6 +2103,10 @@ directory and fails with the badge's log.
 | Wayland | headless sway | move-mode drag far outside the badge (F7) saves the right position and is pixel-exact; `wtype` arrow keys, Enter, Escape with exclusive keyboard |
 | Wayland | headless sway + `swaybar` | the badge sits below the bar's exclusive zone (F3), pixel-exact |
 | Wayland | headless sway | output mode change; scale 2 crisp (every opaque pixel exact); scale 1.5 sized 96 px and placed right (crispness at fractional scales is an owner check, F34) |
+| X11 | Xvfb, move mode | the dashed accent outline appears on the badge edge (a dash in the transparent corner, art through a gap) and goes when move mode ends |
+| X11 | Xvfb + private `dbus-daemon` + a stand-in StatusNotifierWatcher (the test's own zbus object) | the item registers with `Id`, `Title`, `ToolTip`, and a 32 and 64 px `IconPixmap`; the dbusmenu layout has the shared menu with the right checks; **Size ▸ 128** (a dbusmenu `Event`) resizes the badge and appends `[hosts.owl] size = 128` after the untouched `config init` template; **Animation ▸ Static** is saved; `set`/`unset` reload the running badge; an unknown mascot is refused (exit 2) without writing; a hand edit is picked up at the next IPC request (mtime); `tray = false` removes the item and `unset tray` brings a new one; **Quit** exits; the saved choice survives the restart |
+| X11 | Xvfb | `pawprint preview owl`: a normal window (not override-redirect, no DOCK type, `WM_DELETE_WINDOW`), centered, the badge pixel-exact on the backdrop, the frame changes as actions play; Esc closes it, and so does a `WM_DELETE_WINDOW` message |
+| Wayland | headless sway | `pawprint preview owl`: an xdg toplevel (`app_id` `pawprint`) that sway floats (fixed size), focused, the badge pixel-exact on the backdrop; Esc closes it |
 
 What these can't show stays in the manual checks below and the facts ledger:
 real Plasma and GNOME, real input devices, and remote clients.
@@ -2149,6 +2251,9 @@ true instead.
 | F33 | `x11rb` 0.14 connects through the `/tmp/.X11-unix` socket or TCP, not the abstract socket namespace. Where `/tmp/.X11-unix` is read-only (WSLg), a test Xvfb listens on abstract sockets only. | Tests run Xvfb with `-listen tcp`; real X servers always create the filesystem socket | **Confirmed** |
 | F34 | Headless sway 1.9 with the pixman renderer filters the whole output at fractional scales (even swaybg's solid color comes out uneven); about 85% of the badge's pixels at 1.5 were exact. At integer scales every pixel is exact. | Fractional-scale crispness can't be judged there | **Confirmed on headless sway**; crispness at 125%/150% is an owner check on Plasma |
 | F35 | wlroots `keyboard_interactivity = exclusive` on an overlay layer surface sends it the keys at once; virtual keyboards (`wtype`, remote-desktop servers) send keycodes from their own keymaps. | Exclusive keyboard in move mode; keycodes read from the keymap (11.4) | **Confirmed on sway 1.9**; verify on Plasma |
+| F36 | zbus 5 (async-io) runs its socket setup (peer credentials, the SASL zero byte) on the `blocking` crate's thread pool. From `blocking` 1.7 an idle pool thread never exits (it exits only above the thread limit) and wakes every 500 ms; 1.6 lets it exit after 500 ms idle. | `blocking` is pinned to `=1.6.2`, so the badge has zero wakeups at rest with the tray running (7.2) | **Confirmed** (`make power-check`: 39 wakeups in 20 s in static mode with 1.7.0, 0 with 1.6.2) |
+| F37 | `toml_edit` keeps a document's trailing comments after its last table, so a table added to a file that ends in comments lands above them. | The `config init` template ends with an empty `[hosts]`, so host tables go after the commented examples (8.6) | **Confirmed** (`config_edit` tests) |
+| F38 | A `ksni` item with `MENU_ON_ACTIVATE` and the dbusmenu layout can be driven entirely over D-Bus: a stand-in StatusNotifierWatcher on a private `dbus-daemon` receives the registration, and a dbusmenu `Event(id, "clicked")` runs the item's callback. | The tray is tested end to end in `make test-x11` without a desktop (16.1.1) | **Confirmed**; real hosts (Plasma, Ubuntu's AppIndicator) are owner checks |
 
 **macOS facts (M1 macOS backend).** Learned on GitHub's `macos-latest`
 runner (macOS 26.7.2, Apple Silicon, one 1024 × 768 "Apple Virtual"

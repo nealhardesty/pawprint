@@ -2,8 +2,7 @@
 
 use std::fmt;
 
-/// Labels longer than this are cut and end in `..` (SPEC §4.4; provisional,
-/// measured in M2).
+/// Labels longer than this are cut in the middle (SPEC §4.4, measured in M4).
 pub const MAX_LABEL: usize = 20;
 
 /// `raw` lowercased and cut at the first `.`: `owl-02.lab.example` → `owl-02`.
@@ -83,13 +82,18 @@ pub fn label(raw: &str, setting: &LabelSetting, case: LabelCase) -> Option<Strin
     (!text.is_empty()).then_some(text)
 }
 
-/// Cut to [`MAX_LABEL`] characters, ending in `..` when cut.
+/// Cut to [`MAX_LABEL`] characters by replacing the middle with `..`, so
+/// both the start and the end survive: the end is what tells
+/// `jenkins-agent-linux-07` from `-08` and one cloud node from the next.
 pub fn truncate(s: &str) -> String {
-    if s.chars().count() <= MAX_LABEL {
-        s.to_string()
-    } else {
-        s.chars().take(MAX_LABEL - 2).chain("..".chars()).collect()
+    let chars: Vec<char> = s.chars().collect();
+    if chars.len() <= MAX_LABEL {
+        return s.to_string();
     }
+    let keep = (MAX_LABEL - 2) / 2;
+    let head = chars[..keep].iter();
+    let tail = chars[chars.len() - (MAX_LABEL - 2 - keep)..].iter();
+    head.chain(['.', '.'].iter()).chain(tail).collect()
 }
 
 #[cfg(test)]
@@ -152,13 +156,13 @@ mod tests {
                 "prod-database-primary-01",
                 LabelSetting::Auto,
                 Upper,
-                Some("PROD-DATABASE-PRIM.."),
+                Some("PROD-DATA..RIMARY-01"),
             ),
             (
                 long.as_str(),
                 LabelSetting::Auto,
                 Lower,
-                Some("aaaaaaaaaaaaaaaaaa.."),
+                Some("aaaaaaaaa..aaaaaaaaa"),
             ),
             ("", LabelSetting::Auto, Upper, None),
         ];
@@ -175,7 +179,11 @@ mod tests {
     fn truncation_boundary() {
         assert_eq!(truncate(&"x".repeat(20)), "x".repeat(20));
         assert_eq!(truncate(&"x".repeat(21)).chars().count(), 20);
-        assert!(truncate(&"x".repeat(21)).ends_with(".."));
+        assert_eq!(truncate("jenkins-agent-linux-07"), "jenkins-a..-linux-07");
+        assert_eq!(
+            truncate("gke-prod-default-pool-1a2b3c4d-xyz9"),
+            "gke-prod-..3c4d-xyz9"
+        );
     }
 
     #[test]

@@ -4,6 +4,7 @@
 
 mod art;
 mod golden;
+mod power;
 mod sheet;
 
 use std::path::{Path, PathBuf};
@@ -20,6 +21,7 @@ commands:
   building-blocks          docs/building-blocks.png: accents, props, bases x templates
   art-export <id>          out/art/<id>/: a PNG per layer and variant, plus frames.png
   art-import <id> <png>    print a PNG layer as a [layers] table in <id>'s glyphs
+  power-check [seconds]    measure the release badge against SPEC §7.2 (Linux, Xvfb)
   todo <target> <milestone> report a make target that is not implemented yet
   clean-dist               remove dist/";
 
@@ -38,6 +40,8 @@ fn main() -> ExitCode {
         ["art-export", id] => art::export(&root(), id),
         ["art-import", id, png] => art::import(&root(), id, Path::new(png)),
         ["art-import", _] => Err("usage: make art-import MASCOT=<id> PNG=<file>".into()),
+        ["power-check"] => power::power_check(&root(), None),
+        ["power-check", seconds] => power::power_check(&root(), Some(seconds)),
         ["todo", target, milestone] => Err(format!(
             "make {target}: not implemented yet ({milestone}); see ROADMAP.md"
         )),
