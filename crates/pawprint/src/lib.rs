@@ -6,7 +6,6 @@
 
 // The Windows and macOS backends are stubs until they land (M1), so the
 // shared runtime they will drive is unused there. Remove with them.
-#![cfg_attr(not(target_os = "linux"), allow(dead_code))]
 
 mod backend;
 mod clock;

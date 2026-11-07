@@ -91,10 +91,10 @@ Ubuntu GNOME Wayland**, meeting the backend contract
 ([SPEC §11](SPEC.md#11-platform-backends)). This is the milestone that can
 change the design.
 
-- [ ] Windows backend: layered topmost tool window, `UpdateLayeredWindow`,
+- [x] Windows backend: layered topmost tool window, `UpdateLayeredWindow`,
       per-monitor DPI v2, work area, move mode via `HTCAPTION`;
       `pawprint.exe` + `pawprintw.exe`
-- [ ] macOS backend: accessory app, non-activating `NSPanel` at status level,
+- [x] macOS backend: accessory app, non-activating `NSPanel` at status level,
       all Spaces, nearest-neighbor layer, `visibleFrame`, move mode
 - [x] Shared Linux module: `calloop` loop, scale helpers, backend selection
       ([SPEC §3.2](SPEC.md#32-linux-backend-selection-backend--auto))
@@ -102,7 +102,7 @@ change the design.
       with a compositor, bounding-shape fallback without one, override-redirect
       when no WM, RandR monitors, `_NET_WORKAREA`, move mode with pointer grab
       (tested under Xvfb bare, with `xcompmgr`, and with `openbox`)
-- [ ] **GNOME profile** of the X11 backend, via XWayland ([SPEC §11.5](SPEC.md#115-gnome-wayland-ubuntu)),
+- [ ] **GNOME profile** of the X11 backend (*implemented and covered by `make test-x11`; awaiting owner runs on real Ubuntu 24.04/26.04*), via XWayland ([SPEC §11.5](SPEC.md#115-gnome-wayland-ubuntu)),
       tested on Ubuntu 24.04 LTS and 26.04 LTS. *Implemented and selected
       automatically; the owner checks on real Ubuntu are still to do.*
 - [x] Wayland backend: layer-shell overlay, empty input region, margins from
@@ -114,7 +114,7 @@ change the design.
       (Windows named pipe and the Windows/macOS session keys: stubs for those backends)
 - [x] `pawprint`, `run`, `move`, `reset-position`, `quit`, `status`, `doctor`
       (including GNOME fractional-scaling detection and fix)
-- [ ] Display-change handling on every backend (*X11 and Wayland done*)
+- [x] Display-change handling on every backend
 - [x] Display-server tests: `make test-x11`, `make test-wayland`, and a Linux
       CI job that runs them
 - [ ] Facts to settle (update [SPEC §18](SPEC.md#18-facts-ledger)):
@@ -128,17 +128,17 @@ change the design.
 - [ ] **Conditional:** if any GNOME check fails, build the Plan B presenter
       extension ([SPEC §11.5.3](SPEC.md#1153-plan-b-the-presenter-extension))
       and `pawprint gnome-extension install|remove`
-- [ ] DRY review: no backend makes a layout, timing, or identity decision;
+- [x] DRY review: no backend makes a layout, timing, or identity decision;
       each backend is within its size budget (*X11 and Wayland reviewed:
       about 760 and 800 code lines after rustfmt, no decisions; Wayland's
       anchor choice reuses `layout::snap`*)
-- [ ] macOS hostname: read `HostName`/`LocalHostName` through the
+- [x] macOS hostname: read `HostName`/`LocalHostName` through the
       SystemConfiguration API instead of `scutil --get` (M0 stopgap,
       SPEC §5.1)
 - [x] Local clock hour for `Now::local_hour` on each platform (the core takes
       it as an input; SPEC §10.1): `localtime_r` on Unix, `GetLocalTime` on Windows
-- [ ] `pawprintw.exe` second `[[bin]]` on Windows (SPEC §11.1.6)
-- [ ] Move-mode drag events in physical desktop coordinates on every backend
+- [x] `pawprintw.exe` second `[[bin]]` on Windows (SPEC §11.1.6)
+- [x] Move-mode drag events in physical desktop coordinates on every backend
       (the core's coordinate space, SPEC §6.1) (*X11 and Wayland done*)
 
 **Handoff for the Windows and macOS backends** (built on top of this
