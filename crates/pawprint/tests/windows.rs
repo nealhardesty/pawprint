@@ -22,7 +22,8 @@ use common::{Env, Image, assert_badge_at, wait_for};
 use windows_sys::Win32::Foundation::{ERROR_SUCCESS, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::*;
 use windows_sys::Win32::System::Registry::{
-    HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ, RegDeleteKeyValueW, RegGetValueW, RegSetKeyValueW,
+    HKEY_CURRENT_USER, REG_BINARY, REG_SZ, RRF_RT_REG_BINARY, RRF_RT_REG_SZ, RegDeleteKeyValueW,
+    RegGetValueW, RegSetKeyValueW,
 };
 use windows_sys::Win32::UI::HiDpi::{
     DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, GetDpiForMonitor, MDT_EFFECTIVE_DPI,
@@ -521,6 +522,7 @@ fn layered_topmost_click_through_badge() {
         );
         env.ok(&["unset", "size"]);
         env.wait_rect(rect);
+        move_from_the_tray_returns_the_keyboard(hwnd, bg, work);
     }
 
     // A bar docked at the top shrinks the work area: the badge moves down
@@ -629,9 +631,8 @@ fn click_menu_item(menu: HMENU, i: u32) {
 }
 
 /// Open the tray menu the way the shell does for a right click on the icon
-/// (NOTIFYICON_VERSION_4), check it mirrors the core's model, and choose
-/// Size ▸ 128 with real clicks.
-fn choose_size_128(hwnd: HWND, work: RECT) {
+/// (NOTIFYICON_VERSION_4): the badge's pid and the menu.
+fn open_tray_menu(hwnd: HWND, work: RECT) -> (u32, HMENU) {
     let mut pid = 0;
     unsafe { GetWindowThreadProcessId(hwnd, &mut pid) };
     let (x, y) = (work.left + 100, work.top + 100);
@@ -647,6 +648,13 @@ fn choose_size_128(hwnd: HWND, work: RECT) {
         );
     }
     let (_, menu) = wait_for("the tray menu", || popup_menu(pid, null_mut()));
+    (pid, menu)
+}
+
+/// Check the tray menu mirrors the core's model, and choose Size ▸ 128
+/// with real clicks.
+fn choose_size_128(hwnd: HWND, work: RECT) {
+    let (pid, menu) = open_tray_menu(hwnd, work);
     let labels: Vec<String> = (0..unsafe { GetMenuItemCount(menu) } as u32)
         .map(|i| menu_label(menu, i))
         .collect();
@@ -675,6 +683,41 @@ fn choose_size_128(hwnd: HWND, work: RECT) {
     wait_for("the menu to close", || {
         popup_menu(pid, null_mut()).is_none().then_some(())
     });
+}
+
+/// Move from the tray menu: the menu takes the foreground for the badge,
+/// and ending move mode hands it back to the window that had it before the
+/// menu opened, not to the badge itself (SPEC §11.1.4).
+fn move_from_the_tray_returns_the_keyboard(hwnd: HWND, bg: HWND, work: RECT) {
+    // A real click makes the background window the foreground.
+    click(work.left + 20, work.bottom - 20);
+    let before = unsafe { GetForegroundWindow() };
+    if before != bg {
+        println!("SKIP tray Move focus: the click did not give the background the foreground");
+        return;
+    }
+    let (_, menu) = open_tray_menu(hwnd, work);
+    click_menu_item(menu, 0);
+    wait_for("move mode from the tray", || {
+        (ex_style(hwnd) & WS_EX_TRANSPARENT == 0).then_some(())
+    });
+    if unsafe { GetForegroundWindow() } == hwnd {
+        key(VK_ESCAPE);
+    } else {
+        println!("tray Move: the badge did not get the foreground; ending with a posted Esc");
+        unsafe { PostMessageW(hwnd, WM_KEYDOWN, VK_ESCAPE as WPARAM, 0) };
+    }
+    wait_for("move mode to end", || {
+        (ex_style(hwnd) & WS_EX_TRANSPARENT != 0).then_some(())
+    });
+    let after = wait_for("the foreground to leave the badge", || {
+        let fg = unsafe { GetForegroundWindow() };
+        (fg != hwnd).then_some(fg)
+    });
+    assert_eq!(
+        after, before,
+        "the keyboard went back to the window that had it"
+    );
 }
 
 const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
@@ -728,6 +771,58 @@ impl Drop for RunValueGuard {
     }
 }
 
+const APPROVED_KEY: &str =
+    r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
+
+/// The Startup apps switch for `pawprint`, read without PAWPRINT.
+fn approved_value() -> Option<Vec<u8>> {
+    let (key, value) = (wide(APPROVED_KEY), wide("pawprint"));
+    let mut buf = [0u8; 64];
+    let mut bytes = buf.len() as u32;
+    let code = unsafe {
+        RegGetValueW(
+            HKEY_CURRENT_USER,
+            key.as_ptr(),
+            value.as_ptr(),
+            RRF_RT_REG_BINARY,
+            null_mut(),
+            buf.as_mut_ptr().cast(),
+            &mut bytes,
+        )
+    };
+    (code == ERROR_SUCCESS).then(|| buf[..bytes as usize].to_vec())
+}
+
+fn set_approved(data: &[u8]) {
+    let (key, value) = (wide(APPROVED_KEY), wide("pawprint"));
+    let code = unsafe {
+        RegSetKeyValueW(
+            HKEY_CURRENT_USER,
+            key.as_ptr(),
+            value.as_ptr(),
+            REG_BINARY,
+            data.as_ptr().cast(),
+            data.len() as u32,
+        )
+    };
+    assert_eq!(code, ERROR_SUCCESS);
+}
+
+/// Puts this user's Startup apps switch back as it was.
+struct ApprovedGuard(Option<Vec<u8>>);
+
+impl Drop for ApprovedGuard {
+    fn drop(&mut self) {
+        match &self.0 {
+            Some(v) => set_approved(v),
+            None => unsafe {
+                let (key, value) = (wide(APPROVED_KEY), wide("pawprint"));
+                RegDeleteKeyValueW(HKEY_CURRENT_USER, key.as_ptr(), value.as_ptr());
+            },
+        }
+    }
+}
+
 #[test]
 #[ignore = "writes this user's HKCU Run value (restored after); run `make test-windows-display`"]
 fn autostart_writes_the_run_value() {
@@ -745,6 +840,20 @@ fn autostart_writes_the_run_value() {
         "{status}"
     );
     assert!(status.contains(r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run\pawprint"));
+
+    // Switched off in Settings → Apps → Startup: `status` says so, and
+    // `on` switches it back on.
+    let _approved = ApprovedGuard(approved_value());
+    set_approved(&[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    let status = env.ok(&["autostart", "status"]);
+    assert!(status.contains("disabled in Startup apps"), "{status}");
+    env.ok(&["autostart", "on"]);
+    assert_eq!(
+        approved_value(),
+        None,
+        "`on` clears the Startup apps switch"
+    );
+    assert!(!env.ok(&["autostart", "status"]).contains("disabled"));
 
     let out = env.ok(&["autostart", "off"]);
     assert!(out.contains("Autostart is off"), "{out}");
