@@ -26,6 +26,7 @@ use crate::root;
 enum Opt<'a> {
     Archive(&'a Path),
     Version(&'a str),
+    Prefix(&'a str),
     NoStart,
     NoAutostart,
     Uninstall,
@@ -73,6 +74,7 @@ impl Shell {
             match opt {
                 Opt::Archive(p) => out.extend([flag("--archive", "-Archive"), p.into()]),
                 Opt::Version(v) => out.extend([flag("--version", "-Version"), v.into()]),
+                Opt::Prefix(p) => out.extend([flag("--prefix", "-Prefix"), p.into()]),
                 Opt::NoStart => out.push(flag("--no-start", "-NoStart")),
                 Opt::NoAutostart => out.push(flag("--no-autostart", "-NoAutostart")),
                 Opt::Uninstall => out.push(flag("--uninstall", "-Uninstall")),
@@ -234,8 +236,22 @@ struct Case<'a> {
 
 impl Case<'_> {
     fn installer(&self, opts: &[Opt], base: &str, extra_env: &[(&str, &Path)]) -> Run {
+        self.installer_in(None, opts, base, extra_env)
+    }
+
+    /// The installer run from `cwd` (as a shell would: `PWD` set too).
+    fn installer_in(
+        &self,
+        cwd: Option<&Path>,
+        opts: &[Opt],
+        base: &str,
+        extra_env: &[(&str, &Path)],
+    ) -> Run {
         let mut cmd = self.shell.command(self.root, opts);
         self.layout.env(&mut cmd);
+        if let Some(dir) = cwd {
+            cmd.current_dir(dir).env("PWD", dir);
+        }
         cmd.env(
             "PAWPRINT_DOWNLOAD_BASE",
             format!("{}/{base}/releases", self.server),
@@ -510,8 +526,33 @@ impl Case<'_> {
             std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
             std::fs::write(dir.join("state.toml"), "").map_err(|e| e.to_string())?;
         }
-        let run = self.installer(&[Opt::Uninstall, Opt::Purge], "good", &env);
+        // Linux: relative XDG_CONFIG_HOME and XDG_STATE_HOME are invalid (the
+        // XDG spec says to ignore them), so purge must not follow them.
+        let home = self.layout.home.clone();
+        let (rel_config, rel_state) = (home.join("rel-config"), home.join("rel-state"));
+        let mut purge_env = env.to_vec();
+        if cfg!(target_os = "linux") {
+            for dir in [&rel_config, &rel_state] {
+                std::fs::create_dir_all(dir.join("pawprint")).map_err(|e| e.to_string())?;
+            }
+            purge_env.push(("XDG_CONFIG_HOME", Path::new("rel-config")));
+            purge_env.push(("XDG_STATE_HOME", Path::new("rel-state")));
+        }
+        let run = self.installer_in(
+            Some(&home),
+            &[Opt::Uninstall, Opt::Purge],
+            "good",
+            &purge_env,
+        );
         self.check(run.ok, "--uninstall --purge succeeds", Some(&run))?;
+        if cfg!(target_os = "linux") {
+            let kept = rel_config.join("pawprint").is_dir() && rel_state.join("pawprint").is_dir();
+            self.check(
+                kept,
+                "--purge ignores relative XDG_CONFIG_HOME and XDG_STATE_HOME",
+                Some(&run),
+            )?;
+        }
         self.check(
             !Layout::exe(&alt_dir).exists(),
             "the binary is gone",
@@ -525,8 +566,109 @@ impl Case<'_> {
                 Some(&run),
             )?;
         }
+
+        // 6. Relative paths resolve against the working directory: the
+        //    archive (on Unix in a directory with a backslash in its name,
+        //    which GNU sha256sum escapes in its output), and the prefix (on
+        //    Windows with a trailing backslash, which is dropped).
+        let sub = if cfg!(windows) {
+            "archive dir"
+        } else {
+            "back\\slash"
+        };
+        std::fs::create_dir_all(home.join(sub)).map_err(|e| e.to_string())?;
+        let name = self
+            .archive
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+        for file in [name.clone(), format!("{name}.sha256")] {
+            std::fs::copy(
+                self.archive.with_file_name(&file),
+                home.join(sub).join(&file),
+            )
+            .map_err(|e| format!("{file}: {e}"))?;
+        }
+        let rel_archive = Path::new(sub).join(&name);
+        let rel_dir = home.join("rel bin");
+        let prefix = if cfg!(windows) {
+            "rel bin\\"
+        } else {
+            "rel bin"
+        };
+        let run = self.installer_in(
+            Some(&home),
+            &[
+                Opt::Archive(&rel_archive),
+                Opt::Prefix(prefix),
+                Opt::NoStart,
+                Opt::NoAutostart,
+            ],
+            "good",
+            &[],
+        );
+        self.check(
+            run.ok && run.text.contains("Checksum OK"),
+            "install from a relative --archive (checksum checked) into a relative --prefix",
+            Some(&run),
+        )?;
+        self.installed_ok(&rel_dir, &run)?;
+        let shown = if cfg!(windows) {
+            rel_dir.clone()
+        } else {
+            Layout::exe(&rel_dir)
+        };
+        let absolute = run
+            .text
+            .lines()
+            .any(|l| l.trim_end().ends_with(&format!(" to {}", shown.display())));
+        self.check(
+            absolute,
+            &format!("says it installed to {}", shown.display()),
+            Some(&run),
+        )?;
+
+        // 7. Uninstall it through `~` (Unix) or the relative prefix.
+        let prefix = if cfg!(windows) {
+            "rel bin"
+        } else {
+            "~/rel bin"
+        };
+        let run = self.installer_in(
+            Some(&home),
+            &[Opt::Uninstall, Opt::Prefix(prefix)],
+            "good",
+            &[],
+        );
+        self.check(
+            run.ok && !Layout::exe(&rel_dir).exists(),
+            &format!("--uninstall --prefix '{prefix}' removes it"),
+            Some(&run),
+        )?;
+        #[cfg(windows)]
+        {
+            let gone = !self.user_path_has(&rel_dir);
+            self.check(gone, "the relative prefix left the user PATH", Some(&run))?;
+        }
         Ok(())
     }
+}
+
+/// macOS and Windows: the autostart entry is per user, not per home, so the
+/// test would replace a developer's real entry and then delete it. Refuse
+/// when it is on, unless in CI.
+fn refuse_real_autostart(ci: bool, status: &str) -> Result<(), String> {
+    if ci || !status.trim_start().starts_with("on") {
+        return Ok(());
+    }
+    Err(format!(
+        "make test-install: autostart is on for this user ({}).\n\
+         On this OS the test would replace that entry and then remove it. Run \
+         `pawprint autostart off` first (and `pawprint autostart on` afterwards), \
+         or run the test where PAWPRINT isn't installed. In CI (CI set) this check is skipped.",
+        status.trim()
+    ))
 }
 
 /// `make test-install` (after `make package`).
@@ -547,6 +689,12 @@ pub fn test_install() -> Result<(), String> {
         let dir = format!("/{repo}/releases/download/{tag}");
         files.insert(format!("{dir}/{name}"), data.clone());
         files.insert(format!("{dir}/{name}.sha256"), sum);
+    }
+    if !cfg!(target_os = "linux") {
+        let ci = std::env::var_os("CI").is_some_and(|v| !v.is_empty());
+        let status = release::output(Command::new(&build.bins[0]).args(["autostart", "status"]))
+            .unwrap_or_default();
+        refuse_real_autostart(ci, &status)?;
     }
     let server = serve(files, tag)?;
     println!("serving the release at {server}");
@@ -616,6 +764,8 @@ pub fn test_install() -> Result<(), String> {
                 let _ = case.installer(&[Opt::Uninstall], "good", &[]);
                 let alt: [(&str, &Path); 1] = [("PAWPRINT_PREFIX", &case.layout.alt_dir)];
                 let _ = case.installer(&[Opt::Uninstall], "good", &alt);
+                let rel: [(&str, &Path); 1] = [("PAWPRINT_PREFIX", &home.join("rel bin"))];
+                let _ = case.installer(&[Opt::Uninstall], "good", &rel);
                 println!("    FAIL: {e}");
                 results.push(format!("  {:<12} FAIL", shell.name));
                 failures += 1;
@@ -736,6 +886,17 @@ mod tests {
             }
             .powershell()
         );
+    }
+
+    #[test]
+    fn test_install_refuses_a_real_autostart_entry_outside_ci() {
+        let on = "on: HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\pawprint runs pawprintw.exe run";
+        let off = "off (`pawprint autostart on` starts the badge at login)";
+        let e = refuse_real_autostart(false, on).unwrap_err();
+        assert!(e.contains("autostart off"), "{e}");
+        assert_eq!(refuse_real_autostart(true, on), Ok(()));
+        assert_eq!(refuse_real_autostart(false, off), Ok(()));
+        assert_eq!(refuse_real_autostart(false, ""), Ok(()));
     }
 
     #[test]

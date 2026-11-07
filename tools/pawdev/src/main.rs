@@ -27,11 +27,11 @@ commands:
   power-check [seconds]    measure the release badge against SPEC §7.2 (Linux: Xvfb; macOS, Windows: this desktop)
   release                  optimized, checked binaries for this OS into target/
   package                  release + archives + .sha256 sidecars into dist/
-  publish [--dry-run]      upload dist/* and the installers to the GitHub release
+  publish [--dry-run]      upload dist/* and the installers to the draft GitHub release
+  finalize [--dry-run]     check the draft release has every OS's assets, then publish it
   install | uninstall      run the installer on this machine's dist/ archive
   test-install             run the installers end to end in a throwaway home
   lint-installers          shellcheck installers/install.sh
-  todo <target> <milestone> report a make target that is not implemented yet
   clean-dist               remove dist/";
 
 fn main() -> ExitCode {
@@ -56,13 +56,12 @@ fn main() -> ExitCode {
         ["package"] => release::package(),
         ["publish"] => release::publish(false),
         ["publish", "--dry-run"] => release::publish(true),
+        ["finalize"] => release::finalize(false),
+        ["finalize", "--dry-run"] => release::finalize(true),
         ["install"] => install::install(),
         ["uninstall"] => install::uninstall(),
         ["test-install"] => install::test_install(),
         ["lint-installers"] => install::lint(),
-        ["todo", target, milestone] => Err(format!(
-            "make {target}: not implemented yet ({milestone}); see ROADMAP.md"
-        )),
         ["clean-dist"] => clean_dist(),
         _ => Err(USAGE.to_string()),
     };
@@ -177,35 +176,28 @@ mod tests {
     fn every_make_target_has_a_description() {
         let text = std::fs::read_to_string(root().join("Makefile")).unwrap();
         let described: Vec<&str> = parse_help(&text).into_iter().map(|(t, _)| t).collect();
-        // SPEC §14.2: every public target exists.
-        for t in [
-            "help",
-            "build",
-            "run",
-            "preview",
-            "test",
-            "check-assets",
-            "lint",
-            "fmt",
-            "golden",
-            "contact-sheet",
-            "art-export",
-            "art-import",
-            "building-blocks",
-            "palette",
-            "ci",
-            "release",
-            "package",
-            "publish",
-            "install",
-            "uninstall",
-            "doctor",
-            "clean",
-            "test-install",
-        ] {
+        // SPEC §14.2's table and the Makefile list the same targets.
+        let spec = std::fs::read_to_string(root().join("SPEC.md")).unwrap();
+        let table = spec
+            .split_once("### 14.2 Targets")
+            .and_then(|(_, rest)| rest.split_once("### 14.3"))
+            .expect("SPEC.md has §14.2 and §14.3")
+            .0;
+        let specced: Vec<&str> = table
+            .lines()
+            .filter_map(|l| l.strip_prefix("| `")?.split_once('`').map(|(t, _)| t))
+            .collect();
+        assert!(specced.len() > 20, "{specced:?}");
+        for t in &specced {
             assert!(
-                described.contains(&t),
-                "make {t} is missing or has no ## description"
+                described.contains(t),
+                "SPEC §14.2 lists `make {t}`, but the Makefile has no described target {t}"
+            );
+        }
+        for t in &described {
+            assert!(
+                specced.contains(t),
+                "make {t} is missing from SPEC §14.2's target table"
             );
         }
         let readme = std::fs::read_to_string(root().join("README.md")).unwrap();

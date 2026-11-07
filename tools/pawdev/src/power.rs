@@ -21,8 +21,9 @@
 //! `PeakWorkingSet64`, `WorkingSet64`, `Threads`) and each thread's raw
 //! `ContextSwitchesPersec` counter (`Win32_PerfRawData_PerfProc_Thread`, a
 //! running count of every switch to the thread). Win32 known folders can't be
-//! redirected, so it uses this user's config file and restores it, and the
-//! state file, afterwards.
+//! redirected, so it uses this user's config and state files: each is backed
+//! up on disk first (`<file>.pawdev-backup`) and put back afterwards, or at
+//! the start of the next run if this one was interrupted.
 //!
 //! On macOS it runs in the logged-in desktop with its own HOME and TMPDIR,
 //! menu-bar item included, from a universal binary (`lipo` of the arm64 and
@@ -280,8 +281,69 @@ struct Session {
     bus: Option<String>,
     _servers: Vec<Kill>,
     config: PathBuf,
-    /// Windows: this user's files as they were, put back on drop.
-    restore: Vec<(PathBuf, Option<Vec<u8>>)>,
+    /// Windows: this user's files, backed up on disk, put back on drop.
+    backups: Vec<Backup>,
+}
+
+/// A real user file that a measurement overwrites. It is copied to
+/// `<file>.pawdev-backup` (or, if there is no file, `<file>.pawdev-absent`
+/// is written) before anything changes, and put back on drop. Ctrl-C skips
+/// drop, so the next run puts back whatever an interrupted one left.
+struct Backup(PathBuf);
+
+impl Backup {
+    fn take(path: PathBuf) -> Result<Backup, String> {
+        if Backup::restore(&path)? {
+            println!(
+                "restored {} from an interrupted power-check",
+                path.display()
+            );
+        }
+        let fail = |e: std::io::Error| format!("cannot back up {}: {e}", path.display());
+        if path.exists() {
+            // Copy, then rename: a half-written backup must never replace the file.
+            let tmp = Backup::sibling(&path, "pawdev-backup.tmp");
+            std::fs::copy(&path, &tmp).map_err(fail)?;
+            std::fs::rename(&tmp, Backup::sibling(&path, "pawdev-backup")).map_err(fail)?;
+        } else {
+            std::fs::write(Backup::sibling(&path, "pawdev-absent"), "").map_err(fail)?;
+        }
+        Ok(Backup(path))
+    }
+
+    fn sibling(path: &Path, ext: &str) -> PathBuf {
+        let mut name = path.file_name().unwrap_or_default().to_os_string();
+        name.push(format!(".{ext}"));
+        path.with_file_name(name)
+    }
+
+    /// Put `path` back from a backup, if there is one; true if there was.
+    fn restore(path: &Path) -> Result<bool, String> {
+        let fail = |e: std::io::Error| format!("cannot restore {}: {e}", path.display());
+        let backup = Backup::sibling(path, "pawdev-backup");
+        let absent = Backup::sibling(path, "pawdev-absent");
+        if backup.exists() {
+            std::fs::rename(&backup, path).map_err(fail)?;
+            Ok(true)
+        } else if absent.exists() {
+            match std::fs::remove_file(path) {
+                Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(fail(e)),
+                _ => {}
+            }
+            std::fs::remove_file(&absent).map_err(fail)?;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+}
+
+impl Drop for Backup {
+    fn drop(&mut self) {
+        if let Err(e) = Backup::restore(&self.0) {
+            eprintln!("{e}");
+        }
+    }
 }
 
 impl Session {
@@ -320,7 +382,7 @@ impl Session {
                 display: String::new(),
                 bus: None,
                 _servers: Vec::new(),
-                restore: Vec::new(),
+                backups: Vec::new(),
             });
         }
         Session::xvfb()
@@ -334,7 +396,7 @@ impl Session {
             bus: None,
             _servers: Vec::new(),
             config: PathBuf::new(),
-            restore: Vec::new(),
+            backups: Vec::new(),
         };
         if session
             .command(cli)
@@ -364,9 +426,14 @@ impl Session {
         };
         session.config = path("config")?;
         for p in [path("config")?, path("state")?] {
-            let saved = std::fs::read(&p).ok();
-            session.restore.push((p, saved));
+            if let Some(dir) = p.parent() {
+                std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+            }
+            session.backups.push(Backup::take(p)?);
         }
+        println!(
+            "your config and state files are backed up next to them as *.pawdev-backup until this finishes"
+        );
         Ok(session)
     }
 
@@ -417,7 +484,7 @@ impl Session {
             display: format!("127.0.0.1:{n}"),
             bus,
             _servers: servers,
-            restore: Vec::new(),
+            backups: Vec::new(),
         })
     }
 
@@ -461,12 +528,7 @@ impl Session {
 
 impl Drop for Session {
     fn drop(&mut self) {
-        for (path, saved) in &self.restore {
-            let _ = match saved {
-                Some(bytes) => std::fs::write(path, bytes),
-                None => std::fs::remove_file(path),
-            };
-        }
+        // The backups put this user's files back as the fields drop.
         if !self.dir.as_os_str().is_empty() {
             let _ = std::fs::remove_dir_all(&self.dir);
         }
@@ -745,5 +807,49 @@ pub fn power_check(root: &Path, seconds: Option<&str>) -> Result<(), String> {
         Ok(())
     } else {
         Err(format!("power check: over budget: {}", failures.join(", ")))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn backups_survive_an_interrupted_run() {
+        let dir = std::env::temp_dir().join(format!("pawdev-backup-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("config.toml");
+        let read = || std::fs::read_to_string(&file).ok();
+
+        // A clean run: the file is back, and no backup is left.
+        std::fs::write(&file, "mine").unwrap();
+        let backup = Backup::take(file.clone()).unwrap();
+        std::fs::write(&file, "test").unwrap();
+        drop(backup);
+        assert_eq!(read().as_deref(), Some("mine"));
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
+
+        // Interrupted (no drop): the backup stays on disk, and the next run
+        // puts it back before taking its own.
+        let backup = Backup::take(file.clone()).unwrap();
+        std::fs::write(&file, "test").unwrap();
+        std::mem::forget(backup);
+        assert!(dir.join("config.toml.pawdev-backup").is_file());
+        let backup = Backup::take(file.clone()).unwrap();
+        assert_eq!(read().as_deref(), Some("mine"));
+        std::fs::write(&file, "test again").unwrap();
+        drop(backup);
+        assert_eq!(read().as_deref(), Some("mine"));
+
+        // No file to begin with: none afterwards, even after an interruption.
+        std::fs::remove_file(&file).unwrap();
+        let backup = Backup::take(file.clone()).unwrap();
+        std::fs::write(&file, "test").unwrap();
+        std::mem::forget(backup);
+        drop(Backup::take(file.clone()).unwrap());
+        assert_eq!(read(), None);
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
+        let _ = std::fs::remove_dir_all(dir);
     }
 }

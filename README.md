@@ -33,20 +33,12 @@ This is the idea in ASCII.)*
 Runs on **Windows 10/11**, **macOS 13+**, and **Linux**: X11, KDE Plasma 6
 on Wayland, and GNOME on Wayland (Ubuntu 24.04 LTS and newer).
 
-> **Status: pre-release.** PAWPRINT is being built now. This README describes
-> how 1.0 will work. Today **the badge runs on Linux** (X11, Wayland
-> compositors with layer-shell such as KDE Plasma and Sway, and GNOME
-> through XWayland) with its tray icon, `autostart`, `set`/`unset`,
-> `config init`, `forget`, and `preview`, plus `pawprint`, `run`, `move`,
-> `reset-position`, `reload`, `quit`, `status`, `doctor`, and the
-> backend-free commands (`explain`, `list`, `render`, `paths`,
-> `mascot export`, `mascot check`, `--version`). **Windows** and **macOS** run
-> the badge with its tray icon (the menu bar on macOS), `autostart`, and
-> `preview` too. There are no
-> release builds or installers yet, so build from source
-> (see [Development](#development)). All 100 mascots are drawn, and your
-> own mascots already work ([Custom mascots](#custom-mascots)). See [`ROADMAP.md`](ROADMAP.md) for progress and
-> [`SPEC.md`](SPEC.md) for the design.
+> **Status: pre-release.** Everything in this README is implemented and
+> tested in CI on Linux, macOS, and Windows. What remains before 1.0 is the
+> first published release (until then, build from source: see
+> [Development](#development)) and the owner's checks on real hardware.
+> See [`ROADMAP.md`](ROADMAP.md) for what's left and [`SPEC.md`](SPEC.md)
+> for the design.
 
 ---
 
@@ -463,7 +455,7 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make build` | Debug build |
 | `make run` | Build and run the badge in the foreground (`ARGS="--verbose"` passes flags) |
 | `make preview MASCOT=owl` | Open a window with one mascot cycling through all its animations (`SIZE=64` for another size) |
-| `make power-check` | Build the release badge and measure startup time, CPU and wakeups in idle and static mode, memory, and binary size against the power budget (`POWER_SECONDS=120` per mode). Linux: under Xvfb. Windows: on your desktop, with your config file swapped out and restored. macOS: on your desktop with a private HOME, from a universal binary. CI jobs run it on `windows-latest` and `macos-latest` |
+| `make power-check` | Build the release badge and measure startup time, CPU and wakeups in idle and static mode, memory, and binary size against the power budget (`POWER_SECONDS=120` per mode). Linux: under Xvfb. Windows: on your desktop, with your config and state files backed up next to them (`*.pawdev-backup`) and put back afterwards, or at the next run if one was interrupted. macOS: on your desktop with a private HOME, from a universal binary. CI jobs run it on `windows-latest` and `macos-latest` |
 | `make test` | Unit tests, golden image tests, and mascot catalog validation |
 | `make test-x11` | Linux: run the badge under Xvfb (bare, with the `xcompmgr` compositor, with the `openbox` window manager) and check its pixels, click-through, move mode and its outline, single instance, the tray menu over a private D-Bus, `set`/`unset` and reloads, and the preview window |
 | `make test-wayland` | Linux: run the badge under headless Sway and check placement, click-through, move mode, panels, output changes, and the preview window from screenshots |
@@ -483,18 +475,17 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make ci` | Everything CI checks (`lint` + `test`) |
 | `make release` | Optimized build for this OS, checked and run: static musl x86_64 and aarch64 on Linux (the aarch64 one runs under `qemu-user-static` if installed), a universal binary re-signed ad hoc on macOS, `pawprint.exe` and `pawprintw.exe` on Windows |
 | `make package` | Release build, then the archives and their `.sha256` files into `dist/`. Fails if the catalog has fewer than 100 valid mascots or is missing a required one. |
-| `make publish` | Upload `dist/` and the installers to the GitHub release `v<version>`, creating it if needed. Refuses unless the tree is clean and the tag is on `HEAD`. `make publish DRY_RUN=1` prints the `gh` commands without running them |
+| `make publish` | Upload `dist/` and the installers to the GitHub release `v<version>`, creating it as a draft if needed. Refuses unless the tree is clean, the tag is on `HEAD`, and `dist/` was packaged from that commit. `make publish DRY_RUN=1` prints the `gh` commands without running them |
+| `make release-finalize` | Once every OS has published: check the draft release has all four archives, their `.sha256` files, and both installers, then publish it. `DRY_RUN=1` prints the commands and the expected assets |
 | `make install` | Package, then install that build for this user through the real installer (`--archive dist/...`): autostart on, badge started |
 | `make uninstall` | Remove the install and autostart through the installer (config is kept) |
-| `make test-install` | Package, then run the installers end to end in a throwaway home under every shell found (`sh`, `dash`, `bash`; `powershell`, `pwsh`): fresh install, upgrade from a local HTTP server, a checksum mismatch that must change nothing, uninstall, purge. On Windows and macOS it uses your real autostart entry and badge, so run it where PAWPRINT isn't installed (CI does) |
+| `make test-install` | Package, then run the installers end to end in a throwaway home under every shell found (`sh`, `dash`, `bash`; `powershell`, `pwsh`): fresh install, upgrade from a local HTTP server, a checksum mismatch that must change nothing, uninstall, purge. On Windows and macOS the autostart entry is your real one, so it refuses to run while `pawprint autostart status` says on (outside CI) |
 | `make lint-installers` | `shellcheck` the POSIX installer (needs `shellcheck`) |
 | `make doctor` | Run `pawprint doctor` from the local build |
 | `make clean` | Remove build outputs |
 | `make check-all-targets` | Type-check the workspace for every release target (Windows, macOS, Linux musl) from any OS; needs no linkers |
 | `make spike-f22` | Rebuild the F22 spike: proves the Linux window, Wayland, D-Bus, and tray crates link into fully static musl binaries |
 
-Targets for features that don't exist yet (see [`ROADMAP.md`](ROADMAP.md))
-stop with `not implemented yet (Mx)`, naming the milestone that adds them.
 `make check-assets` and `make test` report the catalog gates (at least 100
 mascots, every showcase mascot present) without failing; only `make package`
 enforces them.
@@ -506,14 +497,20 @@ Releases are built locally on each OS and uploaded to one GitHub release:
 1. Bump `version` in the root `Cargo.toml`, commit, then tag and push:
    `git tag v<version> && git push origin v<version>`.
 2. On Linux, macOS, and Windows, check out the tag and run
-   `make package && make publish`. Each machine uploads its own archives,
-   their `.sha256` files, and the two installers (re-uploads replace
-   same-named assets). `make publish DRY_RUN=1` shows what would run.
-3. Test the install one-liners on a clean machine of each OS.
+   `make package && make publish`. The first machine creates the release
+   as a draft (let it finish before the others start); each machine
+   uploads its own archives, their `.sha256` files, and the two installers
+   (re-uploads replace same-named assets). `make publish DRY_RUN=1` shows
+   what would run.
+3. `make release-finalize` checks that the draft has every OS's assets and
+   publishes it. Until then nobody sees the release, so `latest` never
+   lacks an OS.
+4. Test the install one-liners on a clean machine of each OS.
 
 `make publish` reads the version from `Cargo.toml`, so there is nothing to
-pass. It refuses to run with uncommitted changes or when the tag doesn't
-point at `HEAD`, so every asset matches the tagged commit.
+pass. It refuses to run with uncommitted changes, when the tag doesn't
+point at `HEAD`, or when `dist/` was packaged from another commit (recorded
+in `dist/COMMIT`), so every asset matches the tagged commit.
 
 Details are in [SPEC.md §15](SPEC.md#15-packaging-release-and-install).
 
