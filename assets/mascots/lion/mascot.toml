@@ -1,6 +1,8 @@
 # Lion on big-cat. The mane is the whole point: a spiky, streaked mane of
 # brown with orange highlights that fills the frame around a golden face,
-# plus the tufted tail up the right side. The signature
+# plus the tufted tail up the right side. The face is a lion's, not a
+# kitten's: a heavy brow, a lit nose bridge into a broad nose, and whisker
+# pads either side of a mouth line. The signature
 # shakes the mane (which doesn't follow the head) and lets out a small
 # roar; the rare one winds up for a mighty roar and only a squeak comes out.
 id = "lion"
@@ -43,6 +45,53 @@ kqssssssssssssssssssssssssssssSk
 ..kqssssssssssssssssssssssssSk..
 ....kqssssssssssssssssssssSk....
 .......kqssssssssssssssSk.......
+"""
+
+# Heavy brow, nose bridge, whisker pads.
+[layers.head]
+at = [5, 4]
+grid = """
+.....kkkkkkkkkkkk.....
+...kkllllllllllffkk...
+..kllffffffffffffFFk..
+.klfffffffllfffffffFk.
+.klfFFFFfllllfFFFFfFk.
+.klfffffFllllFfffffFk.
+.klffffffllllffffffFk.
+klffffwwwllllwwwffffFk
+klfffwwwwwwwwwwwwfffFk
+kfffwwwMwwwwwwMwwwffFk
+.kffwMwwwwwwwwwwMwfFk.
+..kfwwwwFwFFwFwwwwFk..
+...kkFFwwwwwwwwFFkk...
+"""
+
+[layers.nose]
+at = [13, 12]
+follows = "head"
+grid = """
+nnnnnn
+.nnnn.
+..nn..
+"""
+
+[layers."nose.sniff"]
+at = [13, 11]
+follows = "head"
+grid = """
+nnnnnn
+.nnnn.
+..nn..
+"""
+
+[layers."mouth.open"]
+at = [13, 15]
+follows = "head"
+grid = """
+kkkkkk
+kpkkpk
+kppppk
+.kkkk.
 """
 
 [[actions]]
