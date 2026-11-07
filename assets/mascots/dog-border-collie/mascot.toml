@@ -1,0 +1,210 @@
+# Border Collie on dog-sit. Black and white: a white blaze from the brow
+# widening into a white muzzle, a white ruff and chest, white paws and tail
+# tip, and half-prick ears whose tips fold forward. Brown eyes with a light
+# rim so they read on black fur. The rare action herds a stray sheep (the
+# `puff` prop) across the top of the badge with the famous stare.
+id = "dog-border-collie"
+name = "Border Collie"
+category = "cats-dogs"
+aliases = ["collie", "bordercollie"]
+accent = "teal"
+extends = "dog-sit"
+
+[palette]
+"l" = "grey-3"      # coat sheen
+"f" = "grey-4"      # black coat
+"F" = "fur-black"   # coat shadow
+"w" = "white"       # blaze, muzzle, ruff, paws
+"M" = "grey-1"      # shadow on the white
+"s" = "grey-4"      # ears
+"S" = "fur-black"   # folded ear tips
+"e" = "brown-2"     # iris
+"p" = "pink-2"      # inner ear, tongue
+
+[layers.tail]
+at = [25, 12]
+grid = """
+..kk.
+.kwk.
+.kwMk
+klwfk
+klffk
+kffFk
+kffFk
+kffFk
+"""
+
+[layers."tail.flick"]
+at = [25, 11]
+grid = """
+...kk.
+..kwk.
+..kwMk
+.klwfk
+klffFk
+kffFk.
+kffFk.
+kffFk.
+kffFk.
+"""
+
+# White ruff round the neck and down the chest.
+[layers.body]
+at = [5, 14]
+grid = """
+...kwwwwwwwwwwwwwMk...
+..kwwwwwwwwwwwwwwwMk..
+.klffwwwwwwwwwwwwfFFk.
+klffffwwwwwwwwwwffFFk.
+klfffffwwwwwwwwfffFFFk
+klfffffwwwwwwwwffffFFk
+klffffffwwwwwwfffffFFk
+klfffffffwwwwffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# Black head, white blaze widening into the muzzle.
+[layers.head]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllwwffffkk...
+..kllllffwwffffFFk..
+.kllffffwwwwffffFFk.
+klfffffffwwfffffFFFk
+klffffffwwwwffffffFk
+klfffffwwwwwwfffffFk
+.kfffwwwwwwwwwwfffk.
+.kffwwwwwwwwwwwwFFk.
+..kfwwwwwMMwwwwwFk..
+...kwwwMwwwwMwwwk...
+....kwwwwwwwwwwk....
+.....kkMMMMMMkk.....
+"""
+
+# Half-prick ears: upright, with the tips folded forward.
+[layers.ears]
+at = [5, 1]
+grid = """
+.kkkk............kkkk.
+kSSSsskk......kkssSSSk
+.kkklssk......kssFkkk.
+...klppsk....ksppFk...
+...klppssk..kssppFk...
+"""
+
+# The right ear lifts on its own.
+[layers."ears.flick"]
+at = [5, 0]
+grid = """
+.................kkkk.
+.kkkk.........kkssSSSk
+kSSSsskk......kssFkkk.
+.kkklssk.....ksppFk...
+...klppsk...kssppFk...
+...klppssk..kssppFk...
+"""
+
+[layers.eyes]
+at = [12, 9]
+grid = """
+he....he
+ek....ek
+"""
+
+[layers."eyes.closed"]
+at = [12, 10]
+grid = """
+ll....ll
+"""
+
+[layers."eyes.happy"]
+at = [11, 9]
+grid = """
+.ll....ll.
+l..l..l..l
+"""
+
+[layers."eyes.left"]
+at = [11, 9]
+grid = """
+he....he
+ke....ke
+"""
+
+[layers."eyes.right"]
+at = [13, 9]
+grid = """
+eh....eh
+ek....ek
+"""
+
+# The stare: wide, unblinking, pupils dead centre.
+[layers."eyes.stare"]
+at = [12, 9]
+grid = """
+ee....ee
+kk....kk
+"""
+
+[layers.paws]
+at = [8, 17]
+grid = """
+.MMMM......MMMM.
+MwwwwM....MwwwwM
+kwMwMk....kwMwMk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: drops into an alert crouch, eyes darting, then the stare.
+[[actions]]
+name = "alert-crouch"
+weight = 4
+frames = [
+  { ops = ["all+0,1"], ms = 150 },
+  { ops = ["all+0,2", "ears=flick"], ms = 250 },
+  { ops = ["all+0,2", "eyes=left"], ms = 250 },
+  { ops = ["all+0,2", "eyes=right"], ms = 250 },
+  { ops = ["all+0,2", "eyes=left"], ms = 250 },
+  { ops = ["all+0,2", "eyes=stare"], ms = 1000 },
+  { ops = ["all+0,1"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a stray sheep wanders across the top; it gets the stare, the crouch,
+# and is herded off to the left.
+[[actions]]
+name = "herd-sheep"
+weight = 1
+frames = [
+  { ops = ["eyes=right", "prop:puff@23,1"], ms = 500 },
+  { ops = ["eyes=stare", "all+0,2", "prop:puff@20,1"], ms = 600 },
+  { ops = ["eyes=stare", "all+0,2", "prop:puff@14,1"], ms = 400 },
+  { ops = ["eyes=left", "all+0,1", "prop:puff@8,1"], ms = 400 },
+  { ops = ["eyes=left", "prop:puff@2,1"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

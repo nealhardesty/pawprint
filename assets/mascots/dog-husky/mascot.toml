@@ -1,0 +1,230 @@
+# Siberian Husky on dog-sit. A dark grey cap and widow's peak over a white
+# mask with white brows and "spectacles", ice-blue eyes, prick ears (the
+# base's `ears.prick`, listed in rest), and a white chest. `head.awoo` is the
+# head thrown back with the nose to the sky. The rare action is a snowflake
+# drifting down onto its nose.
+id = "dog-husky"
+name = "Husky"
+category = "cats-dogs"
+aliases = ["husky"]
+accent = "ice"
+extends = "dog-sit"
+rest = ["tail", "body", "head", "ears.prick", "eyes", "nose", "paws"]
+
+[palette]
+"l" = "grey-2"      # coat light
+"f" = "grey-3"      # dark grey coat
+"F" = "grey-4"      # coat shadow
+"w" = "white"       # mask, chest, tail underside
+"M" = "grey-1"      # shadow on the white
+"s" = "grey-3"      # ears
+"e" = "blue-2"      # ice-blue iris
+"h" = "white"       # glint
+"p" = "pink-1"      # inner ear, tongue
+"b" = "blue-1"      # snowflake (arms in the iris blue)
+
+[layers.tail]
+at = [25, 11]
+grid = """
+..kk.
+.kwk.
+.kwFk
+klwFk
+klffk
+klfFk
+kffFk
+kffFk
+kffFk
+"""
+
+[layers."tail.flick"]
+at = [25, 10]
+grid = """
+...kk.
+..kwk.
+..kwFk
+.klwFk
+kllfFk
+klfFk.
+kffFk.
+kffFk.
+kffFk.
+kffFk.
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klffffwwwwwwfffFFk..
+.klfffwwwwwwwwwwffFFk.
+klfffwwwwwwwwwwwwffFFk
+klffffwwwwwwwwwwfffFFk
+klffffwwwwwwwwwwfffFFk
+klfffffwwwwwwwwffffFFk
+klffffffwwwwwwfffffFFk
+klfffffffwwwwffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# Dark cap with a widow's peak between white spectacles; white muzzle.
+[layers.head]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllllffffkk...
+..kllllffffffffFFk..
+.kllfwwffffffwwfFFk.
+klffwwwwwffwwwwwfFFk
+klfwwwwwwffwwwwwwFFk
+kffwwwwwwffwwwwwwFFk
+.kwwwwwwwwwwwwwwwwk.
+.kwwwwwwwwwwwwwwwwk.
+..kwwwwwwMMwwwwwwk..
+...kwwwMwwwwMwwwk...
+....kwwwwwwwwwwk....
+.....kkMMMMMMkk.....
+"""
+
+# Thrown back: nose to the sky, eyes shut, mouth an O.
+[layers."head.awoo"]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kklllnnnnfffkk...
+..kllllwwnnwwffFFk..
+.kllfwwwwwwwwwwfFFk.
+klffwkkkwwwwkkkwfFFk
+klfwwwwwkkkkwwwwwFFk
+kffwwwwkppppkwwwwFFk
+.kwwwwwkppppkwwwwwk.
+.kwwwwwwkkkkwwwwwwk.
+..kwwwwwwwwwwwwwwk..
+...kwwwwwwwwwwwwk...
+....kwwwwwwwwwwk....
+.....kkMMMMMMkk.....
+"""
+
+[layers."ears.flick"]
+at = [7, 0]
+grid = """
+...............kk.
+.kk...........kslk
+klsk.........ksplk
+klpsk.......kspplk
+klppsk.....ksspplk
+klppssk...........
+"""
+
+# Ice-blue eyes with a glint.
+[layers.eyes]
+at = [12, 9]
+grid = """
+he....he
+ek....ek
+"""
+
+[layers."eyes.left"]
+at = [12, 9]
+grid = """
+he....he
+ke....ke
+"""
+
+[layers."eyes.up"]
+at = [12, 9]
+grid = """
+ke....ke
+eh....eh
+"""
+
+# Cross-eyed at a snowflake on the nose.
+[layers."eyes.cross"]
+at = [12, 9]
+grid = """
+he....eh
+ek....ke
+"""
+
+[layers.flake]
+at = [21, 0]
+grid = """
+.e.
+ebe
+.e.
+"""
+
+[layers."flake.mid"]
+at = [18, 3]
+grid = """
+.e.
+ebe
+.e.
+"""
+
+[layers."flake.low"]
+at = [16, 6]
+grid = """
+.e.
+ebe
+.e.
+"""
+
+[layers."flake.nose"]
+at = [15, 10]
+grid = """
+.e.
+ebe
+.e.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 4
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: throws its head back for a long awoo.
+[[actions]]
+name = "awoo"
+weight = 4
+frames = [
+  { ops = ["eyes=closed", "head+0,1"], ms = 250 },
+  { ops = ["head=awoo", "-eyes", "-nose", "head+0,-1"], ms = 300 },
+  { ops = ["head=awoo", "-eyes", "-nose", "head+0,-2", "prop:note@23,4"], ms = 600 },
+  { ops = ["head=awoo", "-eyes", "-nose", "head+0,-2", "prop:note@24,1"], ms = 700 },
+  { ops = ["head=awoo", "-eyes", "-nose", "head+0,-1", "prop:note@25,0"], ms = 300 },
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a snowflake drifts down and lands on its nose.
+[[actions]]
+name = "snowflake"
+weight = 1
+frames = [
+  { ops = ["+flake", "eyes=up"], ms = 500 },
+  { ops = ["+flake.mid", "eyes=up"], ms = 500 },
+  { ops = ["+flake.low", "eyes=cross"], ms = 500 },
+  { ops = ["+flake.nose", "eyes=cross"], ms = 900 },
+  { ops = ["eyes=closed", "nose=sniff", "all+0,-1"], ms = 150 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]

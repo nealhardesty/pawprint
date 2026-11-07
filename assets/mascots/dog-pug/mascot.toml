@@ -1,0 +1,185 @@
+# Pug on dog-sit. A wide, round, flat face: a black mask over the whole
+# muzzle, forehead and nose wrinkles in fur shadow, big bulging eyes, and
+# small black button ears (the base's `ears.fold`, in black). The curly tail
+# sits on its back, out of view, so rest leaves the tail out. The rare
+# action is the pug derp: tongue out, eyes pointing two ways at once.
+id = "dog-pug"
+name = "Pug"
+category = "cats-dogs"
+aliases = ["pug"]
+accent = "honey"
+extends = "dog-sit"
+rest = ["body", "head", "ears.fold", "eyes", "nose", "paws"]
+
+[palette]
+"l" = "cream"       # fawn light
+"f" = "brown-1"     # fawn
+"F" = "brown-2"     # fawn shadow and wrinkles
+"w" = "cream"       # chest
+"M" = "brown-1"     # shadow on the chest
+"s" = "grey-4"      # button ears
+"S" = "fur-black"   # ear shadow
+"x" = "fur-black"   # the mask
+"X" = "grey-4"      # sheen on the mask
+"n" = "ink"         # nose
+"e" = "brown-3"     # iris
+"p" = "pink-2"      # tongue
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klffffwwwwwwfffFFk..
+.klfffffwwwwwwffffFFk.
+klfffffwwwwwwwwffffFFk
+klfffffwwwwwwwwffffFFk
+klfffffwwwwwwwwffffFFk
+klffffffwwwwwwfffffFFk
+klfffffffwwwwffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# Wide and flat: wrinkles over the brow and nose, the black mask below.
+[layers.head]
+at = [4, 4]
+grid = """
+.......kkkkkkkkkk.......
+.....kkllllllllffkk.....
+...kkllllllllfffffFkk...
+..kllllflFFffFFffffFFk..
+.kllllffffffffffffffFFk.
+.kllffffffffffffffffFFk.
+klllffffffFFFFffffffFFFk
+kllffffFxxxxxxxxFffffFFk
+klffffxxxxxxxxxxxxffffFk
+klfffxxxxxxxxxxxxxxfffFk
+.kffxxxxxxXXXXxxxxxxfFk.
+..kfFxxxxxxxxxxxxxxFFk..
+...kkFFFFFFFFFFFFFFkk...
+"""
+
+# Big round bulging eyes, brown with a glint.
+[layers.eyes]
+at = [10, 8]
+grid = """
+.kk......kk.
+khek....khek
+keek....keek
+.kk......kk.
+"""
+
+[layers."eyes.closed"]
+at = [10, 9]
+grid = """
+.FF......FF.
+kkkk....kkkk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+grid = """
+.kk......kk.
+kwhk....kwhk
+kwek....kwek
+.kk......kk.
+"""
+
+# The derp: each eye wanders off on its own.
+[layers."eyes.derp"]
+at = [10, 8]
+grid = """
+.kk......kk.
+khwk....kwhk
+keww....wwek
+.kk......kk.
+"""
+
+[layers.nose]
+at = [14, 11]
+grid = """
+kXXk
+.kk.
+"""
+
+[layers."nose.sniff"]
+at = [14, 10]
+grid = """
+kXXk
+.kk.
+"""
+
+[layers."mouth.blep"]
+at = [15, 15]
+grid = """
+kk
+pp
+kk
+"""
+
+[layers."ears.flick"]
+at = [6, 2]
+grid = """
+...............kkkk.
+.kkkkk........ksssk.
+ksssssk......ksssSk.
+kssssSk......kSSSk..
+kSSSSk........kkk...
+.kkk................
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 4
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a head tilt with one ear up, then a big snort.
+[[actions]]
+name = "tilt-snort"
+weight = 4
+frames = [
+  { ops = ["head+1,0", "-ears", "ears=flick", "eyes=right"], ms = 700 },
+  { ops = ["head+1,0", "-ears", "ears=flick"], ms = 400 },
+  { ops = ["nose=sniff", "eyes=closed"], ms = 150 },
+  { ops = ["eyes=closed", "all+0,-1", "prop:puff@20,11"], ms = 200 },
+  { ops = ["eyes=closed", "prop:puff@21,9"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the derp. Tongue out, eyes pointing two ways at once.
+[[actions]]
+name = "derp"
+weight = 1
+frames = [
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = ["+mouth.blep"], ms = 300 },
+  { ops = ["+mouth.blep", "eyes=derp"], ms = 1600 },
+  { ops = ["+mouth.blep", "eyes=derp", "head+1,0"], ms = 600 },
+  { ops = ["+mouth.blep"], ms = 300 },
+  { ops = [], ms = 200 },
+]

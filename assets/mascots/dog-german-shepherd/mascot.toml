@@ -1,0 +1,238 @@
+# German Shepherd on dog-sit. Tan with a black saddle over the shoulders, a
+# black cap and nose bridge widening into a black muzzle, tan brows and
+# cheeks, and tall, wide, black-rimmed ears standing straight up. The ears
+# swivel (`ears.left`, `ears.right`) for the signature; the rare action
+# tracks a falling leaf and snaps it out of the air.
+id = "dog-german-shepherd"
+name = "German Shepherd"
+category = "cats-dogs"
+aliases = ["shepherd", "gsd", "alsatian"]
+accent = "brick"
+extends = "dog-sit"
+
+[palette]
+"l" = "orange-1"    # tan light, inner ear
+"f" = "orange-2"    # tan
+"F" = "orange-3"    # tan shadow
+"w" = "orange-1"    # pale tan chest
+"M" = "orange-3"    # shadow on the chest
+"x" = "fur-black"   # saddle, cap, muzzle, ear rims
+"X" = "grey-4"      # sheen on the black
+"e" = "brown-3"     # iris
+"p" = "pink-2"      # tongue
+
+# A bushy tail, black along the top.
+[layers.tail]
+at = [24, 11]
+grid = """
+..kkk.
+.kxxXk
+kxxxXk
+kfxxxk
+kffxFk
+kfffFk
+kfffFk
+kfffFk
+kfffFk
+"""
+
+[layers."tail.flick"]
+at = [24, 10]
+grid = """
+...kkk.
+..kxxXk
+.kxxxXk
+kfxxxk.
+kffxFk.
+kfffFk.
+kfffFk.
+kfffFk.
+kfffFk.
+kfffFk.
+"""
+
+# The black saddle across the shoulders, a pale tan chest.
+[layers.body]
+at = [5, 14]
+grid = """
+...kXxxxxxxxxxxxxxxk..
+..kXxxxffwwwwffxxxxxk.
+.kXxxfffwwwwwwfffxxxxk
+kXxxffffwwwwwwffffxxxk
+kxxfffffwwwwwwfffffxxk
+klfffffffwwwwfffffFFFk
+klffffffffwwffffffFFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# Black cap and bridge into a black muzzle; tan brows and cheeks.
+[layers.head]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kkllxxxxxxffkk...
+..kllllfxxxxffffFk..
+.kllffffxxxxffffFFk.
+klffffffxxxxffffffFk
+klffffffxxxxffffffFk
+klfffffxxxxxxfffffFk
+.kffffxxxxxxxxffffk.
+.kfffxxxxxxxxxxfFFk.
+..kffxxxxXXxxxxfFk..
+...kfxxXxxxxXxxfk...
+....kfxxxxxxxxfk....
+.....kkFFFFFFkk.....
+"""
+
+# Tall, wide ears, black rims, tan inside.
+[layers.ears]
+at = [5, 0]
+grid = """
+...kk............kk...
+..kxxk..........kxxk..
+..kxlxk........kxlxk..
+.kxllxk........kxllxk.
+.kxlllxk......kxlllxk.
+kxxlllxk......kxlllxxk
+kxllllxx......xxllllxk
+.kxxxxxx......xxxxxxk.
+"""
+
+[layers."ears.flick"]
+at = [5, 0]
+grid = """
+......................
+...kk............kk...
+..kxxk..........kxxk..
+..kxlxk........kxlxk..
+.kxllxk.......kxllxk..
+.kxlllxk......kxlllxk.
+kxxlllxk......xxllllxk
+.kxxxxxx......xxxxxxk.
+"""
+
+# Both ears swivelled toward a sound on the left.
+[layers."ears.left"]
+at = [4, 0]
+grid = """
+..kk............kk.....
+.kxxk..........kxxk....
+.kxlxk.........kxlxk...
+.kxllxk........kxllxk..
+..kxlllxk......kxlllxk.
+.kxxlllxk......kxlllxxk
+.kxllllxx......xxllllxk
+..kxxxxxx......xxxxxxk.
+"""
+
+[layers."ears.right"]
+at = [5, 0]
+grid = """
+.....kk............kk..
+....kxxk..........kxxk.
+...kxlxk.........kxlxk.
+..kxllxk........kxllxk.
+.kxlllxk......kxlllxk..
+kxxlllxk......kxlllxxk.
+kxllllxx......xxllllxk.
+.kxxxxxx......xxxxxxk..
+"""
+
+[layers.eyes]
+at = [12, 9]
+grid = """
+he....he
+ek....ek
+"""
+
+[layers."eyes.left"]
+at = [11, 9]
+grid = """
+he....he
+ek....ek
+"""
+
+[layers."eyes.right"]
+at = [13, 9]
+grid = """
+eh....eh
+ke....ke
+"""
+
+[layers."eyes.up"]
+at = [12, 9]
+grid = """
+ek....ek
+eh....eh
+"""
+
+[layers."mouth.open"]
+at = [13, 14]
+grid = """
+kkkkkk
+kppppk
+.kppk.
+"""
+
+[layers.paws]
+at = [8, 17]
+grid = """
+.FFFF......FFFF.
+FllllF....FllllF
+klFlFk....klFlFk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the ears swivel one way, then the other, and the head tilts,
+# listening hard.
+[[actions]]
+name = "listen-tilt"
+weight = 4
+frames = [
+  { ops = ["ears=left", "eyes=left"], ms = 500 },
+  { ops = ["ears=right", "eyes=right"], ms = 500 },
+  { ops = [], ms = 200 },
+  { ops = ["head+1,0", "ears=right"], ms = 200 },
+  { ops = ["head+1,1", "ears=right", "eyes=right"], ms = 1000 },
+  { ops = ["head+1,0"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a leaf drifts down, gets tracked all the way, and is snapped out of
+# the air; held proudly, then dropped.
+[[actions]]
+name = "leaf-catch"
+weight = 1
+frames = [
+  { ops = ["eyes=up", "prop:leaf@22,0"], ms = 500 },
+  { ops = ["eyes=up", "ears=right", "prop:leaf@20,3"], ms = 500 },
+  { ops = ["eyes=right", "prop:leaf@17,6"], ms = 400 },
+  { ops = ["+mouth.open", "head+0,-1", "prop:leaf@14,8"], ms = 150 },
+  { ops = ["eyes=happy", "prop:leaf@13,11"], ms = 1000 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = [], ms = 200 },
+]

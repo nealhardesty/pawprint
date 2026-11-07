@@ -1,0 +1,203 @@
+# Greyhound on dog-sit. A long, narrow head whose muzzle reaches the crate
+# rim, small rose ears folded back at the temples, a slim deep chest with a
+# white blaze, and a thin whip tail. The nose moves down to the end of the
+# long muzzle. The rare action is a lap of zoomies out of the crate.
+id = "dog-greyhound"
+name = "Greyhound"
+category = "cats-dogs"
+aliases = ["greyhound", "grey"]
+accent = "sky"
+extends = "dog-sit"
+
+[palette]
+"l" = "grey-1"      # coat light
+"f" = "grey-2"      # blue-grey coat
+"F" = "grey-3"      # coat shadow
+"w" = "white"       # blaze and chest
+"M" = "grey-1"      # shadow on the white
+"s" = "grey-3"      # rose ears
+"S" = "grey-4"      # ear shadow
+"p" = "pink-2"      # tongue
+
+# A thin whip tail.
+[layers.tail]
+at = [24, 10]
+grid = """
+...kk
+..klk
+..kFk
+.klFk
+.kfk.
+klFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+"""
+
+[layers."tail.flick"]
+at = [24, 9]
+grid = """
+....kk
+...klk
+..klFk
+..kFk.
+.klFk.
+.kfk..
+klFk..
+kfFk..
+kfFk..
+kfFk..
+kfFk..
+"""
+
+# Slim and deep-chested, with a white blaze down the front.
+[layers.body]
+at = [7, 13]
+grid = """
+....klffffffffFk....
+..kklfffffffffFFkk..
+.klfffwwwwwwwwfffFk.
+klffffwwwwwwwwffffFk
+klffffwwwwwwwwffffFk
+klffffwwwwwwwwffffFk
+klfffffwwwwwwfffffFk
+klfffffwwwwwwfffffFk
+klffffffwwwwffffffFk
+klfffffffwwfffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+"""
+
+# Long and narrow: the muzzle runs all the way down to the rim.
+[layers.head]
+at = [10, 3]
+grid = """
+...kkkkkk...
+.kkllllffkk.
+kllllfffffFk
+kllfffffffFk
+klffffffffFk
+klffffffffFk
+klffffffffFk
+klffffffffFk
+.klffffffFk.
+.klffffffFk.
+.klffffffFk.
+.klffffffFk.
+.klffffffFk.
+.kfffMMfffk.
+..kFFFFFFk..
+"""
+
+# Rose ears folded back at the temples.
+[layers.ears]
+at = [7, 3]
+grid = """
+.kkk..........kkk.
+kssSk........kSssk
+.kSSF........FSSk.
+..kk..........kk..
+"""
+
+[layers."ears.flick"]
+at = [7, 2]
+grid = """
+..............kkk.
+.kkk.........kSssk
+kssSk........FSSk.
+.kSSF.........kk..
+..kk..............
+"""
+
+[layers.eyes]
+at = [12, 9]
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers.nose]
+at = [14, 14]
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 13]
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."mouth.open"]
+at = [13, 16]
+grid = """
+.kkkk.
+.kppk.
+..kk..
+"""
+
+# Long thin forelegs.
+[layers.paws]
+at = [10, 17]
+grid = """
+.FFF......FFF.
+FlllF....FlllF
+klFlk....klFlk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: lowers the long nose onto the crate edge and lets out a sigh.
+[[actions]]
+name = "rest-chin-sigh"
+weight = 4
+frames = [
+  { ops = ["head+0,1"], ms = 200 },
+  { ops = ["head+0,2"], ms = 500 },
+  { ops = ["head+0,2", "eyes=closed"], ms = 600 },
+  { ops = ["head+0,2", "eyes=closed", "body+0,1", "prop:puff@20,13"], ms = 500 },
+  { ops = ["head+0,2", "eyes=closed", "prop:puff@21,11"], ms = 500 },
+  { ops = ["head+0,2", "eyes=closed"], ms = 600 },
+  { ops = ["head+0,1"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: zoomies. Bolts out of the crate to the left, leaves a puff of dust,
+# and laps back in from the right.
+[[actions]]
+name = "zoomies"
+weight = 1
+frames = [
+  { ops = ["eyes=happy", "all+0,1"], ms = 250 },
+  { ops = ["eyes=happy", "all+-10,0"], ms = 90 },
+  { ops = ["all+-24,0", "prop:puff@12,12"], ms = 90 },
+  { ops = ["all+-40,0", "prop:puff@11,10"], ms = 500 },
+  { ops = ["all+24,0", "eyes=happy"], ms = 90 },
+  { ops = ["all+10,0", "eyes=happy"], ms = 90 },
+  { ops = ["all+2,0", "eyes=happy"], ms = 120 },
+  { ops = ["eyes=happy", "all+0,1"], ms = 600 },
+  { ops = [], ms = 200 },
+]
