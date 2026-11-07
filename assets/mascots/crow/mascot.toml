@@ -1,20 +1,21 @@
-# Crow on bird-perched. A sleek, flat-crowned black bird with a blue gloss,
-# shaggy throat hackles, and a heavy wedge of a beak: the opposite of the
-# owl's round face and tiny hook. The eyes have a pale ring so they read
-# against the black. Signature: a sly head tilt and a silent caw. Rare: a
+# Crow on bird-perched. A sleek, flat-crowned black bird with a blue-violet
+# gloss, shaggy throat hackles, and a heavy wedge of a beak: the opposite of
+# the owl's round face and tiny hook. The eyes have a pale ring so they read
+# against the black, and the sky crate keeps the black bird from sinking
+# into a dark crate. Signature: a sly head tilt and a silent caw. Rare: a
 # glint lands on the crate rim and the crow pockets it.
 id = "crow"
 name = "Crow"
 category = "birds"
 aliases = ["raven", "corvid"]
-accent = "charcoal"
+accent = "sky"
 extends = "bird-perched"
 
 [palette]
-"l" = "grey-3"      # gloss highlight
+"l" = "blue-3"      # blue gloss highlight
 "f" = "grey-4"      # feathers
 "F" = "fur-black"   # feather shadow
-"g" = "blue-3"      # blue sheen
+"g" = "purple-2"    # violet sheen
 "w" = "grey-4"      # no pale breast on a crow
 "m" = "grey-3"
 "e" = "grey-2"      # pale eye ring

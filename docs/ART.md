@@ -129,6 +129,15 @@ rows 22–30 and is always plain cream: never rely on art showing there.
 - **Check every variant at 1×.** A 2 × 2 eye moved 1 px is a glance; a
   closed eye is one row of ink. Both are invisible if they land on an
   outline.
+- **Light fur eats the glint.** The base eye is `hk` over `kk`. On white,
+  cream, or pale yellow fur the white `h` merges with the fur and the eye
+  reads as a dash at 1×. Map `"h" = "grey-3"` (labrador, polar bear,
+  hamster, poodle do): a solid dot at 1×, still a soft catchlight at 128.
+  On black fur the problem flips; give the eye a light iris or tan brows
+  (dachshund).
+- **Nothing pale may stick out unoutlined.** Whiskers past the silhouette
+  have no ink around them, so white ones vanish on a light desktop. Use
+  `grey-2` (walrus, seal): it reads on light and dark.
 - **Props need a corner.** Templates draw their props in the top right
   (`zzz`, `heart`, `bang`, `question`, from x 21). If your face, a spout, or
   a wingtip lives there, set `prop_offset = [dx, dy]` at the top of the file

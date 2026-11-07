@@ -1674,7 +1674,14 @@ reads as fur, not as a hole in the outline.
 - **Eyes:** 2 × 2 with a 1 px `white` highlight for big-eyed mascots, 1 × 2
   for small ones. Eyes are the main source of expression, so give every
   mascot `eyes.closed` and, where it fits, `eyes.left`, `eyes.right`, and
-  `eyes.happy`.
+  `eyes.happy`. On light fur (white, cream, pale yellow) a white highlight
+  merges with the fur and the eye reads as a dash at 1×, so those mascots
+  map the `h` role to `grey-3`: a solid dot at 1×, a soft catchlight when
+  large. On black fur, use a light iris or tan brow points so the eye shows.
+- **Whiskers and bristles that stick out past the silhouette** have no
+  outline, so they use a mid tone (`grey-2`, as on the walrus and seal) that
+  reads on both light and dark desktops. White ones vanish on a light
+  desktop.
 - **Interact with the crate.** Paws, flippers, beaks, and tails over the rim
   make a mascot feel like it lives there.
 - **Exaggerate the defining feature:** moose paddle antlers and dewlap; elk
@@ -2271,7 +2278,7 @@ brief for each mascot's main idle action.
 | ID | Extra aliases | Accent | Signature action |
 |---|---|---|---|
 | ★ `owl` | owls, hoot | violet | One slow blink, then a sideways head turn |
-| `crow` | raven, corvid | charcoal | Tilts its head, caws silently |
+| `crow` | raven, corvid | sky | Tilts its head, caws silently |
 | `puffin` | — | brick | Bill clacks, little hop |
 | `penguin` | — | ice | Waddle-shuffle, flipper flap |
 | `kiwi` | — | moss | Long beak probes the crate |

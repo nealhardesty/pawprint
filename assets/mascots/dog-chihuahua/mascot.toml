@@ -10,6 +10,7 @@ accent = "cranberry"
 extends = "dog-sit"
 
 [palette]
+"h" = "grey-3"      # catchlight: white would vanish into the light fur at 1x
 "l" = "cream"       # fawn light
 "f" = "orange-1"    # fawn
 "F" = "brown-1"     # fawn shadow

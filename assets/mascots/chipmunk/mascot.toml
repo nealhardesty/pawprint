@@ -11,6 +11,7 @@ accent = "marigold"
 extends = "rodent-upright"
 
 [palette]
+"h" = "grey-3"      # catchlight: white would vanish into the light fur at 1x
 "l" = "orange-1"    # fur light
 "f" = "brown-1"     # fur
 "F" = "brown-2"     # fur shadow
