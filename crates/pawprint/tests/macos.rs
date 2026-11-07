@@ -188,9 +188,18 @@ fn drag_and_keys(env: &Env, rect: [i32; 4], scale: f64) -> [i32; 4] {
         post_mouse(CGEventType::LeftMouseDragged, at);
     }
     post_mouse(CGEventType::LeftMouseUp, to);
-    let dragged = wait_for("the drag to land", || {
-        env.badge_rect().filter(|r| *r != rect && !moving(env))
-    });
+    let start = Instant::now();
+    let dragged = loop {
+        if let Some(r) = env.badge_rect().filter(|r| *r != rect && !moving(env)) {
+            break r;
+        }
+        if start.elapsed() > Duration::from_secs(10) {
+            let log = env.log();
+            let events: Vec<&str> = log.lines().filter(|l| l.contains("macos")).collect();
+            panic!("the drag didn't land; badge events:\n{}", events.join("\n"));
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    };
     let dx = f64::from(dragged[0] - rect[0]) / scale;
     let dy = f64::from(dragged[1] - rect[1]) / scale;
     assert!(

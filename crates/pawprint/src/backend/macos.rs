@@ -345,6 +345,11 @@ impl Mac {
         }
         let at = || self.desktop.point_to_physical(NSEvent::mouseLocation());
         let ours = event.windowNumber() == self.panel.windowNumber();
+        log::debug!(
+            "macos: event {} in window {} (ours: {ours})",
+            kind.0,
+            event.windowNumber()
+        );
         match kind {
             NSEventType::LeftMouseDown if ours => {
                 self.dragging = true;
