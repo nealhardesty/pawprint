@@ -1,0 +1,85 @@
+# PAWPRINT: every task goes through make (SPEC §14). Run `make` to list targets.
+#
+# Rules: GNU Make 3.81 compatible (macOS ships 3.81). Every recipe line is a
+# single command that runs cargo or pawdev, so it behaves the same under sh
+# and cmd.exe. Real logic lives in tools/pawdev, never in shell.
+
+CARGO ?= cargo
+PAWDEV = $(CARGO) run --quiet --package pawdev --
+ARGS ?=
+MASCOT ?= owl
+
+# Every release target (keep in sync with rust-toolchain.toml).
+TARGETS = x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows-msvc
+
+.DEFAULT_GOAL := help
+.PHONY: help build run preview test check-assets lint fmt golden contact-sheet art-export art-import ci release package publish install uninstall doctor clean check-all-targets spike-f22
+
+help: ## List targets
+	@$(PAWDEV) help $(firstword $(MAKEFILE_LIST))
+
+build: ## Debug build of pawprint (and pawprintw on Windows)
+	$(CARGO) build --workspace
+
+run: ## Build and run the badge in the foreground; ARGS="..." passes arguments
+	$(CARGO) run --package pawprint -- run $(ARGS)
+
+preview: ## Preview a mascot: make preview MASCOT=owl
+	@$(PAWDEV) todo preview M2
+
+test: ## Unit tests, golden render tests, and asset validation
+	$(CARGO) test --workspace
+	$(PAWDEV) check-assets
+
+check-assets: ## Validate the mascot catalog only (catalog gates are reported, not enforced)
+	$(PAWDEV) check-assets
+
+lint: ## cargo fmt --check and clippy -D warnings
+	$(CARGO) fmt --all -- --check
+	$(CARGO) clippy --workspace --all-targets -- -D warnings
+
+fmt: ## Format the code
+	$(CARGO) fmt --all
+
+golden: ## Regenerate golden images after an intentional rendering change
+	$(PAWDEV) golden
+
+contact-sheet: ## Render every mascot, labels hidden, grouped by base, into docs/gallery.png (ANIMATED=1 adds a GIF)
+	@$(PAWDEV) todo contact-sheet M2
+
+art-export: ## Export a mascot's layers and frames as PNGs: make art-export MASCOT=owl
+	@$(PAWDEV) todo art-export M2
+
+art-import: ## Convert a PNG layer into a grid: make art-import MASCOT=owl PNG=eyes.png
+	@$(PAWDEV) todo art-import M2
+
+ci: lint test ## lint + test (what CI runs on every OS)
+
+release: ## Optimized build for this platform (universal on macOS, musl on Linux)
+	@$(PAWDEV) todo release M5
+
+package: ## release + archive + .sha256 into dist/; enforces catalog gates
+	$(PAWDEV) check-assets --package
+	@$(PAWDEV) todo package M5
+
+publish: ## Upload dist/* and installers to the GitHub release for the current version (needs gh)
+	@$(PAWDEV) todo publish M5
+
+install: ## Install the local release build for this user and enable autostart
+	@$(PAWDEV) todo install M5
+
+uninstall: ## Remove the local install and autostart (config is kept)
+	@$(PAWDEV) todo uninstall M5
+
+doctor: ## Run pawprint doctor from the local build
+	$(CARGO) run --quiet --package pawprint -- doctor
+
+clean: ## Remove target/ and dist/
+	$(PAWDEV) clean-dist
+	$(CARGO) clean
+
+check-all-targets: ## Type-check the workspace for every release target (no linkers needed)
+	$(CARGO) check --workspace --all-targets $(addprefix --target ,$(TARGETS))
+
+spike-f22: ## Spike F22: link x11rb, wayland-client, sctk, zbus, and ksni into static musl binaries
+	$(CARGO) build --release --manifest-path spikes/f22-static-musl/Cargo.toml --target x86_64-unknown-linux-musl --target aarch64-unknown-linux-musl
