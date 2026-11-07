@@ -1,0 +1,244 @@
+# Toucan on bird-perched. A black bird with a yellow bib, a blue eye patch,
+# and a bill as big as its head, banded green, yellow, orange, and red. It
+# rests in three-quarter view facing left, so the bill sweeps across the
+# left of the badge and the top right stays free for props. The `front`
+# variants are the head and bill seen face on, for the swing.
+# Signature: the bill swings side to side. Rare: tosses a berry and
+# catches it.
+id = "toucan"
+name = "Toucan"
+category = "birds"
+aliases = []
+accent = "marigold"
+extends = "bird-perched"
+
+[palette]
+"l" = "grey-3"      # feathers light
+"f" = "grey-4"      # feathers
+"F" = "fur-black"   # feather shadow
+"w" = "yellow-1"    # bib
+"m" = "grey-4"
+"u" = "blue-2"      # bare eye patch, feet
+"b" = "blue-2"      # feet
+"B" = "grey-3"      # feet shadow
+"g" = "green-1"     # bill bands, base to tip
+"G" = "green-1"
+"y" = "yellow-1"
+"Y" = "yellow-2"
+"o" = "orange-2"
+"O" = "orange-3"
+"R" = "red-1"
+"p" = "fur-black"   # inside of the bill
+
+[layers.body]
+at = [5, 12]
+grid = """
+..kkllllwwwwwwllffkk..
+.klllfwwwwwwwwwwffFFk.
+kllffwwwwwwwwwwwwffFFk
+klffffwwwwwwwwwwffffFk
+klfffffwwwwwwwwfffffFk
+klffffffffwwfffffffFFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+"""
+
+# Three-quarter view, facing left: the bib on the near cheek.
+[layers.head]
+at = [6, 3]
+grid = """
+.....kkkkkkkkkk.....
+....kkllllffffkk....
+...klllfffffffffk...
+..klfffffffffffffk..
+.klffffffffffffffFk.
+.kwwwfffffffffffffFk
+.kwwwwwffffffffffFFk
+.kwwwwwwfffffffffFFk
+.kwwwwwwwffffffffFFk
+..kwwwwwwwfffffffFk.
+...wwwwwwwwffffFF...
+"""
+
+[layers."head.front"]
+at = [6, 3]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllllffffkk...
+..klllffffffffffFk..
+.klffffffffffffffFk.
+klffffffffffffffffFk
+klffffffffffffffffFk
+klfffffffffffffffFFk
+klffwwwffffffwwwfFFk
+klfwwwwwwffwwwwwwFFk
+.kwwwwwwwwwwwwwwwFk.
+..wwwwwwwwwwwwwwww..
+"""
+
+[layers.eyes]
+at = [14, 7]
+follows = "head"
+grid = """
+.uu.
+uhku
+ukku
+.uu.
+"""
+
+[layers."eyes.closed"]
+at = [14, 7]
+follows = "head"
+grid = """
+.uu.
+uuuu
+kkkk
+.uu.
+"""
+
+[layers."eyes.left"]
+at = [14, 7]
+follows = "head"
+grid = """
+.uu.
+hkuu
+kkuu
+.uu.
+"""
+
+[layers."eyes.right"]
+at = [14, 7]
+follows = "head"
+grid = """
+.uu.
+uuhk
+uukk
+.uu.
+"""
+
+[layers."eyes.happy"]
+at = [14, 7]
+follows = "head"
+grid = """
+.uu.
+ukku
+kuuk
+.uu.
+"""
+
+[layers."eyes.front"]
+at = [9, 7]
+follows = "head"
+grid = """
+.uu........uu.
+uhku......uhku
+ukku......ukku
+.uu........uu.
+"""
+
+# The bill, side on, sweeping left: green at the base, a red tip.
+[layers.beak]
+at = [1, 7]
+follows = "head"
+grid = """
+...kkkkkkkkkk.
+.kkoooooooyygk
+kRooooooooyygk
+kROOOOOOOOYYGk
+kRRkkkkkkkkkkk
+.kRooooooyyygk
+..kkkkkkkkkkk.
+"""
+
+# The bill face on: a long banded wedge down the bib.
+[layers."beak.front"]
+at = [11, 9]
+follows = "head"
+grid = """
+kkkkkkkkkk
+kggggggGGk
+kyyyyyyYYk
+.kyyyyyYk.
+.kooooOOk.
+..koooOk..
+..kooOOk..
+...kRRk...
+...kRRk...
+....kk....
+"""
+
+[layers."mouth.open"]
+at = [1, 6]
+follows = "head"
+grid = """
+...kkkkkkkkkk.
+.kkoooooooyygk
+kRooooooooyygk
+kRROOOOOOOYYGk
+.kkkkkkkppppkk
+..kkkppppppppk
+...kRooooyyygk
+....kkkkkkkkk.
+"""
+
+[layers.feet]
+at = [10, 18]
+grid = """
+.kbbk....kbbk.
+kbkbk....kbkbk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 4
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the great bill swings across to the other side and back.
+[[actions]]
+name = "bill-swing"
+weight = 5
+frames = [
+  { ops = ["head=front", "eyes=front", "beak=front"], ms = 180 },
+  { ops = ["flipx"], ms = 900 },
+  { ops = ["flipx", "eyes=closed"], ms = 140 },
+  { ops = ["flipx"], ms = 300 },
+  { ops = ["head=front", "eyes=front", "beak=front"], ms = 180 },
+  { ops = [], ms = 400 },
+]
+
+# Rare: tosses a berry up, opens wide, and catches it.
+[[actions]]
+name = "berry-toss"
+weight = 1
+frames = [
+  { ops = ["prop:seed@1,9"], ms = 400 },
+  { ops = ["head+0,1", "prop:seed@1,9"], ms = 160 },
+  { ops = ["head+0,-1", "eyes=right", "prop:seed@3,1"], ms = 200 },
+  { ops = ["head+0,-1", "eyes=right", "-beak", "+mouth.open", "prop:seed@5,0"], ms = 260 },
+  { ops = ["-beak", "+mouth.open", "eyes=right", "prop:seed@6,6"], ms = 140 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = ["eyes=happy", "head+0,1"], ms = 140 },
+  { ops = ["eyes=happy"], ms = 600 },
+]

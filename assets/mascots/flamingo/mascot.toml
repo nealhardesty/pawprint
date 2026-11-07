@@ -1,0 +1,188 @@
+# Flamingo on bird-water. Side on, facing left: a pink body with black
+# flight feathers, a long neck rising into a small head, a pale bill bent
+# sharply down to a black tip, and the only legs in the catalog that show
+# above the rim. The `head` layer carries the upper neck; the `feet` slot
+# is the legs, with `feet.lift` for one leg tucked up. The base's folded
+# `wings` are left out of `rest`; `wings.open` is a raised wing.
+# Signature: lifts one leg and holds it, wobbling a little. Rare: the
+# wobble gets out of hand, wings flail, and it only just stays up.
+id = "flamingo"
+name = "Flamingo"
+category = "birds"
+aliases = []
+accent = "rose"
+extends = "bird-water"
+rest = ["body", "head", "eyes", "bill", "feet"]
+
+[palette]
+"l" = "pink-1"      # feathers light
+"f" = "pink-1"      # feathers
+"F" = "pink-2"      # feather shadow
+"d" = "fur-black"   # flight feathers, bill tip
+"b" = "cream"       # bill
+"P" = "pink-2"      # legs
+
+[layers.body]
+at = [9, 8]
+grid = """
+kffFk......kkkkk......
+kfffk...kkkllffFkk....
+kfffFkkkllllfffffFFk..
+.kffffllfffffffffFFFk.
+.kfffffffffffFFFFFFFkk
+..kffffffffFFFFFdddddk
+...kkfffffffFFFFkkkkkk
+.....kkkkkkkkkk.......
+"""
+
+[layers."wings.open"]
+at = [15, 3]
+grid = """
+.........kkk.
+......kkkdddk
+....kkFFFFddk
+..kkFffffFFk.
+.kFfffffFFk..
+kFfffffFFk...
+kkkkkkkkk....
+"""
+
+# The small head and the top of the neck.
+[layers.head]
+at = [1, 1]
+grid = """
+......kkkk....
+.....kllffk...
+....kllfffFk..
+..kkbkffffFk..
+.kbbbbkkffFk..
+.kbbkk..kffFk.
+.kddk...kffFk.
+..kdk...kffFk.
+...k....kfffk.
+"""
+
+[layers.eyes]
+at = [7, 4]
+follows = "head"
+grid = """
+hk
+"""
+
+[layers."eyes.closed"]
+at = [7, 4]
+follows = "head"
+grid = """
+kk
+"""
+
+[layers."eyes.left"]
+at = [6, 4]
+follows = "head"
+grid = """
+.hk
+"""
+
+[layers."eyes.right"]
+at = [7, 4]
+follows = "head"
+grid = """
+fk
+"""
+
+[layers."eyes.happy"]
+at = [7, 3]
+follows = "head"
+grid = """
+kk
+"""
+
+# The bend in the bill, down to the black tip.
+[layers.bill]
+at = [1, 4]
+follows = "head"
+grid = """
+..kkbk
+.kbbbb
+.kbbkk
+.kddk.
+..kdk.
+...k..
+"""
+
+[layers."mouth.open"]
+at = [1, 4]
+follows = "head"
+grid = """
+..kkbk
+.kbbbb
+kbkkkk
+kdk...
+.kdk..
+..k...
+"""
+
+[layers.feet]
+at = [15, 16]
+grid = """
+.kPk..kPk..
+.kPk..kPk..
+.kPk..kPk..
+kPPk.kPPk..
+kkkk.kkkk..
+"""
+
+[layers."feet.lift"]
+at = [15, 16]
+grid = """
+.kPk..kPkk.
+.kPk..kPPPk
+.kPk...kkk.
+kPPk.......
+kkkk.......
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "double-blink"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: tucks one leg up and balances, eyes shut, with a little wobble.
+[[actions]]
+name = "one-leg"
+weight = 5
+frames = [
+  { ops = ["feet=lift"], ms = 300 },
+  { ops = ["feet=lift", "eyes=closed"], ms = 900 },
+  { ops = ["feet=lift", "eyes=closed", "all+1,0", "feet+-1,0"], ms = 200 },
+  { ops = ["feet=lift", "eyes=closed"], ms = 200 },
+  { ops = ["feet=lift", "eyes=closed", "all+-1,0", "feet+1,0"], ms = 200 },
+  { ops = ["feet=lift"], ms = 500 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: the wobble grows, the wings flail, and it only just stays standing.
+[[actions]]
+name = "big-wobble"
+weight = 1
+frames = [
+  { ops = ["feet=lift", "eyes=closed"], ms = 500 },
+  { ops = ["feet=lift", "all+1,0", "feet+-1,0"], ms = 160 },
+  { ops = ["feet=lift", "all+-1,0", "feet+1,0"], ms = 160 },
+  { ops = ["feet=lift", "all+2,0", "feet+-2,0", "head+1,0", "wings=open", "prop:sweat@24,0"], ms = 200 },
+  { ops = ["feet=lift", "all+-2,0", "feet+2,0", "head+-1,0", "wings=open", "prop:sweat@24,0"], ms = 200 },
+  { ops = ["feet=lift", "all+1,0", "feet+-1,0", "wings=open", "prop:sweat@24,1"], ms = 200 },
+  { ops = ["wings=open", "prop:sweat@24,2"], ms = 300 },
+  { ops = ["eyes=closed"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 400 },
+]

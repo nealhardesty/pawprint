@@ -1,0 +1,203 @@
+# Pelican on bird-water. A white pelican with a shaggy crest (an `ears`
+# slot, so ear-flick ruffles it), black wing tips, and the longest bill on
+# the shelf: a pale yellow upper mandible running all the way down to the
+# rim, with the orange pouch bulging out on both sides.
+# Signature: the pouch stretches wide in a yawn. Rare: it scoops up a
+# pouchful from the crate, the pouch wobbles, and it gulps.
+id = "pelican"
+name = "Pelican"
+category = "birds"
+aliases = []
+accent = "ice"
+extends = "bird-water"
+
+[palette]
+"l" = "white"       # feathers light
+"f" = "white"       # feathers
+"F" = "grey-1"      # feather shadow
+"G" = "grey-2"      # deep shadow
+"d" = "fur-black"   # wing tips
+"w" = "white"
+"b" = "yellow-1"    # upper mandible
+"B" = "yellow-2"    # mandible shadow
+"o" = "orange-1"    # pouch
+"O" = "orange-2"    # pouch shadow, feet
+"q" = "blue-1"      # water in the pouch
+"p" = "orange-2"    # inside of the bill
+
+[layers.wings]
+at = [2, 17]
+grid = """
+kk........................kk
+kfFk....................kFFk
+kffFk..................kFFGk
+kffFFk................kFFGGk
+kfFFdk................kdGGGk
+.kfddk................kddGk.
+.kkddk................kddkk.
+...kkk................kkk...
+"""
+
+[layers."wings.open"]
+at = [0, 12]
+grid = """
+kk............................kk
+kfk..........................kFk
+kfFk........................kFGk
+kffFk......................kFFGk
+.kfFdk....................kdGGk.
+.kffddk..................kddGGk.
+..kkddk..................kddkk..
+....kkk..................kkk....
+"""
+
+# A shaggy crest at the back of the crown.
+[layers.ears]
+at = [12, 0]
+follows = "head"
+grid = """
+..k.k..
+.kfkFk.
+kffFFFk
+"""
+
+[layers."ears.flick"]
+at = [12, 0]
+follows = "head"
+grid = """
+k...k..
+kfkkFk.
+kffFFFk
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+# The long bill: the upper mandible down the middle, the pouch on both
+# sides, all the way to the rim.
+[layers.bill]
+at = [11, 9]
+follows = "head"
+grid = """
+...kkkk...
+...kbbk...
+..kkbbkk..
+.kokbbkok.
+kookbbkook
+kooObbBOok
+kooObbBOok
+kooObbBOok
+.kOObbBOk.
+..kkbBkk..
+...kkkk...
+"""
+
+# The yawn: the mandible lifts and the pouch stretches into a balloon.
+[layers."mouth.open"]
+at = [9, 8]
+follows = "head"
+grid = """
+.....kkkk.....
+.....kbbk.....
+....kbbbBk....
+...kkkkkkkk...
+..kpppppppOk..
+.kooppppppOOk.
+koooooooooOOOk
+koooooooooOOOk
+koooooooooOOOk
+.kooooooooOOk.
+..kkkkkkkkkk..
+"""
+
+# A pouchful of crate water, bulging.
+[layers."pouch.full"]
+at = [9, 9]
+follows = "head"
+grid = """
+.....kkkk.....
+.....kbbk.....
+....kkbbkk....
+...kookbbkok..
+..kooqkbbkqok.
+.kooqqkbbkqqok
+koooqqkbbBqqOk
+kooooqkbbBqOOk
+kooooOkbbBOOOk
+.kooOOkbbBOOk.
+..kkkkkbBkkk..
+.......kk.....
+"""
+
+[layers.feet]
+at = [9, 18]
+grid = """
+.kOOOk..kOOOk.
+kOoOoOkkOoOoOk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: tips its head back and the pouch stretches into a huge yawn.
+[[actions]]
+name = "pouch-yawn"
+weight = 5
+frames = [
+  { ops = ["head+0,-1", "eyes=closed"], ms = 200 },
+  { ops = ["head+0,-1", "eyes=closed", "-bill", "+mouth.open"], ms = 300 },
+  { ops = ["head+0,-2", "eyes=closed", "-bill", "+mouth.open", "mouth+0,1"], ms = 1100 },
+  { ops = ["head+0,-1", "eyes=closed", "-bill", "+mouth.open"], ms = 200 },
+  { ops = ["eyes=closed"], ms = 240 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: scoops up a pouchful from the crate, it wobbles, and down it goes.
+[[actions]]
+name = "scoop"
+weight = 1
+frames = [
+  { ops = ["all+0,3"], ms = 160 },
+  { ops = ["all+0,8", "eyes=closed"], ms = 400 },
+  { ops = ["all+0,2", "-bill", "+pouch.full"], ms = 160 },
+  { ops = ["-bill", "+pouch.full", "eyes=happy"], ms = 600 },
+  { ops = ["-bill", "+pouch.full", "all+1,0"], ms = 90 },
+  { ops = ["-bill", "+pouch.full", "all+-1,0"], ms = 90 },
+  { ops = ["-bill", "+pouch.full", "all+1,0"], ms = 90 },
+  { ops = ["-bill", "+pouch.full", "head+0,-1", "eyes=closed"], ms = 300 },
+  { ops = ["head+0,-1", "eyes=closed"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 500 },
+]

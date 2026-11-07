@@ -1,0 +1,276 @@
+# Parrot on bird-perched. A green amazon with a red cap, bare pale eye rings,
+# blue flight feathers, and a big pale hooked beak curling over a dark lower
+# mandible. Taller-domed than the owl, with no disc and no tufts.
+# Signature: a head-bobbing groove that ends in a full-body feather ruffle.
+# Rare: it whistles a little tune and dances side to side.
+id = "parrot"
+name = "Parrot"
+category = "birds"
+aliases = ["macaw", "polly"]
+accent = "cranberry"
+extends = "bird-perched"
+
+[palette]
+"l" = "green-1"     # feathers light
+"f" = "green-2"     # feathers
+"F" = "green-3"     # feather shadow
+"w" = "green-1"     # breast
+"m" = "green-2"     # breast scallops
+"r" = "red-1"       # cap
+"R" = "red-2"       # cap shadow
+"u" = "blue-2"      # flight feathers
+"c" = "white"       # bare eye ring
+"e" = "amber"       # iris
+"b" = "grey-1"      # beak
+"B" = "grey-2"      # beak shadow, feet
+"d" = "grey-4"      # lower mandible
+"p" = "red-2"       # tongue
+
+[layers.body]
+at = [5, 12]
+grid = """
+..kkllllllllllllffkk..
+.klllfffffffffffffFFk.
+kllffffffwwwwffffffFFk
+klfffffwwwwwwwwfffffFk
+klffffwwwwwwwwwwffffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwmwwwwmwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klffffwwwwwwwwwwffffFk
+klffffwwwwwwwwwwffffFk
+klfffffwwwwwwwwfffffFk
+klfffffwwwwwwwwfffffFk
+klffffffwwwwwwffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+"""
+
+# Feathers fluffed out: a ragged outline, a size bigger.
+[layers."body.ruffle"]
+at = [3, 11]
+grid = """
+...k.kkllkllkllklkfkk.k...
+..klkllllllllllllffFFkFk..
+.kllllffffffwwwwffffffFFk.
+klklffffffwwwwwwwwffffFkFk
+.kllffffwwmwwmwwmwwffffFk.
+klfffffwwwwwwwwwwwwwfffFFk
+.klffffwwmwwmwwmwwwwffffk.
+klfffffwwwwwwwwwwwwwfffFFk
+.klfffwwwwmwwmwwmwwwfffFk.
+klffffwwwwwwwwwwwwwwffffFk
+.klffffwwwwwwwwwwwwffffFk.
+klfffffwwwwwwwwwwwwfffffFk
+.klffffffwwwwwwwwffffffFk.
+klfffffffwwwwwwwwfffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+"""
+
+[layers.wings]
+at = [3, 15]
+grid = """
+.kk....................kk.
+klfk..................kfFk
+klfFk................kfFFk
+kffFk................kfFFk
+kfuFFk..............kFFuFk
+kfuuFk..............kFuuFk
+.kfuuk..............kuuFk.
+.kfuuuk............kuuuFk.
+..kfuuk............kuuFk..
+..kkuuk............kuukk..
+....kkk............kkk....
+"""
+
+[layers."wings.open"]
+at = [0, 12]
+grid = """
+.kk..........................kk.
+klfk........................kfFk
+kfFFk......................kFFFk
+.kfuFk....................kFuFk.
+.kfuuFk..................kFuuFk.
+..kfuuk..................kuuFk..
+..kkuuk..................kuukk..
+....kkk..................kkk....
+"""
+
+# A tall dome with a red cap, and the green running down into the breast.
+[layers.head]
+at = [6, 2]
+grid = """
+......kkkkkkkk......
+....kkrrrrrrRRkk....
+...krrrrrrrrrRRRk...
+..klrrrrrrrrrrRRfk..
+.klllrrrrrrrrrRRfFk.
+kllllllfffffffffFFFk
+klllffffffffffffffFk
+kllfffffffffffffffFk
+kllfffffffffffffffFk
+klffffffffffffffffFk
+.klfffffffffffffffk.
+..kfffffffffffffFk..
+...ffffffffffffff...
+"""
+
+[layers."head.ruffle"]
+at = [5, 1]
+grid = """
+.....k.k.kk.k.k.k.....
+.....kkkrrrrrrRRkkk...
+...kkrrrrrrrrrrrRRkk..
+..krrrrrrrrrrrrrRRRk..
+.kklrrrrrrrrrrrrrRRfkk
+..klllrrrrrrrrrrRRfFk.
+.kllllllfffffffffFFFFk
+kklllffffffffffffffFkk
+.kllffffffffffffffffFk
+kkllffffffffffffffffFk
+.klfffffffffffffffffFk
+..klfffffffffffffffFk.
+...kffffffffffffffFk..
+....ffffffffffffffff..
+"""
+
+# Bare pale rings around amber eyes.
+[layers.eyes]
+at = [9, 7]
+follows = "head"
+grid = """
+.cc........cc.
+cekc......cekc
+ckkc......ckkc
+.cc........cc.
+"""
+
+[layers."eyes.closed"]
+at = [9, 8]
+follows = "head"
+grid = """
+.cc........cc.
+ckkc......ckkc
+.cc........cc.
+"""
+
+[layers."eyes.left"]
+at = [9, 7]
+follows = "head"
+grid = """
+.cc........cc.
+kecc......kecc
+kkcc......kkcc
+.cc........cc.
+"""
+
+[layers."eyes.right"]
+at = [9, 7]
+follows = "head"
+grid = """
+.cc........cc.
+ccek......ccek
+cckk......cckk
+.cc........cc.
+"""
+
+[layers."eyes.happy"]
+at = [9, 7]
+follows = "head"
+grid = """
+.cc........cc.
+ckkc......ckkc
+kcck......kcck
+"""
+
+# The hook: a pale upper mandible curling down over the dark lower one.
+[layers.beak]
+at = [12, 9]
+follows = "head"
+grid = """
+.kkkkkk.
+kbbbbbbk
+kbbbbbBk
+kdbbbBBk
+kdkbBkdk
+.kdkBkk.
+..kkk...
+"""
+
+[layers."mouth.open"]
+at = [12, 9]
+follows = "head"
+grid = """
+.kkkkkk.
+kbbbbbbk
+kbbbbbBk
+.kkbBkk.
+kpkkkkpk
+kddddddk
+.kkkkkk.
+"""
+
+[layers.feet]
+at = [10, 18]
+grid = """
+.kBBk....kBBk.
+kBkBk....kBkBk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 4
+
+[[actions]]
+use = "curious"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: three bobs to a beat only it can hear, then every feather
+# stands up at once and settles.
+[[actions]]
+name = "bob-and-ruffle"
+weight = 5
+frames = [
+  { ops = ["head+0,1"], ms = 160 },
+  { ops = [], ms = 160 },
+  { ops = ["head+0,1"], ms = 160 },
+  { ops = [], ms = 160 },
+  { ops = ["head+0,1"], ms = 160 },
+  { ops = ["head=ruffle", "body=ruffle", "eyes=closed"], ms = 500 },
+  { ops = ["head=ruffle", "body=ruffle", "all+1,0", "eyes=closed"], ms = 90 },
+  { ops = ["head=ruffle", "body=ruffle", "all+-1,0", "eyes=closed"], ms = 90 },
+  { ops = ["eyes=happy"], ms = 500 },
+]
+
+# Rare: whistles a tune and dances along the rim.
+[[actions]]
+name = "tune"
+weight = 1
+frames = [
+  { ops = ["-beak", "+mouth.open", "prop:note@22,2"], ms = 300 },
+  { ops = ["all+-1,0", "head+0,1", "eyes=happy", "prop:note@23,0"], ms = 300 },
+  { ops = ["all+1,0", "-beak", "+mouth.open", "eyes=happy", "prop:note@3,3"], ms = 300 },
+  { ops = ["all+1,0", "head+0,1", "eyes=happy", "prop:note@2,1"], ms = 300 },
+  { ops = ["all+-1,0", "-beak", "+mouth.open", "eyes=happy", "prop:note@22,2"], ms = 300 },
+  { ops = ["all+-1,0", "head+0,1", "eyes=happy", "prop:note@23,0"], ms = 300 },
+  { ops = ["wings=open", "eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]
