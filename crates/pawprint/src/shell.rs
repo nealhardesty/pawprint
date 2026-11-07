@@ -11,7 +11,7 @@
 use std::time::{Duration, Instant};
 
 use pawprint_core::badge::{Badge, Command, Effect, Event, Inputs};
-use pawprint_core::catalog::{Catalog, bundle};
+use pawprint_core::catalog::bundle;
 use pawprint_core::config::Layer;
 use pawprint_core::state::State;
 use pawprint_core::surface::{self, DisplayInfo, Surface};
@@ -45,7 +45,9 @@ impl Shell {
             flags,
             seed: clock::seed(),
         };
-        let badge = Badge::new(Catalog::bundled(), bundle(), inputs, Instant::now());
+        let catalog = commands::catalog(&paths);
+        catalog.warnings().iter().for_each(|w| log::warn!("{w}"));
+        let badge = Badge::new(catalog, bundle(), inputs, Instant::now());
         let r = badge.resolved();
         log::info!(
             "mascot {} ({}), label {:?}",
