@@ -341,10 +341,10 @@ impl Case<'_> {
                 Some(run),
             );
         }
-        // Windows and macOS autostart land separately; until then the
-        // installer must warn and carry on, and either outcome passes.
+        // macOS autostart lands separately; until then the installer must warn
+        // and carry on, and either outcome passes there. Windows must be on.
         let status = self.pawprint(exe, &["autostart", "status"]);
-        if status.ok {
+        if status.ok || cfg!(windows) {
             let on = status.text.starts_with("on:") && status.text.contains("pawprint");
             self.check(
                 on,
@@ -363,6 +363,19 @@ impl Case<'_> {
             ));
             Ok(())
         }
+    }
+
+    /// No autostart entry: the XDG file on Linux; on Windows, what the
+    /// packaged binary reports (the entry is per user, not per install).
+    fn autostart_off(&mut self, run: &Run, what: &str) -> Result<(), String> {
+        if let Some(entry) = self.layout.autostart.clone() {
+            return self.check(!entry.exists(), what, Some(run));
+        }
+        if cfg!(windows) {
+            let status = self.pawprint(self.probe, &["autostart", "status"]);
+            return self.check(status.ok && status.text.starts_with("off"), what, Some(run));
+        }
+        Ok(())
     }
 
     #[cfg(windows)]
@@ -483,9 +496,7 @@ impl Case<'_> {
             let w = bin_dir.join("pawprintw.exe");
             self.check(!w.exists(), "pawprintw.exe is gone", Some(&run))?;
         }
-        if let Some(entry) = self.layout.autostart.clone() {
-            self.check(!entry.exists(), "the autostart entry is gone", Some(&run))?;
-        }
+        self.autostart_off(&run, "the autostart entry is gone")?;
         let stopped = !self.running();
         self.check(stopped, "no badge is running", Some(&run))?;
         self.check(
@@ -511,13 +522,7 @@ impl Case<'_> {
             Some(&run),
         )?;
         self.installed_ok(&alt_dir, &run)?;
-        if let Some(entry) = self.layout.autostart.clone() {
-            self.check(
-                !entry.exists(),
-                "--no-autostart adds no autostart entry",
-                Some(&run),
-            )?;
-        }
+        self.autostart_off(&run, "--no-autostart adds no autostart entry")?;
         for dir in self.layout.state.clone() {
             std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
             std::fs::write(dir.join("state.toml"), "").map_err(|e| e.to_string())?;

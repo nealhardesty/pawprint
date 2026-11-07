@@ -1,12 +1,14 @@
 //! The Windows backend on a real desktop (SPEC §11.1): window styles,
 //! placement in the work area, topmost, click-through, move mode with a real
 //! drag, work-area changes, IPC over the named pipe, single instance,
-//! detached start through `pawprintw.exe`, and the pixels on screen. Run with
-//! `make test-windows-display`; CI runs it on windows-latest.
+//! detached start through `pawprintw.exe`, the pixels on screen, the tray
+//! icon and its menu, autostart's Run value, and the preview window. Run
+//! with `make test-windows-display`; CI runs it on windows-latest.
 //!
 //! It runs in your own session: it covers the primary work area with a
 //! solid window for a few seconds, docks a bar at the top of the screen for
-//! a moment, and restores your state file afterwards.
+//! a moment, opens the tray menu, and restores your state file, config
+//! file, and autostart value afterwards.
 
 #![cfg(windows)]
 
@@ -17,15 +19,20 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use common::{Env, Image, assert_badge_at, wait_for};
-use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
+use windows_sys::Win32::Foundation::{ERROR_SUCCESS, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::*;
+use windows_sys::Win32::System::Registry::{
+    HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ, RegDeleteKeyValueW, RegGetValueW, RegSetKeyValueW,
+};
 use windows_sys::Win32::UI::HiDpi::{
     DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, GetDpiForMonitor, MDT_EFFECTIVE_DPI,
     SetProcessDpiAwarenessContext,
 };
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::*;
 use windows_sys::Win32::UI::Shell::{
-    ABE_TOP, ABM_NEW, ABM_QUERYPOS, ABM_REMOVE, ABM_SETPOS, APPBARDATA, SHAppBarMessage,
+    ABE_TOP, ABM_NEW, ABM_QUERYPOS, ABM_REMOVE, ABM_SETPOS, APPBARDATA, NIM_MODIFY,
+    NOTIFYICONDATAW, NOTIFYICONIDENTIFIER, SHAppBarMessage, Shell_NotifyIconGetRect,
+    Shell_NotifyIconW,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 
@@ -294,22 +301,23 @@ fn key(vk: VIRTUAL_KEY) {
     settle();
 }
 
-/// Puts this user's state file back as it was.
-struct StateGuard {
+/// Puts one of this user's files (`pawprint paths` names it) back as it
+/// was.
+struct FileGuard {
     path: std::path::PathBuf,
     saved: Option<Vec<u8>>,
 }
 
-impl StateGuard {
-    fn new(env: &Env) -> StateGuard {
+impl FileGuard {
+    fn new(env: &Env, name: &str) -> FileGuard {
         let paths = env.ok(&["paths"]);
         let line = paths
             .lines()
-            .find(|l| l.starts_with("state"))
-            .expect("a state path");
-        let path = std::path::PathBuf::from(line["state".len()..].trim());
+            .find(|l| l.split_whitespace().next() == Some(name))
+            .unwrap_or_else(|| panic!("a {name} path in {paths}"));
+        let path = std::path::PathBuf::from(line[name.len()..].trim());
         let saved = std::fs::read(&path).ok();
-        StateGuard { path, saved }
+        FileGuard { path, saved }
     }
 
     fn text(&self) -> String {
@@ -317,7 +325,7 @@ impl StateGuard {
     }
 }
 
-impl Drop for StateGuard {
+impl Drop for FileGuard {
     fn drop(&mut self) {
         let _ = match &self.saved {
             Some(bytes) => std::fs::write(&self.path, bytes),
@@ -340,12 +348,9 @@ fn layered_topmost_click_through_badge() {
         eprintln!("watchdog: the test hung for 2 minutes; badge log:\n{tail}");
         std::process::exit(101);
     });
-    assert_eq!(
-        env.pawprint(&["status"]).status.code(),
-        Some(4),
-        "a badge is already running in this session; `pawprint quit` it first"
-    );
-    let state = StateGuard::new(&env);
+    assert_no_badge(&env);
+    let state = FileGuard::new(&env, "state");
+    let config = FileGuard::new(&env, "config");
     let (work, scale) = primary();
     let s = |n: i32| (f64::from(n) * scale).round() as i32;
 
@@ -404,6 +409,9 @@ fn layered_topmost_click_through_badge() {
     let status = env.ok(&["status"]);
     assert!(status.contains("windows"), "{status}");
 
+    // The tray icon is registered on the badge window (SPEC §11.1.5).
+    assert_tray_icon(hwnd);
+
     // Points inside a 64-px badge (scaled): the label strip and the body.
     let at = |px: i32, py: i32| (x + px * w / 64, y + py * h / 64);
     let label = at(32, 60);
@@ -416,10 +424,11 @@ fn layered_topmost_click_through_badge() {
         .map(|(px, py)| at(px, py))
         .expect("a transparent pixel");
 
-    match capture(rect) {
+    let desktop = capture(rect);
+    match desktop.clone() {
         None => println!(
-            "SKIP pixel, click, drag, and key checks: this session has no visible \
-             desktop (screen capture shows nothing)"
+            "SKIP pixel, click, drag, key, and tray menu checks: this session has no \
+             visible desktop (screen capture shows nothing)"
         ),
         Some(screen) => {
             if scale == 1.0 {
@@ -496,6 +505,24 @@ fn layered_topmost_click_through_badge() {
     env.ok(&["reset-position"]);
     env.wait_rect(rect);
 
+    // The tray menu: Size ▸ 128 resizes the badge and is saved in this
+    // host's table (SPEC §8.6); `unset` brings it back.
+    if desktop.is_some() {
+        choose_size_128(hwnd, work);
+        let [bx, by, bw, _] = wait_for("the badge at size 128", || {
+            env.badge_rect().filter(|r| r[2] == 2 * w)
+        });
+        assert_eq!((bx + bw, by), (x + w, y), "still top-right");
+        let saved = config.text();
+        assert!(
+            saved.contains("size = 128")
+                && (saved.contains("[hosts.owl]") || saved.contains("[hosts.\"owl\"]")),
+            "the choice is saved in this host's table:\n{saved}"
+        );
+        env.ok(&["unset", "size"]);
+        env.wait_rect(rect);
+    }
+
     // A bar docked at the top shrinks the work area: the badge moves down
     // with it, and back when the bar goes.
     {
@@ -520,4 +547,282 @@ fn layered_topmost_click_through_badge() {
         badge_window().is_none().then_some(())
     });
     close(bg);
+}
+
+fn assert_no_badge(env: &Env) {
+    assert_eq!(
+        env.pawprint(&["status"]).status.code(),
+        Some(4),
+        "a badge is already running in this session; `pawprint quit` it first"
+    );
+}
+
+/// The tray's callback message and icon id (`backend::windows`).
+const WM_TRAY: u32 = WM_APP + 1;
+const TRAY_ID: u32 = 1;
+
+/// The notification area knows the badge's icon: its rectangle, or, when
+/// the icon sits in the hidden overflow, a no-op modify that only succeeds
+/// for a registered icon.
+fn assert_tray_icon(hwnd: HWND) {
+    let id = NOTIFYICONIDENTIFIER {
+        cbSize: size_of::<NOTIFYICONIDENTIFIER>() as u32,
+        hWnd: hwnd,
+        uID: TRAY_ID,
+        ..Default::default()
+    };
+    let mut r = RECT::default();
+    let hr = unsafe { Shell_NotifyIconGetRect(&id, &mut r) };
+    if hr == 0 {
+        println!(
+            "tray icon at {:?}",
+            [r.left, r.top, r.right - r.left, r.bottom - r.top]
+        );
+        return;
+    }
+    let data = NOTIFYICONDATAW {
+        cbSize: size_of::<NOTIFYICONDATAW>() as u32,
+        hWnd: hwnd,
+        uID: TRAY_ID,
+        ..Default::default()
+    };
+    let known = unsafe { Shell_NotifyIconW(NIM_MODIFY, &data) } != 0;
+    println!("tray icon: Shell_NotifyIconGetRect {hr:#x}; registered: {known}");
+    assert!(known, "the badge has no notification area icon");
+}
+
+/// The visible popup menu of `pid`'s thread other than `except`, and its
+/// HMENU.
+fn popup_menu(pid: u32, except: HMENU) -> Option<(HWND, HMENU)> {
+    let class = wide("#32768");
+    let mut after = null_mut();
+    loop {
+        let w = unsafe { FindWindowExW(null_mut(), after, class.as_ptr(), null()) };
+        if w.is_null() {
+            return None;
+        }
+        after = w;
+        let mut owner = 0;
+        unsafe { GetWindowThreadProcessId(w, &mut owner) };
+        let menu = unsafe { SendMessageW(w, MN_GETHMENU, 0, 0) } as HMENU;
+        if owner == pid && unsafe { IsWindowVisible(w) } != 0 && !menu.is_null() && menu != except {
+            return Some((w, menu));
+        }
+    }
+}
+
+fn menu_label(menu: HMENU, i: u32) -> String {
+    let mut buf = [0u16; 64];
+    let n = unsafe { GetMenuStringW(menu, i, buf.as_mut_ptr(), 64, MF_BYPOSITION) };
+    String::from_utf16_lossy(&buf[..n.max(0) as usize])
+}
+
+/// Click the middle of item `i` of an open popup menu.
+fn click_menu_item(menu: HMENU, i: u32) {
+    let mut r = RECT::default();
+    assert_ne!(
+        unsafe { GetMenuItemRect(null_mut(), menu, i, &mut r) },
+        0,
+        "menu item {i} has a rectangle"
+    );
+    click((r.left + r.right) / 2, (r.top + r.bottom) / 2);
+}
+
+/// Open the tray menu the way the shell does for a right click on the icon
+/// (NOTIFYICON_VERSION_4), check it mirrors the core's model, and choose
+/// Size ▸ 128 with real clicks.
+fn choose_size_128(hwnd: HWND, work: RECT) {
+    let mut pid = 0;
+    unsafe { GetWindowThreadProcessId(hwnd, &mut pid) };
+    let (x, y) = (work.left + 100, work.top + 100);
+    unsafe {
+        // The badge sets the menu's owner as the foreground window.
+        AllowSetForegroundWindow(pid);
+        let anchor = ((y as u32 & 0xffff) << 16 | (x as u32 & 0xffff)) as WPARAM;
+        PostMessageW(
+            hwnd,
+            WM_TRAY,
+            anchor,
+            ((TRAY_ID << 16) | WM_CONTEXTMENU) as LPARAM,
+        );
+    }
+    let (_, menu) = wait_for("the tray menu", || popup_menu(pid, null_mut()));
+    let labels: Vec<String> = (0..unsafe { GetMenuItemCount(menu) } as u32)
+        .map(|i| menu_label(menu, i))
+        .collect();
+    assert_eq!(
+        labels,
+        [
+            "Move",
+            "Size",
+            "Animation",
+            "Reset position",
+            "Reload config",
+            "Quit"
+        ]
+    );
+    let size = unsafe { GetSubMenu(menu, 1) };
+    let checked = |i| unsafe { GetMenuState(size, i, MF_BYPOSITION) } & MF_CHECKED != 0;
+    assert_eq!(
+        (menu_label(size, 1), checked(0), checked(1), checked(2)),
+        ("64".into(), false, true, false),
+        "Size ▸ 64 is checked"
+    );
+    click_menu_item(menu, 1);
+    let (_, sub) = wait_for("the Size submenu", || popup_menu(pid, menu));
+    assert_eq!(menu_label(sub, 2), "128");
+    click_menu_item(sub, 2);
+    wait_for("the menu to close", || {
+        popup_menu(pid, null_mut()).is_none().then_some(())
+    });
+}
+
+const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
+
+/// HKCU Run's `pawprint` value, read without PAWPRINT.
+fn run_value() -> Option<String> {
+    let (key, value) = (wide(RUN_KEY), wide("pawprint"));
+    let mut buf = [0u16; 1024];
+    let mut bytes = size_of_val(&buf) as u32;
+    let code = unsafe {
+        RegGetValueW(
+            HKEY_CURRENT_USER,
+            key.as_ptr(),
+            value.as_ptr(),
+            RRF_RT_REG_SZ,
+            null_mut(),
+            buf.as_mut_ptr().cast(),
+            &mut bytes,
+        )
+    };
+    (code == ERROR_SUCCESS).then(|| {
+        let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
+        String::from_utf16_lossy(&buf[..len])
+    })
+}
+
+/// Puts this user's autostart value back as it was.
+struct RunValueGuard(Option<String>);
+
+impl Drop for RunValueGuard {
+    fn drop(&mut self) {
+        let (key, value) = (wide(RUN_KEY), wide("pawprint"));
+        unsafe {
+            match &self.0 {
+                Some(v) => {
+                    let data = wide(v);
+                    RegSetKeyValueW(
+                        HKEY_CURRENT_USER,
+                        key.as_ptr(),
+                        value.as_ptr(),
+                        REG_SZ,
+                        data.as_ptr().cast(),
+                        (data.len() * 2) as u32,
+                    );
+                }
+                None => {
+                    RegDeleteKeyValueW(HKEY_CURRENT_USER, key.as_ptr(), value.as_ptr());
+                }
+            }
+        }
+    }
+}
+
+#[test]
+#[ignore = "writes this user's HKCU Run value (restored after); run `make test-windows-display`"]
+fn autostart_writes_the_run_value() {
+    let env = Env::new("windows-autostart");
+    let _guard = RunValueGuard(run_value());
+    let badge =
+        std::path::Path::new(env!("CARGO_BIN_EXE_pawprint")).with_file_name("pawprintw.exe");
+    let want = format!("\"{}\" run", badge.display());
+
+    let out = env.ok(&["autostart", "on"]);
+    assert_eq!(run_value().as_deref(), Some(want.as_str()), "{out}");
+    let status = env.ok(&["autostart", "status"]);
+    assert!(
+        status.starts_with("on: ") && status.contains(&want),
+        "{status}"
+    );
+    assert!(status.contains(r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run\pawprint"));
+
+    let out = env.ok(&["autostart", "off"]);
+    assert!(out.contains("Autostart is off"), "{out}");
+    assert_eq!(run_value(), None);
+    assert!(env.ok(&["autostart", "status"]).starts_with("off"));
+    assert!(env.ok(&["autostart", "off"]).contains("already off"));
+}
+
+fn preview_window() -> Option<HWND> {
+    let class = wide("PawprintPreview");
+    let hwnd = unsafe { FindWindowW(class.as_ptr(), null()) };
+    (!hwnd.is_null() && unsafe { IsWindowVisible(hwnd) } != 0).then_some(hwnd)
+}
+
+#[test]
+#[ignore = "needs a Windows desktop session; run `make test-windows-display`"]
+fn preview_is_a_normal_window() {
+    unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
+    let env = Env::new("windows-preview");
+    let (_, scale) = primary();
+    let s = |n: i32| (f64::from(n) * scale).round() as i32;
+    let exe = env!("CARGO_BIN_EXE_pawprintw");
+
+    // A titled, closable window with a taskbar button: none of the badge's
+    // overlay styles.
+    let mut preview = env.spawn(exe, &["preview", "owl", "--size", "64"]);
+    let hwnd = wait_for("the preview window", preview_window);
+    let style = unsafe { GetWindowLongPtrW(hwnd, GWL_STYLE) } as u32;
+    assert!(
+        style & WS_CAPTION == WS_CAPTION && style & WS_SYSMENU != 0,
+        "{style:#x}"
+    );
+    assert_eq!(style & WS_POPUP, 0, "{style:#x}");
+    let ex = ex_style(hwnd);
+    for (flag, name) in [
+        (WS_EX_LAYERED, "WS_EX_LAYERED"),
+        (WS_EX_TRANSPARENT, "WS_EX_TRANSPARENT"),
+        (WS_EX_TOPMOST, "WS_EX_TOPMOST"),
+        (WS_EX_TOOLWINDOW, "WS_EX_TOOLWINDOW"),
+        (WS_EX_NOACTIVATE, "WS_EX_NOACTIVATE"),
+    ] {
+        assert_eq!(ex & flag, 0, "{name} set on the preview: {ex:#x}");
+    }
+    let mut title = [0u16; 64];
+    let n = unsafe { GetWindowTextW(hwnd, title.as_mut_ptr(), 64) };
+    assert_eq!(
+        String::from_utf16_lossy(&title[..n as usize]),
+        "PAWPRINT preview"
+    );
+
+    // The client area is the badge plus the margin, on the backdrop.
+    let mut client = RECT::default();
+    let mut origin = POINT::default();
+    unsafe {
+        GetClientRect(hwnd, &mut client);
+        ClientToScreen(hwnd, &mut origin);
+    }
+    // Windows may widen a captioned window to its minimum width; the badge
+    // then sits centered on the backdrop.
+    assert_eq!(client.bottom, s(64 + 32), "the badge plus the margin");
+    assert!(client.right >= s(64 + 32), "client width {}", client.right);
+    unsafe { SetForegroundWindow(hwnd) };
+    settle();
+    match capture([origin.x, origin.y, client.right, client.bottom]) {
+        None => println!("SKIP preview pixels: no visible desktop"),
+        Some(shot) => assert_eq!(shot.px(1, 1)[..3], [0x5a, 0x60, 0x6b], "the slate backdrop"),
+    }
+
+    // Closing the window ends the preview.
+    close(hwnd);
+    let status = wait_for("the preview to exit", || preview.exited());
+    assert!(status.success(), "{status:?}");
+    assert!(preview_window().is_none());
+
+    // So does Esc.
+    let mut preview = env.spawn(exe, &["preview", "owl", "--size", "64"]);
+    let hwnd = wait_for("the preview window", preview_window);
+    unsafe { PostMessageW(hwnd, WM_KEYDOWN, VK_ESCAPE as WPARAM, 0) };
+    let status = wait_for("the preview to exit on Esc", || preview.exited());
+    assert!(status.success(), "{status:?}");
 }

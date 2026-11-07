@@ -289,7 +289,7 @@ worth filing.
 - [x] `install.sh` (POSIX sh) and `install.ps1` (PS 5.1 + 7) per [SPEC §15](SPEC.md#15-packaging-release-and-install), including `--archive`, `--uninstall`, `--purge`
 - [x] `make install` / `make uninstall` for local builds
 - [x] `make test-install`: the installers end to end under sh, dash, bash, PowerShell 5.1, and PowerShell 7, in CI on all three OSes ([SPEC §15.7](SPEC.md#157-installer-tests))
-- [ ] Tighten `make test-install` to require autostart on Windows and macOS once those implementations are merged (coordinator)
+- [ ] Tighten `make test-install` to require autostart on macOS once that implementation is merged (Windows is already strict) (coordinator)
 - [ ] Clean-machine install test on each OS, including Ubuntu 24.04 and 26.04 (owner, needs a published release)
 - [ ] Full [remote compatibility matrix](SPEC.md#164-remote-compatibility-matrix), results in release notes (owner, real machines)
 - [ ] README reviewed against reality: every command, path, and screenshot (install and development sections done in M5; the full pass is the owner's, at release)
