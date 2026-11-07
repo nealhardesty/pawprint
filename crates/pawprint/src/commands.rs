@@ -295,37 +295,55 @@ pub fn config_init() -> CmdResult {
             ),
         ));
     }
-    write_config(&path, config_edit::TEMPLATE).map_err(|e| (exit::ERROR, e))?;
+    write_config(&path, config_edit::TEMPLATE)?;
     println!("wrote {} (every key, at its default)", path.display());
     Ok(())
 }
 
 /// Write the config file through `edit`, which gets the current text (empty
-/// if there is no file). A failed edit leaves the file alone.
-pub fn edit_config(
-    paths: &Paths,
-    edit: impl FnOnce(&str) -> Result<String, String>,
-) -> Result<(), String> {
+/// if there is no file). A failed edit leaves the file alone and is a usage
+/// error (exit 2); failing to read or write the file is exit 1.
+pub fn edit_config(paths: &Paths, edit: impl FnOnce(&str) -> Result<String, String>) -> CmdResult {
     let path = &paths.config_file;
     let text = match std::fs::read_to_string(path) {
         Ok(t) => t,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
-        Err(e) => return Err(format!("cannot read {}: {e}", path.display())),
+        Err(e) => return Err((exit::ERROR, format!("cannot read {}: {e}", path.display()))),
     };
-    write_config(path, &edit(&text)?)
+    write_config(path, &edit(&text).map_err(|e| (exit::USAGE, e))?)
 }
 
-/// Replace the file atomically (temporary file, then rename). A symlinked
-/// config (dotfile managers) is written at its target, so the link stays.
-fn write_config(path: &Path, text: &str) -> Result<(), String> {
-    let target = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
-    let fail = |e: std::io::Error| format!("cannot write {}: {e}", target.display());
+/// Replace the file atomically (temporary file, then rename), keeping its
+/// permissions. A symlinked config (dotfile managers) is written at its
+/// target, so the link stays; a link to nothing is an error, not replaced.
+fn write_config(path: &Path, text: &str) -> CmdResult {
+    let fail =
+        |p: &Path, e: std::io::Error| (exit::ERROR, format!("cannot write {}: {e}", p.display()));
+    let link = std::fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink());
+    let target = match std::fs::canonicalize(path) {
+        Ok(t) => t,
+        Err(e) if link => {
+            let to = std::fs::read_link(path).unwrap_or_default();
+            return Err((
+                exit::ERROR,
+                format!(
+                    "{} is a symlink to {}, which is missing ({e}); fix or remove the link",
+                    path.display(),
+                    to.display()
+                ),
+            ));
+        }
+        Err(_) => path.to_path_buf(),
+    };
     if let Some(dir) = target.parent() {
-        std::fs::create_dir_all(dir).map_err(fail)?;
+        std::fs::create_dir_all(dir).map_err(|e| fail(dir, e))?;
     }
     let tmp = target.with_extension("toml.tmp");
-    std::fs::write(&tmp, text).map_err(fail)?;
-    std::fs::rename(&tmp, &target).map_err(fail)
+    std::fs::write(&tmp, text).map_err(|e| fail(&tmp, e))?;
+    if let Ok(meta) = std::fs::metadata(&target) {
+        std::fs::set_permissions(&tmp, meta.permissions()).map_err(|e| fail(&tmp, e))?;
+    }
+    std::fs::rename(&tmp, &target).map_err(|e| fail(&target, e))
 }
 
 /// Tell this session's badge to re-read its config, if one is running.
@@ -349,7 +367,6 @@ pub fn set(key: &str, raw: &str) -> CmdResult {
     let hostname = hostname::detect().map_err(|e| (exit::ERROR, e))?;
     let short = host::short_name(&hostname);
     let (state, _) = State::load(&paths.state_file);
-    let usage = |e: String| (exit::USAGE, e);
     edit_config(&paths, |text| {
         let before = resolve_with(
             &hostname,
@@ -377,8 +394,7 @@ pub fn set(key: &str, raw: &str) -> CmdResult {
             [] => Ok(after_text),
             [w, ..] => Err(w.to_string()),
         }
-    })
-    .map_err(usage)?;
+    })?;
     println!(
         "Set {key} for {short} in [hosts.\"{short}\"] of {}. {}",
         paths.config_file.display(),
@@ -406,7 +422,8 @@ pub fn unset(key: &str) -> CmdResult {
         removed = was;
         Ok(out)
     })
-    .map_err(|e| (exit::ERROR, e))?;
+    // A config that isn't valid TOML is the file's fault, not the command's.
+    .map_err(|(_, e)| (exit::ERROR, e))?;
     if removed {
         println!(
             "Removed {key} from [hosts.\"{short}\"]. {}",
@@ -532,6 +549,49 @@ pub fn mascot_check(dir: &Path) -> CmdResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn config_writes_keep_permissions_and_links() {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+        let dir = std::env::temp_dir().join(format!("pawprint-write-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let mode = |p: &Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+
+        // A private config stays private.
+        let file = dir.join("config.toml");
+        std::fs::write(&file, "size = 32\n").unwrap();
+        std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o600)).unwrap();
+        write_config(&file, "size = 64\n").unwrap();
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "size = 64\n");
+        assert_eq!(mode(&file), 0o600);
+
+        // A link is written through, and stays a link.
+        let link = dir.join("link.toml");
+        symlink(&file, &link).unwrap();
+        write_config(&link, "size = 128\n").unwrap();
+        assert!(std::fs::symlink_metadata(&link).unwrap().is_symlink());
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), "size = 128\n");
+
+        // A link to nothing is refused and left alone.
+        let dangling = dir.join("dangling.toml");
+        symlink(dir.join("gone.toml"), &dangling).unwrap();
+        let (code, msg) = write_config(&dangling, "size = 32\n").unwrap_err();
+        assert_eq!(code, exit::ERROR);
+        assert!(
+            msg.contains("symlink") && msg.contains("gone.toml"),
+            "{msg}"
+        );
+        assert!(std::fs::symlink_metadata(&dangling).unwrap().is_symlink());
+        assert!(!dir.join("gone.toml").exists());
+
+        // An I/O failure is exit 1, not a usage error.
+        let blocked = dir.join("file-not-dir").join("config.toml");
+        std::fs::write(dir.join("file-not-dir"), "").unwrap();
+        assert_eq!(write_config(&blocked, "").unwrap_err().0, exit::ERROR);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 
     #[test]
     fn exported_mascots_pass_check_and_are_not_overwritten() {

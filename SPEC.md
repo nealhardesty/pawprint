@@ -767,8 +767,10 @@ and **Animation** choices all edit the config the same way
   value already in the table keeps its trailing comment. `unset` removes
   the key, then the table if it is left empty without comments, then an
   empty implicit `[hosts]`. A file that isn't valid TOML is left alone and
-  the command fails. The write is atomic (temporary file, then rename) and
-  goes to a symlink's target, so dotfile managers keep their link.
+  the command fails. The write is atomic (temporary file, then rename),
+  keeps the file's permissions, and goes to a symlink's target, so dotfile
+  managers keep their link. A symlink to a missing file is an error, never
+  silently replaced by a regular file.
 - **Values** are read as TOML (`64`, `false`, `[8, 20]`, `"quoted"`) and
   otherwise as a plain string (`otter`), then checked by the parser that
   loads the file (`config::check_value`). `set` also resolves the host
@@ -804,7 +806,7 @@ badge reaches the instance **in the current graphical session**.
 | `pawprint list [--category C] [--accents]` | List mascots (id, name, category, aliases, source: bundled/user/override), or the accent palette. |
 | `pawprint preview <id> [--size N]` | Open a temporary, normal (focusable, closable) window showing that mascot cycling through all its actions (every action in file order, `when` ignored, 1 s apart), on a slate backdrop with a 16 px margin, centered, at size 128 by default. Esc or closing the window ends it. It uses this host's label and accent and the badge's own backend surface in preview mode; it writes nothing. |
 | `pawprint render <id> --out FILE.png [--size N] [--label TEXT] [--frame N]` | Write a badge image. Used for docs and golden tests. |
-| `pawprint set <key> <value>` | Write `<key>` into this host's `[hosts."<short>"]` table using `toml_edit` (keeps comments and formatting), then reload ([8.6](#86-editing-the-config-set-unset-and-the-tray)). Example: `pawprint set mascot otter`. Exit code 2 for an unknown key or invalid value. |
+| `pawprint set <key> <value>` | Write `<key>` into this host's `[hosts."<short>"]` table using `toml_edit` (keeps comments and formatting), then reload ([8.6](#86-editing-the-config-set-unset-and-the-tray)). Example: `pawprint set mascot otter`. Exit code 2 for an unknown key or invalid value, 1 if the file can't be read or written. |
 | `pawprint unset <key>` | Remove that key from this host's table, then reload. |
 | `pawprint forget` | Drop this host's cached fallback assignment (through the running badge if there is one, which picks again and saves; else in the state file) and say what the hash picks now. A host whose mascot comes from another rule has nothing to forget. |
 | `pawprint config init` | Write a commented `config.toml` if none exists. |

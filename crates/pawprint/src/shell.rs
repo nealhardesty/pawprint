@@ -180,7 +180,7 @@ impl Shell {
                     log::info!("saved {key} = {value} in [hosts.{short:?}]");
                     return self.handle(surface, Event::Command(Command::Reload));
                 }
-                Err(e) => {
+                Err((_, e)) => {
                     log::warn!("cannot save {key} ({e}); it applies until the badge restarts")
                 }
             }
