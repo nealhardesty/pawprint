@@ -322,7 +322,7 @@ stamp. `"as-is"` keeps the configured or detected case. `"lower"` lowercases.
 | Platform | Source | Notes |
 |---|---|---|
 | Windows | `GetComputerNameExW(ComputerNameDnsHostname)` | Preserves case. Falls back to `ComputerNameNetBIOS` (uppercase, max 15 characters). |
-| macOS | SystemConfiguration `HostName` if set, else `LocalHostName` | Avoid bare `gethostname()`: on macOS it can return a DHCP- or reverse-DNS-assigned name that changes between networks. `ComputerName` ("Someone's MacBook Pro") is a friendly name, not a hostname, and is never used. M0 reads both keys with `scutil --get`; M1 may call the SystemConfiguration API directly once `objc2` is a dependency. |
+| macOS | SystemConfiguration `HostName` if set, else `LocalHostName` | Avoid bare `gethostname()`: on macOS it can return a DHCP- or reverse-DNS-assigned name that changes between networks. `ComputerName` ("Someone's MacBook Pro") is a friendly name, not a hostname, and is never used. Read through the SystemConfiguration API (`objc2-system-configuration`): `HostName` from the `/System/System` preferences path, else `SCDynamicStoreCopyLocalHostName`, the same values `scutil --get` prints (checked in `make test-macos-display`). |
 | Linux | `/proc/sys/kernel/hostname` (the kernel nodename, which is what `gethostname(2)` returns), else `/etc/hostname` | — |
 | Any | `PAWPRINT_HOSTNAME` env var | Overrides detection. Used by tests and `pawprint explain --host`. |
 
@@ -787,7 +787,7 @@ instance lock, and it is keyed by **graphical session**, not by user:
 | Platform | Session key | Endpoint |
 |---|---|---|
 | Windows | `ProcessIdToSessionId` | Named pipe `\\.\pipe\pawprint-<user>-<sid>` |
-| macOS | GUI security session (`SessionGetInfo`) | Unix socket `$TMPDIR/pawprint/<asid>.sock` |
+| macOS | GUI security session (`SessionGetInfo` audit session id; a session without window server access, such as SSH, has no key) | Unix socket `$TMPDIR/pawprint/asid-<id>.sock` (`TMPDIR` unset: the per-user temporary directory from `confstr(_CS_DARWIN_USER_TEMP_DIR)`) |
 | Linux Wayland | `WAYLAND_DISPLAY` | `$XDG_RUNTIME_DIR/pawprint/wayland-<name>.sock` |
 | Linux X11 | `DISPLAY` | `$XDG_RUNTIME_DIR/pawprint/x11-<display>.sock` |
 
@@ -969,26 +969,60 @@ the same code (two `[[bin]]` targets with one shared `main`):
 
 ### 11.2 macOS
 
+Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
+`objc2-app-kit`, `objc2-quartz-core`, `objc2-core-graphics`, and `dispatch2`.
+
 - `NSApplication` with activation policy **Accessory**, set at runtime, so
   there is no Dock icon and no app menu. No `.app` bundle is needed.
-- `NSPanel`, style mask `borderless | nonactivatingPanel`, `isOpaque = false`,
+- `NSPanel` (a subclass whose only override is `canBecomeKeyWindow = YES`,
+  since borderless windows otherwise refuse key status), style mask
+  `borderless | nonactivatingPanel`, `isOpaque = false`,
   `backgroundColor = clear`, `hasShadow = false`,
-  `ignoresMouseEvents = true`, `level = .statusBar`, `collectionBehavior =
-  canJoinAllSpaces | stationary | fullScreenAuxiliary | ignoresCycle`,
-  `hidesOnDeactivate = false`.
-- Content: a layer-backed `NSView` whose `CALayer.contents` is a `CGImage`
-  of the scaled badge, with `magnificationFilter = nearest`.
+  `ignoresMouseEvents = true`, `level = .statusBar` (window layer 25),
+  `collectionBehavior = canJoinAllSpaces | stationary | fullScreenAuxiliary
+  | ignoresCycle`, `hidesOnDeactivate = false`. It is ordered in with
+  `orderFrontRegardless` at the first `Place`, never made key or main
+  outside move mode.
+- Content: a layer-**hosting** `NSView` (our own `CALayer`, set before
+  `wantsLayer`) whose `contents` is a `CGImage` of the scaled badge, with
+  `magnificationFilter = nearest`. The frame's premultiplied BGRA bytes are
+  `kCGImageAlphaPremultipliedFirst | kCGImageByteOrder32Little` (F30),
+  tagged with the panel screen's color space so the pixels reach the screen
+  unconverted, as on Windows and Linux. Contents and frame changes run with
+  `CATransaction.disableActions`, so nothing cross-fades.
 - **Do not** set `sharingType = .none`. The default (`.readOnly`) keeps the
   badge visible to Screen Sharing, VNC, and Jump.
 - Displays: `NSScreen.screens`; the primary is `screens[0]` (the one with the
-  menu bar, by Cocoa convention). Usable area = `visibleFrame`. Note that
-  Cocoa's origin is bottom-left, so convert in one place. Re-layout on
-  `NSApplicationDidChangeScreenParametersNotification`. Scale =
-  `backingScaleFactor`.
-- Move mode: `ignoresMouseEvents = false`, track `mouseDown`/`mouseDragged`/
-  `mouseUp` in the view, move with `setFrameOrigin`, and save on `mouseUp`.
-  Make the panel key (`becomesKeyOnlyIfNeeded`) for arrow-key nudging.
-- Menu bar: `NSStatusItem` with the same menu as the Windows tray.
+  menu bar, by Cocoa convention). Usable area = `visibleFrame`. Scale =
+  `backingScaleFactor`. Name = `localizedName`. Re-layout on
+  `NSApplicationDidChangeScreenParametersNotification`.
+- Coordinates: Cocoa's desktop is in points with a bottom-left origin on the
+  primary screen; `backend::macos::Desktop` is the one place that converts
+  to and from the core's physical top-left pixels. Inside a screen, one
+  point is `backingScaleFactor` pixels, so rects round-trip exactly. Screen
+  origins are spread by the largest scale, so with mixed scales the screens
+  keep their arrangement and never overlap in physical space.
+- Event loop: `nextEventMatchingMask(any, untilDate: deadline,
+  NSDefaultRunLoopMode)` waits for the next event or `Shell::timeout()`.
+  The IPC thread and the screen-change observer wake it by posting an
+  application-defined `NSEvent` from the main dispatch queue. Every event
+  the badge doesn't consume goes to `NSApplication.sendEvent`, so a status
+  item's menu (M4) works without changing the loop (while a menu is open,
+  AppKit tracks it in its own loop, and IPC answers wait until it closes).
+- Move mode: `ignoresMouseEvents = false` and `makeKeyWindow` (a
+  non-activating panel takes the keyboard without activating the app, so the
+  frontmost app stays frontmost). Left-button down on the panel, dragged,
+  and up are reported to the core as `DragStart/Move/End` at
+  `NSEvent.mouseLocation` in physical pixels; the window server keeps
+  sending drags to the app outside the panel. Arrow keys (Shift for 10),
+  Return/Enter, and Escape arrive as `keyDown` (`kVK_*` codes); other keys
+  are swallowed so nothing beeps. On leaving move mode a key panel is
+  ordered out and back in, which returns the keyboard to the active app.
+- Session: `SessionGetInfo(callerSecuritySession)` from Security.framework
+  (a three-line FFI; no binding crate covers `AuthSession.h`) gives the audit
+  session id for the endpoint ([10.4](#104-single-instance-per-graphical-session))
+  and whether the session has window server access (`doctor` shows both).
+- Menu bar: `NSStatusItem` with the same menu as the Windows tray (M4).
 - Autostart: `~/Library/LaunchAgents/io.github.nealhardesty.pawprint.plist`
   with `ProgramArguments = [<path>/pawprint, run]`, `RunAtLoad = true`,
   `LimitLoadToSessionType = Aqua` (GUI sessions only), and
@@ -1857,6 +1891,26 @@ directory and fails with the badge's log.
 What these can't show stays in the manual checks below and the facts ledger:
 real Plasma and GNOME, real input devices, and remote clients.
 
+#### 16.1.2 GUI-session test (macOS)
+
+`make test-macos-display` runs the real `pawprint run` in the logged-in
+desktop (a CI job runs it on `macos-latest`, whose job runs inside an
+auto-logged-in GUI session, FM3). It is `#[ignore]`d in `make test` and
+uses its own HOME and `TMPDIR`. It asks the window server
+(`CGWindowListCopyWindowInfo`) about the badge's window and asserts:
+status level (layer 25), the frame `status` reports, read-only sharing
+(F12), an Accessory app that is never frontmost or active (also in move
+mode), one badge per session, `status`/`move`/`reload`/`reset-position`/
+`quit` over the socket, a clean exit that removes the socket, and that
+the SystemConfiguration hostname equals `scutil --get`. With Screen
+Recording permission it compares every opaque badge pixel in a
+`screencapture` with `pawprint render` (scale 1 only); with Accessibility
+permission it drags the badge with posted mouse events and checks the
+saved, snapped position (and that it survives a restart), an arrow nudge,
+Enter, and Escape. Without a permission, that check prints `SKIP` and why.
+Click-through, Spaces, full-screen apps, and Retina scales stay owner
+checks ([16.2](#162-backend-smoke-checks-manual-per-backend-every-release)).
+
 ### 16.2 Backend smoke checks (manual, per backend, every release)
 
 1. Badge visible, transparent, top-right, correct label and mascot.
@@ -1929,8 +1983,8 @@ true instead.
 | F9 | `SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)` hides a window from capture-based remote tools. | Never call it | Documented |
 | F10 | `Local\` kernel objects and HKCU Run entries are per logon session; RDP sessions are separate sessions. | Per-session instance; autostart covers RDP | Documented |
 | F11 | GUI-subsystem Windows exes have no usable stdout; console exes flash a window at logon. | Ship `pawprint.exe` + `pawprintw.exe` | Documented |
-| F12 | macOS windows default to `sharingType = .readOnly`; `.none` hides them from capture. | Leave the default | Documented |
-| F13 | macOS `gethostname()` can reflect a network-assigned name; `LocalHostName` is stable. | Hostname source order | Documented |
+| F12 | macOS windows default to `sharingType = .readOnly`; `.none` hides them from capture. | Leave the default | **Confirmed** for the default (macOS 26.7 on `macos-latest`: the panel's `kCGWindowSharingState` is 1, read-only, and `screencapture` sees it pixel-exact); `.none` hiding it is documented |
+| F13 | macOS `gethostname()` can reflect a network-assigned name; `LocalHostName` is stable. | Hostname source order | Documented; the SystemConfiguration read equals `scutil --get` (FM4) |
 | F14 | `curl` downloads don't get `com.apple.quarantine`; browser downloads do. | curl installer avoids Gatekeeper prompts | Documented (verify) |
 | F15 | Apple Silicon requires signed arm64 code; ad-hoc signing suffices for local execution. | Re-sign after `lipo` | **Verify** |
 | F16 | `LimitLoadToSessionType = Aqua` restricts a LaunchAgent to GUI sessions. | No badge attempts in SSH sessions | Documented |
@@ -1953,6 +2007,18 @@ true instead.
 | F33 | `x11rb` 0.14 connects through the `/tmp/.X11-unix` socket or TCP, not the abstract socket namespace. Where `/tmp/.X11-unix` is read-only (WSLg), a test Xvfb listens on abstract sockets only. | Tests run Xvfb with `-listen tcp`; real X servers always create the filesystem socket | **Confirmed** |
 | F34 | Headless sway 1.9 with the pixman renderer filters the whole output at fractional scales (even swaybg's solid color comes out uneven); about 85% of the badge's pixels at 1.5 were exact. At integer scales every pixel is exact. | Fractional-scale crispness can't be judged there | **Confirmed on headless sway**; crispness at 125%/150% is an owner check on Plasma |
 | F35 | wlroots `keyboard_interactivity = exclusive` on an overlay layer surface sends it the keys at once; virtual keyboards (`wtype`, remote-desktop servers) send keycodes from their own keymaps. | Exclusive keyboard in move mode; keycodes read from the keymap (11.4) | **Confirmed on sway 1.9**; verify on Plasma |
+
+**macOS facts (M1 macOS backend).** Learned on GitHub's `macos-latest`
+runner (macOS 26.7.2, Apple Silicon, one 1024 × 768 "Apple Virtual"
+display at scale 1, auto-logged-in GUI session) by `make test-macos-display`.
+
+| # | Fact | Consequence | Status |
+|---|---|---|---|
+| FM1 | The `CGImage` part of F30 holds: premultiplied BGRA bytes as `kCGImageAlphaPremultipliedFirst \| kCGImageByteOrder32Little`, tagged with the screen's color space, on a nearest-filter layer, reach the screen unchanged. | One pixel format on macOS too | **Confirmed** (every opaque pixel of the badge in a `screencapture` equals `pawprint render`) |
+| FM2 | A borderless non-activating `NSPanel` at `NSStatusWindowLevel` in an Accessory app shows as window layer 25 at exactly the requested frame, the app has `activationPolicy = accessory`, and neither showing it nor `makeKeyWindow` in move mode makes it frontmost or active. | Contract items 2–4 on macOS (11.2) | **Confirmed** on the runner; Spaces, full-screen apps, and Mission Control are owner checks |
+| FM3 | GitHub's macOS runner job runs inside the auto-logged-in GUI login: `SessionGetInfo` reports an audit session with window server access, `screencapture` captures other apps' windows, and `CGPreflightPostEventAccess` is true, so synthetic drags and keys reach the panel. | The backend is tested end to end in CI (11.2, 16.1) | **Confirmed** |
+| FM4 | `HostName` from the SystemConfiguration preferences path `/System/System`, else `SCDynamicStoreCopyLocalHostName`, equals `scutil --get HostName`/`LocalHostName`. (The runner's is a generated `sat12-…-FE304CC6C67E.local`.) | No `scutil` subprocess (5.1) | **Confirmed** |
+| FM5 | Posted mouse events reach a panel that just stopped ignoring the mouse; drags keep arriving outside the panel while the button is held, and `NSEvent.mouseLocation` tracks them in global points. | Move-mode drag without a pointer grab (11.2) | **Confirmed** on the runner |
 
 ---
 

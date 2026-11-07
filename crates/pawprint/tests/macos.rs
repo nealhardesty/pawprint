@@ -177,6 +177,9 @@ fn drag_and_keys(env: &Env, rect: [i32; 4], scale: f64) -> [i32; 4] {
     let center = (pt(rect[0] + rect[2] / 2), pt(rect[1] + rect[3] / 2));
 
     env.ok(&["move"]);
+    // Like a hand on the mouse: hover the badge first, then press.
+    post_mouse(CGEventType::MouseMoved, center);
+    std::thread::sleep(Duration::from_millis(200));
     let to = (center.0 - 300.0, center.1 + 200.0);
     post_mouse(CGEventType::LeftMouseDown, center);
     for i in 1..=10 {
