@@ -755,6 +755,13 @@ offset = [16, 16]
 buildbox = "capybara"
 ```
 
+The temporary file is flushed to disk (`sync_all`) before the rename. A bad
+entry (an unknown key, an invalid `[position]`, an assignment that isn't a
+mascot id) is dropped with a warning and the rest is kept. A file that can't
+be used at all (not TOML, or no supported `version`) loads as an empty
+state with a warning, and the next save first copies it to
+`state.toml.bad`, so nothing is lost when it is overwritten.
+
 ### 8.5 Reloading
 
 The running badge reloads config when `pawprint reload` is run, when the tray
