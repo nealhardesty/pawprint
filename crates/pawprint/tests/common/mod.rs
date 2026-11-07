@@ -58,13 +58,22 @@ impl Drop for Env {
 
 impl Env {
     pub fn new(tag: &str) -> Env {
-        let dir = PathBuf::from(format!("/tmp/pp-{}-{tag}", std::process::id()));
+        let tmp = if cfg!(windows) {
+            std::env::temp_dir()
+        } else {
+            PathBuf::from("/tmp")
+        };
+        let dir = tmp.join(format!("pp-{}-{tag}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         for sub in ["home", "run"] {
             std::fs::create_dir_all(dir.join(sub)).unwrap();
         }
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(dir.join("run"), std::fs::Permissions::from_mode(0o700)).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let private = std::fs::Permissions::from_mode(0o700);
+            std::fs::set_permissions(dir.join("run"), private).unwrap();
+        }
         Env {
             dir,
             vars: Vec::new(),

@@ -107,15 +107,32 @@ pub fn security_session() -> Option<SecuritySession> {
     })
 }
 
-/// Windows: the logon session (`ProcessIdToSessionId`), so each RDP session
-/// gets its own badge.
-///
-/// Hook for the Windows backend: return `"<user>-<session id>"` from
-/// `ProcessIdToSessionId(GetCurrentProcessId())` and the user name; the
-/// endpoint becomes `\\.\pipe\pawprint-<user>-<session id>`.
+/// Windows: `"<user>-<session id>"` from `ProcessIdToSessionId`, so the
+/// console and each RDP session get their own badge. The endpoint becomes
+/// `\\.\pipe\pawprint-<user>-<session id>`.
 #[cfg(windows)]
 pub fn session_key() -> Result<String, NoSession> {
-    Err("the Windows session key (ProcessIdToSessionId) is not implemented yet (M1)".into())
+    use windows_sys::Win32::System::RemoteDesktop::ProcessIdToSessionId;
+    use windows_sys::Win32::System::Threading::GetCurrentProcessId;
+    use windows_sys::Win32::System::WindowsProgramming::GetUserNameW;
+    let mut sid = 0;
+    let mut user = [0u16; 257];
+    let mut len = user.len() as u32;
+    // SAFETY: both calls write only into the buffers given, and `len` holds
+    // the buffer size in UTF-16 units.
+    let ok = unsafe {
+        ProcessIdToSessionId(GetCurrentProcessId(), &mut sid) != 0
+            && GetUserNameW(user.as_mut_ptr(), &mut len) != 0
+    };
+    if !ok {
+        return Err(format!(
+            "cannot read the Windows session: {}",
+            io::Error::last_os_error()
+        ));
+    }
+    // `len` counts the terminating NUL. Pipe names may not contain `\`.
+    let user = String::from_utf16_lossy(&user[..len.saturating_sub(1) as usize]);
+    Ok(format!("{}-{sid}", user.replace('\\', "_")))
 }
 
 /// The IPC endpoint for this session.
@@ -220,7 +237,14 @@ pub fn running(endpoint: &std::path::Path) -> Result<Option<Status>, CallError> 
 /// session with no controlling terminal and null stdio on Unix, a detached
 /// process on Windows.
 fn detached_badge() -> io::Result<Command> {
-    let mut cmd = Command::new(std::env::current_exe()?);
+    let exe = std::env::current_exe()?;
+    // Windows: the GUI-subsystem twin next to us, so no console window
+    // opens (SPEC §11.1.6).
+    #[cfg(windows)]
+    let exe = Some(exe.with_file_name("pawprintw.exe"))
+        .filter(|w| w.exists())
+        .unwrap_or(exe);
+    let mut cmd = Command::new(exe);
     cmd.arg("run")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -241,8 +265,8 @@ fn detached_badge() -> io::Result<Command> {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
-        // DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP. The Windows backend
-        // switches this to `pawprintw.exe run` (SPEC §11.1.6).
+        // DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP: no console, and no
+        // Ctrl+C from the terminal that started it.
         cmd.creation_flags(0x0000_0008 | 0x0000_0200);
     }
     Ok(cmd)

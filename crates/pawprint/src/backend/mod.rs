@@ -22,6 +22,8 @@ use linux as platform;
 use macos as platform;
 #[cfg(windows)]
 use windows as platform;
+#[cfg(windows)]
+pub use windows::allow_foreground;
 
 /// Run the badge until it quits. `listener` is this session's claimed IPC
 /// endpoint (SPEC §10.4).

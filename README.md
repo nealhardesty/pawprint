@@ -37,8 +37,9 @@ on Wayland, and GNOME on Wayland (Ubuntu 24.04 LTS and newer).
 > compositors with layer-shell such as KDE Plasma and Sway, and GNOME
 > through XWayland), with `pawprint`, `run`, `move`, `reset-position`,
 > `reload`, `quit`, `status`, and `doctor`, plus the backend-free commands
-> (`explain`, `list`, `render`, `paths`, `--version`). Windows and macOS are
-> next; there are no release builds or installers yet, so build from source
+> (`explain`, `list`, `render`, `paths`, `--version`). **Windows** and
+> **macOS** run the badge too (no tray icon or autostart yet). There are no
+> release builds or installers yet, so build from source
 > (see [Development](#development)). Only one placeholder mascot (the owl)
 > exists so far. See [`ROADMAP.md`](ROADMAP.md) for progress and
 > [`SPEC.md`](SPEC.md) for the design.
@@ -374,6 +375,7 @@ work. Contributor rules for humans and coding agents are in
 | Windows | Visual Studio Build Tools (C++ workload) and GNU Make: `winget install ezwinports.make`. Run targets from PowerShell. |
 | Publishing | [GitHub CLI](https://cli.github.com), authenticated with `gh auth login` |
 | Linux display tests (optional) | `make test-x11` and `make test-wayland` drive real display servers. On Ubuntu: `sudo apt-get install xvfb xcompmgr openbox sway swaybg grim foot wtype` |
+| Windows display test (optional) | `make test-windows-display` runs the badge on your own desktop: nothing to install, but quit any running badge first and leave the mouse alone for a few seconds |
 
 ### Make targets
 
@@ -385,7 +387,8 @@ To try the badge from a checkout, `make run` runs it in the foreground
 (Ctrl-C or `pawprint quit` stops it). After `make build`, the CLI is
 `target/debug/pawprint`: bare `target/debug/pawprint` starts the badge in
 the background, and `target/debug/pawprint move`, `status`, and `quit` talk
-to it.
+to it. On Windows the build also makes `target\debug\pawprintw.exe`, the
+windowless twin that bare `pawprint` starts so no console window opens.
 
 | Target | What it does |
 |---|---|
@@ -398,6 +401,7 @@ to it.
 | `make test-wayland` | Linux: run the badge under headless Sway and check placement, click-through, move mode, panels, and output changes from screenshots |
 | `make test-linux-display` | Both display-server suites (a separate CI job runs this) |
 | `make test-macos-display` | macOS: run the badge in your logged-in desktop and check its window level, placement, IPC, and (with Screen Recording and Accessibility granted to the terminal) pixels, drag, and keys; a CI job runs it on `macos-latest` |
+| `make test-windows-display` | Windows: run `pawprintw.exe` on this desktop and check its window styles, top-right placement, topmost, click-through, a real move-mode drag, work-area changes, the named pipe, and its pixels on screen (a separate CI job runs this on `windows-latest`) |
 | `make check-assets` | Validate the mascot catalog only |
 | `make lint` | Format check and clippy (warnings are errors) |
 | `make fmt` | Format the code |

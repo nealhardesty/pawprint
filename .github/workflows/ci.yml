@@ -77,3 +77,27 @@ jobs:
       - name: pawprint doctor
         if: always()
         run: make doctor
+
+  # The Windows backend on the runner's desktop: window styles, placement,
+  # click-through, move mode, IPC, and screen pixels (SPEC §16.1.2).
+  windows-display:
+    name: make test-windows-display (windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - name: Install GNU Make
+        shell: bash
+        run: command -v make || choco install make --no-progress -y
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: make test-windows-display
+        run: make test-windows-display
+
+      - name: pawprint doctor
+        if: always()
+        run: make doctor
