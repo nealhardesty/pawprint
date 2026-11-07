@@ -33,8 +33,11 @@ Runs on **Windows 10/11**, **macOS 13+**, and **Linux**: X11, KDE Plasma 6
 on Wayland, and GNOME on Wayland (Ubuntu 24.04 LTS and newer).
 
 > **Status: pre-release.** PAWPRINT is being built now. This README describes
-> how 1.0 will work. See [`ROADMAP.md`](ROADMAP.md) for progress and
-> [`SPEC.md`](SPEC.md) for the design.
+> how 1.0 will work. Today the shared core, the art compiler, and the
+> backend-free commands (`pawprint explain`, `list`, `render`, `paths`,
+> `--version`) work; the on-screen badge arrives with the platform backends.
+> See [`ROADMAP.md`](ROADMAP.md) for progress and [`SPEC.md`](SPEC.md) for the
+> design.
 
 ---
 
@@ -333,7 +336,7 @@ work. Contributor rules for humans and coding agents are in
 | OS | Install |
 |---|---|
 | All | [rustup](https://rustup.rs). The pinned toolchain and targets install on first build. |
-| Linux | `make` (plus a cross linker or `cargo-zigbuild` only for aarch64 release builds) |
+| Linux | `make`. Static musl release builds for x86_64 and aarch64 link with the `rust-lld` that rustup ships, so there is no cross toolchain to install. |
 | macOS | Xcode Command Line Tools: `xcode-select --install` (provides `make`, `lipo`, `codesign`) |
 | Windows | Visual Studio Build Tools (C++ workload) and GNU Make: `winget install ezwinports.make`. Run targets from PowerShell. |
 | Publishing | [GitHub CLI](https://cli.github.com), authenticated with `gh auth login` |
@@ -346,6 +349,7 @@ ones.
 
 | Target | What it does |
 |---|---|
+| `make help` | List targets (what `make` on its own runs) |
 | `make build` | Debug build |
 | `make run` | Build and run the badge in the foreground (`ARGS="--verbose"` passes flags) |
 | `make preview MASCOT=owl` | Show one mascot cycling through its animations |
@@ -365,6 +369,14 @@ ones.
 | `make uninstall` | Remove the local install and autostart |
 | `make doctor` | Run `pawprint doctor` from the local build |
 | `make clean` | Remove build outputs |
+| `make check-all-targets` | Type-check the workspace for every release target (Windows, macOS, Linux musl) from any OS; needs no linkers |
+| `make spike-f22` | Rebuild the F22 spike: proves the Linux window, Wayland, D-Bus, and tray crates link into fully static musl binaries |
+
+Targets for features that don't exist yet (see [`ROADMAP.md`](ROADMAP.md))
+stop with `not implemented yet (Mx)`, naming the milestone that adds them.
+`make check-assets` and `make test` report the catalog gates (at least 100
+mascots, every showcase mascot present) without failing; only `make package`
+enforces them.
 
 ### Releasing
 

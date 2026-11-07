@@ -9,8 +9,9 @@ same change.
 - What does not exist yet is in [`ROADMAP.md`](ROADMAP.md).
 - How to install and use it is in [`README.md`](README.md).
 
-**Status of this document:** written before implementation. The repository
-is public. Facts marked
+**Status of this document:** M0 (foundations) is implemented: the shared
+core, the sprite compiler, embedded placeholder art, and the backend-free CLI
+commands. Platform backends start in M1. The repository is public. Facts marked
 **(verify)** come from platform documentation or prior experience and have not
 yet been confirmed by a PAWPRINT spike. When a spike confirms or refutes one,
 update the [Facts ledger](#18-facts-ledger) and drop the marker.
@@ -234,7 +235,8 @@ except where the crate front art is transparent.
 ### 4.3 Sizes and scaling
 
 - `size` is the **mascot size in logical pixels**: `32`, `64` (default), or
-  `128`. Any positive multiple of 32 is accepted.
+  `128`. Any positive multiple of 32 up to 1024 is accepted (the cap keeps a
+  typo from allocating a gigantic image).
 - Art scale `s = size / 32`.
 - Physical pixels per art pixel `P = max(1, round(s × display_scale))`, where
   `display_scale` is the OS scale factor of the target display (1.0, 1.25,
@@ -273,6 +275,16 @@ and remote-client scaling (roadmap M2) and adjusted here.
    crate instead of under it, on the side facing the screen interior, so the
    badge grows inward from its anchored corner.
 
+The label fits the strip when its width (`6n − 1` font pixels for `n`
+characters) and height (7) times the font scale fit the strip's 28 × 8 art
+pixels times the art scale. The nameplate is drawn in **font pixels**, so it
+scales with `label_size`, not `size`: `plate-left`, then `plate-mid` once per
+text column, then `plate-right` (all from `crate.toml`), with the text right
+after `plate-left` and centered vertically. Under the crate, the plate is
+centered horizontally; beside it, the plate's bottom lines up with the
+crate's. The anchor/offset position applies to the whole badge, nameplate
+included (`pawprint_core::layout::badge_layout`).
+
 **Contrast.** Dark text (`#1b1b1f`) on a light strip (`#f2efe6`) with the
 accent around it. The strip and text colors are fixed for legibility. Only
 the accent changes.
@@ -299,8 +311,8 @@ stamp. `"as-is"` keeps the configured or detected case. `"lower"` lowercases.
 | Platform | Source | Notes |
 |---|---|---|
 | Windows | `GetComputerNameExW(ComputerNameDnsHostname)` | Preserves case. Falls back to `ComputerNameNetBIOS` (uppercase, max 15 characters). |
-| macOS | SystemConfiguration `HostName` if set, else `LocalHostName` | Avoid bare `gethostname()`: on macOS it can return a DHCP- or reverse-DNS-assigned name that changes between networks. `ComputerName` ("Someone's MacBook Pro") is a friendly name, not a hostname, and is never used. |
-| Linux | `gethostname(2)` | — |
+| macOS | SystemConfiguration `HostName` if set, else `LocalHostName` | Avoid bare `gethostname()`: on macOS it can return a DHCP- or reverse-DNS-assigned name that changes between networks. `ComputerName` ("Someone's MacBook Pro") is a friendly name, not a hostname, and is never used. M0 reads both keys with `scutil --get`; M1 may call the SystemConfiguration API directly once `objc2` is a dependency. |
+| Linux | `/proc/sys/kernel/hostname` (the kernel nodename, which is what `gethostname(2)` returns), else `/etc/hostname` | — |
 | Any | `PAWPRINT_HOSTNAME` env var | Overrides detection. Used by tests and `pawprint explain --host`. |
 
 ### 5.2 Labels
@@ -410,6 +422,12 @@ the menu bar, the Dock, and panels.
   the top edge. Components along a centered axis shift from the center
   (positive = right/down).
 - Default: `top-right`, `[16, 16]`.
+
+Inside `pawprint-core`, every rectangle is in **physical pixels** in the
+backend's desktop coordinate space. Offsets stay logical and are multiplied by
+the target display's scale (rounded) when placed. Backends whose window APIs
+work in logical units (macOS points, Wayland layer-shell margins) convert at
+the edge.
 
 The badge keeps its relationship to the nearest edges when the resolution
 changes, which happens constantly with RDP reconnects and client window
@@ -650,9 +668,9 @@ session or backend, `4` no running badge (for commands that need one).
 │  cli ──► ipc client ─────────────────┐                                     │
 │                                      ▼                                     │
 │  run ──► backend (one of 4) ◄──► pawprint-core::Badge  (pure state machine)│
-│            │  native event loop      │ handle(Event) -> Vec<Effect>       │
-│            │  window / surface       │ next_deadline() -> Option<Instant> │
-│            │  tray                   │ render() -> RgbaImage (1×)         │
+│            │  native event loop      │ start(displays) -> Vec<Effect>     │
+│            │  window / surface       │ handle(Event) -> Vec<Effect>       │
+│            │  tray                   │ next_deadline() -> Option<Instant> │
 │            └─ ipc server thread ─────┘                                     │
 └────────────────────────────────────────────────────────────────────────────┘
 pawprint-core: hostname rules · matching · HRW · config · state · catalog ·
@@ -664,12 +682,37 @@ decision and has no platform dependencies, so it is fully unit-testable on
 any OS. Each backend is a thin adapter that:
 
 1. owns the native event loop and window or surface;
-2. translates native events into `core::Event`: `Deadline`,
-   `DisplaysChanged(Vec<DisplayInfo>)`, `DragStart/DragMove/DragEnd`,
-   `Key`, `Command(Ipc|Tray)`, `ConfigTouched`;
-3. executes `core::Effect`s: `Present(image, P)`, `Place(rect)`,
-   `SetInteractive(bool)`, `SetTray(state)`, `SaveState`, `Exit`;
+2. translates native events into `core::badge::Event`: `Deadline`,
+   `DisplaysChanged(Vec<DisplayInfo>)`, `DragStart/DragMove/DragEnd(Point)`,
+   `Key(Key)`, `Command(Command)` (from IPC or the tray menu: `Move`,
+   `ResetPosition`, `Reload`, `Quit`, `SetSize(n)`, `SetAnimation(mode)`),
+   and `ConfigTouched(Config)` (the shell noticed a change and re-read the
+   file);
+3. executes `core::badge::Effect`s: `Present(Frame)` (already scaled),
+   `Place(PhysicalRect)`, `SetInteractive(bool)`, `SetTray(TrayState)`,
+   `SaveState(State)` (write it atomically), `ReloadConfig` (re-read the file,
+   then send `ConfigTouched`), and `Exit`;
 4. blocks until the next native event or `core.next_deadline()`.
+
+Driving the core, in full (every backend's loop has this shape):
+
+```rust
+let inputs = Inputs { hostname, config, state, flags, seed: clock_seed };
+let mut badge = Badge::new(Catalog::bundled(), catalog::bundle(), inputs, Instant::now());
+let mut effects = badge.start(surface.displays(), now());
+loop {
+    for effect in surface::apply(&mut surface, effects) {   // Present/Place/SetInteractive
+        match effect { SetTray(t) => .., SaveState(s) => s.save_atomic(..), ReloadConfig => .., Exit => return, _ => {} }
+    }
+    let event = wait_for_native_event_or(badge.next_deadline());   // Deadline on timeout
+    effects = badge.handle(event, now());   // now() = Now { instant, local_hour }
+}
+```
+
+The core emits `Place` and `Present` only when the rectangle or the pixels
+actually change, so animation frames never re-place the window and a resting
+badge never redraws. The local hour is an input (`Now::local_hour`) because
+reading the time zone is a platform call.
 
 The IPC server runs on its own thread and posts commands into the native loop
 (`PostMessageW` on Windows, the main dispatch queue on macOS, a `calloop`
@@ -693,11 +736,12 @@ large C++ runtime for a 64-pixel image. Direct platform APIs come to four small 
 | Paths | `directories` |
 | PNG decode/encode | `png` |
 | Sprite compiler | `pawprint-sprite` (in-tree crate) |
-| Windows | `windows` (windows-rs) |
+| Embedded asset bundle codec | `postcard` (serde, `alloc` only) |
+| Windows | `windows` (windows-rs); `windows-sys` for the hostname call |
 | macOS | `objc2`, `objc2-foundation`, `objc2-app-kit` |
-| X11 | `x11rb` (pure Rust; features `shape`, `xfixes`, `randr`) |
-| Wayland | `smithay-client-toolkit`, `wayland-client`, `wayland-protocols`, `wayland-protocols-wlr`, `wayland-protocols-plasma`, `calloop` |
-| Linux tray | `ksni` (StatusNotifierItem over D-Bus, pure Rust via `zbus`); `zbus` also carries the Plan B presenter protocol |
+| X11 | `x11rb` 0.14 (pure Rust; features `shape`, `xfixes`, `randr`) |
+| Wayland | `smithay-client-toolkit` 0.21 (`default-features = false, features = ["calloop"]`: the default `xkbcommon` feature links libxkbcommon), `wayland-client` 0.31 (no features: `system`/`dlopen` load libwayland and `log` compiles a C shim), `wayland-protocols`, `wayland-protocols-wlr`, `wayland-protocols-plasma`, `calloop` 0.14 |
+| Linux tray | `ksni` 0.3 (`default-features = false, features = ["blocking", "async-io"]`, which avoids tokio) over `zbus` 5 (`default-features = false, features = ["async-io", "blocking-api"]`; ksni 0.3 needs zbus 5, and zbus 6 has no `blocking` module); `zbus` also carries the Plan B presenter protocol |
 | Logging | `log` + a minimal file logger |
 
 No hashing, PRNG, font, or image-scaling crates: those are small, frozen,
@@ -760,6 +804,12 @@ pub trait Surface {
     fn set_interactive(&mut self, on: bool);       // move mode on/off
 }
 ```
+
+`surface::apply(&mut surface, effects)` runs the three surface effects and
+returns the rest to the shell, so no backend re-implements effect dispatch.
+`surface::FakeSurface` records presents, places, and the interactive flag;
+`badge.rs`'s tests drive startup, animation, display changes, move mode,
+tray commands, and config reloads through it.
 
 What is shared, and by whom:
 
@@ -1169,9 +1219,29 @@ grid = """
 | `prop:name@x,y` | Draw a shared prop at mascot coordinates |
 | `flipx` | Mirror the mascot horizontally |
 
+Details the compiler enforces:
+
+- Layer names are kebab-case `slot` or `slot.variant`; `all` is reserved. A
+  layer without `at` must be a full 32 × 32 grid, and a layer with `at` must
+  fit inside 32 × 32. Layer order is drawing order: base layers first, then
+  the mascot's additions; a mascot layer with a base layer's name replaces it
+  in place.
+- A slot with only variants (`mouth.open` and no `mouth`) is hidden at rest.
+  `+slot` shows a slot's default layer; `+slot.variant` and `slot=variant`
+  show that variant.
+- Offsets are signed integers after a `+`: `head+-1,0` moves the head left.
+- Props are drawn after the mascot (and after `flipx`) at mascot
+  coordinates; `all+` does not move them.
+- `ms` defaults to 200 and `weight` to 5. A template action takes the
+  template's `weight` and `when` unless the mascot's `[[actions]]` entry sets
+  its own, and `name` defaults to the template's name.
+- Grids: one glyph per pixel, any non-whitespace character; leading
+  whitespace on each row is ignored, so grids may be indented. A base's
+  `[palette]` supplies defaults that the mascot's `[palette]` overrides.
+
 **Custom frames.** When layer ops can't express a pose (a curl, a spin, a
 roll), an action frame can reference a full 32 × 32 grid from the mascot's
-`[frames.<name>]` table with `{ grid = "<name>", ms = ... }`. Each mascot has a few at most.
+`[frames.<name>]` table with `{ grid = "<name>", ms = ... }`. Each mascot has a few at most. A grid frame may also carry `all+`, `flipx`, and `prop:` ops, but no slot ops.
 
 **Bases.** A base file has the same format without identity fields. Its
 glyphs are *roles*. The mascot's `[palette]` maps them, so one cat base
@@ -1229,8 +1299,9 @@ The launch template set:
   briefly shows `> hello_`.
 - **Day and night:** `when = "day" | "night" | "any"` (default `any`). Night
   is 20:00–06:00 by the local clock. Nocturnal mascots (owl, raccoon, moth,
-  opossum, cat-black) are livelier at night. Everyone else gets `doze` at
-  night. No network or location is involved.
+  opossum, cat-black) are livelier at night: their `when = "night"` actions
+  weigh 3× at night (`anim::NOCTURNAL_NIGHT_BOOST`). Everyone else gets
+  `doze` at night. No network or location is involved.
 
 ### 12.6 Production process
 
@@ -1280,7 +1351,10 @@ How 100 complete mascots get made:
 - **User mascots may skip the text format entirely:** a directory holding a
   `mascot.toml` with `sprite = "sprite.png"` (a horizontal strip of 32 × 32
   frames) and actions whose `frames` are frame indices is accepted as-is.
-  `pawprint mascot export <id> <dir>` produces this simpler form.
+  `rest` is a frame index (default 0) and `duration_ms` (default 200) sets
+  every frame of an action. PNG mascots take no `extends`, `palette`,
+  `layers`, or motion templates, and any pixel with partial alpha is an
+  error. `pawprint mascot export <id> <dir>` produces this simpler form.
 
 ### 12.8 Bases
 
@@ -1348,9 +1422,13 @@ reads as fur, not as a hole in the outline.
 
 ### 12.11 Validation rules
 
-Enforced by `make check-assets` (and therefore `make test` and
-`make package`) for bundled mascots, and by `pawprint mascot check` for user
-mascots:
+Rules 1–8 are enforced by `pawprint-core`'s `build.rs` (so any build,
+including `make test`, fails on a bad asset), by `make check-assets`, and by
+`make package` for bundled mascots, and by `pawprint mascot check` for user
+mascots. Rule 9 is enforced **only** by `make package`
+(`pawdev check-assets --package`): `make test` and `make check-assets`
+report the gates without failing, because the catalog stays small until
+M3. The build also fails if no mascot is eligible for the fallback.
 
 1. The source parses. `id` matches the directory and the ID grammar.
    `extends`, `use`, and `prop:` references resolve.
@@ -1368,9 +1446,10 @@ mascots:
 7. `accent` resolves.
 8. Squashed aliases are unique across the catalog (bundled check). For user
    mascots, collisions are a warning, and the user mascot wins.
-9. **Catalog gates (bundled only):** ≥ 100 valid entries, every
-   `required` id present, and every showcase mascot has ≥ 2 template
-   actions, a signature action, and a rare action.
+9. **Catalog gates (bundled only, `make package` only):** ≥ `minimum`
+   (100) valid entries, every `required` id present, and every showcase
+   (required) mascot has ≥ 2 template actions, a signature action (not from
+   a template, weight above 1), and a rare action (weight 1).
 
 ### 12.12 Catalog file
 
@@ -1388,10 +1467,16 @@ minimum = 100
 ### 12.13 Embedding
 
 `pawprint-core`'s `build.rs` uses `pawprint-sprite` (as a build-dependency)
-to compile every bundled source into indexed frame data, validate the
-catalog, and generate a static table. The binary needs no asset files at
-runtime. Only the selected mascot's frames are expanded to RGBA at startup.
-User mascots are compiled at load time by the same crate.
+to compile every bundled source into indexed frame data (32 × 32 palette
+indices per distinct frame, identical frames shared) and validate the
+catalog. The result, a `pawprint_sprite::Bundle` (accents, font, crate,
+mascots, catalog gates), is serialized with `postcard` to
+`$OUT_DIR/bundle.bin`, embedded with `include_bytes!`, and decoded once on
+first use (`pawprint_core::catalog::bundle()`). The binary needs no asset
+files at runtime. Frames stay indexed; a frame is expanded to RGBA only
+when it is drawn. User mascots are compiled at load time by the same crate;
+text-format user mascots that use bases, templates, or props will need
+those library sources embedded too (M3).
 
 ---
 
@@ -1401,6 +1486,7 @@ User mascots are compiled at load time by the same crate.
 pawprint/
 ├── Makefile                  # the only entry point for humans and CI
 ├── Cargo.toml                # workspace; [workspace.package] version is the release version
+├── .cargo/config.toml        # rust-lld as the musl linker (14.4)
 ├── rust-toolchain.toml       # pinned stable toolchain + targets
 ├── crates/
 │   ├── pawprint-core/        # pure logic + build.rs asset embedding; no OS deps
@@ -1427,6 +1513,8 @@ pawprint/
 │   └── gnome-presenter/      # Plan B GNOME Shell extension (only if needed, 11.5.3)
 ├── docs/
 │   └── gallery.png           # generated contact sheet (make contact-sheet)
+├── spikes/
+│   └── f22-static-musl/      # standalone spike crate (not a workspace member); make spike-f22
 ├── README.md  SPEC.md  ROADMAP.md  AGENTS.md  LICENSE
 └── .github/workflows/ci.yml  # calls make targets only
 ```
@@ -1480,12 +1568,19 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
 | `uninstall` | Remove the local install and autostart (config is kept) |
 | `doctor` | Run `pawprint doctor` from the local build |
 | `clean` | Remove `target/` and `dist/` |
+| `check-all-targets` | `cargo check` of the whole workspace for every release target, from any OS (needs no linkers) |
+| `spike-f22` | Rebuild the F22 spike ([14.4](#144-static-linux-binaries)) for x86_64 and aarch64 musl |
+
+Targets whose features don't exist yet stop with
+`make <target>: not implemented yet (Mx)` from `pawdev todo`, naming the
+milestone in [`ROADMAP.md`](ROADMAP.md). `make package` already runs the
+catalog gates first.
 
 ### 14.3 Toolchains per OS
 
 | OS | Requirements |
 |---|---|
-| Linux | `rustup`; `make`; targets `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl` (cross-linking aarch64 needs a cross linker or `cargo-zigbuild`, decided in M0) |
+| Linux | `rustup`; `make`; targets `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`. Both link with rustup's own `rust-lld` (decided in M0, F22): no cross linker, `musl-gcc`, or `cargo-zigbuild` |
 | macOS | `rustup`; Xcode Command Line Tools (provides `make` 3.81, `lipo`, `codesign`); targets `aarch64-apple-darwin`, `x86_64-apple-darwin` |
 | Windows | `rustup` with the MSVC toolchain; Visual Studio Build Tools (C++ workload); GNU Make (`winget install ezwinports.make`); target `x86_64-pc-windows-msvc` |
 
@@ -1495,9 +1590,20 @@ installs them on first build.
 ### 14.4 Static Linux binaries
 
 `x11rb`, `wayland-client` (with the pure-Rust backend, no `libwayland`
-linking), and `zbus` are pure Rust. The Linux release is therefore a static
-`musl` binary with **no shared-library dependencies**, so it runs on any
-distribution, with no glibc baseline to manage **(verify in M0)**.
+linking), `smithay-client-toolkit`, `calloop`, `zbus`, and `ksni` are pure
+Rust. The Linux release is therefore a static `musl` binary with **no
+shared-library dependencies**, so it runs on any distribution, with no glibc
+baseline to manage (confirmed in M0, F22).
+
+How: rustc ships the musl CRT and libc for both musl targets, and rustup
+ships `rust-lld`. `.cargo/config.toml` sets `linker = "rust-lld"` for
+`x86_64-unknown-linux-musl` and `aarch64-unknown-linux-musl`. No RUSTFLAGS,
+`musl-gcc`, zig, or sudo are needed. The default `cc` linker happens to work
+for x86_64 when a host gcc exists, but fails for aarch64
+(`unrecognized option '--fix-cortex-a53-843419'`), so rust-lld is used for
+both. Keep the C-pulling crate features off (10.3). `make spike-f22`
+rebuilds the proof: a binary that really calls x11rb, wayland-client with
+sctk, calloop, zbus, and ksni.
 
 ---
 
@@ -1600,8 +1706,11 @@ and user mascots are in separate directories and are never touched except by
   snap, and nameplate placement at each size.
 - **Config:** precedence, globs, unknown-key warnings, and invalid-value
   fallback.
-- **Golden renders:** `pawprint render` output for a fixed set of
-  (mascot, size, label, frame) is byte-compared with `tests/golden/`.
+- **Golden renders:** badge renders for a fixed set of (mascot, size,
+  label, frame), using the same `pawprint_core::render::render_badge` as
+  `pawprint render`, are compared with `tests/golden/` as decoded RGBA
+  pixels (not PNG bytes, so a PNG encoder update can't cause a false
+  failure). `make golden` rewrites them.
 - **Assets:** [12.11](#1211-validation-rules) on the full catalog.
 - **Sprite compiler:** layer ops, bases and recolors, templates, props, and
   PNG import/export round-trips.
@@ -1689,7 +1798,7 @@ true instead.
 | F19 | macOS ships GNU Make 3.81. | Makefile stays 3.81-compatible | Documented |
 | F20 | GNU Make on Windows uses `sh.exe` if found on `PATH`, else `cmd.exe`. | Single-command recipes | Documented |
 | F21 | Standard GitHub-hosted runners are free for public repositories. | CI on all three OSes | Documented |
-| F22 | `x11rb`, pure-Rust `wayland-client`, and `zbus` allow a fully static musl binary. | One Linux binary for every distro | **Verify in M0** |
+| F22 | `x11rb`, pure-Rust `wayland-client`, `smithay-client-toolkit`, `calloop`, `zbus`, and `ksni` link into a fully static musl binary for x86_64 and aarch64 with only rustup pieces (`linker = "rust-lld"`, bundled musl CRT). x86_64: static-pie, 4.9 MB stripped, connects to X11 (XFixes 5.0, RandR), Wayland, and the session bus; exits cleanly with no session. aarch64: statically linked, 4.3 MB (not run; no qemu). Needs sctk without `xkbcommon` and wayland-client without `system`/`dlopen`/`log`. | One Linux binary for every distro; no cross toolchain for aarch64 | **Confirmed (M0 spike, `make spike-f22`)** |
 | F23 | Whether an unowned topmost `WS_EX_TOOLWINDOW` window shows on all Windows virtual desktops is unconfirmed. | May need a workaround | **Verify** |
 | F24 | Layer-shell overlays appear in Plasma's KRdp/krfb screencast streams. | Plasma Wayland remote support | **Verify** |
 | F25 | Mutter keeps one stack for X11 and Wayland windows; an above-state XWayland window stays above normal Wayland windows. | GNOME stacking via XWayland | **Verify** |
@@ -1867,5 +1976,7 @@ sixteen, so additions never move a fallback host's color.
 | 7 | `marigold` | `#e8912d` | 15 | `charcoal` | `#4a4a4f` |
 
 Each accent expands to a 3-step ramp (shadow, base, highlight) for crate
-shading. The ramp is computed at build time by fixed HSL offsets and stored in
-`assets/accents.toml`.
+shading: HSL lightness −0.12 and +0.12, hue and saturation unchanged
+(`pawprint_sprite::ramp`). `assets/accents.toml` stores only names and hex
+values; the ramp is computed when drawing, the same way for bundled accents
+and for `#rrggbb` accents from config.

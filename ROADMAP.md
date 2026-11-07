@@ -6,8 +6,11 @@ ships, move its facts into [`SPEC.md`](SPEC.md) and its user-facing docs into
 before proposing new work. If an idea isn't here, add it (with a reason)
 before building it.
 
-**Current state:** documentation only. No code, no art, no builds. The
-repository is public.
+**Current state:** M0 (foundations) is done: the Cargo workspace, the
+shared core with its tests, the sprite compiler, embedded placeholder art
+(crate, font, one owl), the backend-free CLI commands, every `make` target,
+and CI on Linux, macOS, and Windows. Nothing opens a window yet; that is M1.
+The repository is public.
 
 ---
 
@@ -45,33 +48,36 @@ M0 Foundations ──► M1 One-owl overlay ──► M2 Art pipeline + showcase
 Goal: a workspace where the pure logic is done and tested, and every
 automation path exists, before any window opens.
 
-- [ ] Cargo workspace per [SPEC §13](SPEC.md#13-repository-layout): `crates/pawprint-core`, `crates/pawprint-sprite`, `crates/pawprint`, `tools/pawdev`
-- [ ] `rust-toolchain.toml` pinning stable and listing all release targets
-- [ ] Root `Makefile`: `help` default, every target in [SPEC §14.2](SPEC.md#142-targets) present (stubs that fail clearly are fine for targets whose features don't exist yet), GNU Make 3.81 compatible
-- [ ] CI workflow running `make ci` on `ubuntu-latest`, `macos-latest`, `windows-latest`
-- [ ] `pawprint-core`:
-  - [ ] hostname → short name → label pipeline ([SPEC §5.2](SPEC.md#52-labels))
-  - [ ] alias table, `squash`, tokenizer, n-gram matcher ([SPEC §5.3](SPEC.md#53-choosing-a-mascot))
-  - [ ] `fnv1a64` + `splitmix64` + HRW, with the frozen test vectors
-  - [ ] accent palette and fallback accent
-  - [ ] config parsing, `[hosts]` exact and glob precedence, warnings for unknown keys
-  - [ ] state file read/atomic write
-  - [ ] layout: anchor/offset ↔ rect, clamping, 3×3 snap, label/nameplate placement
-  - [ ] move-mode controller (drag, constrain, snap, nudge, Esc, timeout)
-  - [ ] animation scheduler with `next_deadline()`, weights, `when` (day/night)
-  - [ ] 1× compositor, integer nearest-neighbor scaler, shared BGRA-premultiplied output + 1-bit mask
-  - [ ] tray menu model
-  - [ ] `Surface` trait + `FakeSurface`; event/effect loop tested end to end without a window
-- [ ] `pawprint-sprite`: grid parser, palette mapping, layers and variants, layer ops, `extends`/recolor, templates, props, custom frames; PNG-mode mascots
-- [ ] `build.rs` asset embedding + catalog validation
-- [ ] Placeholder art (text format): crate, 5×7 font, one owl with rest + `blink`
-- [ ] CLI skeleton (`clap`): `explain`, `list`, `render`, `paths`, `--version` working without any backend
-- [ ] `make test` golden render of the placeholder owl at 32/64/128
-- [ ] **Spike F22:** confirm a static musl Linux binary links with `x11rb` + pure-Rust `wayland-client` + `zbus`; choose the aarch64 cross approach (cross linker vs. `cargo-zigbuild`)
+- [x] Cargo workspace per [SPEC §13](SPEC.md#13-repository-layout): `crates/pawprint-core`, `crates/pawprint-sprite`, `crates/pawprint`, `tools/pawdev`
+- [x] `rust-toolchain.toml` pinning stable and listing all release targets
+- [x] Root `Makefile`: `help` default, every target in [SPEC §14.2](SPEC.md#142-targets) present (stubs that fail clearly are fine for targets whose features don't exist yet), GNU Make 3.81 compatible
+- [x] CI workflow running `make ci` on `ubuntu-latest`, `macos-latest`, `windows-latest`
+- [x] `pawprint-core`:
+  - [x] hostname → short name → label pipeline ([SPEC §5.2](SPEC.md#52-labels))
+  - [x] alias table, `squash`, tokenizer, n-gram matcher ([SPEC §5.3](SPEC.md#53-choosing-a-mascot))
+  - [x] `fnv1a64` + `splitmix64` + HRW, with the frozen test vectors
+  - [x] accent palette and fallback accent
+  - [x] config parsing, `[hosts]` exact and glob precedence, warnings for unknown keys
+  - [x] state file read/atomic write
+  - [x] layout: anchor/offset ↔ rect, clamping, 3×3 snap, label/nameplate placement
+  - [x] move-mode controller (drag, constrain, snap, nudge, Esc, timeout)
+  - [x] animation scheduler with `next_deadline()`, weights, `when` (day/night)
+  - [x] 1× compositor, integer nearest-neighbor scaler, shared BGRA-premultiplied output + 1-bit mask
+  - [x] tray menu model
+  - [x] `Surface` trait + `FakeSurface`; event/effect loop tested end to end without a window
+- [x] `pawprint-sprite`: grid parser, palette mapping, layers and variants, layer ops, `extends`/recolor, templates, props, custom frames; PNG-mode mascots
+- [x] `build.rs` asset embedding + catalog validation
+- [x] Placeholder art (text format): crate, 5×7 font, one owl with rest + `blink`
+- [x] CLI skeleton (`clap`): `explain`, `list`, `render`, `paths`, `--version` working without any backend
+- [x] `make test` golden render of the placeholder owl at 32/64/128
+- [x] **Spike F22:** confirm a static musl Linux binary links with `x11rb` + pure-Rust `wayland-client` + `zbus`; choose the aarch64 cross approach (cross linker vs. `cargo-zigbuild`)
 
 **Exit:** `make ci` is green on all three OSes. `pawprint explain --host prod-owl-02`
 prints the right answer. `pawprint render owl --out owl.png` produces a crisp
 badge.
+
+Spike F22 outcome: static musl binaries link for x86_64 and aarch64 with
+rustup's `rust-lld`; no cross linker or `cargo-zigbuild` (SPEC §14.4, F22).
 
 ---
 
@@ -115,6 +121,14 @@ change the design.
       and `pawprint gnome-extension install|remove`
 - [ ] DRY review: no backend makes a layout, timing, or identity decision;
       each backend is within its size budget
+- [ ] macOS hostname: read `HostName`/`LocalHostName` through the
+      SystemConfiguration API instead of `scutil --get` (M0 stopgap,
+      SPEC §5.1)
+- [ ] Local clock hour for `Now::local_hour` on each platform (the core takes
+      it as an input; SPEC §10.1)
+- [ ] `pawprintw.exe` second `[[bin]]` on Windows (SPEC §11.1.6)
+- [ ] Move-mode drag events in physical desktop coordinates on every backend
+      (the core's coordinate space, SPEC §6.1)
 
 **Exit:** [SPEC §16.3](SPEC.md#163-spike-exit-criteria-m1-one-owl-prototype)
 passes on all five desktops, **and** the owner has run a first pass of the
@@ -187,7 +201,9 @@ Waves are grouped by base so siblings are reviewed side by side
       against common hostname words (`db`, `web`, `prod`, `dev`, `test`,
       `build`, `mini`, `pro`, `lab`, `srv`, `node`, ...)
 - [ ] Catalog stability golden test (200 synthetic hostnames) committed
-- [ ] User mascot overrides and additions (text and PNG forms) from the config `mascots/` folder
+- [ ] User mascot overrides and additions (text and PNG forms) from the config `mascots/` folder;
+      embed the bases, motion templates, and props in the bundle so text-form
+      user mascots can use them (SPEC §12.13)
 - [ ] `pawprint mascot export` / `pawprint mascot check`
 - [ ] `pawprint list` with source column
 - [ ] `docs/gallery.png` and `docs/gallery.gif` embedded in the README
@@ -265,15 +281,13 @@ Ideas worth doing, roughly by value. None are commitments.
 
 Decisions still needed. Each has a recommendation.
 
-1. **Linux aarch64 at 1.0, or later?** *Recommendation:* include it if the
-   M0 cross-build spike is easy (it's the same code); otherwise move it after
-   1.0.
-2. **Wayland drag fallback.** If F7 fails on Plasma, is a full-output
+1. **Wayland drag fallback.** If F7 fails on Plasma, is a full-output
    transparent drag surface acceptable, or should Wayland move mode be
    keyboard-only? *Recommendation:* full-output surface; decide after the
    M1 spike.
 
-Settled since the first draft: the repository is public; GNOME on Wayland
+Settled since the first draft: Linux aarch64 ships at 1.0 (the M0 spike
+showed it cross-links with rustup's `rust-lld` alone); the repository is public; GNOME on Wayland
 (Ubuntu) is a launch target; backends share everything through the core;
 art is produced through the text pipeline in SPEC §12; the label limit is 20,
 to be measured in M2.
