@@ -37,3 +37,22 @@ jobs:
 
       - name: make ci
         run: make ci
+
+  # The X11 and Wayland backends against real display servers: Xvfb (bare,
+  # with xcompmgr, with openbox) and headless sway, checked pixel by pixel.
+  linux-display:
+    name: make test-linux-display (ubuntu)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - name: Install display servers and test tools
+        run: sudo apt-get update && sudo apt-get install -y xvfb xcompmgr openbox sway swaybg grim foot wtype
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: make test-linux-display
+        run: make test-linux-display
