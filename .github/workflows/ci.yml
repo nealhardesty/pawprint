@@ -101,3 +101,44 @@ jobs:
       - name: pawprint doctor
         if: always()
         run: make doctor
+
+  # Release builds and the installers end to end (SPEC §15): `make package`
+  # checks every binary (static on Linux, aarch64 run under qemu; universal
+  # and ad-hoc re-signed on macOS, F15), then `make test-install` runs each
+  # installer under every shell (sh, dash, bash; Windows PowerShell 5.1 and
+  # PowerShell 7) against the archive and a local HTTP server laid out like
+  # GitHub releases: fresh install, upgrade, checksum mismatch, uninstall,
+  # purge. `make publish DRY_RUN=1` prints the gh commands and runs none.
+  install:
+    name: make test-install (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - name: Install GNU Make (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: command -v make || choco install make --no-progress -y
+
+      - name: Install dash, shellcheck, and qemu (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y dash shellcheck qemu-user-static
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: make lint-installers
+        if: runner.os == 'Linux'
+        run: make lint-installers
+
+      - name: make test-install
+        run: make test-install
+
+      - name: make publish DRY_RUN=1
+        run: make publish DRY_RUN=1

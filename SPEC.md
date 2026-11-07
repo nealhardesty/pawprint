@@ -580,7 +580,7 @@ after the first frame is flushed.
 | CPU, static mode | 0.000% | 0% |
 | Wakeups, static mode | **0 in 180 s** | zero |
 | Resident memory | 12.2 MB peak | < 30 MB |
-| Binary size | 7.1 MB (glibc release build, 100 mascots; the musl build is M5) | < 15 MB |
+| Binary size | 7.1 MB (glibc release build, 100 mascots); the shipped static musl build is 7.7 MB (x86_64) and 6.8 MB (aarch64), [14.5](#145-release-builds) | < 15 MB |
 | Threads | 5 (loop, IPC, tray service, D-Bus reactor, and one idle) | — |
 
 The first run found 39 wakeups in 20 s in static mode: an idle `blocking`
@@ -1993,11 +1993,13 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
 | `art-export` | Export a mascot's layers and frames as PNGs: `make art-export MASCOT=owl` |
 | `art-import` | Convert a PNG layer into a grid: `make art-import MASCOT=owl PNG=eyes.png` |
 | `ci` | `lint` + `test` (what CI runs on every OS) |
-| `release` | Optimized build for this platform (universal on macOS, musl on Linux) |
-| `package` | `release` + archive + `.sha256` into `dist/`; enforces catalog gates |
-| `publish` | Upload `dist/*` and installers to the GitHub release `v$(VERSION)`, creating it if needed (needs `gh`) |
-| `install` | Install the local release build for this user and enable autostart |
-| `uninstall` | Remove the local install and autostart (config is kept) |
+| `release` | Optimized build for this platform, checked and run ([14.5](#145-release-builds)): static musl x86_64 + aarch64 on Linux, universal re-signed ad hoc on macOS, MSVC on Windows |
+| `package` | `release` + archives + `.sha256` sidecars into `dist/` ([15.2](#152-release-assets)); enforces catalog gates |
+| `publish` | Upload `dist/*` and installers to the GitHub release `v<version>`, creating it if needed (needs `gh`, a clean tree, and the tag on `HEAD`); `DRY_RUN=1` prints the `gh` commands only |
+| `install` | `package`, then install for this user through the real installer with `--archive dist/<archive>` (autostart on, badge started) |
+| `uninstall` | Remove the install and autostart through the installer (config is kept) |
+| `test-install` | `package`, then run the installers end to end ([15.7](#157-installer-tests)); a CI job runs it on all three OSes |
+| `lint-installers` | `shellcheck --shell=sh` on `install.sh` |
 | `doctor` | Run `pawprint doctor` from the local build |
 | `clean` | Remove `target/` and `dist/` |
 | `check-all-targets` | `cargo check` of the whole workspace for every release target, from any OS (needs no linkers) |
@@ -2041,6 +2043,38 @@ both. Keep the C-pulling crate features off (10.3). `make spike-f22`
 rebuilds the proof: a binary that really calls x11rb, wayland-client with
 sctk, calloop, zbus, and ksni.
 
+### 14.5 Release builds
+
+`make release` (logic in `pawdev release`) builds `pawprint` with
+`cargo build --release` for this OS's targets and checks every binary
+before anything is packaged:
+
+| OS | Builds | Checks |
+|---|---|---|
+| Linux | `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl` | No `PT_INTERP` program header (static or static-pie); runs `--version` natively, and the aarch64 one under `qemu-aarch64-static` when installed (else it says it skipped) |
+| macOS | `aarch64-apple-darwin` + `x86_64-apple-darwin` → `lipo -create` → `target/universal-apple-darwin/release/pawprint` → `codesign --force -s -` | `codesign -v`, `lipo -archs` lists `x86_64 arm64`, runs `--version`; reports whether the x86_64 slice runs (Rosetta) |
+| Windows | `x86_64-pc-windows-msvc`: `pawprint.exe` and `pawprintw.exe` | Runs both with `--version` |
+
+Every binary must be under the 15 MB budget ([7.2](#72-power-budget)) and
+print `pawprint <workspace version> (`.
+
+Release profile: `lto = true`, `codegen-units = 1`, `strip = true`,
+`opt-level = 3` (the default), unwinding panics. Measured in M5 with all
+100 mascots (Linux musl, stripped):
+
+| Profile | x86_64 | aarch64 | Archive (x86_64 `.tar.gz`) |
+|---|---|---|---|
+| **lto + codegen-units 1 + strip (chosen)** | **7.74 MB** | **6.83 MB** | 2.73 MB |
+| + `panic = "abort"` | 6.84 MB | 5.97 MB | 2.30 MB |
+| + `panic = "abort"` + `opt-level = "s"` | 5.57 MB | — | — |
+
+Neither `panic = "abort"` nor `opt-level = "s"` is used. The binary is
+already about half the budget, so size buys nothing. `opt-level = 3` keeps rendering cheapest, which is what the
+power budget cares about. And with `abort`, a CLI panic becomes a `SIGABRT`
+with a core dump (and on Ubuntu an apport crash report) instead of exit 101:
+today `pawprint explain | head` panics on the broken pipe, so abort is not
+safe until the CLI handles `EPIPE`.
+
 ---
 
 ## 15. Packaging, release, and install
@@ -2066,14 +2100,46 @@ Each OS builds and uploads its own archives with its own `.sha256` sidecar.
 Release builds can run on three different machines without merging a shared
 checksum file.
 
+`make package` (logic in `pawdev package`) writes them into `dist/`. The
+archives are flat (the files at the top level, no directory), with
+`pawprint` at mode 0755 and the documents at 0644, owned by uid 0. The zip is
+deflated. A sidecar is one line, `<lowercase hex>  <archive name>`, so
+`sha256sum -c` and `shasum -a 256 -c` accept it. pawdev writes the archives
+itself (with the `tar`, `flate2`, and `zip` crates), so packaging needs no
+`tar` or `zip` tool and works the same way on every OS.
+
 ### 15.3 Release procedure
 
 1. Bump the version in `Cargo.toml`, update the README if needed, and commit.
-2. Tag `v<ver>` and push.
-3. On each of Linux, macOS, and Windows: `make package && make publish`.
+2. Tag `v<ver>` and push the tag.
+3. On each of Linux, macOS, and Windows: check out the tag, then
+   `make package && make publish`.
 4. `make publish` creates the release on first use, uploads that machine's
    `dist/*` plus the installers, and replaces same-named assets on re-runs.
 5. Run the installer one-liners on a clean machine of each OS.
+
+`make publish` (logic in `pawdev publish`) refuses to run, and says how to
+fix it, when:
+
+- `git status --porcelain` shows anything. Untracked files count, because
+  the build embeds everything under `assets/`.
+- the tag `v<ver>` doesn't exist, or doesn't point at `HEAD`.
+- `dist/` holds an archive of another version.
+
+Otherwise it runs these from the repository root:
+
+```sh
+gh release view v<ver> --repo nealhardesty/pawprint        # does it exist?
+gh release create v<ver> --repo nealhardesty/pawprint --title 'PAWPRINT <ver>' --generate-notes --verify-tag   # only if not
+gh release upload v<ver> --repo nealhardesty/pawprint --clobber dist/<every file> installers/install.sh installers/install.ps1
+```
+
+With `--verify-tag`, `gh` refuses if the tag was not pushed.
+`make publish DRY_RUN=1` prints those commands, and anything a real publish
+would refuse, without running them. CI runs it on every OS. The release is
+published right away, not as a draft. So for the few minutes between the
+first and the last machine's upload, `latest` can be missing an OS's
+archive.
 
 The repository is public, so standard GitHub-hosted runners are free. CI runs `make ci` on all three OSes for every push and PR. Moving
 step 3 into CI is a roadmap item; local builds remain fully supported.
@@ -2085,20 +2151,48 @@ curl -fsSL https://github.com/nealhardesty/pawprint/releases/latest/download/ins
 curl -fsSL .../install.sh | sh -s -- --version 1.2.0 --no-autostart
 ```
 
-Steps: detect OS and arch → resolve version (`latest` by default) → download
-the archive and its `.sha256` → verify (`sha256sum` or `shasum -a 256`) →
-install to `~/.local/bin/pawprint` → `pawprint autostart on` → start the
-badge → print `pawprint explain` and a PATH hint if `~/.local/bin` is not on
-`PATH`.
+Steps:
+
+1. Parse the flags. Detect the OS (`uname -s`) and the CPU (`uname -m`:
+   x86_64 or aarch64 on Linux; macOS always gets the universal build).
+2. Resolve the version. For `latest` (the default), follow GitHub's
+   redirect from `releases/latest` to `releases/tag/v<ver>` and read the
+   version from the tag (`curl -w '%{url_effective}'`, or the `Location:`
+   headers of `wget --spider -S`). Asset names carry the version, so
+   `releases/latest/download/<asset>` works for the installers but not for
+   the archives.
+3. Download `releases/download/v<ver>/<archive>` and its `.sha256` into a
+   temporary directory (removed on exit), with `curl`, or `wget` if there is
+   no curl. With `--archive FILE`, use that file instead, plus `FILE.sha256`
+   if it sits next to it. Without a sidecar, the installer says the
+   checksum is not checked.
+4. Verify with `sha256sum` or `shasum -a 256`. A mismatch stops here.
+5. Unpack, and run the new binary's `--version`. A binary that can't run on
+   this machine stops here. On macOS, clear `com.apple.quarantine` from it
+   (an archive downloaded with a browser is quarantined; curl's isn't).
+6. **Only now change the system.** Stop a running badge (`pawprint quit`,
+   then wait until `pawprint status` says it's gone). Copy the binary next
+   to `~/.local/bin/pawprint` and `mv` it into place, which is atomic.
+7. `pawprint autostart on`. If this fails, the installer warns and carries
+   on: the binary is installed.
+8. Start the badge with bare `pawprint`. This fails without a graphical
+   session (over SSH, say); the installer warns that the badge will start at
+   the next graphical login.
+9. Print `pawprint explain`, and a PATH hint if the prefix is not on `PATH`.
 
 Flags: `--version V`, `--archive PATH` (install from a local archive, with no
 network access), `--prefix DIR`, `--no-autostart`, `--no-start`,
-`--uninstall`, `--purge` (with uninstall, also delete config and state).
-Environment equivalents: `PAWPRINT_VERSION`, `PAWPRINT_PREFIX`. The
-repository is public, so downloads need no credentials.
+`--uninstall`, `--purge` (with uninstall, also delete config and state),
+`--help`. Environment equivalents: `PAWPRINT_VERSION`, `PAWPRINT_PREFIX`.
+`PAWPRINT_DOWNLOAD_BASE` (default
+`https://github.com/nealhardesty/pawprint/releases`) points the installer at
+a mirror with the same layout. The installer tests use it to reach a local
+server. The repository is public, so downloads need no credentials.
 
-The script is POSIX `sh` (no bashisms), uses only `curl` or `wget`, `tar`, and
-a SHA-256 tool, and changes nothing until verification passes.
+The script is POSIX `sh` with no bashisms. It is checked with
+`shellcheck --shell=sh` and runs under dash, bash, and macOS's bash 3.2 as
+`sh`. It uses only `curl` or `wget`, `tar`, and a SHA-256 tool, and changes
+nothing until verification passes.
 
 ### 15.5 `install.ps1` (Windows)
 
@@ -2107,20 +2201,92 @@ irm https://github.com/nealhardesty/pawprint/releases/latest/download/install.ps
 & ([scriptblock]::Create((irm https://github.com/nealhardesty/pawprint/releases/latest/download/install.ps1))) -Version 1.2.0 -NoAutostart
 ```
 
-Same steps and flags as `install.sh` (`-Version`, `-Archive`, `-NoAutostart`,
-`-NoStart`, `-Uninstall`, `-Purge`). Installs to
-`%LOCALAPPDATA%\Programs\pawprint\`, adds that directory to the **user**
-`PATH`, runs `Unblock-File` on the binaries, and verifies with
-`Get-FileHash -Algorithm SHA256`. It works on Windows PowerShell 5.1 and
-PowerShell 7. Piping into `iex` is not subject to the script execution
-policy.
+Same steps and flags as `install.sh` (`-Version`, `-Archive`, `-Prefix`,
+`-NoAutostart`, `-NoStart`, `-Uninstall`, `-Purge`, `-Help`, and the same
+environment variables). Installs to `%LOCALAPPDATA%\Programs\pawprint\`,
+adds that directory to the **user** `PATH`, runs `Unblock-File` on the
+binaries, and verifies with `Get-FileHash -Algorithm SHA256`. It works on
+Windows PowerShell 5.1 and PowerShell 7. Piping into `iex` is not subject to
+the script execution policy.
+
+Details that matter:
+
+- `latest` comes from the redirect's `ResponseUri` (a `HEAD`
+  `WebRequest`). Downloads use `Invoke-WebRequest -UseBasicParsing` with
+  TLS 1.2 enabled, because 5.1 may default to older protocols. The progress
+  bar is off, because it slows 5.1 downloads badly.
+- The script never calls `exit`: run through `iex`, that would close the
+  user's window. Errors are thrown instead, and `-File` turns them into
+  exit code 1.
+- Native commands run with `$ErrorActionPreference = 'Continue'`, because
+  under `Stop`, 5.1 turns redirected stderr into terminating errors.
+- A running or just-exited exe can be renamed but not overwritten. So each
+  binary is moved to `<name>.old` before the new one is copied in, and the
+  `.old` file is deleted when possible (otherwise on the next run).
+- The user `PATH` is edited in the registry (`HKCU\Environment`) as
+  `REG_EXPAND_SZ`, which keeps entries like `%USERPROFILE%\bin` unexpanded.
+  A `WM_SETTINGCHANGE` broadcast (sent by
+  `[Environment]::SetEnvironmentVariable`) tells Explorer. The current
+  session's `$env:Path` is updated too.
+- The script is ASCII only: Windows PowerShell 5.1 reads a script without
+  a byte-order mark in the ANSI code page.
 
 ### 15.6 Upgrades and uninstall
 
 Re-running the installer upgrades in place: it stops the running badge
 (`pawprint quit`), replaces the binary, and starts it again. Config, state,
 and user mascots are in separate directories and are never touched except by
-`--purge`.
+`--purge`. A failed download, checksum, or smoke run changes nothing, and
+the running badge keeps running.
+
+Uninstall runs `pawprint autostart off` and `pawprint quit`, then removes
+the binaries. If an autostart entry is still there afterwards (from an older
+binary, or with no binary at all), it removes the entry directly: the XDG
+desktop file, the LaunchAgent plist, or the `HKCU\…\Run` value `pawprint`.
+On Windows it also removes the directory from the user `PATH`, and deletes
+the directory if it is empty. `--purge` deletes the config and state
+directories ([8.1](#81-files-and-locations)), plus `~/Library/Logs/pawprint`
+on macOS. To uninstall a `--prefix` install, pass the same `--prefix`.
+
+`make install` runs the same installer with `--archive dist/<this machine's
+archive>` after `make package`, and `make uninstall` runs it with
+`--uninstall`. A local install takes exactly the path a download does.
+
+### 15.7 Installer tests
+
+`make test-install` (logic in `pawdev test-install`) runs after
+`make package`. It drives the real installers under every interpreter on
+the machine: `sh`, `dash`, and `bash` on Linux; `sh` (bash 3.2) and `bash`
+on macOS; `powershell` (5.1) and `pwsh` on Windows. Each run gets a
+throwaway home. On Unix that means `HOME`, plus a private `XDG_RUNTIME_DIR`
+and `TMPDIR` so that a badge already on the desktop is left alone; on
+Windows, `LOCALAPPDATA` and `APPDATA`. Each run also gets a local HTTP
+server laid out like GitHub releases: a `latest` redirect, a good release,
+and a release whose `.sha256` is wrong.
+
+1. Fresh install from `--archive`. The installed binary is the packaged one
+   and prints the version. The autostart entry runs it. The output has the
+   `explain` text and the PATH hint (on Windows, the directory was added to
+   the user `PATH`).
+2. Upgrade from `latest` over HTTP. The installer says it is upgrading.
+   Where there is a desktop session (the macOS and Windows runners, a Linux
+   desktop), the badge was running before and is running again after.
+3. `--version` from the bad release. It fails and says "checksum". The
+   installed binary's bytes and mtime are unchanged, and the running badge
+   still runs.
+4. `--uninstall`. The binaries and the autostart entry are gone, no badge
+   runs, and the config is kept (on Windows, the directory left the user
+   `PATH`).
+5. Install with `PAWPRINT_PREFIX` + `PAWPRINT_VERSION` and `--no-start
+   --no-autostart` (no autostart entry), then `--uninstall --purge`. The
+   config and state are gone.
+
+Autostart on Windows and macOS: the test passes either when
+`autostart status` reports the installed binary, or when the CLI says
+autostart isn't available on that OS and the installer warned about it.
+The coordinator makes this strict once both implementations are merged. On
+Windows and macOS the badge and the autostart entry are the user's real
+ones, so run the test where PAWPRINT isn't installed (CI does).
 
 ---
 
@@ -2318,7 +2484,7 @@ true instead.
 | F19 | macOS ships GNU Make 3.81. | Makefile stays 3.81-compatible | Documented |
 | F20 | GNU Make on Windows uses `sh.exe` if found on `PATH`, else `cmd.exe`. | Single-command recipes | Documented |
 | F21 | Standard GitHub-hosted runners are free for public repositories. | CI on all three OSes | Documented |
-| F22 | `x11rb`, pure-Rust `wayland-client`, `smithay-client-toolkit`, `calloop`, `zbus`, and `ksni` link into a fully static musl binary for x86_64 and aarch64 with only rustup pieces (`linker = "rust-lld"`, bundled musl CRT). x86_64: static-pie, 4.9 MB stripped, connects to X11 (XFixes 5.0, RandR), Wayland, and the session bus; exits cleanly with no session. aarch64: statically linked, 4.3 MB (not run; no qemu). Needs sctk without `xkbcommon` and wayland-client without `system`/`dlopen`/`log`. | One Linux binary for every distro; no cross toolchain for aarch64 | **Confirmed (M0 spike, `make spike-f22`)** |
+| F22 | `x11rb`, pure-Rust `wayland-client`, `smithay-client-toolkit`, `calloop`, `zbus`, and `ksni` link into a fully static musl binary for x86_64 and aarch64 with only rustup pieces (`linker = "rust-lld"`, bundled musl CRT). x86_64: static-pie, 4.9 MB stripped, connects to X11 (XFixes 5.0, RandR), Wayland, and the session bus; exits cleanly with no session. aarch64: statically linked, 4.3 MB (not run; no qemu). Needs sctk without `xkbcommon` and wayland-client without `system`/`dlopen`/`log`. | One Linux binary for every distro; no cross toolchain for aarch64 | **Confirmed (M0 spike, `make spike-f22`)**; **re-confirmed on the real badge in M5** (`make release`): x86_64 `static-pie linked`, aarch64 `statically linked` (`file`), `ldd`: "statically linked", no `PT_INTERP`; both run `--version`, aarch64 under `qemu-aarch64-static` (qemu-user-static 8.2, Ubuntu 24.04) |
 | F23 | Whether an unowned topmost `WS_EX_TOOLWINDOW` window shows on all Windows virtual desktops is unconfirmed. | May need a workaround | **Verify** |
 | F24 | Layer-shell overlays appear in Plasma's KRdp/krfb screencast streams. | Plasma Wayland remote support | **Verify** |
 | F25 | Mutter keeps one stack for X11 and Wayland windows; an above-state XWayland window stays above normal Wayland windows. | GNOME stacking via XWayland | **Verify** |

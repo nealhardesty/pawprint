@@ -4,7 +4,9 @@
 
 mod art;
 mod golden;
+mod install;
 mod power;
+mod release;
 mod sheet;
 
 use std::path::{Path, PathBuf};
@@ -23,6 +25,12 @@ commands:
   art-export <id>          out/art/<id>/: a PNG per layer and variant, plus frames.png
   art-import <id> <png>    print a PNG layer as a [layers] table in <id>'s glyphs
   power-check [seconds]    measure the release badge against SPEC §7.2 (Linux, Xvfb)
+  release                  optimized, checked binaries for this OS into target/
+  package                  release + archives + .sha256 sidecars into dist/
+  publish [--dry-run]      upload dist/* and the installers to the GitHub release
+  install | uninstall      run the installer on this machine's dist/ archive
+  test-install             run the installers end to end in a throwaway home
+  lint-installers          shellcheck installers/install.sh
   todo <target> <milestone> report a make target that is not implemented yet
   clean-dist               remove dist/";
 
@@ -44,6 +52,14 @@ fn main() -> ExitCode {
         ["art-import", _] => Err("usage: make art-import MASCOT=<id> PNG=<file>".into()),
         ["power-check"] => power::power_check(&root(), None),
         ["power-check", seconds] => power::power_check(&root(), Some(seconds)),
+        ["release"] => release::release().map(|_| ()),
+        ["package"] => release::package(),
+        ["publish"] => release::publish(false),
+        ["publish", "--dry-run"] => release::publish(true),
+        ["install"] => install::install(),
+        ["uninstall"] => install::uninstall(),
+        ["test-install"] => install::test_install(),
+        ["lint-installers"] => install::lint(),
         ["todo", target, milestone] => Err(format!(
             "make {target}: not implemented yet ({milestone}); see ROADMAP.md"
         )),
@@ -185,6 +201,7 @@ mod tests {
             "uninstall",
             "doctor",
             "clean",
+            "test-install",
         ] {
             assert!(
                 described.contains(&t),

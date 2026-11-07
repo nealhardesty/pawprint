@@ -12,12 +12,13 @@ SIZE ?= 128
 PNG ?=
 ANIMATED ?=
 POWER_SECONDS ?= 120
+DRY_RUN ?=
 
 # Every release target (keep in sync with rust-toolchain.toml).
 TARGETS = x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows-msvc
 
 .DEFAULT_GOAL := help
-.PHONY: help build run preview power-check test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden golden-hosts contact-sheet building-blocks palette art-export art-import ci release package publish install uninstall doctor clean check-all-targets spike-f22
+.PHONY: help build run preview power-check test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden golden-hosts contact-sheet building-blocks palette art-export art-import ci release package publish install uninstall test-install lint-installers doctor clean check-all-targets spike-f22
 
 help: ## List targets
 	@$(PAWDEV) help $(firstword $(MAKEFILE_LIST))
@@ -85,21 +86,27 @@ art-import: ## Print a PNG layer as a grid in the mascot's glyphs: make art-impo
 
 ci: lint test ## lint + test (what CI runs on every OS)
 
-release: ## Optimized build for this platform (universal on macOS, musl on Linux)
-	@$(PAWDEV) todo release M5
+release: ## Optimized build for this platform (static musl x86_64 + aarch64 on Linux, signed universal on macOS, MSVC on Windows), checked and run
+	$(PAWDEV) release
 
-package: ## release + archive + .sha256 into dist/; enforces catalog gates
+package: ## release + archives + .sha256 sidecars into dist/; enforces catalog gates
 	$(PAWDEV) check-assets --package
-	@$(PAWDEV) todo package M5
+	$(PAWDEV) package
 
-publish: ## Upload dist/* and installers to the GitHub release for the current version (needs gh)
-	@$(PAWDEV) todo publish M5
+publish: ## Upload dist/* and installers to the GitHub release v<version> (needs gh, a clean tree, the tag on HEAD); DRY_RUN=1 only prints the gh commands
+	$(PAWDEV) publish $(if $(DRY_RUN),--dry-run)
 
-install: ## Install the local release build for this user and enable autostart
-	@$(PAWDEV) todo install M5
+install: package ## Package, then install for this user with the real installer (--archive dist/...): autostart on, badge started
+	$(PAWDEV) install
 
-uninstall: ## Remove the local install and autostart (config is kept)
-	@$(PAWDEV) todo uninstall M5
+uninstall: ## Remove the install and autostart with the real installer (config is kept)
+	$(PAWDEV) uninstall
+
+test-install: package ## Run the installers end to end in a throwaway home, under every shell found (sh, dash, bash; powershell, pwsh)
+	$(PAWDEV) test-install
+
+lint-installers: ## shellcheck installers/install.sh as POSIX sh (needs shellcheck)
+	$(PAWDEV) lint-installers
 
 doctor: ## Run pawprint doctor from the local build
 	$(CARGO) run --quiet --package pawprint -- doctor
