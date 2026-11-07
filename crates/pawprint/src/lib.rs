@@ -129,6 +129,7 @@ enum Cmd {
     /// Print every file location
     Paths,
     /// GNOME presenter extension (only if needed): install or remove
+    #[command(hide = true)]
     GnomeExtension { action: InstallRemove },
 }
 

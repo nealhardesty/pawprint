@@ -6,14 +6,15 @@ ships, move its facts into [`SPEC.md`](SPEC.md) and its user-facing docs into
 before proposing new work. If an idea isn't here, add it (with a reason)
 before building it.
 
-**Current state:** M0 (foundations) is done: the Cargo workspace, the
-shared core with its tests, the sprite compiler, embedded placeholder art
-(crate, font, one owl), the backend-free CLI commands, every `make` target,
-and CI on Linux, macOS, and Windows. M1 is under way: the shared runtime
-(shell, IPC, single instance, doctor) and the Linux backends (X11 with the
-GNOME profile, and Wayland) work and are tested against real X and Wayland
-servers in CI. The Windows and macOS backends are next. The repository is
-public.
+**Current state:** everything in [`SPEC.md`](SPEC.md) is implemented
+and tested in CI on Linux, macOS, and Windows: all five backends (Windows,
+macOS, X11 with its GNOME profile, Wayland), the tray and autostart on every
+OS, the full catalog of 100 mascots, the power checks, release builds,
+packaging, and the installers. What remains needs the owner: a first
+published release, the clean-machine install one-liners, checks on real
+KDE Plasma and Ubuntu GNOME desktops, the remote compatibility matrix, and
+a week of daily use. Those items are unchecked below and marked
+**(owner)**. The repository is public.
 
 ---
 
@@ -53,7 +54,7 @@ automation path exists, before any window opens.
 
 - [x] Cargo workspace per [SPEC §13](SPEC.md#13-repository-layout): `crates/pawprint-core`, `crates/pawprint-sprite`, `crates/pawprint`, `tools/pawdev`
 - [x] `rust-toolchain.toml` pinning stable and listing all release targets
-- [x] Root `Makefile`: `help` default, every target in [SPEC §14.2](SPEC.md#142-targets) present (stubs that fail clearly are fine for targets whose features don't exist yet), GNU Make 3.81 compatible
+- [x] Root `Makefile`: `help` default, every target in [SPEC §14.2](SPEC.md#142-targets) present, GNU Make 3.81 compatible
 - [x] CI workflow running `make ci` on `ubuntu-latest`, `macos-latest`, `windows-latest`
 - [x] `pawprint-core`:
   - [x] hostname → short name → label pipeline ([SPEC §5.2](SPEC.md#52-labels))
@@ -102,32 +103,35 @@ change the design.
       with a compositor, bounding-shape fallback without one, override-redirect
       when no WM, RandR monitors, `_NET_WORKAREA`, move mode with pointer grab
       (tested under Xvfb bare, with `xcompmgr`, and with `openbox`)
-- [ ] **GNOME profile** of the X11 backend (*implemented and covered by `make test-x11`; awaiting owner runs on real Ubuntu 24.04/26.04*), via XWayland ([SPEC §11.5](SPEC.md#115-gnome-wayland-ubuntu)),
-      tested on Ubuntu 24.04 LTS and 26.04 LTS. *Implemented and selected
-      automatically; the owner checks on real Ubuntu are still to do.*
+- [ ] **(owner)** **GNOME profile** of the X11 backend via XWayland
+      ([SPEC §11.5](SPEC.md#115-gnome-wayland-ubuntu)), checked on real
+      Ubuntu 24.04 LTS and 26.04 LTS. *Implemented, selected automatically,
+      and covered by `make test-x11`; only the runs on real Ubuntu remain.*
 - [x] Wayland backend: layer-shell overlay, empty input region, margins from
       anchor/offset, `kde_output_order_v1` primary, fractional scale,
       move mode (implicit-grab drag failed on sway, F7; the full-area drag
-      surface is the design now). Tested under headless sway; owner check on Plasma pending.
+      surface is the design now). Tested under headless sway; the Plasma
+      check is the owner's (facts F3, F6 below).
 - [x] Single instance per graphical session + IPC (`status`, `move`,
-      `reset-position`, `reload`, `quit`), shared Unix transport for Linux and macOS
-      (Windows named pipe and the Windows/macOS session keys: stubs for those backends)
+      `reset-position`, `reload`, `quit`): a Unix socket on Linux and macOS,
+      a named pipe on Windows, with a session key per OS
 - [x] `pawprint`, `run`, `move`, `reset-position`, `quit`, `status`, `doctor`
       (including GNOME fractional-scaling detection and fix)
 - [x] Display-change handling on every backend
 - [x] Display-server tests: `make test-x11`, `make test-wayland`, and a Linux
       CI job that runs them
-- [ ] Facts to settle (update [SPEC §18](SPEC.md#18-facts-ledger)):
-  - [ ] F3 `exclusive_zone = 0` vs. Plasma panels
-  - [ ] F6 primary output on Plasma
+- [ ] **(owner)** Facts to settle (update [SPEC §18](SPEC.md#18-facts-ledger)):
+  - [ ] **(owner)** F3 `exclusive_zone = 0` vs. Plasma panels (confirmed on sway)
+  - [ ] **(owner)** F6 primary output on Plasma
   - [x] F7 Wayland drag with implicit grab (refuted on sway 1.9: press-relative coordinates)
-  - [ ] F15 ad-hoc re-sign after `lipo`
-  - [ ] F23 Windows virtual desktops
-  - [ ] F24 layer-shell in KRdp/krfb streams
-  - [ ] F25–F28, F31 GNOME stacking, input shape, primary, scaling, Xwayland on demand
-- [ ] **Conditional:** if any GNOME check fails, build the Plan B presenter
-      extension ([SPEC §11.5.3](SPEC.md#1153-plan-b-the-presenter-extension))
-      and `pawprint gnome-extension install|remove`
+  - [x] F15 ad-hoc re-sign after `lipo` (confirmed on `macos-latest` in M5)
+  - [ ] **(owner)** F23 Windows virtual desktops
+  - [ ] **(owner)** F24 layer-shell in KRdp/krfb streams
+  - [ ] **(owner)** F25–F28, F31 GNOME stacking, input shape, primary, scaling, Xwayland on demand
+- [ ] **Conditional, only if an owner GNOME check fails:** build the Plan B
+      presenter extension ([SPEC §11.5.3](SPEC.md#1153-plan-b-the-presenter-extension))
+      and `pawprint gnome-extension install|remove` (the command exists,
+      hidden from `--help`, and says it is not implemented)
 - [x] DRY review: no backend makes a layout, timing, or identity decision;
       each backend is within its size budget (*X11 and Wayland reviewed:
       about 760 and 800 code lines after rustfmt, no decisions; Wayland's
@@ -139,32 +143,7 @@ change the design.
       it as an input; SPEC §10.1): `localtime_r` on Unix, `GetLocalTime` on Windows
 - [x] `pawprintw.exe` second `[[bin]]` on Windows (SPEC §11.1.6)
 - [x] Move-mode drag events in physical desktop coordinates on every backend
-      (the core's coordinate space, SPEC §6.1) (*X11 and Wayland done*)
-
-**Handoff for the Windows and macOS backends** (built on top of this
-branch). Everything platform-independent already exists; a backend is a
-`Surface` and a native loop:
-
-1. `crates/pawprint/src/backend/windows.rs` / `macos.rs`: replace the stub
-   `run(shell, listener)` and `doctor(report)`. `run` owns the window and
-   the native loop; call `shell.set_backend(..)`, `shell.start(&mut
-   surface)` once, `ipc::serve(listener, post)` with a `post` that queues
-   the `Incoming` and wakes the loop (`PostMessageW` / main queue), then
-   loop: wait at most `shell.timeout()`, translate native events into
-   `shell.handle(&mut surface, Event::..)`, hand queued requests to
-   `shell.request(&mut surface, incoming)`, call `shell.tick(&mut
-   surface)`, and stop when `shell.done()`. `backend::linux::drive` is the
-   reference loop.
-2. `crates/pawprint/src/instance.rs`: `session_key()` for the OS
-   (`ProcessIdToSessionId` → `"<user>-<sid>"`; `SessionGetInfo` → the
-   audit session id). macOS reuses the Unix-socket transport as is.
-3. `crates/pawprint/src/ipc/windows.rs`: the named-pipe `Transport`
-   (`bind` must fail with `AddrInUse` while the pipe exists).
-4. `instance::detached_badge`: spawn `pawprintw.exe run` on Windows.
-5. Remove the `cfg_attr(not(target_os = "linux"), allow(dead_code))` at
-   the top of `main.rs` once both backends use the runtime.
-6. Doctor: add rows with `report.row`, problems with `report.problem`, and
-   return displays to `report.displays`.
+      (the core's coordinate space, SPEC §6.1)
 
 **Exit:** [SPEC §16.3](SPEC.md#163-spike-exit-criteria-m1-one-owl-prototype)
 passes on all five desktops, **and** the owner has run a first pass of the
@@ -276,8 +255,10 @@ Can run in parallel with M2/M3 once M1 passes.
 - [x] Power check on Linux: `make power-check`, numbers in [SPEC §7.2](SPEC.md#72-power-budget) (it found and fixed a twice-a-second wakeup, F36)
 - [x] Power check on Windows and macOS (on macOS, AppKit's own threads keep a small static-mode floor; the check budgets our share, SPEC §7.2)
 
-**Exit:** a week of daily use across the owner's machines with no annoyances
-worth filing.
+- [ ] **(owner)** A week of daily use across the owner's machines with no
+      annoyances worth filing
+
+**Exit:** that week of daily use.
 
 ---
 
@@ -285,14 +266,15 @@ worth filing.
 
 - [x] `make release`: universal macOS binary (re-signed ad hoc, F15), static musl Linux (x86_64 + aarch64), Windows MSVC; every binary checked and run ([SPEC §14.5](SPEC.md#145-release-builds))
 - [x] `make package`: archives + `.sha256` sidecars into `dist/`
-- [x] `make publish`: create/update GitHub release via `gh`, upload `dist/` + installers; refuses a dirty tree or a tag off `HEAD`; `DRY_RUN=1` tested in CI (the first real upload is the owner's)
+- [x] `make publish`: create a draft GitHub release via `gh` and upload `dist/` + installers; refuses a dirty tree, a tag off `HEAD`, or a `dist/` packaged from another commit; `make release-finalize` publishes the draft once all ten assets are there; `DRY_RUN=1` of both tested in CI
+- [ ] **(owner)** First real release: `make package && make publish` on each OS, then `make release-finalize`
 - [x] `install.sh` (POSIX sh) and `install.ps1` (PS 5.1 + 7) per [SPEC §15](SPEC.md#15-packaging-release-and-install), including `--archive`, `--uninstall`, `--purge`
 - [x] `make install` / `make uninstall` for local builds
 - [x] `make test-install`: the installers end to end under sh, dash, bash, PowerShell 5.1, and PowerShell 7, in CI on all three OSes ([SPEC §15.7](SPEC.md#157-installer-tests))
 - [x] `make test-install` requires autostart on every OS
-- [ ] Clean-machine install test on each OS, including Ubuntu 24.04 and 26.04 (owner, needs a published release)
-- [ ] Full [remote compatibility matrix](SPEC.md#164-remote-compatibility-matrix), results in release notes (owner, real machines)
-- [ ] README reviewed against reality: every command, path, and screenshot (install and development sections done in M5; the full pass is the owner's, at release)
+- [ ] **(owner)** Clean-machine install test on each OS, including Ubuntu 24.04 and 26.04 (needs a published release)
+- [ ] **(owner)** Full [remote compatibility matrix](SPEC.md#164-remote-compatibility-matrix), results in release notes (real machines)
+- [ ] **(owner)** README reviewed against reality: every command, path, and screenshot, at release (install and development sections done in M5)
 
 **Exit:** `v1.0.0` published. The install one-liners work on clean
 Windows, macOS, and Linux machines.
@@ -340,5 +322,5 @@ transparent surface, because the implicit-grab drag failed on sway (F7,
 SPEC §11.4); Linux aarch64 ships at 1.0 (the M0 spike
 showed it cross-links with rustup's `rust-lld` alone); the repository is public; GNOME on Wayland
 (Ubuntu) is a launch target; backends share everything through the core;
-art is produced through the text pipeline in SPEC §12; the label limit is 20,
-to be measured in M2.
+art is produced through the text pipeline in SPEC §12; the label limit is 20
+(measured in M4; long names are cut in the middle, SPEC §4.4).

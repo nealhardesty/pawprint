@@ -9,13 +9,13 @@ same change.
 - What does not exist yet is in [`ROADMAP.md`](ROADMAP.md).
 - How to install and use it is in [`README.md`](README.md).
 
-**Status of this document:** M0 (foundations) is implemented: the shared
-core, the sprite compiler, embedded placeholder art, and the backend-free CLI
-commands. M1 is in progress: the shared runtime (shell, IPC, single
-instance, doctor) and the Linux backends (X11 with its GNOME profile, and
-Wayland) are implemented and tested against real display servers
-([16.1.1](#1611-display-server-tests-linux)); the Windows and macOS backends
-are next. The repository is public. Facts marked
+**Status of this document:** everything described here is implemented
+(except the conditional GNOME Plan B extension, 11.5.3) and tested in CI on
+Linux, macOS, and Windows, including real display servers and desktops
+([16.1](#161-automated-make-test-every-os-in-ci)) and the installers
+([15.7](#157-installer-tests)). What remains is a published release and the
+owner's checks on real hardware (Plasma, Ubuntu GNOME, remote clients); see
+[`ROADMAP.md`](ROADMAP.md). The repository is public. Facts marked
 **(verify)** come from platform documentation or prior experience and have not
 yet been confirmed by a PAWPRINT spike. When a spike confirms or refutes one,
 update the [Facts ledger](#18-facts-ledger) and drop the marker.
@@ -813,7 +813,7 @@ badge reaches the instance **in the current graphical session**.
 | `pawprint autostart on\|off\|status` | Register or remove launch at graphical login for this user: an entry that runs `<this executable> run` (on Windows `pawprintw.exe run`). Linux: `$XDG_CONFIG_HOME/autostart/pawprint.desktop`. Windows and macOS: [11.1.5](#1115-tray-and-autostart), [11.2](#112-macos). |
 | `pawprint doctor` | Diagnose the environment: session type, chosen backend and why, compositor/WM, layer-shell, ARGB visual, compositing manager, displays with names, scales and work areas, primary detection, GNOME fractional-scaling blur (with the fix), tray availability, IPC endpoint, autostart state, config warnings. |
 | `pawprint paths` | Print every file location ([8.1](#81-files-and-locations)). |
-| `pawprint gnome-extension install\|remove` | Plan B only ([11.5.3](#1153-plan-b-the-presenter-extension)): install or remove the GNOME presenter extension. |
+| `pawprint gnome-extension install\|remove` | Plan B only ([11.5.3](#1153-plan-b-the-presenter-extension)): install or remove the GNOME presenter extension. Not built unless a GNOME check fails, so the command is hidden from `--help` and says it is not implemented. |
 | `pawprint --version` | Version, git commit, target triple, catalog size. |
 
 Exit codes: `0` ok, `1` error, `2` usage error, `3` no usable graphical
@@ -2077,8 +2077,9 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
   under `sh` and `cmd.exe`.
 - **GNU Make 3.81 compatible.** macOS ships GNU Make 3.81. No `.ONESHELL`,
   `.RECIPEPREFIX`, `!=`, `$(file ...)`, or other 3.82+/4.x features.
-- OS detection: `ifeq ($(OS),Windows_NT)` (the `OS` variable is set by
-  Windows itself), otherwise `uname -s`.
+- The Makefile does no OS detection: every recipe is the same on every
+  OS, and whatever differs per OS (release targets, binaries, shells,
+  paths) is decided in Rust by pawdev at `cfg!` time.
 - On Windows, GNU Make runs recipes with `sh.exe` if one is on `PATH` (for
   example from Git for Windows), and with `cmd.exe` otherwise. Single-command
   recipes make this irrelevant.
@@ -2091,7 +2092,7 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
 | `build` | Debug build of `pawprint` (and `pawprintw` on Windows) |
 | `run` | Build and run the badge in the foreground; `ARGS="..."` passes arguments |
 | `preview` | Open a preview window: `make preview MASCOT=owl SIZE=128` (`pawprint preview`) |
-| `power-check` | Measure the release badge against [7.2](#72-power-budget): Linux under Xvfb, Windows on the current desktop; `POWER_SECONDS=120` per mode |
+| `power-check` | Measure the release badge against [7.2](#72-power-budget): Linux under Xvfb, macOS on the current desktop with a private HOME (from a universal binary), Windows on the current desktop (the user's config and state files are backed up on disk as `<file>.pawdev-backup` and put back afterwards, or at the next run after an interruption); `POWER_SECONDS=120` per mode |
 | `test` | Unit tests, golden render tests, and asset validation |
 | `check-assets` | Validate the mascot catalog only |
 | `lint` | `cargo fmt --check` and `clippy -D warnings` |
@@ -2105,11 +2106,12 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
 | `art-import` | Convert a PNG layer into a grid: `make art-import MASCOT=owl PNG=eyes.png` |
 | `ci` | `lint` + `test` (what CI runs on every OS) |
 | `release` | Optimized build for this platform, checked and run ([14.5](#145-release-builds)): static musl x86_64 + aarch64 on Linux, universal re-signed ad hoc on macOS, MSVC on Windows |
-| `package` | `release` + archives + `.sha256` sidecars into `dist/` ([15.2](#152-release-assets)); enforces catalog gates |
-| `publish` | Upload `dist/*` and installers to the GitHub release `v<version>`, creating it if needed (needs `gh`, a clean tree, and the tag on `HEAD`); `DRY_RUN=1` prints the `gh` commands only |
+| `package` | `release` + archives + `.sha256` sidecars into `dist/` ([15.2](#152-release-assets)), plus `dist/COMMIT`; enforces catalog gates |
+| `publish` | Upload `dist/*` and installers to the GitHub release `v<version>`, creating it as a draft if needed (needs `gh`, a clean tree, the tag on `HEAD`, and `dist/` packaged from that commit); `DRY_RUN=1` prints the `gh` commands only |
+| `release-finalize` | After every OS has run `publish`: check the draft has all four archives, their sidecars, and both installers, then publish it ([15.3](#153-release-procedure)); `DRY_RUN=1` prints the `gh` commands and the expected assets only |
 | `install` | `package`, then install for this user through the real installer with `--archive dist/<archive>` (autostart on, badge started) |
 | `uninstall` | Remove the install and autostart through the installer (config is kept) |
-| `test-install` | `package`, then run the installers end to end ([15.7](#157-installer-tests)); a CI job runs it on all three OSes |
+| `test-install` | `package`, then run the installers end to end ([15.7](#157-installer-tests)); a CI job runs it on all three OSes. On macOS and Windows it refuses to run while this user's autostart is on, unless `CI` is set |
 | `lint-installers` | `shellcheck --shell=sh` on `install.sh` |
 | `doctor` | Run `pawprint doctor` from the local build |
 | `clean` | Remove `target/` and `dist/` |
@@ -2118,12 +2120,12 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
 | `test-x11` | Linux: the X11 backend under Xvfb, bare, with `xcompmgr`, and with `openbox` ([16.1.1](#1611-display-server-tests-linux)) |
 | `test-wayland` | Linux: the Wayland backend under headless sway ([16.1.1](#1611-display-server-tests-linux)) |
 | `test-linux-display` | Both of the above (what the Linux display CI job runs) |
+| `test-macos-display` | macOS: the real badge in the logged-in desktop session ([16.1.2](#1612-gui-session-test-macos)); a `macos-latest` CI job runs it |
 | `test-windows-display` | Windows: the real badge on this desktop ([16.1.3](#1613-desktop-test-windows)); a `windows-latest` CI job runs it |
 
-Targets whose features don't exist yet stop with
-`make <target>: not implemented yet (Mx)` from `pawdev todo`, naming the
-milestone in [`ROADMAP.md`](ROADMAP.md). `make package` already runs the
-catalog gates first.
+Every target is implemented; a pawdev test checks that this table and the
+Makefile list the same targets. `make package` runs the catalog gates
+first.
 
 ### 14.3 Toolchains per OS
 
@@ -2228,10 +2230,17 @@ itself (with the `tar`, `flate2`, and `zip` crates), so packaging needs no
 1. Bump the version in `Cargo.toml`, update the README if needed, and commit.
 2. Tag `v<ver>` and push the tag.
 3. On each of Linux, macOS, and Windows: check out the tag, then
-   `make package && make publish`.
-4. `make publish` creates the release on first use, uploads that machine's
-   `dist/*` plus the installers, and replaces same-named assets on re-runs.
-5. Run the installer one-liners on a clean machine of each OS.
+   `make package && make publish`. Let the first machine finish creating
+   the draft before the others publish: draft releases don't reserve their
+   tag, so two machines creating at once would make two drafts.
+4. `make publish` creates the release **as a draft** on first use, uploads
+   that machine's `dist/*` plus the installers, and replaces same-named
+   assets on re-runs. Nobody sees a draft, so `latest` never points at a
+   release that is missing an OS.
+5. `make release-finalize` (from any machine) lists the draft's assets,
+   refuses while any of the ten is missing (four archives, four sidecars,
+   two installers) and names them, then publishes the draft.
+6. Run the installer one-liners on a clean machine of each OS.
 
 `make publish` (logic in `pawdev publish`) refuses to run, and says how to
 fix it, when:
@@ -2239,22 +2248,36 @@ fix it, when:
 - `git status --porcelain` shows anything. Untracked files count, because
   the build embeds everything under `assets/`.
 - the tag `v<ver>` doesn't exist, or doesn't point at `HEAD`.
+- `dist/COMMIT` is missing or names another commit. `make package` writes
+  the `HEAD` it built from there (with `-dirty` appended if the tree had
+  changes), so archives left over from another commit, or built from a
+  dirty tree, are never uploaded under the tag.
 - `dist/` holds an archive of another version.
 
 Otherwise it runs these from the repository root:
 
 ```sh
 gh release view v<ver> --repo nealhardesty/pawprint        # does it exist?
-gh release create v<ver> --repo nealhardesty/pawprint --title 'PAWPRINT <ver>' --generate-notes --verify-tag   # only if not
-gh release upload v<ver> --repo nealhardesty/pawprint --clobber dist/<every file> installers/install.sh installers/install.ps1
+gh release create v<ver> --repo nealhardesty/pawprint --draft --title 'PAWPRINT <ver>' --generate-notes --verify-tag   # only if not
+gh release upload v<ver> --repo nealhardesty/pawprint --clobber dist/<every archive and sidecar> installers/install.sh installers/install.ps1
+```
+
+`make release-finalize` (logic in `pawdev finalize`) runs:
+
+```sh
+gh release view v<ver> --repo nealhardesty/pawprint --json assets --jq '.assets[].name'
+gh release edit v<ver> --repo nealhardesty/pawprint --draft=false      # only if nothing is missing
 ```
 
 With `--verify-tag`, `gh` refuses if the tag was not pushed.
-`make publish DRY_RUN=1` prints those commands, and anything a real publish
-would refuse, without running them. CI runs it on every OS. The release is
-published right away, not as a draft. So for the few minutes between the
-first and the last machine's upload, `latest` can be missing an OS's
-archive.
+`make publish DRY_RUN=1` and `make release-finalize DRY_RUN=1` print their
+commands (and anything a real publish would refuse, or the expected asset
+list) without running them. CI runs both on every OS.
+
+Archives are reproducible: every file in them carries the commit time of
+`HEAD` (or `SOURCE_DATE_EPOCH` when set) as its modification time, and the
+gzip header has none, so packaging the same binaries twice gives the same
+bytes and the same sidecar.
 
 The repository is public, so standard GitHub-hosted runners are free. CI runs `make ci` on all three OSes for every push and PR. Moving
 step 3 into CI is a roadmap item; local builds remain fully supported.
@@ -2400,11 +2423,24 @@ and a release whose `.sha256` is wrong.
    --no-autostart` (no autostart entry), then `--uninstall --purge`. The
    config and state are gone.
 
+6. Install from a relative `--archive` (on Unix in a directory with a
+   backslash in its name, which GNU `sha256sum` would escape) into a
+   relative `--prefix` (on Windows with a trailing `\`), run from the
+   throwaway home. The checksum is checked, and the installer reports the
+   absolute install path.
+7. Uninstall it through `--prefix '~/rel bin'` (Unix; the installer
+   expands a `~` the calling shell left alone) or the relative prefix
+   (Windows).
+
+On Linux, step 5's purge also sets relative `XDG_CONFIG_HOME` and
+`XDG_STATE_HOME`, which must be ignored as the XDG spec says.
+
 Autostart: on Linux the test checks the XDG entry; on Windows and macOS,
 that `autostart status` reports the installed binary (and `off` after
-uninstall). On
-Windows and macOS the badge and the autostart entry are the user's real
-ones, so run the test where PAWPRINT isn't installed (CI does).
+uninstall). On Windows and macOS the badge and the autostart entry are the
+user's real ones, so the test refuses to start while `pawprint autostart
+status` reports on, unless the `CI` environment variable is set (CI runners
+are clean machines).
 
 ---
 
