@@ -520,6 +520,24 @@ impl Bus {
             )
             .unwrap();
     }
+
+    /// Click an item that ends the badge (Quit), asking for no reply: the
+    /// badge may exit before ksni answers, which a call reports as NoReply.
+    fn click_last(&self, item: &str, path: &[&str]) {
+        let (id, _) = self.find(item, path);
+        let data = zbus::zvariant::Value::from(0i32);
+        let msg = zbus::Message::method_call("/MenuBar", "Event")
+            .unwrap()
+            .destination(item)
+            .unwrap()
+            .interface(MENU)
+            .unwrap()
+            .with_flags(zbus::message::Flags::NoReplyExpected)
+            .unwrap()
+            .build(&(id, "clicked", data, 0u32))
+            .unwrap();
+        self.conn.send(&msg).unwrap();
+    }
 }
 
 const BG_PIXEL: u32 = 0x336699;
@@ -945,7 +963,7 @@ fn tray_menu_and_config_edits_reach_the_badge() {
     let item = bus.item(Some(&item));
 
     // Quit from the menu; the saved choice outlives the badge.
-    bus.click(&item, &["Quit"]);
+    bus.click_last(&item, &["Quit"]);
     wait_for("the badge to exit", || badge.exited());
     let _badge = env.run_badge();
     env.wait_rect([16, 16, 64, 64]);
