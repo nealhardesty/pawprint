@@ -93,8 +93,10 @@ mod xdg {
 
     /// Quote an `Exec` argument as the Desktop Entry spec asks: in double
     /// quotes, with `"`, `` ` ``, `$`, and `\` escaped, when it has any
-    /// reserved character.
+    /// reserved character; and `%` doubled, since `%f` and friends are
+    /// field codes.
     pub fn quote(arg: &str) -> String {
+        let arg = &arg.replace('%', "%%");
         let reserved = |c: char| c.is_whitespace() || "\"'\\><~|&;$*?#()`".contains(c);
         if !arg.contains(reserved) {
             return arg.to_string();
@@ -135,8 +137,11 @@ mod xdg {
         status_at(&entry_path()?)
     }
 
+    /// An entry with `Hidden=true` is the desktop's way of turning it off
+    /// (the autostart spec), so it counts as off.
     pub fn status_at(path: &Path) -> Result<State, String> {
         match std::fs::read_to_string(path) {
+            Ok(text) if text.lines().any(|l| l.trim() == "Hidden=true") => Ok(State::Off),
             Ok(text) => Ok(State::On {
                 entry: path.to_path_buf(),
                 command: exec_line(&text).unwrap_or_else(|| "(no Exec line)".into()),
@@ -532,6 +537,7 @@ mod tests {
         );
         assert_eq!(quote("/opt/my apps/pawprint"), "\"/opt/my apps/pawprint\"");
         assert_eq!(quote("/a$b"), "\"/a\\\\$b\"");
+        assert_eq!(quote("/opt/100%/pawprint"), "/opt/100%%/pawprint");
     }
 
     #[test]
@@ -552,6 +558,9 @@ mod tests {
             text.starts_with("[Desktop Entry]\nType=Application\n"),
             "{text}"
         );
+        // A desktop that hides the entry has turned it off.
+        std::fs::write(&path, format!("{text}Hidden=true\n")).unwrap();
+        assert_eq!(status_at(&path), Ok(State::Off));
         disable_at(&path).unwrap();
         disable_at(&path).unwrap(); // already off is fine
         assert_eq!(status_at(&path), Ok(State::Off));

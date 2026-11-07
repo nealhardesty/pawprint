@@ -768,7 +768,8 @@ state with a warning, and the next save first copies it to
 
 ### 8.5 Reloading
 
-The running badge reloads config when `pawprint reload` is run, when the tray
+The running badge reloads its config and its user mascots
+([12.7](#127-png-bridges)) when `pawprint reload` is run, when the tray
 item **Reload config** is chosen, and when the config file's modification
 time changes. The last is checked only on display or IPC events and on the
 next animation deadline, so there is no file-watch thread: `Shell::tick`,
@@ -792,8 +793,10 @@ and **Animation** choices all edit the config the same way
   value already in the table keeps its trailing comment. `unset` removes
   the key, then the table if it is left empty without comments, then an
   empty implicit `[hosts]`. A file that isn't valid TOML is left alone and
-  the command fails. The write is atomic (temporary file, then rename) and
-  goes to a symlink's target, so dotfile managers keep their link.
+  the command fails. The write is atomic (temporary file, then rename),
+  keeps the file's permissions, and goes to a symlink's target, so dotfile
+  managers keep their link. A symlink to a missing file is an error, never
+  silently replaced by a regular file.
 - **Values** are read as TOML (`64`, `false`, `[8, 20]`, `"quoted"`) and
   otherwise as a plain string (`otter`), then checked by the parser that
   loads the file (`config::check_value`). `set` also resolves the host
@@ -829,7 +832,7 @@ badge reaches the instance **in the current graphical session**.
 | `pawprint list [--category C] [--accents]` | List mascots (id, name, category, aliases, source: bundled/user/override), or the accent palette. |
 | `pawprint preview <id> [--size N]` | Open a temporary, normal (focusable, closable) window showing that mascot cycling through all its actions (every action in file order, `when` ignored, 1 s apart), on a slate backdrop with a 16 px margin, centered, at size 128 by default. Esc or closing the window ends it. It uses this host's label and accent and the badge's own backend surface in preview mode; it writes nothing. |
 | `pawprint render <id> --out FILE.png [--size N] [--label TEXT] [--frame N]` | Write a badge image. Used for docs and golden tests. |
-| `pawprint set <key> <value>` | Write `<key>` into this host's `[hosts."<short>"]` table using `toml_edit` (keeps comments and formatting), then reload ([8.6](#86-editing-the-config-set-unset-and-the-tray)). Example: `pawprint set mascot otter`. Exit code 2 for an unknown key or invalid value. |
+| `pawprint set <key> <value>` | Write `<key>` into this host's `[hosts."<short>"]` table using `toml_edit` (keeps comments and formatting), then reload ([8.6](#86-editing-the-config-set-unset-and-the-tray)). Example: `pawprint set mascot otter`. Exit code 2 for an unknown key or invalid value, 1 if the file can't be read or written. |
 | `pawprint unset <key>` | Remove that key from this host's table, then reload. |
 | `pawprint forget` | Drop this host's cached fallback assignment (through the running badge if there is one, which picks again and saves; else in the state file) and say what the hash picks now. A host whose mascot comes from another rule has nothing to forget. |
 | `pawprint config init` | Write a commented `config.toml` if none exists. |
@@ -879,7 +882,8 @@ any OS. Each backend is a thin adapter that:
    file);
 3. executes `core::badge::Effect`s: `Present(Frame)` (already scaled),
    `Place(PhysicalRect)`, `SetInteractive(bool)`, `SetTray(TrayState)`,
-   `SaveState(State)` (write it atomically), `ReloadConfig` (re-read the file,
+   `SaveState(State)` (write it atomically), `ReloadConfig` (re-read the user
+   mascots into a new catalog for `Badge::set_catalog`, re-read the file,
    then send `ConfigTouched`), and `Exit`;
 4. blocks until the next native event or `core.next_deadline()`.
 
@@ -887,7 +891,7 @@ Driving the core, in full (every backend's loop has this shape):
 
 ```rust
 let inputs = Inputs { hostname, config, state, flags, seed: clock_seed };
-let mut badge = Badge::new(Catalog::bundled(), catalog::bundle(), inputs, Instant::now());
+let mut badge = Badge::new(Arc::new(Catalog::load(user_dir)), catalog::bundle(), inputs, Instant::now());
 let mut effects = badge.start(surface.displays(), now());
 loop {
     for effect in surface::apply(&mut surface, effects) {   // Present/Place/SetInteractive
@@ -922,6 +926,7 @@ in `pawprint::shell::Shell`:
 | `Shell::set_tray(Box<dyn Tray>)` | Once, to attach the platform's tray; the shell calls `Tray::show(&TrayState)` with every `SetTray` (also at once, if the core already described it) |
 | `Shell::menu(&mut surface, command)` | For each tray menu choice. Size and Animation are saved first (8.6), then everything is the same `Command` IPC sends |
 | `Shell::is_preview()` | When creating the surface: true for `pawprint preview` (a normal window) |
+| `Shell::target()` | Wayland, before committing: the core's target display, which fixes the output its layer surfaces go on |
 
 The shell runs the surface effects through `surface::apply`, writes
 `SaveState` atomically, re-reads the config on `ReloadConfig` (and when its
@@ -976,6 +981,9 @@ instance lock, and it is keyed by **graphical session**, not by user:
 | Linux Wayland | `WAYLAND_DISPLAY` | `$XDG_RUNTIME_DIR/pawprint/wayland-<name>.sock` |
 | Linux X11 | `DISPLAY` | `$XDG_RUNTIME_DIR/pawprint/x11-<display>.sock` |
 
+Without `XDG_RUNTIME_DIR`, Linux uses `/tmp/pawprint-<uid>/` (always
+`/tmp`, never `$TMPDIR`, so every terminal in the session agrees).
+
 On Linux the key comes from the environment alone, `WAYLAND_DISPLAY` first,
 so a terminal in the session finds its badge without probing any display
 server. GNOME on Wayland keys on `WAYLAND_DISPLAY` even though the badge
@@ -983,18 +991,27 @@ draws through XWayland. The X11 key keeps host and display number and drops
 the screen (`:0`, `:0.0`, and `unix:0` are all `x11-0`; `localhost:10.0` is
 `x11-localhost_10`). An absolute `WAYLAND_DISPLAY` has its `/` replaced.
 
-Startup (`instance::claim`): bind the endpoint. If it already exists and a
-live instance answers `status`, print "already running" and exit 0. If
-nobody answers, it is stale (a crashed badge): remove it and bind again.
-Binding first means two badges started at once can't both win. Sockets are
-created mode `0600` in a `0700` directory that must belong to the user. A
-clean exit removes the socket.
+Startup (`instance::claim`): bind the endpoint. If a live badge holds it,
+print "already running" (with its pid if it answers `status`) and exit 0,
+**whether or not it answers**: a stopped or stuck badge still owns its
+session, so it is never replaced. Binding first means two badges started at
+once can't both win.
+
+On Unix the lock is an exclusive `flock(LOCK_EX | LOCK_NB)` on
+`<key>.lock` next to the socket, taken before binding and held for the life
+of the process. The kernel releases it when the process dies, however it
+dies. Holding the lock, `bind` removes any socket left at the path (a
+crashed badge's) and binds; failing to take it is `AddrInUse`. Only the
+lock holder ever unlinks the socket, on a clean exit; the lock file stays.
+Sockets are created mode `0600` in a `0700` directory that must be a real
+directory (not a symlink) belonging to the user.
 
 The session key and the transport are the only platform parts:
 `instance::session_key()` per OS, and `ipc::Transport` (`bind`, `accept`,
 `connect`, `remove_stale`), with `ipc::unix::UnixSocket` for Linux and
 macOS and `ipc::windows::NamedPipe` for Windows. `bind` must fail with
-`AddrInUse` while the endpoint exists; that is what makes it a lock.
+`AddrInUse` while another live process holds the endpoint; that is what
+makes it a lock.
 
 The Windows key is `<user>-<session id>` (`GetUserNameW`, with `\` replaced
 by `_`). The first pipe instance is created with
@@ -1044,8 +1061,12 @@ returns the same fields `pawprint status` prints, under `"status"`: `pid`,
 `scale`, `mascot`, `label`, `position`, `position_source`, `size`,
 `moving`. `move` answers `no target display` when there is nothing to move.
 `quit` answers before the badge exits. Unknown `v`, unknown commands, and
-malformed lines get an error response. Either side gives up after 5
-seconds, and a request line is at most 4 KiB. The CLI and the badge always
+malformed lines get an error response. The client gives up after 5
+seconds; the badge's IPC thread waits at most 4 seconds for the loop and
+then answers `{"ok":false,"error":"the badge did not answer in time"}`, so
+the client hears why. An `ok:false` answer means a live badge (busy or
+stuck), never a stale endpoint. A request line is at most 4 KiB. The CLI
+and the badge always
 come from the same binary, so the protocol carries no compatibility shims
 beyond the version check.
 
@@ -1060,8 +1081,17 @@ Platform code is unavoidable. Duplicated platform code is not. The rules:
    that introduces the second copy.
 3. **Each backend stays small,** around 500–800 lines including its
    autostart glue. A tray in a module of its own (`backend::windows_tray`,
-   `backend::menubar`, `backend::sni`) doesn't count toward its backend. A backend growing past that is a sign that rule 1 is being
-   broken.
+   `backend::menubar`, `backend::sni`) doesn't count toward its backend. A
+   backend growing past that is a sign that rule 1 is being broken. Two are
+   over, and were reviewed for it (M5): Wayland (about 1,050 lines) and X11
+   (about 880). What they share is already in `backend::linux` (the loop,
+   scale helpers, move-mode keys, doctor) and `backend::sni`; the excess is
+   protocol plumbing with no decisions in it. Wayland carries sctk's handler
+   traits (most methods empty), four kinds of surface (badge, work-area
+   probe, move-mode catcher, preview window), and the keymap reader that
+   replaces libxkbcommon (F22). X11 carries the EWMH, Motif, and shape
+   setup, the image upload split to the request size, and the
+   compositor-change rebuild.
 4. **The core has a `FakeSurface`,** so move mode, display changes, reloads,
    and animation are tested in `make test` on every OS, without a window.
 
@@ -1481,15 +1511,20 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   core's own 3 × 3 rule (`layout::snap`), with margins measured from those
   edges (centered axes anchor left or top). The compositor applies margins
   from the real usable area, so the badge lands right even though its
-  position inside the output isn't known.
+  position inside the output isn't known. Anchor, margins, and size are
+  set before the surface's first commit: a zero size on an axis not
+  anchored to both edges is a protocol error (KWin enforces it; sway
+  doesn't). `make test-wayland` checks the order in the `WAYLAND_DEBUG`
+  log.
 - Primary output: Wayland has no core concept of a primary output. On
   Plasma, `kde_output_order_v1` lists outputs in priority order, and the
   first is the primary. Elsewhere: the configured `display` name, a single
   output, or else the first output by position (not the null output, which
   would leave the core without a usable area to lay out in).
-- The output of a layer surface is fixed at creation (F5). The badge is
-  recreated when its rectangle moves to another output, when its output
-  goes away, and when the compositor closes it.
+- The output of a layer surface is fixed at creation (F5). It is the core's
+  target display (`Shell::target`, [6.2](#62-target-display)); the backend
+  never picks one. The badge is recreated when the target changes, when
+  its output goes away, and when the compositor closes it.
 - Scaling: the scale is the output's physical mode over its xdg-output
   logical size, rounded to 1/120, which equals the compositor's fractional
   scale, so `wp_fractional_scale_v1` adds nothing. With `wp_viewporter`, the
@@ -1945,9 +1980,11 @@ shared by the badge and every command that uses the catalog (`run`,
 - An invalid user mascot is skipped with a warning (in the log for the
   badge, on stderr for commands); the bundled mascot of the same id, if
   any, stays. User mascots never stop the badge from starting.
-- The badge reads the folder when it starts; restart it (`pawprint quit`,
-  then `pawprint`) to pick up changes. `pawprint reload` re-reads only
-  `config.toml`.
+- The badge reads the folder when it starts and on every reload (`pawprint
+  reload`, `set`/`unset`, the tray, or a changed `config.toml`): the shell
+  loads a fresh `Catalog` and hands it to the badge (`Badge::set_catalog`,
+  which owns its catalog as an `Arc`), then re-reads the config. A mascot
+  whose folder was removed is resolved away at once.
 
 ### 12.8 Bases
 
@@ -2580,7 +2617,10 @@ real display servers and check the screen. They are `#[ignore]`d in
 `make test` because they need the servers installed; a separate Linux CI
 job installs them (`xvfb xcompmgr openbox sway swaybg grim foot wtype dbus`) and
 runs `make test-linux-display`. Each test gets its own HOME and runtime
-directory and fails with the badge's log.
+directory and fails with the badge's log. Xvfb picks a free display itself
+(`-displayfd`) and admits only clients with the test's cookie (`-auth`,
+never `-ac`). Child processes get SIGTERM, then SIGKILL after a second, so
+Xvfb removes its lock file.
 
 | Suite | Session | What is asserted |
 |---|---|---|
@@ -2588,13 +2628,13 @@ directory and fails with the badge's log.
 | X11 | Xvfb + `xcompmgr` started and stopped under a running badge | the window is rebuilt as 32-bit ARGB and back; pixel-exact and click-through in both |
 | X11 | Xvfb + `openbox` | a managed DOCK, at the requested position, above a normal window mapped later, clicks pass through to that window (F32), drag works |
 | X11 | GNOME-like environment (`XDG_CURRENT_DESKTOP=GNOME`, no layer-shell) | the `gnome` profile is chosen, ARGB, keyed on `WAYLAND_DISPLAY` |
-| X11 | Xvfb | single instance: a second `run` and bare `pawprint` say "already running"; after a crash the stale socket is replaced; bare `pawprint` detaches; `quit` removes the socket |
+| X11 | Xvfb | single instance: a second `run` and bare `pawprint` say "already running", even while the first is stopped (SIGSTOP) and not answering; after a crash the stale socket is replaced; bare `pawprint` detaches; `quit` removes the socket |
 | Wayland | headless sway, pixman renderer, `swaybg` backdrop | layer surface pixel-exact at top-right (via `grim`); a virtual-pointer click on the badge focuses the `foot` window under it; in move mode the click is taken |
 | Wayland | headless sway | move-mode drag far outside the badge (F7) saves the right position and is pixel-exact; `wtype` arrow keys, Enter, Escape with exclusive keyboard |
 | Wayland | headless sway + `swaybar` | the badge sits below the bar's exclusive zone (F3), pixel-exact |
 | Wayland | headless sway | output mode change; scale 2 crisp (every opaque pixel exact); scale 1.5 sized 96 px and placed right (crispness at fractional scales is an owner check, F34) |
 | X11 | Xvfb, move mode | the dashed accent outline appears on the badge edge (a dash in the transparent corner, art through a gap) and goes when move mode ends |
-| X11 | Xvfb + private `dbus-daemon` + a stand-in StatusNotifierWatcher (the test's own zbus object) | the item registers with `Id`, `Title`, `ToolTip`, and a 32 and 64 px `IconPixmap`; the dbusmenu layout has the shared menu with the right checks; **Size ▸ 128** (a dbusmenu `Event`) resizes the badge and appends `[hosts.owl] size = 128` after the untouched `config init` template; **Animation ▸ Static** is saved; `set`/`unset` reload the running badge; an unknown mascot is refused (exit 2) without writing; a hand edit is picked up at the next IPC request (mtime); `tray = false` removes the item and `unset tray` brings a new one; **Quit** exits; the saved choice survives the restart |
+| X11 | Xvfb + private `dbus-daemon` + a stand-in StatusNotifierWatcher (the test's own zbus object) | the item registers with `Id`, `Title`, `ToolTip`, and a 32 and 64 px `IconPixmap`; the dbusmenu layout has the shared menu with the right checks; **Size ▸ 128** (a dbusmenu `Event`) resizes the badge and appends `[hosts.owl] size = 128` after the untouched `config init` template; **Animation ▸ Static** is saved; `set`/`unset` reload the running badge; an unknown mascot is refused (exit 2) without writing; a user mascot added while the badge runs shows after `set mascot`; a hand edit is picked up at the next IPC request (mtime); `tray = false` removes the item and `unset tray` brings a new one; **Quit** exits; the saved choice survives the restart |
 | X11 | Xvfb | `pawprint preview owl`: a normal window (not override-redirect, no DOCK type, `WM_DELETE_WINDOW`), centered, the badge pixel-exact on the backdrop, the frame changes as actions play; Esc closes it, and so does a `WM_DELETE_WINDOW` message |
 | Wayland | headless sway | `pawprint preview owl`: an xdg toplevel (`app_id` `pawprint`) that sway floats (fixed size), focused, the badge pixel-exact on the backdrop; Esc closes it |
 
@@ -2755,7 +2795,7 @@ true instead.
 | F30 | Premultiplied little-endian ARGB8888 (bytes B, G, R, A) is accepted by `UpdateLayeredWindow`, X11 32-bit ARGB visuals, `wl_shm` `ARGB8888`, and `CGImage` (premultiplied-first, 32-bit little-endian). | One pixel format for every backend | Documented |
 | F31 | GNOME sessions set `DISPLAY` and start Xwayland on demand, including releases without an X11 session. | GNOME path needs nothing installed | Documented (verify on Ubuntu 26.04) |
 | F32 | Openbox reparents even `_NET_WM_WINDOW_TYPE_DOCK` windows into a frame and copies the client's bounding shape to it, but not its input shape, so the frame swallows clicks. | The X11 backend sets its input shape on its frame too (11.3.1) | **Confirmed** (openbox 3.6 under Xvfb) |
-| F33 | `x11rb` 0.14 connects through the `/tmp/.X11-unix` socket or TCP, not the abstract socket namespace. Where `/tmp/.X11-unix` is read-only (WSLg), a test Xvfb listens on abstract sockets only. | Tests run Xvfb with `-listen tcp`; real X servers always create the filesystem socket | **Confirmed** |
+| F33 | `x11rb` 0.14 connects through the `/tmp/.X11-unix` socket or TCP, not the abstract socket namespace. Where `/tmp/.X11-unix` is read-only (WSLg), a test Xvfb listens on abstract sockets only. | Tests (and `power-check`) run Xvfb on the filesystem socket where `/tmp/.X11-unix` is writable, else with `-listen tcp`; either way with `-auth` and a private cookie, never `-ac`. Real X servers always create the filesystem socket | **Confirmed** |
 | F34 | Headless sway 1.9 with the pixman renderer filters the whole output at fractional scales (even swaybg's solid color comes out uneven); about 85% of the badge's pixels at 1.5 were exact. At integer scales every pixel is exact. | Fractional-scale crispness can't be judged there | **Confirmed on headless sway**; crispness at 125%/150% is an owner check on Plasma |
 | F35 | wlroots `keyboard_interactivity = exclusive` on an overlay layer surface sends it the keys at once; virtual keyboards (`wtype`, remote-desktop servers) send keycodes from their own keymaps. | Exclusive keyboard in move mode; keycodes read from the keymap (11.4) | **Confirmed on sway 1.9**; verify on Plasma |
 | F36 | zbus 5 (async-io) runs its socket setup (peer credentials, the SASL zero byte) on the `blocking` crate's thread pool. From `blocking` 1.7 an idle pool thread never exits (it exits only above the thread limit) and wakes every 500 ms; 1.6 lets it exit after 500 ms idle. | `blocking` is pinned to `=1.6.2`, so the badge has zero wakeups at rest with the tray running (7.2) | **Confirmed** (`make power-check`: 39 wakeups in 20 s in static mode with 1.7.0, 0 with 1.6.2) |

@@ -9,6 +9,8 @@
 mod common;
 
 use std::collections::HashMap;
+use std::os::fd::AsRawFd;
+use std::os::unix::process::CommandExt;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -32,29 +34,57 @@ struct X {
 }
 
 impl X {
-    /// Start Xvfb on a free display. It listens on TCP so the test works
-    /// where `/tmp/.X11-unix` is read-only (x11rb can't use abstract sockets).
+    /// Start Xvfb on a display it picks itself (`-displayfd`). Only clients
+    /// with this test's cookie may connect. It listens on the filesystem
+    /// socket, or on TCP where `/tmp/.X11-unix` is read-only (WSL), since
+    /// x11rb can't use abstract sockets.
     fn start(env: &mut Env) -> X {
-        let n = (150..250)
-            .find(|n| !std::path::Path::new(&format!("/tmp/.X{n}-lock")).exists())
-            .expect("a free display number");
-        let server = env.spawn(
-            "Xvfb",
-            &[
-                &format!(":{n}"),
-                "-screen",
-                "0",
-                &format!("{W}x{H}x24"),
-                "-listen",
-                "tcp",
-                "-ac",
-                "-nolisten",
-                "unix",
-            ],
-        );
-        let display = format!("127.0.0.1:{n}");
+        let mut cookie = [0u8; 16];
+        std::io::Read::read_exact(
+            &mut std::fs::File::open("/dev/urandom").unwrap(),
+            &mut cookie,
+        )
+        .unwrap();
+        let auth = env.dir.join("Xauthority");
+        std::fs::write(&auth, xauthority(&cookie)).unwrap();
+        env.set("XAUTHORITY", auth.to_str().unwrap());
+
+        let unix = writable(std::path::Path::new("/tmp/.X11-unix"));
+        let (number, write) = std::io::pipe().unwrap();
+        let fd = write.as_raw_fd();
+        let mut cmd = env.command("Xvfb");
+        cmd.args([
+            "-displayfd",
+            &fd.to_string(),
+            "-auth",
+            auth.to_str().unwrap(),
+        ])
+        .args(["-screen", "0", &format!("{W}x{H}x24")]);
+        if unix {
+            cmd.args(["-nolisten", "tcp"]);
+        } else {
+            cmd.args(["-listen", "tcp", "-nolisten", "unix"]);
+        }
+        // SAFETY: fcntl is async-signal-safe; it keeps the pipe open across exec.
+        unsafe {
+            cmd.pre_exec(move || match libc::fcntl(fd, libc::F_SETFD, 0) {
+                -1 => Err(std::io::Error::last_os_error()),
+                _ => Ok(()),
+            });
+        }
+        let server = env.spawn_command(cmd);
+        drop(write);
+        // One line with the number, or EOF if Xvfb failed (see Xvfb.log).
+        let mut line = String::new();
+        std::io::BufRead::read_line(&mut std::io::BufReader::new(number), &mut line).unwrap();
+        let n: u32 = line.trim().parse().expect("Xvfb's display number");
+        let display = if unix {
+            format!(":{n}")
+        } else {
+            format!("127.0.0.1:{n}")
+        };
         env.set("DISPLAY", &display);
-        let (conn, screen) = wait_for("Xvfb", || x11rb::connect(Some(&display)).ok());
+        let (conn, screen) = connect(&display, &cookie).expect("a connection to Xvfb");
         let root = conn.setup().roots[screen].root;
         X {
             conn,
@@ -282,6 +312,43 @@ enum Prop {
     Text(String),
 }
 
+/// An Xauthority file with one MIT-MAGIC-COOKIE-1 entry for any address
+/// and display (family Wild, empty number), so it works before the
+/// display number is known. Every field is a big-endian length and bytes.
+fn xauthority(cookie: &[u8]) -> Vec<u8> {
+    let mut out = 0xffffu16.to_be_bytes().to_vec();
+    for field in [&b""[..], b"", b"MIT-MAGIC-COOKIE-1", cookie] {
+        out.extend((field.len() as u16).to_be_bytes());
+        out.extend(field);
+    }
+    out
+}
+
+fn writable(dir: &std::path::Path) -> bool {
+    let path = std::ffi::CString::new(dir.as_os_str().as_encoded_bytes()).unwrap();
+    // SAFETY: access only reads the NUL-terminated path.
+    unsafe { libc::access(path.as_ptr(), libc::W_OK) == 0 }
+}
+
+/// Connect to `display` with `cookie`; the test's own connection doesn't
+/// read XAUTHORITY, which is set for the children only.
+fn connect(display: &str, cookie: &[u8]) -> Option<(RustConnection, usize)> {
+    use x11rb::reexports::x11rb_protocol::parse_display::parse_display;
+    let parsed = parse_display(Some(display)).ok()?;
+    let screen = usize::from(parsed.screen);
+    parsed.connect_instruction().find_map(|addr| {
+        let (stream, _) = x11rb::rust_connection::DefaultStream::connect(&addr).ok()?;
+        RustConnection::connect_to_stream_with_auth_info(
+            stream,
+            screen,
+            b"MIT-MAGIC-COOKIE-1".to_vec(),
+            cookie.to_vec(),
+        )
+        .ok()
+        .map(|c| (c, screen))
+    })
+}
+
 /// What a desktop panel provides: a StatusNotifierWatcher. It records the
 /// bus names of the items that register.
 struct Watcher {
@@ -453,6 +520,24 @@ impl Bus {
             )
             .unwrap();
     }
+
+    /// Click an item that ends the badge (Quit), asking for no reply: the
+    /// badge may exit before ksni answers, which a call reports as NoReply.
+    fn click_last(&self, item: &str, path: &[&str]) {
+        let (id, _) = self.find(item, path);
+        let data = zbus::zvariant::Value::from(0i32);
+        let msg = zbus::Message::method_call("/MenuBar", "Event")
+            .unwrap()
+            .destination(item)
+            .unwrap()
+            .interface(MENU)
+            .unwrap()
+            .with_flags(zbus::message::Flags::NoReplyExpected)
+            .unwrap()
+            .build(&(id, "clicked", data, 0u32))
+            .unwrap();
+        self.conn.send(&msg).unwrap();
+    }
 }
 
 const BG_PIXEL: u32 = 0x336699;
@@ -599,6 +684,10 @@ fn compositor_switches_to_argb_and_back() {
     wait_for("a 24-bit badge window", || {
         x.badge().filter(|&w| x.depth(w) == Some(24) && w != win)
     });
+    wait_for("shaped pixels", || {
+        let screen = x.capture();
+        (screen.px(1232, 60)[..3] == expected.px(32, 44)[..3]).then_some(())
+    });
     assert_badge_at(&x.capture(), &expected, 1200, 16, BACKGROUND);
     drop(badge);
 }
@@ -703,6 +792,24 @@ fn gnome_profile_through_xwayland() {
 
 #[test]
 #[ignore = "needs Xvfb; run `make test-x11`"]
+fn a_refused_request_does_not_end_the_badge() {
+    let mut env = Env::new("x11-refused");
+    let x = X::start(&mut env);
+    let mut badge = env.run_badge();
+    let win = x.mapped_badge();
+    env.wait_rect([1200, 16, 64, 64]);
+    // Another client destroys the window, so move mode's keyboard grab
+    // (a request with a reply) gets BadWindow.
+    x.conn.destroy_window(win).unwrap();
+    x.conn.sync().unwrap();
+    env.ok(&["move"]);
+    env.ok(&["status"]);
+    assert!(badge.exited().is_none(), "{}", env.log());
+    assert!(env.log().contains("request failed"), "{}", env.log());
+}
+
+#[test]
+#[ignore = "needs Xvfb; run `make test-x11`"]
 fn single_instance_and_detached_start() {
     let mut env = Env::new("x11-instance");
     let x = X::start(&mut env);
@@ -715,6 +822,26 @@ fn single_instance_and_detached_start() {
     assert!(second.status.success());
     assert!(String::from_utf8_lossy(&second.stdout).contains("already running"));
     assert!(String::from_utf8_lossy(&env.ok(&[]).into_bytes()).contains("already running"));
+
+    // A badge that doesn't answer (stopped, or stuck) still owns the
+    // session: a second one must not replace it (SPEC §10.4).
+    let pid = first.0.id() as i32;
+    // SAFETY: kill only sends a signal.
+    unsafe { libc::kill(pid, libc::SIGSTOP) };
+    let mut second = Proc(
+        env.command(env!("CARGO_BIN_EXE_pawprint"))
+            .arg("run")
+            .stdout(std::process::Stdio::piped())
+            .spawn()
+            .unwrap(),
+    );
+    let code = wait_for("the second badge to give up", || second.exited());
+    unsafe { libc::kill(pid, libc::SIGCONT) };
+    let mut out = String::new();
+    std::io::Read::read_to_string(&mut second.0.stdout.take().unwrap(), &mut out).unwrap();
+    assert!(code.success() && out.contains("already running"), "{out}");
+    let status = env.ok(&["status"]);
+    assert!(status.contains(&format!("pid {pid}")), "{status}");
 
     // After a crash the stale socket is replaced; bare `pawprint` detaches.
     first.0.kill().unwrap();
@@ -732,11 +859,11 @@ fn single_instance_and_detached_start() {
         x.badge().is_none().then_some(())
     });
     assert!(
-        !env.runtime()
-            .join("pawprint")
-            .read_dir()
+        !env.runtime().join("pawprint").read_dir().unwrap().any(|e| e
             .unwrap()
-            .any(|_| true),
+            .path()
+            .extension()
+            .is_some_and(|x| x == "sock")),
         "socket removed on quit"
     );
     assert!(first.exited().is_some());
@@ -826,6 +953,16 @@ fn tray_menu_and_config_edits_reach_the_badge() {
     let bad = env.pawprint(&["set", "mascot", "no-such-animal"]);
     assert_eq!(bad.status.code(), Some(2), "unknown mascots are refused");
     assert!(!env.config().contains("no-such-animal"));
+    // A user mascot added while the badge runs: the reload re-reads the
+    // folder, so `set` shows it at once (SPEC §12.7).
+    let zork = env.home().join(".config/pawprint/mascots/zork");
+    env.ok(&["mascot", "export", "walrus", zork.to_str().unwrap()]);
+    let toml = zork.join("mascot.toml");
+    let text = std::fs::read_to_string(&toml).unwrap();
+    std::fs::write(&toml, text.replace("id = \"walrus\"", "id = \"zork\"")).unwrap();
+    env.ok(&["set", "mascot", "zork"]);
+    assert!(env.ok(&["status"]).contains("mascot      zork"));
+    env.ok(&["unset", "mascot"]);
     assert!(env.ok(&["forget"]).contains("Nothing cached for owl"));
 
     // A hand edit is picked up at the next event, here an IPC request
@@ -844,7 +981,7 @@ fn tray_menu_and_config_edits_reach_the_badge() {
     let item = bus.item(Some(&item));
 
     // Quit from the menu; the saved choice outlives the badge.
-    bus.click(&item, &["Quit"]);
+    bus.click_last(&item, &["Quit"]);
     wait_for("the badge to exit", || badge.exited());
     let _badge = env.run_badge();
     env.wait_rect([16, 16, 64, 64]);

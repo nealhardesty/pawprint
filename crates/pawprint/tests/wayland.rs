@@ -35,6 +35,7 @@ impl Sway {
             &config,
             format!(
                 "output * mode 1280x720 bg #336699 solid_color\nfocus_follows_mouse no\n\
+                 # No XWayland: nothing here needs it, and it would take an X display.\nxwayland disable\n\
                  # Keep the cursor out of screenshots.\nseat * hide_cursor 100\n{extra_config}\n"
             ),
         )
@@ -202,11 +203,54 @@ fn badge_session(tag: &str, extra_config: &str) -> (Env, Sway, Pointer, Proc) {
     (env, sway, pointer, badge)
 }
 
+/// The layer-shell protocol makes a first commit with a zero size on an
+/// axis that isn't anchored to both edges an error (KWin enforces it, sway
+/// doesn't), so the badge's surface gets its anchor and size first.
+fn assert_sized_before_first_commit(log: &str) {
+    let lines: Vec<&str> = log.lines().filter(|l| l.contains(" -> ")).collect();
+    let (at, create) = lines
+        .iter()
+        .enumerate()
+        .find(|(_, l)| l.contains(".get_layer_surface(") && l.contains("\"pawprint\")"))
+        .unwrap_or_else(|| panic!("no badge layer surface in the protocol log:\n{log}"));
+    // get_layer_surface(zwlr_layer_surface_v1@L, wl_surface@S, ...)
+    let id = |prefix: &str| {
+        let start = create.find(prefix).expect(prefix) + prefix.len();
+        let digits: String = create[start..]
+            .chars()
+            .take_while(char::is_ascii_digit)
+            .collect();
+        format!("{prefix}{digits}.")
+    };
+    let (layer, surface) = (id("zwlr_layer_surface_v1@"), id("wl_surface@"));
+    let first = |call: &str| {
+        lines[at..]
+            .iter()
+            .position(|l| l.contains(&format!("{call}(")))
+            .unwrap_or_else(|| panic!("no {call} in:\n{}", lines[at..].join("\n")))
+    };
+    let commit = first(&format!("{surface}commit"));
+    for call in ["set_anchor", "set_size"] {
+        assert!(
+            first(&format!("{layer}{call}")) < commit,
+            "{call} must come before the first commit:\n{}",
+            lines[at..=at + commit].join("\n")
+        );
+    }
+}
+
 #[test]
 #[ignore = "needs sway, swaybg, grim, foot; run `make test-wayland`"]
 fn layer_surface_draws_top_right_and_passes_clicks() {
-    let (env, sway, mut pointer, _badge) = badge_session("wl-place", "");
+    let mut env = Env::new("wl-place");
+    let sway = Sway::start(&mut env, "");
+    let mut pointer = Pointer::new(&sway);
+    // The badge's protocol log, for the first-commit check below.
+    env.set("WAYLAND_DEBUG", "client");
+    let _badge = env.run_badge();
+    env.vars.retain(|(k, _)| k != "WAYLAND_DEBUG");
     env.wait_rect([1200, 16, 64, 64]);
+    assert_sized_before_first_commit(&env.log());
     let expected = env.expected(64);
     wait_for("the badge on screen", || {
         (sway.grab(&env).px(1232, 60) != [0x33, 0x66, 0x99, 255]).then_some(())
@@ -310,6 +354,31 @@ fn move_mode_drags_with_the_implicit_grab_and_nudges() {
     env.wait_rect([267, 368, 64, 64]);
     key("Escape");
     env.wait_rect([266, 368, 64, 64]);
+}
+
+#[test]
+#[ignore = "needs sway, swaybg, grim; run `make test-wayland`"]
+fn a_named_display_gets_the_badge_and_doctor_marks_it() {
+    let mut env = Env::new("wl-display");
+    let sway = Sway::start(&mut env, "");
+    sway.msg(&env, &["create_output"]); // HEADLESS-2, right of HEADLESS-1
+    env.write_config("display = \"HEADLESS-2\"\n");
+    let _badge = env.run_badge();
+    env.wait_rect([1280 + 1200, 16, 64, 64]);
+    assert!(env.ok(&["status"]).contains("HEADLESS-2"));
+    let expected = env.expected(64);
+    let screen = wait_for("the badge on HEADLESS-2", || {
+        let s = sway.grab(&env);
+        (s.width == 2560 && s.px(2480 + 32, 16 + 44)[..3] == expected.px(32, 44)[..3]).then_some(s)
+    });
+    assert_badge_at(&screen, &expected, 2480, 16, BACKGROUND);
+    // doctor marks the configured display, not the first one.
+    let doctor = env.ok(&["doctor"]);
+    let marked: Vec<&str> = doctor.lines().filter(|l| l.ends_with("<- badge")).collect();
+    assert!(
+        marked.len() == 1 && marked[0].contains("HEADLESS-2"),
+        "{doctor}"
+    );
 }
 
 #[test]

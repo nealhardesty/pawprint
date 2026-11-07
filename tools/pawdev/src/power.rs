@@ -442,18 +442,32 @@ impl Session {
         let n = (150..250)
             .find(|n| !Path::new(&format!("/tmp/.X{n}-lock")).exists())
             .ok_or("no free X display number")?;
+        // Only clients with this cookie may connect. The filesystem socket
+        // if /tmp/.X11-unix is writable, else TCP (WSL), since x11rb can't
+        // use abstract sockets.
+        let mut cookie = [0u8; 16];
+        std::fs::File::open("/dev/urandom")
+            .and_then(|mut f| std::io::Read::read_exact(&mut f, &mut cookie))
+            .map_err(|e| e.to_string())?;
+        let mut xauth = 0xffffu16.to_be_bytes().to_vec(); // family Wild: any address
+        for field in [&b""[..], b"", b"MIT-MAGIC-COOKIE-1", &cookie] {
+            xauth.extend((field.len() as u16).to_be_bytes());
+            xauth.extend(field);
+        }
+        let auth = dir.join("Xauthority");
+        std::fs::write(&auth, xauth).map_err(|e| e.to_string())?;
+        let probe = Path::new("/tmp/.X11-unix").join(format!(".pawdev-{}", std::process::id()));
+        let unix = std::fs::File::create(&probe).is_ok();
+        let _ = std::fs::remove_file(&probe);
+        let listen: &[&str] = if unix {
+            &["-nolisten", "tcp"]
+        } else {
+            &["-listen", "tcp", "-nolisten", "unix"]
+        };
         let xvfb = Command::new("Xvfb")
-            .args([
-                &format!(":{n}"),
-                "-screen",
-                "0",
-                "1280x720x24",
-                "-listen",
-                "tcp",
-                "-ac",
-                "-nolisten",
-                "unix",
-            ])
+            .args([&format!(":{n}"), "-auth", &auth.to_string_lossy()])
+            .args(["-screen", "0", "1280x720x24"])
+            .args(listen)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
@@ -481,7 +495,11 @@ impl Session {
         Ok(Session {
             config: dir.join("home/.config/pawprint/config.toml"),
             dir,
-            display: format!("127.0.0.1:{n}"),
+            display: if unix {
+                format!(":{n}")
+            } else {
+                format!("127.0.0.1:{n}")
+            },
             bus,
             _servers: servers,
             backups: Vec::new(),
@@ -509,7 +527,8 @@ impl Session {
             cmd.env("TMPDIR", self.dir.join("run"));
         } else {
             cmd.env("XDG_RUNTIME_DIR", self.dir.join("run"))
-                .env("DISPLAY", &self.display);
+                .env("DISPLAY", &self.display)
+                .env("XAUTHORITY", self.dir.join("Xauthority"));
         }
         if let Some(bus) = &self.bus {
             cmd.env("DBUS_SESSION_BUS_ADDRESS", bus);

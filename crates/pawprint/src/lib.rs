@@ -189,6 +189,15 @@ pub fn main() -> ExitCode {
         Ok(cli) => cli,
         Err(e) => e.exit(),
     };
+    // `pawprint list | head` should end quietly, like any Unix tool; Rust
+    // ignores SIGPIPE, which makes println! panic instead. The badge and the
+    // preview keep ignoring it: a client hanging up mid-answer must not
+    // kill them.
+    #[cfg(unix)]
+    if !matches!(cli.command, Some(Cmd::Run { .. } | Cmd::Preview { .. })) {
+        // SAFETY: restoring a default disposition, before any other thread.
+        unsafe { libc::signal(libc::SIGPIPE, libc::SIG_DFL) };
+    }
     let result = match cli.command {
         None => instance::start(),
         Some(Cmd::Run { verbose }) => run(verbose),
@@ -255,10 +264,7 @@ fn run(verbose: bool) -> CmdResult {
     let listener = match instance::claim(&endpoint) {
         Ok(instance::Claim::Claimed(l)) => l,
         Ok(instance::Claim::Running(s)) => {
-            println!(
-                "PAWPRINT is already running in this session (pid {}).",
-                s.pid
-            );
+            println!("{}", instance::already_running(s.as_deref()));
             return Ok(());
         }
         Err(e) => {

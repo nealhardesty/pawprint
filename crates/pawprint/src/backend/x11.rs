@@ -65,6 +65,7 @@ type XResult<T> = Result<T, ReplyOrIdError>;
 /// The connection and what we learned about the server.
 struct Server {
     conn: RustConnection,
+    screen_num: usize,
     root: Window,
     atoms: Atoms,
     /// `_NET_WM_CM_S<screen>`, owned by the compositing manager.
@@ -102,6 +103,7 @@ impl Server {
         let randr = conn.randr_query_version(1, 5)?.reply()?;
         Ok(Server {
             conn,
+            screen_num,
             root,
             atoms,
             cm_atom,
@@ -198,7 +200,7 @@ impl Server {
             });
         }
         if out.is_empty() {
-            let s = &self.conn.setup().roots[0];
+            let s = &self.conn.setup().roots[self.screen_num];
             let bounds =
                 PhysicalRect::new(0, 0, s.width_in_pixels.into(), s.height_in_pixels.into());
             out.push(DisplayInfo {
@@ -231,16 +233,9 @@ impl Server {
         let per = usize::from(map.keysyms_per_keycode.max(1));
         let mut keys = HashMap::new();
         for (i, syms) in map.keysyms.chunks(per).enumerate() {
-            let code = match syms[0] {
-                0xff51 => KeyCode::Left,
-                0xff52 => KeyCode::Up,
-                0xff53 => KeyCode::Right,
-                0xff54 => KeyCode::Down,
-                0xff0d | 0xff8d => KeyCode::Enter,
-                0xff1b => KeyCode::Escape,
-                _ => continue,
-            };
-            keys.insert(min + i as u8, code);
+            if let Some(&(_, _, code)) = linux::MOVE_KEYS.iter().find(|k| k.0 == syms[0]) {
+                keys.insert(min + i as u8, code);
+            }
         }
         Ok(keys)
     }
@@ -261,6 +256,8 @@ pub struct X11 {
     /// The window manager's frame around ours, or the root.
     parent: Window,
     gc: Gcontext,
+    /// The ARGB window's colormap, or NONE.
+    colormap: Colormap,
     argb: bool,
     override_redirect: bool,
     rect: Option<PhysicalRect>,
@@ -304,6 +301,7 @@ impl X11 {
             window: x11rb::NONE,
             parent: x11rb::NONE,
             gc: x11rb::NONE,
+            colormap: x11rb::NONE,
             argb: false,
             override_redirect: false,
             rect: None,
@@ -325,6 +323,10 @@ impl X11 {
         if self.window != x11rb::NONE {
             conn.destroy_window(self.window)?;
             conn.free_gc(self.gc)?;
+            if self.colormap != x11rb::NONE {
+                conn.free_colormap(self.colormap)?;
+                self.colormap = x11rb::NONE;
+            }
             self.mapped = false;
         }
         // Mutter always composites (SPEC §11.5.1), so GNOME never needs the
@@ -367,6 +369,7 @@ impl X11 {
             let colormap = conn.generate_id()?;
             conn.create_colormap(ColormapAlloc::NONE, colormap, s.root, v)?;
             aux = aux.colormap(colormap).border_pixel(0).background_pixel(0);
+            self.colormap = colormap;
         }
         let r = self.rect.unwrap_or(PhysicalRect::new(0, 0, 1, 1));
         conn.create_window(
@@ -593,10 +596,18 @@ impl X11 {
         Ok(())
     }
 
+    /// Keep the first fatal error for the next flush. A request the server
+    /// refused (a window that just went away, a property that vanished
+    /// mid-change) is only logged: the next event or display change
+    /// redoes the work, so it must not end the badge.
     fn record(&mut self, result: XResult<()>) {
-        if let Err(e) = result {
-            log::error!("x11: {e}");
-            self.error.get_or_insert_with(|| e.to_string());
+        match result {
+            Ok(()) => {}
+            Err(ReplyOrIdError::X11Error(e)) => log::warn!("x11: request failed: {e:?}"),
+            Err(e) => {
+                log::error!("x11: {e}");
+                self.error.get_or_insert_with(|| e.to_string());
+            }
         }
     }
 

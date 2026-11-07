@@ -41,7 +41,7 @@ use pawprint_core::config::Backend;
 use pawprint_core::geom::{PhysicalRect, Point};
 use pawprint_core::movemode::{Key, KeyCode};
 use pawprint_core::render::Frame;
-use pawprint_core::surface::{DisplayInfo, Surface, select_display};
+use pawprint_core::surface::{DisplayInfo, Surface};
 
 use super::menubar::MenuBar;
 use crate::shell::Shell;
@@ -664,7 +664,7 @@ pub fn doctor(report: &mut Report) {
         Some(mtm) if gui => screens(mtm).1,
         _ => Vec::new(),
     };
-    report.displays(&displays, select_display(&displays, "primary"));
+    report.displays(&displays);
     report.row(
         "menu bar item",
         "NSStatusItem with the badge menu (`tray = false` hides it)",

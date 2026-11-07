@@ -24,13 +24,18 @@ pub const VERSION: u32 = 1;
 /// How long either side waits for the other.
 pub const TIMEOUT: Duration = Duration::from_secs(5);
 
+/// How long the IPC thread waits for the badge's loop to answer: inside
+/// [`TIMEOUT`], so a client hears "did not answer in time" instead of
+/// timing out itself.
+const LOOP_TIMEOUT: Duration = Duration::from_secs(4);
+
 /// A connected byte stream to or from the badge.
 pub trait Stream: Read + Write + Send {}
 impl<T: Read + Write + Send> Stream for T {}
 
 /// One platform's IPC transport. `bind` doubles as the single-instance lock
-/// (SPEC §10.4), so it must fail with [`io::ErrorKind::AddrInUse`] while the
-/// endpoint exists.
+/// (SPEC §10.4), so it must fail with [`io::ErrorKind::AddrInUse`] while
+/// another live process holds the endpoint.
 pub trait Transport {
     type Listener: Send + 'static;
     fn bind(endpoint: &Path) -> io::Result<Self::Listener>;
@@ -38,7 +43,7 @@ pub trait Transport {
     fn accept(listener: &Self::Listener) -> io::Result<Box<dyn Stream>>;
     /// Connect to a running badge, failing fast if there is none.
     fn connect(endpoint: &Path) -> io::Result<Box<dyn Stream>>;
-    /// Remove an endpoint that nobody answers on (a crashed badge).
+    /// Remove our endpoint on a clean exit.
     fn remove_stale(endpoint: &Path) -> io::Result<()>;
 }
 
@@ -216,7 +221,7 @@ pub fn serve(listener: Listener, post: impl Fn(Incoming) -> bool + Send + 'stati
                         );
                         return;
                     }
-                    rx.recv_timeout(TIMEOUT)
+                    rx.recv_timeout(LOOP_TIMEOUT)
                         .unwrap_or_else(|_| Response::error("the badge did not answer in time"))
                 }
             };
@@ -259,7 +264,13 @@ pub fn call(endpoint: &Path, request: Request) -> Result<Response, CallError> {
         },
     )
     .map_err(io)?;
-    let line = read_line(&mut *stream).map_err(io)?;
+    let line = read_line(&mut *stream).map_err(|e| match e.kind() {
+        io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut => CallError::Io(io::Error::new(
+            e.kind(),
+            format!("no answer within {} s", TIMEOUT.as_secs()),
+        )),
+        _ => CallError::Io(e),
+    })?;
     serde_json::from_str(line.trim()).map_err(|e| CallError::Io(io::Error::other(e)))
 }
 
