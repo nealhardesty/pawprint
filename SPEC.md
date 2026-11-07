@@ -2120,6 +2120,10 @@ Release profile: `lto = true`, `codegen-units = 1`, `strip = true`,
 | + `panic = "abort"` | 6.84 MB | 5.97 MB | 2.30 MB |
 | + `panic = "abort"` + `opt-level = "s"` | 5.57 MB | — | — |
 
+The other release builds (M5, from CI): macOS universal 8.02 MB (both
+slices; 2.29 MB archive), Windows `pawprint.exe` and `pawprintw.exe`
+4.5 MB each (2.37 MB zip). All are well under the 15 MB budget.
+
 Neither `panic = "abort"` nor `opt-level = "s"` is used. The binary is
 already about half the budget, so size buys nothing. `opt-level = 3` keeps rendering cheapest, which is what the
 power budget cares about. And with `abort`, a CLI panic becomes a `SIGABRT`
