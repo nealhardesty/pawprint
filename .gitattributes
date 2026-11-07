@@ -1,0 +1,4 @@
+# Keep text sources LF on every OS (art grids, TOML, Rust) and never touch
+# binary golden images.
+* text=auto eol=lf
+*.png binary

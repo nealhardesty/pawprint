@@ -1,0 +1,11 @@
+# Motion template (SPEC §12.4). Use it with `use = "sniff"` in [[actions]].
+name = "sniff"
+summary = "Nose twitches twice"
+needs = ["nose.sniff"]
+frames = [
+  { ops = ["nose=sniff"], ms = 100 },
+  { ops = [], ms = 110 },
+  { ops = ["nose=sniff"], ms = 100 },
+  { ops = [], ms = 300 },
+  { ops = ["nose=sniff"], ms = 100 },
+]

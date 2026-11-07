@@ -1,0 +1,30 @@
+[workspace]
+resolver = "3"
+members = ["crates/pawprint-core", "crates/pawprint-sprite", "crates/pawprint", "tools/pawdev"]
+exclude = ["spikes"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/nealhardesty/pawprint"
+rust-version = "1.99"
+
+[workspace.dependencies]
+pawprint-core = { path = "crates/pawprint-core" }
+pawprint-sprite = { path = "crates/pawprint-sprite" }
+clap = { version = "4.6", features = ["derive"] }
+directories = "6"
+gif = { version = "0.14", default-features = false, features = ["std"] }
+png = "0.18"
+postcard = { version = "1.1", default-features = false, features = ["alloc"] }
+serde = { version = "1", features = ["derive"] }
+toml = { version = "1.2", features = ["preserve_order"] }
+toml_edit = "0.25"
+windows-sys = "0.61"
+
+# Sizes and the reasoning: SPEC §14.5.
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1

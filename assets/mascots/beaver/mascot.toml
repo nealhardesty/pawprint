@@ -1,0 +1,295 @@
+# Beaver, on rodent-upright. Dark brown and stocky, with a tan muzzle, a big
+# black nose, two big orange buck teeth, and the defining feature: a flat,
+# cross-hatched paddle tail standing up on the right. `tail.up` and
+# `tail.slap` are the slap; `stick` is the stick it gnaws (hidden at rest),
+# whittled down to `.stub` in the rare action; `chips` fly off it.
+id = "beaver"
+name = "Beaver"
+category = "mammals"
+aliases = []
+accent = "copper"
+extends = "rodent-upright"
+
+[palette]
+"l" = "brown-2"     # fur light
+"f" = "brown-3"     # fur
+"F" = "brown-4"     # fur shadow
+"w" = "brown-1"     # muzzle and belly
+"M" = "brown-2"     # muzzle shadow
+"t" = "orange-1"    # teeth, fresh wood
+"T" = "orange-2"    # NEW: tooth shadow
+"B" = "orange-3"    # NEW: bark
+"n" = "fur-black"   # nose
+"p" = "brown-4"     # inner ear, mouth
+"q" = "grey-4"      # NEW: paddle tail
+"Q" = "grey-3"      # NEW: paddle scales
+
+[layers.tail]
+at = [24, 1]
+grid = """
+..kkkk..
+.kqqqqk.
+kqQqqQqk
+kqqQQqqk
+kqQqqQqk
+kqqQQqqk
+kqQqqQqk
+kqqQQqqk
+kqQqqQqk
+kqqQQqqk
+kqQqqQqk
+.kqQQqk.
+..kqqk..
+...kFk..
+...kFk..
+...kFk..
+"""
+
+[layers."tail.up"]
+at = [24, 0]
+grid = """
+...kkkk.
+..kqqqqk
+.kqQqqQk
+.kqqQQqk
+kqQqqQqk
+kqqQQqqk
+kqQqqQqk
+kqqQQqqk
+kqQqqQqk
+kqqQQqqk
+kqQqqQk.
+kqqQqk..
+.kqqk...
+.kFk....
+kFk.....
+kFk.....
+"""
+
+# The paddle comes down flat on the crate rim.
+[layers."tail.slap"]
+at = [19, 15]
+grid = """
+...kkkkkkkk..
+.kkqQqqQqqQk.
+kFkqqQQqqQQqk
+.kkqQqqQqqQk.
+...kkkkkkkk..
+"""
+
+[layers.body]
+at = [6, 12]
+grid = """
+.klffffffffffffffFk.
+klfffffffffffffffFFk
+klffffwwwwwwwwffffFk
+klffwwwwwwwwwwwwffFk
+klffwwwwwwwwwwwwffFk
+klfwwwwwwwwwwwwwwfFk
+klfwwwwwwwwwwwwwMfFk
+klfwwwwwwwwwwwwwMfFk
+klfwwwwwwwwwwwwMMfFk
+klfwwwwwwwwwwwwMMfFk
+klffwwwwwwwwwwMMffFk
+klffwwwwwwwwwwMMffFk
+klffwwwwwwwwwMMfffFk
+klfffwwwwwwwMMffffFk
+klfffffwwwwMMfffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+"""
+
+# A broad head with a big puffy muzzle.
+[layers.head]
+at = [5, 3]
+grid = """
+......kkkkkkkkkk......
+....kkllllllllffkk....
+...kllllfffffffffFk...
+..kllffffffffffffFFk..
+.klfffffffffffffffFFk.
+.klfffffffffffffffFFk.
+.klfffffffffffffffFFk.
+klffffffwwwwwwfffffFFk
+klfffwwwwwwwwwwwwffFFk
+.kffwwwwwwwwwwwwwwFFk.
+..kfwwwwwwwwwwwwwMFk..
+...kkMMwwwwwwwwMMkk...
+"""
+
+[layers.ears]
+at = [7, 3]
+follows = "head"
+grid = """
+.kk............kk.
+kffk..........kfFk
+.kk............kk.
+"""
+
+[layers."ears.flick"]
+at = [6, 2]
+follows = "head"
+grid = """
+.................kk.
+..kk............kfFk
+.kffk............kk.
+..kk................
+"""
+
+[layers.nose]
+at = [14, 10]
+follows = "head"
+grid = """
+knnk
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 9]
+follows = "head"
+grid = """
+knnk
+.nn.
+"""
+
+# Two big orange buck teeth.
+[layers.mouth]
+at = [14, 12]
+follows = "head"
+grid = """
+.MM.
+tTtT
+tTtT
+kkkk
+"""
+
+[layers."mouth.open"]
+at = [13, 12]
+follows = "head"
+grid = """
+k.MM.k
+ktTtTk
+kppppk
+.kkkk.
+"""
+
+[layers."mouth.gnaw"]
+at = [14, 13]
+follows = "head"
+grid = """
+tTtT
+tTtT
+kkkk
+"""
+
+[layers.paws]
+at = [10, 15]
+grid = """
+.FFFF..FFFF.
+FffffFFffffF
+.FfFfFFfFfF.
+"""
+
+# Paws held up to grip the stick.
+[layers."paws.grip"]
+at = [9, 15]
+grid = """
+.FFF......FFF.
+FfffF....FfffF
+.FfF......FfF.
+"""
+
+[layers."stick.held"]
+at = [4, 15]
+grid = """
+kkkkkkkkkkkkkkkkkkkkkkk
+ktBBBBBBBBBBBBBBBBBBBtk
+kkkkkkkkkkkkkkkkkkkkkkk
+"""
+
+[layers."stick.bitten"]
+at = [4, 15]
+grid = """
+kkkkkkkkkkkk..kkkkkkkkk
+ktBBBBBBBBBkttkBBBBBBtk
+kkkkkkkkkkkkkkkkkkkkkkk
+"""
+
+[layers."stick.stub"]
+at = [17, 10]
+grid = """
+...k..
+..ktk.
+..kBk.
+..kBk.
+.kBBk.
+.kBBk.
+"""
+
+[layers."chips.a"]
+at = [6, 11]
+grid = """
+t...........
+..........t.
+.t.........t
+"""
+
+[layers."chips.b"]
+at = [4, 9]
+grid = """
+t...............
+...............t
+................
+..t...........t.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "duck"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: gnaws a stick, turning it like corn on the cob, then slaps its
+# tail on the rim.
+[[actions]]
+name = "gnaw-and-slap"
+weight = 5
+frames = [
+  { ops = ["stick=held", "paws=grip"], ms = 300 },
+  { ops = ["stick=held", "paws=grip", "head+0,1", "mouth=gnaw", "stick+1,0"], ms = 130 },
+  { ops = ["stick=held", "paws=grip", "chips=a"], ms = 130 },
+  { ops = ["stick=bitten", "paws=grip", "head+0,1", "mouth=gnaw", "stick+-1,0"], ms = 130 },
+  { ops = ["stick=bitten", "paws=grip", "chips=b"], ms = 300 },
+  { ops = ["tail=up"], ms = 200 },
+  { ops = ["tail=slap", "all+0,1", "prop:puff@22,12"], ms = 160 },
+  { ops = ["tail=slap", "eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it gnaws the whole stick down to a little point and holds it up,
+# very proud of itself.
+[[actions]]
+name = "whittle"
+weight = 1
+frames = [
+  { ops = ["stick=held", "paws=grip", "head+0,1", "mouth=gnaw", "stick+1,0", "chips=a"], ms = 110 },
+  { ops = ["stick=held", "paws=grip", "head+0,1", "mouth=gnaw", "stick+-1,0", "chips=b"], ms = 110 },
+  { ops = ["stick=bitten", "paws=grip", "head+0,1", "mouth=gnaw", "stick+1,0", "chips=a"], ms = 110 },
+  { ops = ["stick=bitten", "paws=grip", "head+0,1", "mouth=gnaw", "chips=b"], ms = 110 },
+  { ops = ["stick=stub", "all+0,-1", "eyes=closed"], ms = 300 },
+  { ops = ["stick=stub", "all+0,-1", "eyes=happy", "prop:sparkle@21,5"], ms = 900 },
+  { ops = ["stick=stub", "eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

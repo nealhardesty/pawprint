@@ -1,0 +1,213 @@
+# Kiwi on bird-perched. A round, shaggy brown egg of a bird with no wings
+# to speak of (the `wings` slot is left out of `rest`), tiny eyes, and a
+# long thin pale beak that reaches all the way down to the crate rim.
+# Signature: the beak probes the crate. Rare: it pulls up a worm and
+# slurps it down.
+id = "kiwi"
+name = "Kiwi"
+category = "birds"
+aliases = []
+accent = "moss"
+extends = "bird-perched"
+rest = ["body", "head", "eyes", "beak", "feet"]
+
+[palette]
+"l" = "brown-1"     # feathers light
+"f" = "brown-2"     # feathers
+"F" = "brown-3"     # shaggy streaks, shadow
+"d" = "brown-4"     # deepest shadow
+"b" = "cream"       # beak
+"B" = "brown-1"     # beak shadow
+"t" = "grey-2"      # feet
+"T" = "grey-3"      # feet shadow
+"q" = "pink-1"      # worm
+"Q" = "pink-2"      # worm shadow
+
+# One round, hairy body: wider than the owl's, with no breast and no wings.
+[layers.body]
+at = [3, 10]
+grid = """
+.........kkkkkkkk.........
+......kkkllllffffkkk......
+....kkllllffffffffffkk....
+...klllfffffffffffffFFk...
+..kllffffFfffffFfffffFFk..
+.kllfffffffffffffffFffFFk.
+.klffFffffFffffffFffffFFk.
+klfffffffffffFffffffFfffFk
+klffFfffffffffffFfffffffFk
+klfffffFfffffffffffffFffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+"""
+
+# A small dome that runs straight into the body: no neck at all.
+[layers.head]
+at = [9, 3]
+grid = """
+....kkkkkk....
+..kklllfffkk..
+.kllfffffffFk.
+.klffffffffFFk
+klffffffffffFk
+klfffFffffffFk
+klffffffffFfFk
+klffffffffffFk
+.kfffffffffFk.
+..ffffffffff..
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk....kk.
+k..k..k..k
+"""
+
+# The long thin beak, nostrils at the tip, resting on the rim.
+[layers.beak]
+at = [8, 9]
+follows = "head"
+grid = """
+......kbbk
+......kbBk
+.....kbBk.
+.....kbk..
+....kbBk..
+....kbk...
+...kbBk...
+...kbk....
+..kbBk....
+..kbk.....
+.kBk......
+..k.......
+"""
+
+[layers."mouth.open"]
+at = [13, 9]
+follows = "head"
+grid = """
+.kbbk
+.kbBk
+kbkBk
+kbkBk
+kbkbk
+.k.k.
+"""
+
+# A worm, dangling from the tip of the beak.
+[layers."worm.dangle"]
+at = [4, 13]
+follows = "head"
+grid = """
+..k....
+.kqk...
+kQk....
+kqkk...
+.kqQk..
+..kkqk.
+....kqk
+.....k.
+"""
+
+[layers."worm.slurp"]
+at = [7, 15]
+follows = "head"
+grid = """
+.k..
+kqk.
+.kQk
+..k.
+"""
+
+[layers.feet]
+at = [9, 18]
+grid = """
+.kttk......kttk.
+ktktTk....ktTktk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "shiver"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: leans in and probes the crate with the long beak, twice.
+[[actions]]
+name = "probe"
+weight = 5
+frames = [
+  { ops = ["eyes=left"], ms = 400 },
+  { ops = ["head+0,1"], ms = 160 },
+  { ops = ["head+0,1", "all+0,2", "eyes=closed"], ms = 400 },
+  { ops = ["head+0,1", "all+0,1"], ms = 200 },
+  { ops = ["head+0,1", "all+0,3", "eyes=closed"], ms = 500 },
+  { ops = ["head+0,1", "all+0,1"], ms = 200 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: comes up from a probe with a worm, which goes down in one slurp.
+[[actions]]
+name = "worm"
+weight = 1
+frames = [
+  { ops = ["head+0,1", "all+0,3", "eyes=closed"], ms = 600 },
+  { ops = ["all+0,1", "+worm.dangle"], ms = 200 },
+  { ops = ["+worm.dangle", "eyes=happy"], ms = 900 },
+  { ops = ["all+0,-1", "+worm.slurp", "eyes=closed"], ms = 220 },
+  { ops = ["all+0,-1", "eyes=happy"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

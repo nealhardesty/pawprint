@@ -1,0 +1,240 @@
+# Puffin on bird-water. A stout black-and-white seabird with a pale grey
+# face, a dark collar, and a tall, narrow bill banded grey, yellow, and
+# orange-red, plus the sad-clown grey mark that runs out from each eye.
+# Signature: the bill clacks and it does a little hop. Rare: it pops up
+# with a beakful of fish.
+id = "puffin"
+name = "Puffin"
+category = "birds"
+aliases = []
+accent = "brick"
+extends = "bird-water"
+
+[palette]
+"l" = "grey-4"      # back light
+"f" = "fur-black"   # back
+"D" = "fur-black"   # back shadow
+"w" = "white"       # belly
+"W" = "white"       # face
+"G" = "grey-1"      # face shadow
+"M" = "grey-2"      # eye mark, bill base
+"y" = "yellow-1"    # bill band
+"o" = "orange-2"    # bill
+"r" = "red-1"       # bill tip, eye ring
+"R" = "red-2"       # bill tip shadow
+"b" = "orange-2"    # feet
+"B" = "orange-3"    # feet shadow
+"p" = "red-2"       # inside of the bill
+"s" = "blue-1"      # fish
+"S" = "grey-2"      # fish backs
+
+[layers.body]
+at = [3, 14]
+grid = """
+........kkkkkkkkkk........
+.....kkkllllllllffkkk.....
+...kkllllfwwwwwwwwfDDkk...
+..kllllfwwwwwwwwwwwwfDDk..
+.kllffffwwwwwwwwwwfffDDDk.
+.klffffwwwwwwwwwwwwffffDk.
+klfffffwwwwwwwwwwwwwffffDk
+klffffwwwwwwwwwwwwwwwfffDk
+klffffwwwwwwwwwwwwwwwfffDk
+klffffwwwwwwwwwwwwwwwfffDk
+klffffwwwwwwwwwwwwwwwfffDk
+klfffffwwwwwwwwwwwwwffffDk
+klffffffwwwwwwwwwwwfffffDk
+klfffffffffffffffffffffDDk
+klfffffffffffffffffffffDDk
+klfffffffffffffffffffffDDk
+klfffffffffffffffffffffDDk
+klfffffffffffffffffffffDDk
+"""
+
+[layers.wings]
+at = [2, 17]
+grid = """
+kk........................kk
+klDk....................kDDk
+kffDk..................kDDDk
+kffDDk................kDDDDk
+kffDDk................kDDDDk
+.kffDk................kDDDk.
+.kkfDk................kDDkk.
+...kkk................kkk...
+"""
+
+[layers."wings.open"]
+at = [0, 12]
+grid = """
+kk............................kk
+klk..........................kfk
+kfDk........................kDDk
+kffDk......................kDDDk
+.kffDk....................kDDDk.
+.kffDDk..................kDDDDk.
+..kkfDk..................kDDkk..
+....kkk..................kkk....
+"""
+
+# Black cap, pale face, dark collar.
+[layers.head]
+at = [7, 3]
+grid = """
+....kkkkkkkkkk....
+..kkllllllllffkk..
+.klllffffffffffDk.
+kllffWWWWWWWWffDDk
+klfWWWWWWWWWWWWfDk
+klWWWWWWWWWWWWWGDk
+klWWWWWWWWWWWWWGDk
+klWWWWWWWWWWWWWGDk
+klWWWWWWWWWWWWGGDk
+.kWWWWWWWWWWWWGDk.
+..kfWWWWWWWWGGDk..
+...lffffffffffD...
+...lfwwwwwwwwfD...
+"""
+
+[layers.eyes]
+at = [9, 7]
+follows = "head"
+grid = """
+M............M
+.hk........hk.
+.kkr......rkk.
+"""
+
+[layers."eyes.closed"]
+at = [9, 7]
+follows = "head"
+grid = """
+M............M
+..............
+.kkr......rkk.
+"""
+
+[layers."eyes.left"]
+at = [9, 7]
+follows = "head"
+grid = """
+M............M
+hk........hk..
+kkr.......kkr.
+"""
+
+[layers."eyes.right"]
+at = [9, 7]
+follows = "head"
+grid = """
+M............M
+..hk........hk
+.rkk......rkk.
+"""
+
+[layers."eyes.happy"]
+at = [9, 7]
+follows = "head"
+grid = """
+M............M
+.kk........kk.
+k..k......k..k
+"""
+
+# Tall and narrow: grey at the base, a yellow band, an orange-red tip.
+[layers.bill]
+at = [13, 9]
+follows = "head"
+grid = """
+.kkkk.
+kMMMMk
+kyyyyk
+koooRk
+korrRk
+krrrRk
+.krRk.
+..kk..
+"""
+
+[layers."mouth.open"]
+at = [13, 9]
+follows = "head"
+grid = """
+.kkkk.
+kMMMMk
+kyyyyk
+koooRk
+kkkkkk
+kppppk
+.krRk.
+..kk..
+"""
+
+# Rare: a beakful of fish, crossways.
+[layers."fish.catch"]
+at = [6, 13]
+follows = "head"
+grid = """
+.kkk................
+kSSSkkk...kkkk..kk..
+kssssssk.kSSSSkkSk..
+.kkkkkkk.kssssssssk.
+.....kk..kkkkkkkkk..
+....kSSkkk......kk..
+....kssssk....kSSk..
+.....kkkk.....kssk..
+...............kk...
+"""
+
+[layers.feet]
+at = [9, 18]
+grid = """
+.kbbbk..kbbbk.
+kbBbBbkkbBbBbk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "hop"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: clack, clack, and a little hop.
+[[actions]]
+name = "clack-hop"
+weight = 5
+frames = [
+  { ops = ["-bill", "+mouth.open"], ms = 100 },
+  { ops = [], ms = 120 },
+  { ops = ["-bill", "+mouth.open"], ms = 100 },
+  { ops = [], ms = 200 },
+  { ops = ["all+0,-1"], ms = 90 },
+  { ops = ["all+0,-3", "eyes=happy"], ms = 200 },
+  { ops = ["all+0,-1", "eyes=happy"], ms = 90 },
+  { ops = ["all+0,1"], ms = 140 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: dives into the crate and comes up with a beakful of fish.
+[[actions]]
+name = "catch"
+weight = 1
+frames = [
+  { ops = ["all+0,4"], ms = 100 },
+  { ops = ["all+0,14"], ms = 600 },
+  { ops = ["all+0,4", "+fish.catch"], ms = 120 },
+  { ops = ["all+0,-1", "+fish.catch", "eyes=happy"], ms = 160 },
+  { ops = ["+fish.catch", "eyes=happy"], ms = 1300 },
+  { ops = ["+fish.catch"], ms = 400 },
+  { ops = ["all+0,1", "eyes=closed"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 400 },
+]

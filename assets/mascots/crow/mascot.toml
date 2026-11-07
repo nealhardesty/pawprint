@@ -1,0 +1,265 @@
+# Crow on bird-perched. A sleek, flat-crowned black bird with a blue-violet
+# gloss, shaggy throat hackles, and a heavy wedge of a beak: the opposite of
+# the owl's round face and tiny hook. The eyes have a pale ring so they read
+# against the black, and the sky crate keeps the black bird from sinking
+# into a dark crate. Signature: a sly head tilt and a silent caw. Rare: a
+# glint lands on the crate rim and the crow pockets it.
+id = "crow"
+name = "Crow"
+category = "birds"
+aliases = ["raven", "corvid"]
+accent = "sky"
+extends = "bird-perched"
+
+[palette]
+"l" = "blue-3"      # blue gloss highlight
+"f" = "grey-4"      # feathers
+"F" = "fur-black"   # feather shadow
+"g" = "purple-2"    # violet sheen
+"w" = "grey-4"      # no pale breast on a crow
+"m" = "grey-3"
+"e" = "grey-2"      # pale eye ring
+"b" = "grey-2"      # beak
+"B" = "grey-3"      # beak shadow, feet
+"p" = "red-2"       # inside of the beak
+
+[layers.body]
+at = [5, 12]
+grid = """
+..kkllllllllllllffkk..
+.klllfffffffffffffFFk.
+kllfffffffffffffffFFFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffFffFffFfffffFk
+klffffffffffffffffffFk
+klfffffffFffFffffffFFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+"""
+
+[layers.wings]
+at = [3, 14]
+grid = """
+.kk....................kk.
+klgk..................kgFk
+klgFk................kFgFk
+kfgFk................kFgFk
+kffFFk..............kFFFFk
+kffFFk..............kFFFFk
+.kffFk..............kFFFk.
+.kffFFk............kFFFFk.
+..kffFk............kFFFk..
+..kkfFk............kFFkk..
+....kkk............kkk....
+"""
+
+[layers."wings.open"]
+at = [0, 11]
+grid = """
+.kk..........................kk.
+klgk........................kgFk
+klgFk......................kFgFk
+.kfgFk....................kFgFk.
+.kffFFk..................kFFFFk.
+..kffFk..................kFFFk..
+..kkfFk..................kFFkk..
+....kkk..................kkk....
+"""
+
+# A flatter, sleeker crown than the owl's, with a sheen on the brow and
+# shaggy hackles at the throat.
+[layers.head]
+at = [6, 3]
+grid = """
+......kkkkkkkk......
+...kkkllllllgfkkk...
+..klggglllfffffffk..
+.klgglffffffffffFFk.
+klglfffffffffffffFFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+.kffffffffffffffffk.
+..kfffffffffffffFk..
+...fFfffFffFfffF....
+"""
+
+[layers."head.tilt"]
+at = [6, 3]
+grid = """
+.........kkkkk......
+......kkkllgfkkk....
+....kkllllfffffFk...
+..kklggfffffffffFk..
+.klgglfffffffffffFk.
+klglffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+.kffffffffffffffffk.
+..kfffffffffffffFk..
+...fFfffFffFfffF....
+"""
+
+[layers.eyes]
+at = [9, 7]
+follows = "head"
+grid = """
+.ee........ee.
+ehke......ehke
+ekke......ekke
+.ee........ee.
+"""
+
+[layers."eyes.closed"]
+at = [9, 8]
+follows = "head"
+grid = """
+.ee........ee.
+kkkk......kkkk
+"""
+
+[layers."eyes.left"]
+at = [9, 7]
+follows = "head"
+grid = """
+.ee........ee.
+hkee......hkee
+kkee......kkee
+.ee........ee.
+"""
+
+[layers."eyes.right"]
+at = [9, 7]
+follows = "head"
+grid = """
+.ee........ee.
+eehk......eehk
+eekk......eekk
+.ee........ee.
+"""
+
+[layers."eyes.happy"]
+at = [9, 8]
+follows = "head"
+grid = """
+.ee........ee.
+e..e......e..e
+"""
+
+# The tilt: the far eye rises, the near eye drops, and the beak swings.
+[layers."eyes.tilt"]
+at = [9, 6]
+follows = "head"
+grid = """
+...........ee.
+..........ehke
+.ee.......ekke
+ehke.......ee.
+ekke..........
+.ee...........
+"""
+
+# A heavy wedge, pointing down past the hackles.
+[layers.beak]
+at = [12, 9]
+follows = "head"
+grid = """
+kkbbbbkk
+.kbbbbk.
+.kbbbBk.
+..kbBk..
+..kbBk..
+...kk...
+"""
+
+[layers."beak.tilt"]
+at = [11, 9]
+follows = "head"
+grid = """
+.kkbbbbkk
+.kbbbbbk.
+kbbbbBk..
+kbbBkk...
+kbBk.....
+.kk......
+"""
+
+[layers."mouth.open"]
+at = [12, 9]
+follows = "head"
+grid = """
+kkbbbbkk
+.kbbbbk.
+.kkkkkk.
+.kppppk.
+.kbbbBk.
+..kbBk..
+...kk...
+"""
+
+[layers.feet]
+at = [10, 18]
+grid = """
+.kBBk....kBBk.
+kBkBk....kBkBk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 4
+
+[[actions]]
+use = "hop"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: tilts its head to one side, considers you, and caws without a
+# sound.
+[[actions]]
+name = "tilt-and-caw"
+weight = 5
+frames = [
+  { ops = ["head=tilt", "eyes=tilt", "beak=tilt"], ms = 700 },
+  { ops = ["head=tilt", "eyes=tilt", "beak=tilt", "head+1,0"], ms = 600 },
+  { ops = ["head=tilt", "eyes=tilt", "beak=tilt"], ms = 200 },
+  { ops = [], ms = 200 },
+  { ops = ["head+0,-1", "-beak", "+mouth.open"], ms = 260 },
+  { ops = ["head+0,-1"], ms = 140 },
+  { ops = ["head+0,-1", "-beak", "+mouth.open"], ms = 320 },
+  { ops = [], ms = 240 },
+]
+
+# Rare: a glint lands on the crate rim. The crow eyes it, snatches it, looks
+# both ways, and ducks into the crate to stash it.
+[[actions]]
+name = "shiny"
+weight = 1
+frames = [
+  { ops = ["prop:sparkle@1,13"], ms = 300 },
+  { ops = ["eyes=left", "prop:sparkle@1,13"], ms = 700 },
+  { ops = ["eyes=left", "head+-2,1", "prop:sparkle@1,13"], ms = 200 },
+  { ops = ["eyes=left", "head+-3,2", "prop:sparkle@4,13"], ms = 160 },
+  { ops = ["eyes=happy", "prop:sparkle@12,13"], ms = 500 },
+  { ops = ["eyes=left", "prop:sparkle@12,13"], ms = 400 },
+  { ops = ["eyes=right", "prop:sparkle@12,13"], ms = 400 },
+  { ops = ["all+0,12"], ms = 700 },
+  { ops = ["all+0,3", "eyes=happy"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 400 },
+]

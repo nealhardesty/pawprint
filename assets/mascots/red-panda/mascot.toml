@@ -1,0 +1,231 @@
+# Red panda, on small-quadruped. Told apart from the fox at a glance: a
+# round face (not a pointed one) that is white from the brows down, with
+# russet tear tracks running from the eyes; big rounded white-rimmed ears;
+# a dark chest and black arms; and a ringed tail with no white tip.
+# `paws.raised` is the arms-up "I am very big" stand.
+id = "red-panda"
+name = "Red Panda"
+category = "mammals"
+aliases = ["firefox", "lesserpanda"]
+accent = "brick"
+extends = "small-quadruped"
+
+[palette]
+"l" = "orange-2"    # fur light
+"f" = "orange-3"    # russet fur
+"F" = "red-2"       # fur shadow, tear tracks
+"r" = "orange-1"    # NEW: tail rings
+"w" = "white"       # face markings, ear rims
+"M" = "grey-1"      # shadow on the white
+"s" = "grey-4"      # chest and arms light
+"S" = "fur-black"   # chest, arms, inner ears
+"n" = "fur-black"   # nose
+"p" = "pink-2"      # mouth
+
+[layers.tail]
+at = [23, 6]
+grid = """
+..kk...
+.kFFk..
+krrrrk.
+kfffFk.
+kfffFk.
+.krrrrk
+.kfffFk
+.kfffFk
+.krrrrk
+kffffFk
+kfffFFk
+krrrrrk
+kffFFk.
+kfFFk..
+"""
+
+[layers."tail.flick"]
+at = [23, 6]
+grid = """
+...kk..
+..kFFk.
+.krrrrk
+.kfffFk
+.kfffFk
+.krrrrk
+.kfffFk
+.kfffFk
+.krrrrk
+kffffFk
+kfffFFk
+krrrrrk
+kffFFk.
+kfFFk..
+"""
+
+# Russet back and sides around a dark chest.
+[layers.body]
+at = [6, 13]
+grid = """
+.klffffffffffffffFk.
+klfffffffffffffffFFk
+klffffsSSSSSSsfffFFk
+klfffsSSSSSSSSsfffFk
+klfffsSSSSSSSSsfffFk
+klfffsSSSSSSSSsfffFk
+klffffsSSSSSSsffffFk
+klffffsSSSSSSsffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+"""
+
+# A round face: russet crown, white brow spots, white cheeks and muzzle,
+# and a russet tear track under each eye.
+[layers.head]
+at = [4, 5]
+grid = """
+......kkkkkkkkkkkk......
+....kkllllllllllffkk....
+...kllfwwffffffwwfFFk...
+..klffffffffffffffffFk..
+..klffffffffffffffffFk..
+.klfffffffffffffffffFFk.
+kwwwwwwFwwwwwwwwFwwwwwwk
+kwwwwwwFFwwwwwwFFwwwwwMk
+.kwwwwwwFwwwwwwFwwwwwMk.
+..kwwwwwwwwwwwwwwwwwMk..
+...kkwwwwwwwwwwwwwMkk...
+.....kkkMMMMMMMMkkk.....
+"""
+
+# Big rounded ears with white rims and dark insides.
+[layers.ears]
+at = [4, 1]
+follows = "head"
+grid = """
+..kkkk............kkkk..
+.kwwwwk..........kwwwwk.
+kwwSSwwk........kwwSSwwk
+kwSSSfwk........kwfSSSwk
+kwSSffk..........kffSSwk
+.kkffk............kffkk.
+"""
+
+[layers."ears.flick"]
+at = [4, 0]
+follows = "head"
+grid = """
+..................kkkk..
+..kkkk...........kwwwwk.
+.kwwwwk.........kwwSSwwk
+kwwSSwwk........kwfSSSwk
+kwSSSfwk.........kffSSwk
+kwSSffk...........kffkk.
+.kkffk..................
+"""
+
+[layers.nose]
+at = [15, 12]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [14, 11]
+follows = "head"
+grid = """
+knnk
+"""
+
+[layers.mouth]
+at = [14, 13]
+follows = "head"
+grid = """
+M..M
+.MM.
+"""
+
+[layers."mouth.open"]
+at = [14, 13]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+[layers.paws]
+at = [9, 17]
+grid = """
+.SSS......SSS.
+SsssS....SsssS
+kSsSk....kSsSk
+"""
+
+# Both arms thrown up beside the face, claws out.
+[layers."paws.raised"]
+at = [2, 5]
+grid = """
+.kk......................kk.
+kSSk....................kSSk
+kSsk....................ksSk
+kSsk....................ksSk
+.kSsk..................ksSk.
+.kSsk..................ksSk.
+..kSsk................ksSk..
+..kSSk................kSSk..
+...kSk................kSk...
+...kSk................kSk...
+...kSk................kSk...
+...kSk................kSk...
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 4
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: stands up tall on its hind legs and throws both arms up.
+[[actions]]
+name = "arms-up"
+weight = 5
+frames = [
+  { ops = ["all+0,-1"], ms = 140 },
+  { ops = ["all+0,-3", "paws=raised"], ms = 160 },
+  { ops = ["all+0,-3", "paws=raised", "eyes=happy"], ms = 1200 },
+  { ops = ["all+0,-3", "paws=raised"], ms = 400 },
+  { ops = ["all+0,-1"], ms = 160 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: stands up so tall it topples over backwards into the crate, then
+# climbs back up, a little embarrassed.
+[[actions]]
+name = "topple"
+weight = 1
+frames = [
+  { ops = ["all+0,-3", "paws=raised", "eyes=happy"], ms = 700 },
+  { ops = ["all+1,-3", "paws=raised", "eyes=closed"], ms = 160 },
+  { ops = ["all+2,-2", "paws=raised", "eyes=closed"], ms = 120 },
+  { ops = ["all+2,6", "paws=raised", "eyes=closed"], ms = 100 },
+  { ops = ["all+1,14", "prop:puff@11,14"], ms = 600 },
+  { ops = ["all+0,8"], ms = 300 },
+  { ops = ["all+0,2", "eyes=left", "prop:sweat@23,4"], ms = 900 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,262 @@
+# Red squirrel, on rodent-upright. Russet and slender, with tufted ears, pale
+# eye rings, and the defining feature: a huge bushy tail in an S that rises
+# up the right side and curls its tip over the top. The whole body sits 2 px
+# left of the base to give the tail room. `tail.flick` snaps the tail tip
+# up; `paws.nut` holds a nut at the chest.
+id = "squirrel"
+name = "Squirrel"
+category = "mammals"
+aliases = []
+accent = "copper"
+extends = "rodent-upright"
+
+[palette]
+"l" = "orange-2"    # fur light
+"f" = "orange-3"    # fur
+"F" = "brown-3"     # fur shadow
+"r" = "orange-1"    # NEW: tail fluff strands
+"w" = "cream"       # belly, cheeks, eye rings
+"M" = "brown-1"     # belly shadow
+"t" = "white"       # teeth
+"n" = "brown-4"     # nose
+"p" = "pink-2"      # inner ear, mouth
+
+[layers.tail]
+at = [19, 0]
+grid = """
+.......kkkk..
+.....kkrrllk.
+....krrlfffkk
+...krlffFFflk
+..krlffFkkfFk
+..klrffFk.kk.
+..klfffFk....
+...klfffFk...
+....krlffFk..
+.....krlffFk.
+.....klrfffFk
+.....klffrfFk
+.....klfrffFk
+.....klfffFFk
+....klfffFFk.
+....klffFFk..
+...klffFFk...
+...kfffFk....
+...kffFk.....
+...kfFk......
+"""
+
+[layers."tail.flick"]
+at = [19, 0]
+grid = """
+.........kk..
+.......kkrlk.
+.....kkrlffk.
+....krrlfFFk.
+...krlffFkk..
+..krlffFk....
+..klfffFk....
+...klfffFk...
+....krlffFk..
+.....krlffFk.
+.....klrfffFk
+.....klffrfFk
+.....klfrffFk
+.....klfffFFk
+....klfffFFk.
+....klffFFk..
+...klffFFk...
+...kfffFk....
+...kffFk.....
+...kfFk......
+"""
+
+[layers.body]
+at = [6, 12]
+grid = """
+.klffffffffffFk.
+klfffffffffffFFk
+klffwwwwwwwwffFk
+klfwwwwwwwwwwfFk
+klfwwwwwwwwwwfFk
+klfwwwwwwwwwwfFk
+klfwwwwwwwwwwfFk
+klfwwwwwwwwwMfFk
+klfwwwwwwwwwMfFk
+klfwwwwwwwwwMfFk
+klffwwwwwwwMffFk
+klffwwwwwwwMffFk
+klffwwwwwwwMffFk
+klfffwwwwwMfffFk
+klfffwwwwwMfffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+"""
+
+# A slimmer, rounder face than the base.
+[layers.head]
+at = [5, 3]
+grid = """
+....kkkkkkkkkk....
+..kkllllllllffkk..
+.kllllfffffffffFk.
+kllffffffffffffFFk
+klffffffffffffffFk
+klffffffffffffffFk
+klffffffffffffffFk
+kwwwffffffffffwwFk
+kwwwwffwwwwffwwwMk
+.kwwwwwwwwwwwwwwk.
+..kwwwwwwwwwwwMk..
+....FFwwwwwwFF....
+"""
+
+# Tall ears with tufts of hair at the tips.
+[layers.ears]
+at = [5, 0]
+follows = "head"
+grid = """
+.k..............k.
+.kk............kk.
+klpk..........kpFk
+kfpfk........kfpFk
+.kffk........kfFk.
+"""
+
+[layers."ears.flick"]
+at = [4, 0]
+follows = "head"
+grid = """
+k................k.
+.kk.............kk.
+.klpk..........kpFk
+.kfpfk........kfpFk
+..kffk........kfFk.
+"""
+
+[layers.eyes]
+at = [9, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [9, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [8, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [10, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [8, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [13, 11]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [12, 10]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers.mouth]
+at = [12, 12]
+follows = "head"
+grid = """
+.FF.
+FttF
+"""
+
+[layers."mouth.open"]
+at = [12, 12]
+follows = "head"
+grid = """
+FkkF
+kttk
+kppk
+.kk.
+"""
+
+[layers.paws]
+at = [8, 15]
+grid = """
+.FFFF..FFFF.
+FffffFFffffF
+.FfFfFFfFfF.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 4
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the tail flicks twice, then the squirrel freezes bolt upright,
+# eyes wide, before relaxing.
+[[actions]]
+name = "flick-freeze"
+weight = 4
+frames = [
+  { ops = ["tail=flick"], ms = 120 },
+  { ops = [], ms = 120 },
+  { ops = ["tail=flick"], ms = 120 },
+  { ops = [], ms = 100 },
+  { ops = ["all+0,-1", "eyes=right"], ms = 1300 },
+  { ops = ["all+0,-1"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a nut drops out of the sky, bonks it on the head, and it catches it.
+[[actions]]
+name = "nut-bonk"
+weight = 1
+frames = [
+  { ops = ["prop:seed@12,-6"], ms = 120 },
+  { ops = ["prop:seed@12,-2"], ms = 100 },
+  { ops = ["eyes=closed", "all+0,1", "prop:seed@13,-3", "prop:bang@24,2"], ms = 200 },
+  { ops = ["eyes=closed", "prop:seed@14,6"], ms = 120 },
+  { ops = ["eyes=left", "prop:seed@13,13"], ms = 500 },
+  { ops = ["eyes=happy", "prop:seed@13,13"], ms = 900 },
+  { ops = ["prop:seed@13,13"], ms = 300 },
+]

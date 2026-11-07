@@ -1,0 +1,271 @@
+# Black Maine Coon, a showcase cat on cat-sit. Big and fluffy: a wide head
+# with tufted cheeks and a chin ruff, tall lynx-tipped ears, a plume tail up
+# the right side, and amber eyes. Fur is fur-black so it reads as fur, with
+# grey strands for the fluff. `eyes.side` is the half-lidded amber side-eye of
+# the signature; `head.puff` and `tail.puff` are the rare ruff fluff-up.
+id = "cat-maine-coon-black"
+name = "Black Maine Coon"
+category = "cats-dogs"
+aliases = ["mainecoon", "maine"]
+accent = "plum"
+extends = "cat-sit"
+
+[palette]
+"l" = "grey-3"      # fur sheen
+"f" = "fur-black"   # fur
+"F" = "fur-black"   # fur shadow (a black cat's shadows sink into the fur)
+"r" = "grey-2"      # NEW: fluff strands (ruff, cheeks, plume)
+"R" = "grey-1"      # NEW: strand tips
+"w" = "fur-black"   # muzzle (only its mouth lines show)
+"M" = "grey-3"      # mouth lines
+"e" = "amber"       # iris
+"h" = "white"       # eye glint
+"n" = "grey-2"      # nose
+"p" = "grey-3"      # inner ear
+
+[layers.tail]
+at = [24, 2]
+grid = """
+.....kk.
+....krRk
+...krlfk
+..krlffk
+..klfrFk
+.klffrFk
+.klfrfFk
+..kfrfFk
+..klfrFk
+..krfrFk
+...kfrFk
+..klrfFk
+..kfrfFk
+..klfrFk
+..krfFk.
+.klfFk..
+.kfFk...
+.kFk....
+"""
+
+# The flick lifts the whole plume 2 px and curls its tip toward the head.
+[layers."tail.flick"]
+at = [24, 0]
+grid = """
+...kkk..
+..kRrrk.
+.krlffk.
+..kklffk
+...klfrk
+..klfrFk
+.klffrFk
+.klfrfFk
+..kfrfFk
+..klfrFk
+..krfrFk
+...kfrFk
+..klrfFk
+..kfrfFk
+..klfrFk
+..krfFk.
+.klfFk..
+.klfFk..
+.kfFk...
+.kFk....
+"""
+
+[layers."tail.puff"]
+at = [24, 1]
+grid = """
+.....kk.
+...kkRRk
+..kRrlRk
+.kRrlfrk
+.krlffRk
+kRlfrRrk
+klffrRFk
+kRlfrfRk
+.kfrRfrk
+.kRlfrRk
+.krfrRFk
+..kfrRrk
+.kRlrfRk
+.kfrRfrk
+.kRlfrRk
+.krfRFk.
+kRlfFk..
+.kfFk...
+.kFk....
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klfffffffffffffFFk..
+.klfffffffffffffffFFk.
+klffffrRfrRRrfRrffffFk
+klfffffrRrRRrRrfffffFk
+klffffffrRrrRrffffffFk
+klfffffffrRRrfffffffFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+[layers.head]
+at = [2, 4]
+grid = """
+........kkkkkkkkkkkk........
+......kkllllffffffffkk......
+.....kllffffffffffffFFk.....
+....klfffffffffffffffFFk....
+...klffffffffffffffffffFk...
+..klfffffffffffffffffffFFk..
+..klfffffffffffffffffffFFk..
+.klrffffffffffffffffffffrFk.
+krlffffffffwwwwwwfffffffFrFk
+.klrffffffwwwMMwwwffffffFrk.
+krlrfffffffwMwwMwfffffffrFFk
+.krfffffffffwwwwffffffffFrk.
+..krfrffffffffffffffffrfrk..
+...kfrRfrRffrRRrffRrfRrfk...
+"""
+
+# Tall ears with lynx tips that lean outward, and grey ear furnishings.
+[layers."head.puff"]
+at = [0, 4]
+grid = """
+..........kkkkkkkkkkkk..........
+........kkllllffffffffkk........
+.......kllffffffffffffFFk.......
+......klfffffffffffffffFFk......
+.....klffffffffffffffffffFk.....
+....klfffffffffffffffffffFFk....
+...krlfffffffffffffffffffFFrk...
+.kRrlrffffffffffffffffffffrFrRk.
+kRrrlffffffffwwwwwwffffffffFrrRk
+.kRrlrffffffwwwMMwwwffffffFrRrk.
+kRrrlrfffffffwMwwMwfffffffFrrrRk
+.kRrrffffffffffwwwwffffffffFrRk.
+..kRrRrfRrffrRRRRRRrffrRfrRrRk..
+...kRrRfRrRfRRrRRRrRfRrRfRrRk...
+"""
+
+[layers.ears]
+at = [5, 0]
+grid = """
+..k................k..
+...k..............k...
+..klk............kFk..
+..klRk..........kRFk..
+.klpRfk........kfRpFk.
+.klpRRfk......kfRRpFk.
+klppRrffF....FffrRppFk
+"""
+
+[layers."ears.flick"]
+at = [5, 0]
+grid = """
+...................k..
+..k...............k...
+...k.............kFk..
+..klk...........kRFk..
+..klRk.........kfRpFk.
+.klpRfk.......kfRRpFk.
+.klpRRfk.....FffrRppFk
+klppRrffF.............
+"""
+
+[layers.eyes]
+at = [10, 9]
+grid = """
+hke......hke
+eke......eke
+"""
+
+[layers."eyes.closed"]
+at = [10, 10]
+grid = """
+rrr......rrr
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+grid = """
+keh......keh
+kee......kee
+"""
+
+[layers."eyes.right"]
+at = [10, 9]
+grid = """
+hek......hek
+eek......eek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.r........r.
+r.r......r.r
+"""
+
+[layers."eyes.side"]
+at = [10, 9]
+grid = """
+rrr......rrr
+eek......eek
+"""
+
+# Big fluffy paws, set wide so the chest ruff shows between them.
+[layers.paws]
+at = [7, 17]
+grid = """
+.lrll........lrll.
+lrllrl......lrllrl
+klFlFk......klFlFk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 4
+
+[[actions]]
+use = "doze"
+
+# Signature: a slow amber side-eye, then one fluffy tail flick.
+[[actions]]
+name = "side-eye"
+weight = 4
+frames = [
+  { ops = ["eyes=right"], ms = 200 },
+  { ops = ["eyes=side"], ms = 1000 },
+  { ops = ["eyes=side", "tail=flick"], ms = 220 },
+  { ops = ["eyes=side"], ms = 500 },
+  { ops = ["eyes=closed"], ms = 160 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: the ruff, cheeks, and plume all fluff up at once, then settle.
+[[actions]]
+name = "ruff-fluff"
+weight = 1
+frames = [
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = ["eyes=closed", "head=puff", "tail=puff", "all+0,-1"], ms = 250 },
+  { ops = ["head=puff", "tail=puff", "all+0,-1"], ms = 1200 },
+  { ops = ["head=puff", "tail=puff"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

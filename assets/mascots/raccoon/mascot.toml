@@ -1,0 +1,280 @@
+# Raccoon, on small-quadruped. Grey, with the defining black bandit mask
+# across the eyes between a white brow band and a white muzzle, a dark
+# stripe down the nose, round white-rimmed ears, a black-ringed tail, and
+# dark clever little hands. Nocturnal: busier after dark, napping by day.
+# `paws.wash` / `paws.rub` are the paw-washing; `loot` is the shiny thing it
+# finds in the crate.
+id = "raccoon"
+name = "Raccoon"
+category = "mammals"
+aliases = ["trashpanda"]
+accent = "charcoal"
+nocturnal = true
+extends = "small-quadruped"
+
+[palette]
+"l" = "grey-1"      # fur light
+"f" = "grey-2"      # fur
+"F" = "grey-3"      # fur shadow, nose stripe
+"w" = "white"       # brow band, muzzle, ear rims
+"M" = "grey-1"      # shadow on the white
+"s" = "grey-4"      # mask and hands light
+"S" = "fur-black"   # mask, tail rings, hands
+"n" = "fur-black"   # nose
+"c" = "yellow-1"    # NEW: loot
+"C" = "yellow-2"    # NEW: loot shadow
+
+[layers.tail]
+at = [23, 6]
+grid = """
+..kk...
+.kSSk..
+kSSSSk.
+kffffk.
+kllflk.
+.kSSSSk
+.kSSSSk
+.kfffFk
+.kfffFk
+kSSSSSk
+kSSSSSk
+kfffFFk
+kffFFk.
+kSSSk..
+"""
+
+[layers."tail.flick"]
+at = [23, 6]
+grid = """
+...kk..
+..kSSk.
+.kSSSSk
+.kffffk
+.kllflk
+.kSSSSk
+.kSSSSk
+.kfffFk
+.kfffFk
+kSSSSSk
+kSSSSSk
+kfffFFk
+kffFFk.
+kSSSk..
+"""
+
+[layers.body]
+at = [6, 13]
+grid = """
+.klffffffffffffffFk.
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffflllllfffffFk
+klffffflllllllffffFk
+klffffflllllllffffFk
+klfffffflllllfffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+"""
+
+# The bandit mask: a black band across the eyes between a white brow band
+# and a white muzzle, split by a grey stripe down the nose.
+[layers.head]
+at = [4, 5]
+grid = """
+......kkkkkkkkkkkk......
+....kkllllllFFllffkk....
+...kllfffffFFfffffFFk...
+..klfwwwwwfFFfwwwwwfFk..
+..kfSSSSSSSffSSSSSSSFk..
+.klSSSSSSSSffSSSSSSSSFk.
+klfSSSSSSSwFFwSSSSSSSfFk
+klffsSSSSwwFFwwSSSSsffFk
+.kfffwwwwwwFFwwwwwwfffk.
+...kffwwwwwwwwwwwwffk...
+.....kfwwwwwwwwwwfk.....
+.......kwwwwwwwwMk......
+.........kkkkkk.........
+"""
+
+[layers.ears]
+at = [4, 2]
+follows = "head"
+grid = """
+..kkk..............kkk..
+.kwwwk............kwwwk.
+kwwSwwk..........kwwSwwk
+kwSSfwk..........kwfSSwk
+.kfffk............kfffk.
+"""
+
+[layers."ears.flick"]
+at = [4, 1]
+follows = "head"
+grid = """
+...................kkk..
+..kkk.............kwwwk.
+.kwwwk...........kwwSwwk
+kwwSwwk..........kwfSSwk
+kwSSfwk...........kfffk.
+.kfffk..................
+"""
+
+# Eyes glint out of the mask.
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+wk......wk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+ss......ss
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+wk......wk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+wk......wk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.ww......ww.
+w..w....w..w
+"""
+
+# Dark hands with fingers. `.wash` brings them together, `.rub` scrubs.
+[layers.paws]
+at = [9, 17]
+grid = """
+.SSS......SSS.
+SsssS....SsssS
+kSsSk....kSsSk
+"""
+
+[layers."paws.wash"]
+at = [11, 16]
+grid = """
+.SSS.SSS..
+SsssSsssS.
+kSsSkSsSk.
+"""
+
+[layers."paws.rub"]
+at = [11, 15]
+grid = """
+.SSS......
+SsssSSSS..
+kSsSsssSS.
+...kSsSk..
+"""
+
+[layers."paws.hold"]
+at = [9, 15]
+grid = """
+...SSS..SSS...
+..SsssSSsssS..
+..kSsSkkSsSk..
+"""
+
+# A shiny ring found in the crate.
+[layers."loot.ring"]
+at = [13, 12]
+grid = """
+.kkkk.
+kcCCck
+kCkkck
+kcCCck
+.kkkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+# Nocturnal, so it naps by day.
+[[actions]]
+use = "doze"
+when = "day"
+weight = 2
+
+# Signature: washes its paws, glancing around between scrubs.
+[[actions]]
+name = "paw-wash"
+weight = 5
+frames = [
+  { ops = ["paws=wash"], ms = 200 },
+  { ops = ["paws=rub", "head+0,1"], ms = 140 },
+  { ops = ["paws=wash", "head+0,1", "prop:bubble@20,10"], ms = 140 },
+  { ops = ["paws=rub", "head+0,1"], ms = 140 },
+  { ops = ["paws=wash", "eyes=left", "prop:bubble@21,6"], ms = 600 },
+  { ops = ["paws=wash", "eyes=right", "prop:bubble@22,3"], ms = 600 },
+  { ops = ["paws=rub", "head+0,1"], ms = 140 },
+  { ops = [], ms = 200 },
+]
+
+# Night: rummages around in the bottom of the crate, rustling.
+[[actions]]
+name = "rummage"
+weight = 4
+when = "night"
+frames = [
+  { ops = ["all+0,4"], ms = 120 },
+  { ops = ["all+0,12"], ms = 300 },
+  { ops = ["all+1,12", "prop:puff@6,14"], ms = 160 },
+  { ops = ["all+-1,12"], ms = 160 },
+  { ops = ["all+1,12", "prop:puff@18,14"], ms = 160 },
+  { ops = ["all+0,9", "eyes=left"], ms = 700 },
+  { ops = ["all+0,9", "eyes=right"], ms = 500 },
+  { ops = ["all+0,3"], ms = 120 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: dives into the crate and comes back up holding something shiny.
+[[actions]]
+name = "shiny"
+weight = 1
+frames = [
+  { ops = ["eyes=left"], ms = 300 },
+  { ops = ["all+0,12"], ms = 300 },
+  { ops = ["all+1,12", "prop:puff@12,14"], ms = 200 },
+  { ops = ["all+0,5", "paws=hold", "loot=ring"], ms = 120 },
+  { ops = ["paws=hold", "loot=ring", "eyes=happy", "prop:sparkle@19,7"], ms = 900 },
+  { ops = ["paws=hold", "loot=ring", "eyes=happy", "prop:sparkle@20,6"], ms = 700 },
+  { ops = ["paws=hold", "loot=ring", "eyes=left"], ms = 500 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,208 @@
+# Polar bear on bear. Cream fur with cool icy-blue shadows, small round ears
+# set far back, a long narrow muzzle (the polar bear's Roman nose), a big
+# black nose, small dark eyes, and grey claws on the rim. No patches, no big
+# ears: it is the plain, long-faced one among the bears. The signature lifts
+# its nose and sniffs the cold air; the rare one catches a snowflake.
+id = "polar-bear"
+name = "Polar Bear"
+category = "aquatic"
+aliases = []
+accent = "ice"
+extends = "bear"
+
+[palette]
+"h" = "grey-3"      # catchlight: white would vanish into the light fur at 1x
+"l" = "white"       # fur light
+"f" = "cream"       # fur
+"F" = "blue-1"      # fur shadow: icy
+"w" = "white"       # muzzle
+"M" = "grey-2"      # mouth lines
+"c" = "grey-3"      # NEW: claws
+"n" = "fur-black"   # nose
+"p" = "grey-2"      # inner ear
+"e" = "grey-3"      # unused
+
+[layers.body]
+at = [4, 14]
+grid = """
+....klffffffffffffFk....
+..kklfffffffffffffFFkk..
+.klffffffffffffffffffFk.
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+"""
+
+# Small round ears, set back on the corners of the head.
+[layers.ears]
+at = [7, 3]
+follows = "head"
+grid = """
+.kk............kk.
+klpk..........kpFk
+kffk..........kfFk
+"""
+
+[layers."ears.flick"]
+at = [7, 2]
+follows = "head"
+grid = """
+...............kk.
+.kk...........kpFk
+klpk..........kfFk
+kffk..............
+"""
+
+# A long, narrow muzzle.
+[layers.head]
+at = [6, 4]
+grid = """
+....kkkkkkkkkkkk....
+..kkllllllllllffkk..
+.kllfffffffffffffFk.
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+.kffffffffffffffFFk.
+..kffffwwwwwwfffFk..
+...kfwwwwwwwwwwFk...
+...kfwwwwwwwwwwFk...
+...kfwwwwMMwwwwFk...
+....kFwwMwwMwwFk....
+.....kkFFFFFFkk.....
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers."eyes.cross"]
+at = [12, 9]
+follows = "head"
+grid = """
+kh....hk
+kk....kk
+"""
+
+[layers.nose]
+at = [14, 12]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 11]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."mouth.open"]
+at = [14, 14]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+[layers.paws]
+at = [7, 17]
+grid = """
+.FFFFF......FFFFF.
+FlllllF....FfffffF
+kcfcfck....kcfcfck
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: lifts its nose into the cold air and wiggles it, then lets out
+# a frosty breath.
+[[actions]]
+name = "cold-sniff"
+weight = 4
+frames = [
+  { ops = ["head+0,-1"], ms = 200 },
+  { ops = ["head+0,-1", "nose=sniff", "eyes=closed"], ms = 120 },
+  { ops = ["head+0,-1", "eyes=closed"], ms = 120 },
+  { ops = ["head+0,-1", "nose=sniff", "eyes=closed"], ms = 120 },
+  { ops = ["head+0,-1", "eyes=closed"], ms = 300 },
+  { ops = ["head+0,-1", "nose=sniff", "eyes=closed"], ms = 120 },
+  { ops = ["eyes=happy", "prop:puff@20,10"], ms = 600 },
+  { ops = ["eyes=happy", "prop:puff@21,8"], ms = 300 },
+]
+
+# Rare: a snowflake drifts down onto its nose and melts.
+[[actions]]
+name = "snowflake"
+weight = 1
+frames = [
+  { ops = ["prop:sparkle@18,0"], ms = 400 },
+  { ops = ["eyes=right", "prop:sparkle@17,3"], ms = 400 },
+  { ops = ["eyes=cross", "prop:sparkle@14,6"], ms = 400 },
+  { ops = ["eyes=cross", "prop:sparkle@13,9"], ms = 700 },
+  { ops = ["eyes=closed", "nose=sniff", "prop:sweat@13,10"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 600 },
+]

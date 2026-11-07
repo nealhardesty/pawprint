@@ -1,0 +1,204 @@
+# Whale, on sea-creature. A big blue cartoon whale seen side-on, facing
+# right: a blunt head and hump, a long smile, a grooved pale throat, and the
+# tail flukes rising out of the water behind it (`tail`, so tail-flick
+# works). A blowhole sits on top; the signature sends up a spout
+# (`spout.small`, `spout.big`, `spout.drops`) that ends in a puff of spray.
+# The rare action is a whale song with notes drifting up.
+id = "whale"
+name = "Whale"
+category = "aquatic"
+aliases = ["orca"]
+accent = "sky"
+extends = "sea-creature"
+# Template props (doze's zzz) ride on the back, clear of the face on the right.
+prop_offset = [-9, -1]
+
+# The base fins are left out: a side-on whale shows its flukes instead.
+rest = ["body", "head", "eyes", "water", "tail"]
+
+[palette]
+"l" = "blue-1"      # skin light, throat grooves
+"f" = "blue-2"      # skin
+"F" = "blue-3"      # skin shadow, mouth line, blowhole
+"w" = "white"       # throat
+"u" = "blue-1"      # water foam and spout
+
+[layers.body]
+at = [4, 16]
+grid = """
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+klfffffffffffffFFFFFFFFFFFk
+"""
+
+# Side view, facing right: the blunt head and hump, with the tail stock
+# rising on the left into the flukes (the `tail` slot).
+[layers.head]
+at = [3, 5]
+grid = """
+.............kkkkkkkkkk.....
+..........kkkllllllFFllkk...
+........kkllllfffffffffffk..
+.......kllffffffffffffffffk.
+.klfFFfffffffffffffffffffFFk
+.klffFFfffffffffffffffffffFk
+.klfffFffffffffffffFfffffffk
+.klfffffffffffffffffFFFFFFFk
+.klffffffffffffffffwwwwwwwwk
+.klffffffffffffffllllllllllk
+.klffffffffffffwwwwwwwwwwwwk
+"""
+
+[layers.tail]
+at = [0, 1]
+grid = """
+kk.........kk
+kllk.....kffk
+.kllk...kffk.
+..kllkkkffk..
+...kllffFk...
+....klfFk....
+....klfFk....
+....klfFk....
+"""
+
+[layers."tail.flick"]
+at = [0, 0]
+grid = """
+kk...........
+kllk.........
+.kllk.....kk.
+..kllk..kkffk
+...kllkkffFk.
+...kllffFk...
+....klfFk....
+....klfFk....
+....klfFk....
+"""
+
+[layers.eyes]
+at = [23, 9]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.closed"]
+at = [23, 10]
+grid = """
+kk
+"""
+
+[layers."eyes.left"]
+at = [22, 9]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.right"]
+at = [24, 9]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.happy"]
+at = [22, 9]
+grid = """
+.kk.
+k..k
+"""
+
+[layers."mouth.open"]
+at = [24, 12]
+grid = """
+kkkkkk
+kppppk
+.kkkkk
+"""
+
+# The spout: a stub, the full fountain, and the last drops falling away.
+[layers."spout.small"]
+at = [21, 3]
+grid = """
+.kk.
+kuuk
+kwuk
+"""
+
+[layers."spout.big"]
+at = [17, 0]
+grid = """
+..kkk..kkk..
+.kuuukkuuuk.
+kuk.kwuk.kuk
+kk..kwuk..kk
+....kwuk....
+....kuuk....
+"""
+
+[layers."spout.drops"]
+at = [15, 1]
+grid = """
+.k...............
+kuk.............k
+.k.............ku
+...............k.
+..k..............
+.kuk.............
+..k..............
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a breath in, then a spout from the blowhole that ends in spray.
+[[actions]]
+name = "spout"
+weight = 4
+frames = [
+  { ops = ["eyes=closed", "all+0,1"], ms = 300 },
+  { ops = ["+spout.small"], ms = 100 },
+  { ops = ["+spout.big", "eyes=happy"], ms = 600 },
+  { ops = ["+spout.drops", "eyes=happy", "prop:puff@18,0"], ms = 400 },
+  { ops = ["prop:puff@18,0"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a whale song, eyes shut, notes drifting up on both sides.
+[[actions]]
+name = "song"
+weight = 1
+frames = [
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = ["eyes=closed", "+mouth.open", "prop:note@25,3"], ms = 500 },
+  { ops = ["eyes=closed", "+mouth.open", "prop:note@26,1", "prop:note@15,2"], ms = 600 },
+  { ops = ["eyes=closed", "+mouth.open", "prop:note@16,0"], ms = 600 },
+  { ops = ["eyes=happy"], ms = 400 },
+]

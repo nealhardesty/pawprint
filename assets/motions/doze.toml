@@ -1,0 +1,12 @@
+# Motion template (SPEC §12.4). Use it with `use = "doze"` in [[actions]].
+name = "doze"
+summary = "Eyes close while a zzz rises; night only"
+needs = ["eyes.closed"]
+when = "night"
+frames = [
+  { ops = ["eyes=closed"], ms = 400 },
+  { ops = ["eyes=closed", "prop:zzz@21,5"], ms = 600 },
+  { ops = ["eyes=closed", "prop:zzz@21,3", "all+0,1"], ms = 700 },
+  { ops = ["eyes=closed", "prop:zzz@21,1", "all+0,1"], ms = 700 },
+  { ops = ["eyes=closed"], ms = 400 },
+]

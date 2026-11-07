@@ -1,0 +1,152 @@
+# Yellow Labrador on dog-sit, the catalog's default dog. A broad head with a
+# wide muzzle, the base's floppy ears in a deeper gold, and a thick, tapered
+# otter tail. The rare action brings a tennis ball, drops it on the rim, and
+# waits, panting, for someone to throw it.
+id = "dog-labrador"
+name = "Labrador"
+category = "cats-dogs"
+aliases = ["dog", "labrador"]
+accent = "honey"
+extends = "dog-sit"
+
+[palette]
+"h" = "grey-3"      # catchlight: white would vanish into the light fur at 1x
+"l" = "yellow-1"    # coat light
+"f" = "orange-1"    # yellow coat
+"F" = "yellow-2"    # coat shadow
+"w" = "cream"       # muzzle and chest
+"M" = "brown-1"     # shadow on the muzzle
+"s" = "yellow-2"    # ears
+"S" = "orange-3"    # ear shadow
+"p" = "pink-2"      # tongue
+"g" = "green-1"     # tennis ball
+"G" = "green-2"     # ball shadow
+
+# The otter tail: thick at the root, tapering to a point.
+[layers.tail]
+at = [24, 10]
+grid = """
+...kk.
+..klk.
+..klFk
+.klfFk
+.klfFk
+klffFk
+klffFk
+klffFk
+klffFk
+klffFk
+"""
+
+[layers."tail.flick"]
+at = [24, 9]
+grid = """
+.....kk
+....klk
+...klFk
+..klfFk
+.klffFk
+klffFk.
+klffFk.
+klffFk.
+klffFk.
+klffFk.
+klffFk.
+"""
+
+# Broad skull, wide square muzzle.
+[layers.head]
+at = [5, 4]
+grid = """
+......kkkkkkkkkk......
+....kkllllllllllffkk..
+...kllllllllllfffFFk..
+..klllffffffffffFFFk..
+.kllffffffffffffffFFk.
+kllffffffffffffffffFFk
+klffffffffffffffffffFk
+klfffwwwwwwwwwwwwfffFk
+klffwwwwwwwwwwwwwwffFk
+.kfwwwwwwwMMwwwwwwwfk.
+.kfwwwwMwwwwwwMwwwwfk.
+..kFwwwwwwwwwwwwwwFk..
+...kkMMMMMMMMMMMMkk...
+"""
+
+# The tennis ball: held in the mouth, dropped, and resting on the rim.
+[layers."ball.mouth"]
+at = [13, 13]
+follows = "head"
+grid = """
+.kkkk.
+kggggk
+kglgGk
+kgGGGk
+.kkkk.
+"""
+
+[layers."ball.drop"]
+at = [17, 15]
+grid = """
+.kkkk.
+kggggk
+kglgGk
+kgGGGk
+.kkkk.
+"""
+
+[layers."ball.rim"]
+at = [21, 14]
+grid = """
+.kkkk.
+kggggk
+kglgGk
+kgGGGk
+.kkkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "yawn"
+weight = 3
+
+[[actions]]
+use = "curious"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a big happy pant while the otter tail wags.
+[[actions]]
+name = "happy-pant"
+weight = 5
+frames = [
+  { ops = ["eyes=happy", "+mouth.open"], ms = 250 },
+  { ops = ["eyes=happy", "+mouth.open", "head+0,1", "tail=flick"], ms = 200 },
+  { ops = ["eyes=happy", "+mouth.open"], ms = 200 },
+  { ops = ["eyes=happy", "+mouth.open", "head+0,1", "tail=flick"], ms = 200 },
+  { ops = ["eyes=happy", "+mouth.open"], ms = 200 },
+  { ops = ["eyes=happy", "+mouth.open", "head+0,1", "tail=flick"], ms = 200 },
+  { ops = ["eyes=happy", "+mouth.open"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: brings a tennis ball, drops it on the rim, and waits for the throw.
+[[actions]]
+name = "fetch"
+weight = 1
+frames = [
+  { ops = ["+ball.mouth", "eyes=happy"], ms = 700 },
+  { ops = ["+mouth.open", "+ball.drop"], ms = 120 },
+  { ops = ["+mouth.open", "+ball.rim", "eyes=right"], ms = 500 },
+  { ops = ["+mouth.open", "+ball.rim", "eyes=happy", "tail=flick"], ms = 200 },
+  { ops = ["+mouth.open", "+ball.rim", "eyes=happy"], ms = 200 },
+  { ops = ["+mouth.open", "+ball.rim", "eyes=happy", "tail=flick"], ms = 200 },
+  { ops = ["+ball.rim", "eyes=right"], ms = 800 },
+  { ops = [], ms = 200 },
+]

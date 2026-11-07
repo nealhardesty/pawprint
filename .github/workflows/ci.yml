@@ -1,0 +1,158 @@
+# CI calls make targets only (SPEC §14.1), so it behaves like a local run.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  ci:
+    name: make ci (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Installs the toolchain and targets pinned in rust-toolchain.toml.
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      # macOS keeps its own GNU Make 3.81 on purpose, to prove compatibility.
+      - name: Install GNU Make (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: command -v make || choco install make --no-progress -y
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: make ci
+        run: make ci
+
+  # The X11 and Wayland backends against real display servers: Xvfb (bare,
+  # with xcompmgr, with openbox) and headless sway, checked pixel by pixel.
+  linux-display:
+    name: make test-linux-display (ubuntu)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - name: Install display servers and test tools
+        run: sudo apt-get update && sudo apt-get install -y xvfb xcompmgr openbox sway swaybg grim foot wtype dbus
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: make test-linux-display
+        run: make test-linux-display
+
+  # The macOS backend in the runner's logged-in desktop session: window
+  # level, placement, accessory policy, IPC, and (where the runner permits
+  # capture and synthetic input) pixels, drag, and keys.
+  macos-display:
+    name: make test-macos-display (macos)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: make test-macos-display
+        run: make test-macos-display
+
+      # The power budget (SPEC §7.2) from the universal release binary.
+      - name: make power-check
+        if: always()
+        run: make power-check POWER_SECONDS=150
+
+      - name: pawprint doctor
+        if: always()
+        run: make doctor
+
+  # The Windows backend on the runner's desktop: window styles, placement,
+  # click-through, move mode, IPC, screen pixels, the tray menu, autostart,
+  # and the preview window (SPEC §16.1.3), then the power budget (§7.2).
+  windows-display:
+    name: make test-windows-display (windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - name: Install GNU Make
+        shell: bash
+        run: command -v make || choco install make --no-progress -y
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: make test-windows-display
+        run: make test-windows-display
+
+      # The power budget on a real Windows desktop (SPEC §7.2).
+      - name: make power-check
+        run: make power-check POWER_SECONDS=150
+
+      - name: pawprint doctor
+        if: always()
+        run: make doctor
+
+  # Release builds and the installers end to end (SPEC §15): `make package`
+  # checks every binary (static on Linux, aarch64 run under qemu; universal
+  # and ad-hoc re-signed on macOS, F15), then `make test-install` runs each
+  # installer under every shell (sh, dash, bash; Windows PowerShell 5.1 and
+  # PowerShell 7) against the archive and a local HTTP server laid out like
+  # GitHub releases: fresh install, upgrade, checksum mismatch, uninstall,
+  # purge, relative paths. `make publish DRY_RUN=1` and
+  # `make release-finalize DRY_RUN=1` print the gh commands and run none.
+  install:
+    name: make test-install (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - name: Install GNU Make (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: command -v make || choco install make --no-progress -y
+
+      - name: Install dash, shellcheck, and qemu (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y dash shellcheck qemu-user-static
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: make lint-installers
+        if: runner.os == 'Linux'
+        run: make lint-installers
+
+      - name: make test-install
+        run: make test-install
+
+      - name: make publish DRY_RUN=1
+        run: make publish DRY_RUN=1
+
+      - name: make release-finalize DRY_RUN=1
+        run: make release-finalize DRY_RUN=1

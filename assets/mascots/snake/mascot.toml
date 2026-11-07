@@ -1,0 +1,205 @@
+# Snake, on critter. A corn snake piled in the crate: two coils of orange
+# scales with dark red saddles, the tail tip poking up at the side (`tail`,
+# so tail-flick works), and a small oval head held up on its neck with a
+# forked tongue (`tongue.out`). `body.long` stretches the neck for the rare
+# periscope look around. No feet, so the base's feet are left out.
+id = "snake"
+name = "Snake"
+category = "critters"
+aliases = ["python", "viper"]
+accent = "moss"
+extends = "critter"
+
+rest = ["body", "head", "eyes", "nose", "tail"]
+
+[palette]
+"l" = "orange-1"    # scales light
+"f" = "orange-2"    # scales
+"F" = "orange-3"    # scales shadow, nostrils
+"s" = "red-2"       # NEW: saddles
+"w" = "cream"       # belly
+"p" = "red-1"       # mouth and tongue
+
+[layers.body]
+at = [2, 12]
+grid = """
+.....kkkkkkkkkkkkkkkkkk.....
+....kllllllkffffkllllllk....
+....kfssfffklfffkfssfffk....
+.kkkkFFFFFFFFFFFFFFFFFFkkkk.
+kllllkkkkkkkkkkkkkkkkkkllllk
+kffssffffssffffssffffssffffk
+kFFFFFFFFFFFFFFFFFFFFFFFFFFk
+kwwwwwwwwwwwwwwwwwwwwwwwwwwk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+"""
+
+[layers."body.long"]
+at = [2, 9]
+grid = """
+...........kffffk...........
+...........klfssk...........
+...........kffffk...........
+.....kkkkkkklfffkkkkkkk.....
+....kllllllkfffskllllllk....
+....kfssfffklfffkfssfffk....
+.kkkkFFFFFFFFFFFFFFFFFFkkkk.
+kllllkkkkkkkkkkkkkkkkkkllllk
+kffssffffssffffssffffssffffk
+kFFFFFFFFFFFFFFFFFFFFFFFFFFk
+kwwwwwwwwwwwwwwwwwwwwwwwwwwk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+kfssffffffssffffffssffffffsk
+"""
+
+[layers.head]
+at = [10, 5]
+grid = """
+...kkkkkk...
+.kklssllfkk.
+kllllssffFFk
+klfffffffFFk
+klfffffffFFk
+kffffffffffk
+.kfFFFFFFfk.
+..kkkkkkkk..
+"""
+
+[layers."tongue.out"]
+at = [14, 12]
+follows = "head"
+grid = """
+.pp.
+.pp.
+p..p
+"""
+
+[layers.tail]
+at = [27, 11]
+grid = """
+..kk
+.kfk
+.ksk
+kffk
+kfk.
+"""
+
+[layers."tail.flick"]
+at = [27, 11]
+grid = """
+kk..
+kfk.
+.ksk
+kffk
+kfk.
+"""
+
+
+[layers.eyes]
+at = [12, 8]
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.closed"]
+at = [12, 9]
+grid = """
+kk....kk
+"""
+
+[layers."eyes.left"]
+at = [11, 8]
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.right"]
+at = [13, 8]
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.happy"]
+at = [11, 8]
+grid = """
+.kk..kk.
+k..kk..k
+"""
+
+[layers."mouth.open"]
+at = [13, 10]
+grid = """
+kkkkkk
+kppppk
+.kkkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: two tongue flicks, then a slow sway from side to side.
+[[actions]]
+name = "flick-sway"
+weight = 4
+frames = [
+  { ops = ["+tongue.out"], ms = 110 },
+  { ops = [], ms = 100 },
+  { ops = ["+tongue.out"], ms = 110 },
+  { ops = ["head+-1,0"], ms = 250 },
+  { ops = ["head+-2,0", "eyes=left"], ms = 350 },
+  { ops = ["head+-1,0"], ms = 200 },
+  { ops = ["head+1,0"], ms = 200 },
+  { ops = ["head+2,0", "eyes=right", "+tongue.out"], ms = 350 },
+  { ops = ["head+1,0"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the neck stretches up like a periscope, looks both ways, and sinks.
+[[actions]]
+name = "periscope"
+weight = 1
+frames = [
+  { ops = ["body=long", "head+0,-2"], ms = 150 },
+  { ops = ["body=long", "head+0,-4"], ms = 300 },
+  { ops = ["body=long", "head+0,-4", "eyes=left"], ms = 600 },
+  { ops = ["body=long", "head+0,-4", "eyes=right", "+tongue.out"], ms = 600 },
+  { ops = ["body=long", "head+0,-4", "eyes=happy"], ms = 300 },
+  { ops = ["body=long", "head+0,-2"], ms = 150 },
+  { ops = [], ms = 200 },
+]

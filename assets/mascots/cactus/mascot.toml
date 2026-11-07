@@ -1,0 +1,184 @@
+# Cactus, a bespoke oddball: a saguaro planted in the crate, one arm raised
+# higher than the other, with a pink bud on top. The signature opens the bud
+# into a flower; the rare one blooms, blushes, and floats a heart.
+id = "cactus"
+name = "Cactus"
+category = "oddballs"
+aliases = []
+accent = "pine"
+# Template props go over the lower left arm, clear of the face and the right arm.
+prop_offset = [-21, 0]
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "green-1"     # light
+"f" = "green-2"     # body
+"F" = "green-3"     # shadow, ribs, sepals
+"w" = "cream"       # spines
+"h" = "white"       # eye highlight
+"p" = "pink-1"      # petals, blush
+"P" = "pink-2"      # petal shadow
+"y" = "yellow-1"    # flower center
+
+[layers."body"]
+grid = """
+................................
+................................
+.............kkkkkk.............
+...........kklllfffkk...........
+..........klllffffffFk...kkk....
+..........klfffffffwFk..klfFk...
+..........klwfffffffFk..klwFk...
+..........klffffffffFk..klfFk...
+....kkk...klffffffffFkkkklfFk...
+...klfFk..klffffffffFffffwfFk...
+...klfFk..klffffffffFffffffFk...
+...kwfFk..klffffffffFFFFFFFFk...
+...klfFkkkklffffffffFFkkkkkk....
+...klfffffflffffffffFk..........
+...klwfffffwffFffFffFk..........
+...klFFFFFFlffFffFffwk..........
+....kkkkkkklffFwfFffFk..........
+..........klffFffFffFk..........
+..........klffFffFwfFk..........
+..........klwfFffFffFk..........
+..........klffFffFffFk..........
+..........klffFffFffFk..........
+..........klffFffFffFk..........
+..........klffFffFffFk..........
+..........klffFffFffFk..........
+..........klffFffFffFk..........
+..........klffFffFffFk..........
+..........klffFffFffFk..........
+..........klffFffFffFk..........
+..........klffFffFffFk..........
+..........klffFffFffFk..........
+..........klffFffFffFk..........
+"""
+
+[layers.blush]
+at = [11, 11]
+grid = """
+pp......pp
+"""
+
+[layers.eyes]
+at = [12, 8]
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.closed"]
+at = [12, 9]
+grid = """
+kk....kk
+"""
+
+[layers."eyes.left"]
+at = [11, 8]
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.right"]
+at = [13, 8]
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.up"]
+at = [12, 7]
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.happy"]
+at = [11, 8]
+grid = """
+.kk....kk.
+k..k..k..k
+"""
+
+[layers.mouth]
+at = [14, 11]
+grid = """
+k..k
+.kk.
+"""
+
+# The bud on top, half open, and in bloom.
+[layers.flower]
+at = [14, 0]
+grid = """
+.kk.
+kpPk
+kFFk
+"""
+
+[layers."flower.half"]
+at = [12, 0]
+grid = """
+...kk...
+..kppk..
+.kpyyPk.
+..kFFk..
+"""
+
+[layers."flower.open"]
+at = [11, 0]
+grid = """
+..kk..kk..
+.kppkkPPk.
+kpppyyPPPk
+kppyyyyPPk
+.kkkFFkkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: it glances up, and the bud pops open into a flower.
+[[actions]]
+name = "bloom"
+weight = 4
+frames = [
+  { ops = ["eyes=up"], ms = 400 },
+  { ops = ["eyes=up", "flower=half"], ms = 150 },
+  { ops = ["eyes=happy", "flower=open", "all+0,-1"], ms = 120 },
+  { ops = ["eyes=happy", "flower=open"], ms = 1200 },
+  { ops = ["flower=open"], ms = 400 },
+  { ops = ["flower=half"], ms = 150 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: in full bloom, it blushes and a heart floats up.
+[[actions]]
+name = "in-love"
+weight = 1
+frames = [
+  { ops = ["eyes=up", "flower=half"], ms = 200 },
+  { ops = ["eyes=happy", "flower=open", "all+0,-1"], ms = 120 },
+  { ops = ["eyes=happy", "flower=open", "prop:heart@0,2"], ms = 600 },
+  { ops = ["eyes=happy", "flower=open", "prop:heart@0,1", "all+0,-1"], ms = 160 },
+  { ops = ["eyes=happy", "flower=open", "prop:heart@0,0"], ms = 900 },
+  { ops = ["eyes=happy", "flower=open"], ms = 400 },
+  { ops = ["flower=half"], ms = 150 },
+  { ops = [], ms = 200 },
+]

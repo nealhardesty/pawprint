@@ -1,0 +1,22 @@
+# A bamboo shoot with one leaf. 8x10; drawn with `prop:bamboo@x,y`
+# (x, y is where the top-left lands).
+name = "bamboo"
+grid = """
+kkkkkkkk
+klgkkllk
+klgklgkk
+kGGkgkk.
+klggkk..
+klgkk...
+kGGk....
+klgk....
+klgk....
+kkkk....
+"""
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "green-1"
+"g" = "green-2"
+"G" = "green-3"

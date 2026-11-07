@@ -1,0 +1,197 @@
+# Corgi on dog-sit. A red-and-white Pembroke: huge upright ears, a fox face
+# with a white blaze, white muzzle, chest, and paws, and no tail at all (rest
+# leaves the base tail out). `ears.down` is the relaxed airplane-ear pose the
+# signature perks up from; the rare action turns round to show off the
+# famous fluffy loaf.
+id = "dog-corgi"
+name = "Corgi"
+category = "cats-dogs"
+aliases = ["corgi"]
+accent = "marigold"
+extends = "dog-sit"
+rest = ["body", "head", "ears", "eyes", "nose", "paws"]
+
+[palette]
+"l" = "orange-2"    # fur light
+"f" = "orange-3"    # red fur
+"F" = "brown-3"     # fur shadow
+"w" = "white"       # blaze, muzzle, chest, paws
+"M" = "grey-1"      # shadow on the white
+"p" = "pink-2"      # inner ear, tongue
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klfffwwwwwwwwffFFk..
+.klffwwwwwwwwwwwwfFFk.
+klffwwwwwwwwwwwwwwfFFk
+klfffwwwwwwwwwwwwffFFk
+klfffwwwwwwwwwwwwffFFk
+klffffwwwwwwwwwwfffFFk
+klfffffwwwwwwwwffffFFk
+klffffffwwwwwwfffffFFk
+klfffffffwwwwffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# Fox face: red over the eyes, a white blaze between them, white cheeks
+# tapering to a pointed chin.
+[layers.head]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllwwllffkk...
+..kllllllwwffffFFk..
+.kllllfffwwffffFFFk.
+klllfffffwwfffffFFFk
+klffffffwwwwffffffFk
+klfffffwwwwwwfffffFk
+.kffwwwwwwwwwwwwffk.
+.kfwwwwwwwwwwwwwwFk.
+..kwwwwwwMMwwwwwwk..
+...kwwwMwwwwMwwwk...
+....kMwwwwwwwwMk....
+.....kkMMMMMMkk.....
+"""
+
+# Big upright ears, wider than the skull.
+[layers.ears]
+at = [3, 0]
+grid = """
+..kk..................kk..
+..klk................kFk..
+..klpk..............kpFk..
+.klppfk............kfpFFk.
+.klpppfk..........kffpFFk.
+.klpppff..........ffpppFk.
+.kllppff..........ffppFFk.
+..kllfff..........fffFFk..
+"""
+
+[layers."ears.flick"]
+at = [3, 0]
+grid = """
+..kk......................
+..klk.................kk..
+..klpk...............kFk..
+.klppfk.............kpFk..
+.klpppfk...........kfpFFk.
+.klpppff..........kffpFFk.
+.kllppff..........ffppFFk.
+..kllfff..........fffFFk..
+"""
+
+# Relaxed airplane ears, tipped out to the sides.
+[layers."ears.down"]
+at = [1, 2]
+grid = """
+.kk..........................
+kllkk.....................kk.
+klppfk..................kkFFk
+.klpppkk..............kkpppFk
+..klpppff............ffppFFk.
+...kllfff............fffFFk..
+"""
+
+[layers.paws]
+at = [8, 17]
+grid = """
+.MMMM......MMMM.
+MwwwwM....MwwwwM
+kwMwMk....kwMwMk
+"""
+
+# Rare: turned round, the fluffy loaf with its white pants.
+[frames.loaf]
+grid = """
+................................
+................................
+................................
+................................
+................................
+................................
+........kkkkk......kkkkk........
+......kkllllfkk..kkfFFFFkk......
+.....kllllffffFkkFffffFFFFk.....
+....klllfffffffFFfffffffFFFk....
+....kllffffffffFFffffffffFFk....
+...kllfffffffffFFfffffffffFFk...
+...klffffffffffwwffffffffffFk...
+...klfffffffffwwwwfffffffffFk...
+...kfffffffffwwwwwwfffffffffk...
+...kffffffffwwwwwwwwffffffffk...
+...kfffffffwwwwwwwwwwfffffffk...
+...kfffffffwwwwwwwwwwfffffffk...
+...kfffffffwwwwwwwwwwfffffffk...
+...kffffffffwwwwwwwwffffffffk...
+...kffffffffwwwwwwwwffffffffk...
+...kfffffffffwwwwwwfffffffffk...
+...kfffffffffwwwwwwfffffffffk...
+...kfffffffffwwwwwwfffffffffk...
+...kfffffffffwwwwwwfffffffffk...
+...kfffffffffwwwwwwfffffffffk...
+...kfffffffffwwwwwwfffffffffk...
+...kfffffffffwwwwwwfffffffffk...
+...kfffffffffwwwwwwfffffffffk...
+...kfffffffffwwwwwwfffffffffk...
+...kfffffffffwwwwwwfffffffffk...
+...kfffffffffwwwwwwfffffffffk...
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 4
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: ears relax, then perk straight up, and the whole loaf wiggles.
+[[actions]]
+name = "perk-wiggle"
+weight = 4
+frames = [
+  { ops = ["ears=down", "head+0,1"], ms = 500 },
+  { ops = ["ears=down", "head+0,1", "eyes=closed"], ms = 160 },
+  { ops = ["head+0,-1"], ms = 400 },
+  { ops = ["head+0,-1", "eyes=happy", "all+1,0"], ms = 120 },
+  { ops = ["head+0,-1", "eyes=happy", "all+-1,0"], ms = 120 },
+  { ops = ["head+0,-1", "eyes=happy", "all+1,0"], ms = 120 },
+  { ops = ["head+0,-1", "eyes=happy", "all+-1,0"], ms = 120 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: ducks, turns round, and shows off the loaf with a wiggle.
+[[actions]]
+name = "loaf-reveal"
+weight = 1
+frames = [
+  { ops = ["all+0,4"], ms = 120 },
+  { ops = ["all+0,12"], ms = 300 },
+  { grid = "loaf", ops = ["all+0,4"], ms = 160 },
+  { grid = "loaf", ms = 500 },
+  { grid = "loaf", ops = ["all+1,0"], ms = 130 },
+  { grid = "loaf", ops = ["all+-1,0"], ms = 130 },
+  { grid = "loaf", ops = ["all+1,0"], ms = 130 },
+  { grid = "loaf", ops = ["all+-1,0"], ms = 130 },
+  { grid = "loaf", ms = 400 },
+  { ops = ["all+0,12"], ms = 300 },
+  { ops = ["all+0,4"], ms = 120 },
+  { ops = [], ms = 200 },
+]

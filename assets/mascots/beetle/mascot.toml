@@ -1,0 +1,257 @@
+# Beetle, on bug. A glossy jewel beetle: a black head and pronotum with
+# clubbed antennae and big white eyes, and shiny green wing cases (the
+# body) split down the middle with a white shine. The base's wings stay
+# folded away until the signature cracks the shell open (`body.open`) and
+# they peek out. The rare one tips over onto its back (custom frames),
+# legs waving, and rights itself.
+id = "beetle"
+name = "Beetle"
+category = "critters"
+aliases = []
+accent = "pine"
+extends = "bug"
+
+# The hind wings are folded under the shell at rest.
+rest = ["body", "head", "antennae", "eyes", "mouth", "legs"]
+
+[palette]
+"l" = "green-1"     # shell light
+"f" = "teal"        # shell
+"F" = "green-3"     # shell shadow
+"s" = "fur-black"   # head, pronotum, and antennae
+"S" = "grey-4"      # their light
+"h" = "white"       # shine
+"e" = "white"       # NEW: eyes
+"w" = "white"       # wing light
+"m" = "blue-1"      # wing shade
+
+[layers.head]
+at = [10, 3]
+grid = """
+...kkkkkk...
+.kkSSsssskk.
+kSSsssssssSk
+kSssssssssSk
+kSssssssssSk
+.kssssssssk.
+..kkkkkkkk..
+"""
+
+[layers.body]
+at = [5, 9]
+grid = """
+.....kkkkkkkkkkkk.....
+...kkSSsssssssssskk...
+.kSSssssssssssssssssk.
+kkkkkkkkkkkkkkkkkkkkkk
+klhhffffffkkfffffffFFk
+klhhffffffkkfffffffFFk
+klhhffffffkkfffffffFFk
+klhhffffffkkfffffffFFk
+klllffffffkkfffffffFFk
+klllffffffkkfffffffFFk
+klffffffffkkfffffffFFk
+klffffffffkkfffffffFFk
+klffffffffkkfffffffFFk
+klffffffffkkfffffffFFk
+klffffffffkkfffffffFFk
+klffffffffkkfffffffFFk
+klffffffffkkfffffffFFk
+klffffffffkkfffffffFFk
+klffffffffkkfffffffFFk
+klffffffffkkfffffffFFk
+klffffffffkkfffffffFFk
+klffffffffkkfffffffFFk
+klffffffffkkfffffffFFk
+"""
+
+[layers."body.open"]
+at = [5, 9]
+grid = """
+.....kkkkkkkkkkkk.....
+...kkSSsssssssssskk...
+.kSSssssssssssssssssk.
+kkkkkkkkkkkkkkkkkkkkkk
+klhhffffkmwwmkffffffFk
+klhhffffkmwwmkffffffFk
+klhhffffkmwwmkffffffFk
+klhhffffkmwwmkffffffFk
+klllffffkmwwmkffffffFk
+klllffffkmwwmkffffffFk
+klffffffkmwwmkffffffFk
+klffffffkmwwmkffffffFk
+klffffffkmmmmkffffffFk
+klffffffkmmmmkffffffFk
+klffffffkmmmmkffffffFk
+klffffffkmmmmkffffffFk
+klffffffkmmmmkffffffFk
+klffffffkmmmmkffffffFk
+klffffffkmmmmkffffffFk
+klffffffkmmmmkffffffFk
+klffffffkmmmmkffffffFk
+klffffffkmmmmkffffffFk
+klffffffkmmmmkffffffFk
+"""
+
+[layers.eyes]
+at = [12, 6]
+follows = "head"
+grid = """
+ee....ee
+ek....ke
+"""
+
+[layers."eyes.closed"]
+at = [12, 7]
+follows = "head"
+grid = """
+ee....ee
+"""
+
+[layers."eyes.left"]
+at = [12, 6]
+follows = "head"
+grid = """
+ee....ee
+ke....ke
+"""
+
+[layers."eyes.right"]
+at = [12, 6]
+follows = "head"
+grid = """
+ee....ee
+ek....ek
+"""
+
+[layers."eyes.happy"]
+at = [11, 6]
+follows = "head"
+grid = """
+.ee..ee.
+e..ee..e
+"""
+
+[layers.mouth]
+at = [14, 8]
+follows = "head"
+grid = """
+S..S
+"""
+
+[frames."on-back-1"]
+grid = """
+..........k..........k..........
+.....k....k..........k....k.....
+......k...k..........k...k......
+......k...k..........k...k......
+.......k..kkkkkkkkkkkk..k.......
+........k.kssssssssssk.k........
+.kk.....kssssssssssssssk.....kk.
+...k...kssssssssssssssssk...k...
+....k.kSSSSSSSSSSSSSSSSSSk.k....
+.....kksssssssssssssssssskk.....
+......kssssssssssssssssssk......
+......kSSSSSSSSSSSSSSSSSSk......
+......kssssssssssssssssssk......
+.......kssssssssssssssssk.......
+.......kssssssssssssssssk.......
+........kffffffffffffffk........
+..........kFFFFFFFFFFk..........
+..........kkkkkkkkkkkk..........
+............kek..kek............
+.............k....k.............
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+[frames."on-back-2"]
+grid = """
+............k......k............
+.......k....k......k....k.......
+.......k...k........k...k.......
+.......k...k........k...k.......
+........k.kkkkkkkkkkkk.k........
+........k.kssssssssssk.k........
+........kssssssssssssssk........
+.......kssssssssssssssssk.......
+.kkkk.kSSSSSSSSSSSSSSSSSSk.kkkk.
+.....kksssssssssssssssssskk.....
+......kssssssssssssssssssk......
+......kSSSSSSSSSSSSSSSSSSk......
+......kssssssssssssssssssk......
+.......kssssssssssssssssk.......
+.......kssssssssssssssssk.......
+........kffffffffffffffk........
+..........kFFFFFFFFFFk..........
+..........kkkkkkkkkkkk..........
+............kek..kek............
+.............k....k.............
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "double-blink"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the shell opens a crack, the wings peek out, and it closes.
+[[actions]]
+name = "shell-crack"
+weight = 4
+frames = [
+  { ops = ["body=open"], ms = 300 },
+  { ops = ["body=open", "+wings.open"], ms = 500 },
+  { ops = ["body=open", "+wings.open", "antennae=twitch"], ms = 300 },
+  { ops = ["body=open", "+wings"], ms = 200 },
+  { ops = ["body=open"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it tips over onto its back, legs waving, then flips back upright.
+[[actions]]
+name = "on-its-back"
+weight = 1
+frames = [
+  { ops = ["all+0,-2"], ms = 120 },
+  { grid = "on-back-1", ms = 300 },
+  { grid = "on-back-2", ms = 250 },
+  { grid = "on-back-1", ms = 250, ops = ["prop:sweat@25,1"] },
+  { grid = "on-back-2", ms = 250, ops = ["prop:sweat@25,2"] },
+  { grid = "on-back-1", ms = 250 },
+  { ops = ["all+0,-2"], ms = 120 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

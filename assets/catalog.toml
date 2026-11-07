@@ -1,0 +1,9 @@
+# Catalog-wide data (SPEC §12.12). The gates below (minimum count, required
+# ids, showcase completeness) are enforced only by `make package`; `make test`
+# and `make check-assets` report them without failing (SPEC §12.11 rule 9).
+version = 1
+required = [
+  "owl", "moose", "marmot", "elk", "armadillo", "bear", "walrus", "chipmunk",
+  "cat-maine-coon-black", "cat-buff-tabby", "cat-cow", "cat-tuxedo",
+]
+minimum = 100

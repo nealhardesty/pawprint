@@ -1,0 +1,8 @@
+# Static Linux release builds link with the rust-lld that ships with rustup,
+# using rustc's bundled musl CRT. No musl-gcc, zig, or cross toolchain needed
+# (SPEC §14.4, fact F22).
+[target.x86_64-unknown-linux-musl]
+linker = "rust-lld"
+
+[target.aarch64-unknown-linux-musl]
+linker = "rust-lld"

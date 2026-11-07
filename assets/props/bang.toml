@@ -1,0 +1,19 @@
+# Exclamation mark, for startle. 4x8; drawn with `prop:bang@x,y`
+# (x, y is where the top-left lands).
+name = "bang"
+grid = """
+kkkk
+kyyk
+kyyk
+kyYk
+kyYk
+kkkk
+kyYk
+kkkk
+"""
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"y" = "yellow-1"
+"Y" = "yellow-2"

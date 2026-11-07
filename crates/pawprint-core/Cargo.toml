@@ -1,0 +1,18 @@
+[package]
+name = "pawprint-core"
+description = "PAWPRINT's platform-independent logic: identity, config, layout, animation, rendering"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+pawprint-sprite.workspace = true
+serde.workspace = true
+toml.workspace = true
+toml_edit.workspace = true
+
+[build-dependencies]
+pawprint-sprite.workspace = true

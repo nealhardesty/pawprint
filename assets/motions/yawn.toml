@@ -1,0 +1,9 @@
+# Motion template (SPEC §12.4). Use it with `use = "yawn"` in [[actions]].
+name = "yawn"
+summary = "Eyes squeeze shut and the mouth opens wide, slowly"
+needs = ["mouth.open", "eyes.closed"]
+frames = [
+  { ops = ["eyes=closed"], ms = 240 },
+  { ops = ["eyes=closed", "+mouth.open", "all+0,-1"], ms = 1000 },
+  { ops = ["eyes=closed"], ms = 260 },
+]

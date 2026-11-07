@@ -1,0 +1,162 @@
+# Base: pinniped (SPEC §12.8). A smooth-headed seal with no external ears:
+# big dark eyes, spotted whisker pads with whiskers fanning out, a light
+# chest, and fore-flippers resting on the rim. Members: walrus, seal.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)    l f F  hide light / base / shadow
+#   w M    muzzle and chest light / its shadow (whisker spots, mouth)
+#   v whiskers (mid grey: they stick out unoutlined, so white would vanish
+#     on a light desktop)   e iris (unused by the default eyes)
+#   h eye highlight   n nose   p tongue
+#
+# Slots, in drawing order: body, head, eyes (+closed, left, right, happy),
+# nose (+sniff), mouth (.open only, hidden at rest), whiskers (+twitch), paws
+# (the fore-flippers). eyes, nose, mouth, and whiskers follow head. There is
+# no ears slot, so ear-flick does not apply; walrus adds a `tusks` slot.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "grey-1"
+"f" = "grey-2"
+"F" = "grey-3"
+"w" = "cream"
+"M" = "grey-2"
+"v" = "grey-2"
+"e" = "brown-3"
+"h" = "white"
+"n" = "fur-black"
+"p" = "pink-2"
+
+[layers.body]
+at = [4, 14]
+grid = """
+.....klffffffffffFk.....
+...kklffffffffffffFkk...
+.kklffffffffffffffffFkk.
+klfffffffwwwwwwffffffFFk
+klffffffwwwwwwwwfffffFFk
+klffffffwwwwwwwwfffffFFk
+klffffffwwwwwwwwfffffFFk
+klffffffwwwwwwwwfffffFFk
+klffffffwwwwwwwwfffffFFk
+klffffffwwwwwwwwfffffFFk
+klffffffwwwwwwwwfffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+"""
+
+[layers.head]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllllllffkk...
+..kllffffffffffFFk..
+.klffffffffffffffFk.
+.klffffffffffffffFk.
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffwwwwwwwwffffFk
+klfffwwMwwwwMwwfffFk
+klfffwMwMwwMwMwfffFk
+.kfffwwwwMMwwwwffFk.
+..kFFfwwwwwwwwfFFk..
+...kkFFFFFFFFFFkk...
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [14, 11]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 10]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."mouth.open"]
+at = [14, 14]
+follows = "head"
+grid = """
+kkkk
+kppk
+.kk.
+"""
+
+[layers.whiskers]
+at = [3, 11]
+follows = "head"
+grid = """
+vv......................vv
+..vvvv..............vvvv..
+..........................
+.vvvv................vvvv.
+"""
+
+[layers."whiskers.twitch"]
+at = [3, 10]
+follows = "head"
+grid = """
+vv......................vv
+..vvvv..............vvvv..
+..........................
+.vvvv................vvvv.
+"""
+
+[layers.paws]
+at = [5, 17]
+grid = """
+..FFFFFF......FFFFFF..
+.FllllffF....FffffffF.
+kfFfFfFffk..kffFfFfFfk
+"""

@@ -1,0 +1,180 @@
+# Base: bug (SPEC §12.8). A round, segmented bug: a big-eyed head with two
+# antennae, a striped body, wings folded behind it, and little legs on the
+# crate rim. It reads as a bee with the default colors; turn the stripes into
+# a shell for a beetle, or into fuzz and patterned wings for a moth.
+# Members: moth, beetle, bee.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)   l f F  body and head light / base / shadow
+#   s S    stripes and antennae / their shadow
+#   w m    wing light / wing shade     e iris (unused by the default eyes)
+#   h eye highlight                    p mouth inside
+#
+# Slots, in drawing order: wings (+open), body, head, antennae (+twitch),
+# eyes (+closed, left, right, happy), mouth (default smile, +open), legs.
+# antennae, eyes, and mouth follow head.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "yellow-1"
+"f" = "yellow-2"
+"F" = "orange-3"
+"s" = "fur-black"
+"S" = "grey-4"
+"w" = "white"
+"m" = "blue-1"
+"e" = "amber"
+"h" = "white"
+"p" = "red-1"
+
+[layers.wings]
+at = [1, 9]
+grid = """
+..kkkk..................kkkk..
+.kwwwwkk..............kkwwwwk.
+kwwwwwwmk............kmwwwwwwk
+kwwwwwwmmk..........kmmwwwwwwk
+kwwwwwmmmk..........kmmmwwwwwk
+.kwwwmmmk............kmmmwwwk.
+..kkmmmk..............kmmmkk..
+....kkk................kkk....
+"""
+
+[layers."wings.open"]
+at = [0, 5]
+grid = """
+..kkkk....................kkkk..
+.kwwwwk..................kwwwwk.
+kwwwwwwk................kwwwwwwk
+kwwwwwmmk..............kmmwwwwwk
+kwwwwmmmk..............kmmmwwwwk
+.kwwmmmmk..............kmmmmwwk.
+..kkmmmk................kmmmkk..
+....kkk..................kkk....
+"""
+
+[layers.body]
+at = [5, 12]
+grid = """
+...kkllllllFFFFFFkk...
+..klllffffffffffFFFk..
+.klffffffffffffffffFk.
+.kssssssssssssssssssk.
+klssssssssssssssssssFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+kssssssssssssssssssssk
+klssssssssssssssssssFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+kssssssssssssssssssssk
+klssssssssssssssssssFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+kssssssssssssssssssssk
+klssssssssssssssssssFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+kssssssssssssssssssssk
+"""
+
+[layers.head]
+at = [7, 4]
+grid = """
+....kkkkkkkkkk....
+..kklllllFFFFFkk..
+.klllffffffffFFFk.
+kllffffffffffffFFk
+klffffffffffffffFk
+klffffffffffffffFk
+klffffffffffffffFk
+klffffffffffffffFk
+.kffffffffffffffk.
+..kkffffffffffkk..
+"""
+
+[layers.antennae]
+at = [9, 0]
+follows = "head"
+grid = """
+.kk........kk.
+kssk......kssk
+kssk......kssk
+.kk.k....k.kk.
+....k....k....
+"""
+
+[layers."antennae.twitch"]
+at = [8, 0]
+follows = "head"
+grid = """
+.kk..........kk.
+kssk........kssk
+kssk........kssk
+.kkk........kkk.
+....kk....kk....
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk....kk.
+k..k..k..k
+"""
+
+[layers.mouth]
+at = [14, 11]
+follows = "head"
+grid = """
+F..F
+.FF.
+"""
+
+[layers."mouth.open"]
+at = [14, 11]
+follows = "head"
+grid = """
+kkkk
+kppk
+.kk.
+"""
+
+[layers.legs]
+at = [9, 18]
+grid = """
+.kk........kk.
+kSk........kSk
+"""

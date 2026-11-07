@@ -1,0 +1,247 @@
+# Hedgehog, on small-quadruped. The defining feature is the spines: a big
+# spiky dome of brown quills with cream tips, drawn as the `body` so it sits
+# behind a small, pale, pointy face with a black button nose, rosy cheeks,
+# and tiny round ears. No tail to see. `body.puff` bristles the spines out;
+# `body.ball` is the curled-up spiky ball.
+id = "hedgehog"
+name = "Hedgehog"
+category = "mammals"
+aliases = ["hedgie"]
+accent = "ochre"
+extends = "small-quadruped"
+
+[palette]
+"l" = "cream"       # quill tips
+"f" = "brown-3"     # quills
+"F" = "brown-4"     # quill shadow
+"w" = "brown-1"     # face and belly
+"M" = "brown-2"     # face shadow
+"s" = "brown-2"     # paws light
+"S" = "brown-3"     # paws
+"n" = "fur-black"   # nose
+"p" = "pink-1"      # cheeks, mouth
+
+# The spines hide any tail.
+[layers.tail]
+at = [16, 20]
+grid = """
+.
+"""
+
+[layers.body]
+grid = """
+................................
+..............kk....k...........
+.............kllk.kklk..........
+........kkkkklllfkflllk.........
+.......kllffffllfffllfkkkk......
+......kflllfFFFffFFFffkfflk.....
+.....kkffFfffFFffFFfffFflllk....
+...kkfffFFFffFFffFFffFFFlllk....
+..klllfffFFFffFffFffFFFffffk....
+..klllffffFFffFffFffFFfffffkk...
+..kffFFffffFFfFffFfFFffffFFflkk.
+...kfFFFFfffFFfFFfFFfffFFFFllllk
+..kfffFFFFFffFfFFfFffFFFFFffllk.
+.kffffffffFFFfFFFFfFFFffffffffk.
+klllffffffffffFFFFfffffffffffk..
+klllFFFFFFMwwwwwwwwwwMFFFFFFfk..
+klllFFFFFFMwwwwwwwwwwMFFFFFFfk..
+.kllFFFFFFMwwwwwwwwwwMFFFFFFfk..
+.klfFFFFFFMwwwwwwwwwwMFFFFFFffk.
+.kffFFFFFfMwwwwwwwwwwMfFFFFFlfk.
+..kfFFFfffMwwwwwwwwwwMfffFFFllk.
+..kfFfffffMwwwwwwwwwwMfffffFllk.
+...kffffffMwwwwwwwwwwMffffflllk.
+...kffffffMwwwwwwwwwwMffffflllk.
+...kfffffFMwwwwwwwwwwMFfffflllk.
+..kFFFFFFFMwwwwwwwwwwMFFFFFfffk.
+..kFfFFFFFMwwwwwwwwwwMFFFFFFFk..
+..kfffFFFFMwwwwwwwwwwMFFFFFFk...
+..kfffFFFFMwwwwwwwwwwMFFFFFk....
+..kfffFFFFMwwwwwwwwwwMFFFFFk....
+..kfffFFFFMwwwwwwwwwwMFFFFFk....
+..kfffFFFFMwwwwwwwwwwMFFFFFk....
+"""
+
+[layers."body.puff"]
+grid = """
+..........klkk.klllk...k........
+.........klllfkflllk.kklk.......
+.....kkk.kfllffflllfkfllk.......
+....kllfkkfllffFFfffflllfk......
+....klllffFFFffFFffFFFlffkkkk...
+....kfllfffFFffFFffFFffffffllk..
+...kkffFfffFFffFFffFFfffFflllk..
+.kkfffFFFfffFFfFFfFFfffFFFlllk..
+klllfffFFFffFFfFFfFFffFFFffffk..
+kllllfffFFFffFfFFfFffFFFffffkkk.
+.kflFFffffFFfFFffFFfFFffffFFfflk
+.kffFFFFfffFFfFffFfFFfffFFFFllll
+.kffFFFFFFfffFffffFfffFFFFFFflll
+kffffffffFFFFfFFFFfFFFFffffffffk
+lllfffffffffffFFFFffffffffffffk.
+lllFFFFFFFMwwwwwwwwwwMFFFFFFFfk.
+lllFFFFFFFMwwwwwwwwwwMFFFFFFFfk.
+lllFFFFFFFMwwwwwwwwwwMFFFFFFFffk
+kffFFFFFFfMwwwwwwwwwwMfFFFFFFffk
+kffFFFFFffMwwwwwwwwwwMffFFFFFllk
+.kfFFFffffMwwwwwwwwwwMffffFFFlll
+.kfFffffffMwwwwwwwwwwMffffffFlll
+..kffffffFMwwwwwwwwwwMFfffffllll
+.kffffffFFMwwwwwwwwwwMFFffffllll
+.kfffffFFFMwwwwwwwwwwMFFFfffllll
+.kfffffFFFMwwwwwwwwwwMFFFfffflll
+.kffFFFFFFMwwwwwwwwwwMFFFFFFFFFk
+kfffFFFFFFMwwwwwwwwwwMFFFFFFFFk.
+kffffFFFFFMwwwwwwwwwwMFFFFFFkk..
+kffffFFFFFMwwwwwwwwwwMFFFFFFk...
+kffffFFFFFMwwwwwwwwwwMFFFFFFFk..
+kfffFFFFFFMwwwwwwwwwwMFFFFFFFk..
+"""
+
+[layers."body.ball"]
+grid = """
+................................
+................................
+.............k....k.............
+............klkkkklk............
+........kk.kfllffllfk.kk........
+.......kllkkfllfFllfkkllk.......
+.......klllfFFffFFffflllk.......
+.......kflfffFFfFffFFflfk.......
+.......kkFFffFFfFffFfffkk.......
+......kfffFFffFfFfFfffFffk......
+.....kllffffFfffFFffFFFFllk.....
+.....kllFFfffFfFfffFFFffllk.....
+......kfFFFFFFfffFfffffffk......
+......kfffffffFfffFFFFFFfk......
+.....kllffFFFfffFfFfffFFllk.....
+.....kllFFFFffFFfffFffffllk.....
+......kFFFFFFFFFFFFFFFFFFk......
+.......kkFFFFFFFFFFFFFFkk.......
+.......kFfFFFFFFFFFFFFfFk.......
+.......kfffFFFFFFFFFFfffk.......
+.......kffkkFffFFffFkkffk.......
+........kk.kFffFFffFk.kk........
+............kfkkkkfk............
+.............k....k.............
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+[layers.head]
+at = [8, 6]
+grid = """
+.....kkkkkk.....
+...kkwwwwwwkk...
+..kwwwwwwwwwwk..
+.kwwwwwwwwwwwwk.
+kwwwwwwwwwwwwwwk
+kwpwwwwwwwwwwpMk
+.kwwwwwwwwwwwMk.
+..kwwwwwwwwwMk..
+...kwwwwwwwwk...
+....kwwwwwwk....
+.....kMwwMk.....
+......kkkk......
+"""
+
+[layers.ears]
+at = [8, 5]
+follows = "head"
+grid = """
+.kk..........kk.
+kwMk........kwMk
+"""
+
+[layers."ears.flick"]
+at = [8, 4]
+follows = "head"
+grid = """
+.............kk.
+.kk.........kwMk
+kwMk.........kk.
+"""
+
+[layers.nose]
+at = [15, 15]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [14, 14]
+follows = "head"
+grid = """
+knnk
+"""
+
+[layers."mouth.open"]
+at = [14, 16]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+[layers.paws]
+at = [10, 17]
+grid = """
+.SS........SS.
+SssS......SssS
+kSSk......kSSk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 5
+
+[[actions]]
+use = "look-left"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: puffs its spines out, holds, and deflates with a sigh.
+[[actions]]
+name = "puff-up"
+weight = 5
+frames = [
+  { ops = ["eyes=closed"], ms = 160 },
+  { ops = ["body=puff", "eyes=closed", "all+0,-1"], ms = 200 },
+  { ops = ["body=puff", "all+0,-1"], ms = 1000 },
+  { ops = ["body=puff", "eyes=closed"], ms = 200 },
+  { ops = ["eyes=happy", "prop:puff@22,6"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: curls into a spiky ball, rolls away and back, and uncurls with a
+# leaf stuck on its spines.
+[[actions]]
+name = "roll"
+weight = 1
+frames = [
+  { ops = ["eyes=closed", "all+0,1"], ms = 200 },
+  { ops = ["body=ball", "-head", "-ears", "-eyes", "-nose", "-paws"], ms = 300 },
+  { ops = ["body=ball", "-head", "-ears", "-eyes", "-nose", "-paws", "all+-2,0", "flipx"], ms = 150 },
+  { ops = ["body=ball", "-head", "-ears", "-eyes", "-nose", "-paws", "all+-4,0"], ms = 150 },
+  { ops = ["body=ball", "-head", "-ears", "-eyes", "-nose", "-paws", "all+-2,0", "flipx"], ms = 150 },
+  { ops = ["body=ball", "-head", "-ears", "-eyes", "-nose", "-paws"], ms = 300 },
+  { ops = ["eyes=closed", "prop:leaf@18,0"], ms = 300 },
+  { ops = ["eyes=left", "prop:leaf@18,0"], ms = 900 },
+  { ops = ["eyes=happy", "prop:leaf@18,0"], ms = 600 },
+  { ops = [], ms = 200 },
+]

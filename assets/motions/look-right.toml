@@ -1,0 +1,7 @@
+# Motion template (SPEC §12.4). Use it with `use = "look-right"` in [[actions]].
+name = "look-right"
+summary = "Glances right and holds"
+needs = ["eyes.right"]
+frames = [
+  { ops = ["eyes=right"], ms = 1100 },
+]

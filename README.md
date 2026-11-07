@@ -13,7 +13,8 @@ turns its head to look at you.
   │  OWL  │              │   MOOSE    │       │ BUILD7 │
   └───────┘              └────────────┘       └────────┘
 ```
-*(Real art is 32×32 pixel sprites. This is the idea in ASCII.)*
+*(Real art is 32×32 pixel sprites: see [all 100 mascots](#the-100-mascots).
+This is the idea in ASCII.)*
 
 - **Always on top, never in the way.** Clicks go straight through it, it never
   steals focus, and it stays out of the taskbar, Dock, and Alt-Tab.
@@ -32,9 +33,33 @@ turns its head to look at you.
 Runs on **Windows 10/11**, **macOS 13+**, and **Linux**: X11, KDE Plasma 6
 on Wayland, and GNOME on Wayland (Ubuntu 24.04 LTS and newer).
 
-> **Status: pre-release.** PAWPRINT is being built now. This README describes
-> how 1.0 will work. See [`ROADMAP.md`](ROADMAP.md) for progress and
-> [`SPEC.md`](SPEC.md) for the design.
+> **Status: pre-release.** Everything in this README is implemented and
+> tested in CI on Linux, macOS, and Windows. What remains before 1.0 is the
+> first published release (until then, build from source: see
+> [Development](#development)) and the owner's checks on real hardware.
+> See [`ROADMAP.md`](ROADMAP.md) for what's left and [`SPEC.md`](SPEC.md)
+> for the design.
+
+---
+
+## The 100 mascots
+
+Six packs: mammals, cats and dogs, birds, aquatic, critters, and oddballs.
+Each one has its own signature move and a few shared ones (blinks, ear
+flicks, a doze at night). Here they are at actual size and 2×, grouped by
+body plan, with labels hidden:
+
+![All 100 PAWPRINT mascots at 1× and 2×](docs/gallery.png)
+
+<details>
+<summary>The same sheet with every animation playing (1.3 MB GIF)</summary>
+
+![All 100 PAWPRINT mascots animated](docs/gallery.gif)
+
+</details>
+
+`pawprint list` prints them all with their aliases (`--category birds`
+narrows it), and `pawprint render <id> --out badge.png` draws one.
 
 ---
 
@@ -66,11 +91,23 @@ badge should appear in the top-right corner of your primary display.
 | `install.sh` | `install.ps1` | Effect |
 |---|---|---|
 | `--version 1.2.0` | `-Version 1.2.0` | Install a specific version (default: latest) |
-| `--archive ./pawprint-….tar.gz` | `-Archive .\pawprint-….zip` | Install from a downloaded archive, with no network access |
+| `--archive ./pawprint-….tar.gz` | `-Archive .\pawprint-….zip` | Install from a downloaded archive, with no network access. Its `.sha256` file is checked if it sits next to it |
 | `--no-autostart` | `-NoAutostart` | Don't start at login |
 | `--no-start` | `-NoStart` | Don't start it now |
-| `--prefix DIR` | — | Install somewhere other than `~/.local/bin` |
+| `--prefix DIR` | `-Prefix DIR` | Install somewhere other than `~/.local/bin` (Windows: `%LOCALAPPDATA%\Programs\pawprint`) |
 | `--uninstall [--purge]` | `-Uninstall [-Purge]` | Remove PAWPRINT (`purge` also deletes your config) |
+
+The environment variables `PAWPRINT_VERSION` and `PAWPRINT_PREFIX` work
+like `--version` and `--prefix`. `PAWPRINT_DOWNLOAD_BASE` replaces
+`https://github.com/nealhardesty/pawprint/releases`, for a mirror laid out
+the same way (`download/v<version>/<asset>`, with `latest` redirecting to
+`tag/v<version>`); the tests use it to point at a local server.
+
+Re-running the installer upgrades in place: it checks the download first,
+then stops the running badge, replaces the binary, and starts it again. A
+failed download or checksum changes nothing. Your config is never touched.
+Without a desktop session (over SSH, say) the badge can't start yet; the
+installer says so and the badge starts at your next graphical login.
 
 Passing options through a pipe:
 
@@ -99,6 +136,11 @@ pawprint
 On macOS, a binary downloaded **with a browser** is quarantined by
 Gatekeeper. Clear that with `xattr -d com.apple.quarantine ./pawprint`. The
 curl installer doesn't have this problem.
+
+On macOS, `pawprint autostart on` adds a LaunchAgent
+(`~/Library/LaunchAgents/io.github.nealhardesty.pawprint.plist`) and starts
+the badge right away. macOS says "Background Items Added" and lists it under
+System Settings → General → Login Items.
 </details>
 
 Install locations: `~/.local/bin/pawprint` on Linux and macOS, and
@@ -111,24 +153,29 @@ Install locations: `~/.local/bin/pawprint` on Linux and macOS, and
 | You want to... | Do this |
 |---|---|
 | Start it | `pawprint` (it starts automatically at login after install) |
-| Move it | Tray/menu-bar icon → **Move**, or `pawprint move`. Drag the badge, then let go. **Esc** cancels. |
+| Move it | Tray/menu-bar icon → **Move**, or `pawprint move`. A dashed outline shows it's ready: drag the badge, then let go. **Esc** cancels. |
 | Put it back in the corner | `pawprint reset-position` |
 | See why it chose that animal | `pawprint explain` |
 | Pick a different animal | `pawprint list`, then `pawprint set mascot otter` |
 | Change the label | `pawprint set label "BUILD-7"` (or `none` to hide it) |
-| Make it bigger or smaller | `pawprint set size 128` (presets: 32, 64, 128) |
-| Stop the animation | `pawprint set animation static` |
+| Make it bigger or smaller | Tray → **Size**, or `pawprint set size 128` (presets: 32, 64, 128) |
+| Stop the animation | Tray → **Animation ▸ Static**, or `pawprint set animation static` |
+| Undo a `set` | `pawprint unset size` (any key) |
 | Change the crate color | `pawprint set accent teal` (`pawprint list --accents` shows them all) |
-| Preview a mascot | `pawprint preview walrus` |
+| Preview a mascot | `pawprint preview walrus` opens a window that plays every animation; Esc closes it |
 | Stop it | `pawprint quit`, or tray → **Quit** |
+| Start it at login | `pawprint autostart on` (`status` shows what is registered) |
 | Stop it starting at login | `pawprint autostart off` |
 | Find out what's wrong | `pawprint doctor` |
 
 **Why "move mode"?** The badge lets every click pass through to whatever is
 underneath, so it never blocks a button you need. To drag it, you first ask
-it to hold still. Move mode ends when you let go, when you press Esc, or
-after 30 seconds. Its position is anchored to the nearest corner or edge, so
-it stays put when a remote session changes resolution.
+it to hold still. Move mode ends when you let go, when you press Enter or
+Esc, or after 30 seconds. The arrow keys nudge it by a pixel (Shift: ten)
+while move mode is on, and the keyboard goes to the badge until it ends.
+Its position is anchored to the nearest corner or edge, so it stays put
+when a remote session changes resolution. (On Wayland, clicks anywhere
+else on the screen are held back while move mode is on.)
 
 ### How it picks a mascot
 
@@ -206,8 +253,17 @@ mascot = "cat-maine-coon-black"
 accent = "cranberry"     # every production box gets a red crate
 ```
 
-`pawprint set ...` writes into the current host's section for you and keeps
-your comments and formatting.
+`pawprint set <key> <value>` writes into the current host's section
+(`[hosts.<short hostname>]`) for you, keeps your comments and formatting,
+checks the value first, and tells the running badge. The tray's **Size**
+and **Animation** choices are saved the same way, so they survive a
+restart; `pawprint unset <key>` takes one back out. Because they go into
+this host's own section, they win over patterns and top-level settings, and
+copying the file to another machine doesn't carry them over.
+
+The tray menu (the menu bar on macOS): **Move**,
+**Size ▸ 32/64/128**, **Animation ▸ Idle/Static**, **Reset position**,
+**Reload config**, **Quit**. Set `tray = false` to hide it.
 
 A dragged position is saved separately (in PAWPRINT's state file) so your
 config file is never rewritten behind your back. `pawprint reset-position`
@@ -221,22 +277,34 @@ Every mascot can be replaced, and you can add your own. The easiest route is
 a PNG sprite strip:
 
 ```sh
-pawprint mascot export owl ./my-owl          # start from a built-in (PNG + mascot.toml)
-# ...edit ./my-owl/sprite.png in Aseprite, LibreSprite, Piskel, etc...
-pawprint mascot check ./my-owl               # validate it
+pawprint mascot export owl ./owl     # start from a built-in: ./owl/mascot.toml + ./owl/sprite.png
+# ...edit ./owl/sprite.png in Aseprite, LibreSprite, Piskel, etc...
+pawprint mascot check ./owl          # validate it with the same rules as the build
 ```
 
 Then copy the folder into the `mascots` folder next to your config file
-(`pawprint paths` shows exactly where). **A folder with the same id as a
-built-in replaces it. A new id adds a new mascot**, which you can select with
-`pawprint set mascot <id>` or match by hostname through its `aliases`.
+(`pawprint paths` shows exactly where, e.g. `~/.config/pawprint/mascots/owl/`).
+**A folder with the same id as a built-in replaces it. A new id adds a new
+mascot**: change `id` in `mascot.toml` and name the folder the same, then
+select it with `pawprint set mascot <id>` or match it by hostname through its
+`aliases` (yours win if they clash with a built-in's; `mascot check` warns).
+
+`pawprint list` shows where each mascot comes from in its SOURCE column:
+`bundled`, `user` (one you added), or `override` (yours, replacing a
+built-in). A mascot with a mistake in it is skipped with a warning (in
+`pawprint explain`, `pawprint list`, and the log) and never stops the badge.
+The badge reads the folder when it starts and again on every reload, so
+`pawprint reload` (or `pawprint set mascot <id>`, which reloads) picks up a
+new or changed mascot.
 
 The rules, briefly:
 
 - `sprite.png` is a horizontal strip of **32×32 frames**.
 - Pixels are either fully opaque or fully transparent (no soft edges).
 - Keep the face in the top 20 rows. The bottom 12 rows are behind the crate.
-- `mascot.toml` names a rest frame and one or more short actions:
+- `mascot.toml` names a rest frame and one or more short actions. Each
+  action lists frame numbers, and each frame shows for `duration_ms`
+  (80–2000 ms; at most 4 s per action), so repeat a number to hold a frame:
 
 ```toml
 id = "my-owl"
@@ -257,7 +325,8 @@ The built-in mascots are written in a **text pixel format** instead: pixel
 grids in TOML, with shared body bases, reusable motions like `blink` and
 `duck`, and props like `zzz`. Your own mascots can use it too, and it's the
 way to contribute new built-ins. Both formats are documented in
-[SPEC.md §12](SPEC.md#12-mascot-assets).
+[SPEC.md §12](SPEC.md#12-mascot-assets), and [docs/ART.md](docs/ART.md) walks
+through drawing one on a shared body base, step by step.
 
 ---
 
@@ -287,11 +356,35 @@ way to contribute new built-ins. Both formats are documented in
 
 Run **`pawprint doctor`** first. It reports the session type, which backend
 was chosen and why, your displays and which one is primary, transparency
-support, autostart status, and any config problems.
+support, autostart status, and any config problems. For example, on a
+Linux X11 session with no compositor:
+
+```
+$ pawprint doctor
+...
+Backend
+  backend             x11
+  why                 DISPLAY is set
+  window manager      Openbox
+  compositor          none
+  ARGB visual         yes
+  transparency        bounding shape from the badge mask (pixel-identical)
+  RandR monitors      yes (1.5)
+  display             DP-1 1920x1080+0+0 scale 1 usable 1920x1040+0+40 (primary)  <- badge
+  tray                StatusNotifierItem host available
+
+No problems found.
+```
+
+On Linux, PAWPRINT picks its backend like this: a Wayland compositor with
+layer-shell (KDE Plasma, Sway, Hyprland, ...) gets the native Wayland
+backend; GNOME on Wayland uses X11 through XWayland; anything else with
+`DISPLAY` set (X11 desktops, xrdp, Xvnc) uses X11. Set `backend = "x11"` or
+`"wayland"` in the config only if `doctor` suggests it.
 
 | Problem | Try |
 |---|---|
-| Nothing appears | `pawprint status`. If it isn't running, `pawprint run --verbose` shows errors in the terminal. |
+| Nothing appears | `pawprint status`. If it isn't running, `pawprint run --verbose` shows errors in the terminal. Exit code 3 means no usable graphical session was found. |
 | Black or gray box instead of transparency (Linux X11) | No compositor is running. PAWPRINT should switch to shaped mode automatically; `doctor` shows which mode is in use. |
 | It's on the wrong monitor | `pawprint doctor` lists output names; set `display = "<name>"`. |
 | Blurry on Ubuntu/GNOME with fractional scaling | Run `pawprint doctor`; it shows the `gsettings` command that makes it crisp. |
@@ -300,7 +393,9 @@ support, autostart status, and any config problems.
 | Want a fresh fallback pick | `pawprint forget` clears this host's remembered choice. |
 | "already running" but nothing visible | It's running in a different session (for example the console vs. RDP). `pawprint quit` from that session, or log out of it. |
 
-Logs: `pawprint paths` shows the log file location.
+Logs: `pawprint paths` shows the log file location (on Linux,
+`~/.local/state/pawprint/pawprint.log`; it is capped at 1 MB, with one
+older file kept as `pawprint.log.1`).
 
 ---
 
@@ -315,7 +410,8 @@ curl -fsSL https://github.com/nealhardesty/pawprint/releases/latest/download/ins
 ```
 
 Your config and custom mascots are kept. Add `--purge` / `-Purge` to delete
-them too.
+them too. If you installed with `--prefix`, pass the same `--prefix` to
+uninstall. From a checkout, `make uninstall` does the same.
 
 ---
 
@@ -333,10 +429,13 @@ work. Contributor rules for humans and coding agents are in
 | OS | Install |
 |---|---|
 | All | [rustup](https://rustup.rs). The pinned toolchain and targets install on first build. |
-| Linux | `make` (plus a cross linker or `cargo-zigbuild` only for aarch64 release builds) |
+| Linux | `make`. Static musl release builds for x86_64 and aarch64 link with the `rust-lld` that rustup ships, so there is no cross toolchain to install. |
 | macOS | Xcode Command Line Tools: `xcode-select --install` (provides `make`, `lipo`, `codesign`) |
 | Windows | Visual Studio Build Tools (C++ workload) and GNU Make: `winget install ezwinports.make`. Run targets from PowerShell. |
 | Publishing | [GitHub CLI](https://cli.github.com), authenticated with `gh auth login` |
+| Installer checks (optional) | `make lint-installers` needs `shellcheck`; `make release` on Linux runs the aarch64 binary if `qemu-user-static` is installed. On Ubuntu: `sudo apt-get install shellcheck qemu-user-static` |
+| Linux display tests (optional) | `make test-x11` and `make test-wayland` drive real display servers (and `make power-check` uses Xvfb). On Ubuntu: `sudo apt-get install xvfb xcompmgr openbox sway swaybg grim foot wtype dbus` |
+| Windows display test (optional) | `make test-windows-display` runs the badge on your own desktop: nothing to install, but quit any running badge first and leave the mouse alone for a few seconds |
 
 ### Make targets
 
@@ -344,35 +443,75 @@ work. Contributor rules for humans and coding agents are in
 The targets are the same on Linux, macOS, and Windows, and CI runs the same
 ones.
 
+To try the badge from a checkout, `make run` runs it in the foreground
+(Ctrl-C or `pawprint quit` stops it). After `make build`, the CLI is
+`target/debug/pawprint`: bare `target/debug/pawprint` starts the badge in
+the background, and `target/debug/pawprint move`, `status`, and `quit` talk
+to it. On Windows the build also makes `target\debug\pawprintw.exe`, the
+windowless twin that bare `pawprint` starts so no console window opens.
+
 | Target | What it does |
 |---|---|
+| `make help` | List targets (what `make` on its own runs) |
 | `make build` | Debug build |
 | `make run` | Build and run the badge in the foreground (`ARGS="--verbose"` passes flags) |
-| `make preview MASCOT=owl` | Show one mascot cycling through its animations |
+| `make preview MASCOT=owl` | Open a window with one mascot cycling through all its animations (`SIZE=64` for another size) |
+| `make power-check` | Build the release badge and measure startup time, CPU and wakeups in idle and static mode, memory, and binary size against the power budget (`POWER_SECONDS=120` per mode). Linux: under Xvfb. Windows: on your desktop, with your config and state files backed up next to them (`*.pawdev-backup`) and put back afterwards, or at the next run if one was interrupted. macOS: on your desktop with a private HOME, from a universal binary. CI jobs run it on `windows-latest` and `macos-latest` |
 | `make test` | Unit tests, golden image tests, and mascot catalog validation |
+| `make test-x11` | Linux: run the badge under Xvfb (bare, with the `xcompmgr` compositor, with the `openbox` window manager) and check its pixels, click-through, move mode and its outline, single instance, the tray menu over a private D-Bus, `set`/`unset` and reloads, and the preview window |
+| `make test-wayland` | Linux: run the badge under headless Sway and check placement, click-through, move mode, panels, output changes, and the preview window from screenshots |
+| `make test-linux-display` | Both display-server suites (a separate CI job runs this) |
+| `make test-macos-display` | macOS: run the badge in your logged-in desktop and check its window level, placement, IPC, menu-bar item, `autostart` against launchd, and the preview window, and (with Screen Recording and Accessibility granted to the terminal) pixels, drag, keys, and a menu choice; a CI job runs it on `macos-latest` |
+| `make test-windows-display` | Windows: run `pawprintw.exe` on this desktop and check its window styles, top-right placement, topmost, click-through, a real move-mode drag, work-area changes, the named pipe, its pixels on screen, the tray icon and a real click through its menu, `autostart` writing the `Run` value, and the preview window (a separate CI job runs this on `windows-latest`). It restores your state file, config file, and autostart value afterwards |
 | `make check-assets` | Validate the mascot catalog only |
 | `make lint` | Format check and clippy (warnings are errors) |
 | `make fmt` | Format the code |
 | `make golden` | Regenerate golden images after an intentional rendering change |
-| `make contact-sheet` | Render every mascot (labels hidden, grouped by body base) into `docs/gallery.png`; `ANIMATED=1` adds an animated GIF |
-| `make art-export MASCOT=owl` | Export a mascot's layers and frames as PNGs for editing in a pixel-art tool |
-| `make art-import MASCOT=owl PNG=eyes.png` | Convert an edited PNG layer back into the text pixel format |
+| `make golden-hosts` | Recompute `tests/golden/hostnames.tsv`, the catalog stability fixture (200 hostnames and the mascot each gets), after an intentional catalog change; review the diff, since it moves real machines |
+| `make contact-sheet` | Render every mascot (labels hidden, grouped by body base) into `docs/gallery.png`; `ANIMATED=1` also writes `docs/gallery.gif` with every action playing (sampled every 100 ms) |
+| `make building-blocks` | Render the crate in every accent, every prop, and every body base with every motion template into `docs/building-blocks.png` |
+| `make palette` | Regenerate `assets/palette.gpl`, the master palette for GIMP, Aseprite, and LibreSprite |
+| `make art-export MASCOT=owl` | Export a mascot's layers (one PNG each) and frames into `out/art/<id>/` for editing in a pixel-art tool |
+| `make art-import MASCOT=owl PNG=out/art/owl/eyes.png` | Print an edited PNG layer as a ready-to-paste grid in the mascot's own glyphs |
 | `make ci` | Everything CI checks (`lint` + `test`) |
-| `make release` | Optimized build (universal binary on macOS, static musl on Linux) |
-| `make package` | Release build, archive, and checksum into `dist/`. Fails if the catalog has fewer than 100 valid mascots or is missing a required one. |
-| `make publish` | Upload `dist/` and the installers to the GitHub release for the current version |
-| `make install` | Install your local release build for this user and turn on autostart |
-| `make uninstall` | Remove the local install and autostart |
+| `make release` | Optimized build for this OS, checked and run: static musl x86_64 and aarch64 on Linux (the aarch64 one runs under `qemu-user-static` if installed), a universal binary re-signed ad hoc on macOS, `pawprint.exe` and `pawprintw.exe` on Windows |
+| `make package` | Release build, then the archives and their `.sha256` files into `dist/`. Fails if the catalog has fewer than 100 valid mascots or is missing a required one. |
+| `make publish` | Upload `dist/` and the installers to the GitHub release `v<version>`, creating it as a draft if needed. Refuses unless the tree is clean, the tag is on `HEAD`, and `dist/` was packaged from that commit. `make publish DRY_RUN=1` prints the `gh` commands without running them |
+| `make release-finalize` | Once every OS has published: check the draft release has all four archives, their `.sha256` files, and both installers, then publish it. `DRY_RUN=1` prints the commands and the expected assets |
+| `make install` | Package, then install that build for this user through the real installer (`--archive dist/...`): autostart on, badge started |
+| `make uninstall` | Remove the install and autostart through the installer (config is kept) |
+| `make test-install` | Package, then run the installers end to end in a throwaway home under every shell found (`sh`, `dash`, `bash`; `powershell`, `pwsh`): fresh install, upgrade from a local HTTP server, a checksum mismatch that must change nothing, uninstall, purge. On Windows and macOS the autostart entry is your real one, so it refuses to run while `pawprint autostart status` says on (outside CI) |
+| `make lint-installers` | `shellcheck` the POSIX installer (needs `shellcheck`) |
 | `make doctor` | Run `pawprint doctor` from the local build |
 | `make clean` | Remove build outputs |
+| `make check-all-targets` | Type-check the workspace for every release target (Windows, macOS, Linux musl) from any OS; needs no linkers |
+| `make spike-f22` | Rebuild the F22 spike: proves the Linux window, Wayland, D-Bus, and tray crates link into fully static musl binaries |
+
+`make check-assets` and `make test` report the catalog gates (at least 100
+mascots, every showcase mascot present) without failing; only `make package`
+enforces them.
 
 ### Releasing
 
 Releases are built locally on each OS and uploaded to one GitHub release:
 
-1. Bump `version` in the root `Cargo.toml`, commit, and tag `v<version>`.
-2. On Linux, macOS, and Windows, run `make package && make publish`.
-3. Test the install one-liners on a clean machine of each OS.
+1. Bump `version` in the root `Cargo.toml`, commit, then tag and push:
+   `git tag v<version> && git push origin v<version>`.
+2. On Linux, macOS, and Windows, check out the tag and run
+   `make package && make publish`. The first machine creates the release
+   as a draft (let it finish before the others start); each machine
+   uploads its own archives, their `.sha256` files, and the two installers
+   (re-uploads replace same-named assets). `make publish DRY_RUN=1` shows
+   what would run.
+3. `make release-finalize` checks that the draft has every OS's assets and
+   publishes it. Until then nobody sees the release, so `latest` never
+   lacks an OS.
+4. Test the install one-liners on a clean machine of each OS.
+
+`make publish` reads the version from `Cargo.toml`, so there is nothing to
+pass. It refuses to run with uncommitted changes, when the tag doesn't
+point at `HEAD`, or when `dist/` was packaged from another commit (recorded
+in `dist/COMMIT`), so every asset matches the tagged commit.
 
 Details are in [SPEC.md §15](SPEC.md#15-packaging-release-and-install).
 

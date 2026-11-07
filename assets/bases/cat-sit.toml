@@ -1,0 +1,190 @@
+# Base: cat-sit (SPEC §12.8). A sitting cat, ears up, front paws on the rim,
+# tail curling up the right side. Members: all 12 cats.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)    l f F  fur light / base / shadow
+#   w M    muzzle and chest light / its shadow (mouth lines)
+#   e iris (unused by the default eyes; add it in your own eyes)
+#   h eye highlight   n nose   p inner ear and tongue
+#
+# Slots, in drawing order: tail (+flick), body, head, ears (+flick), eyes
+# (+closed, left, right, happy), nose (+sniff), mouth (.open only, hidden at
+# rest), paws. ears, eyes, nose, and mouth follow head, so `head+1,0` tilts
+# the whole face.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "grey-1"
+"f" = "grey-2"
+"F" = "grey-3"
+"w" = "white"
+"M" = "grey-1"
+"e" = "green-1"
+"h" = "white"
+"n" = "pink-2"
+"p" = "pink-1"
+
+[layers.tail]
+at = [26, 11]
+grid = """
+.kk.
+klfk
+klFk
+kfFk
+kfFk
+kfFk
+kfFk
+kfFk
+kfFk
+kfFk
+"""
+
+[layers."tail.flick"]
+at = [26, 10]
+grid = """
+..kk.
+.klfk
+.klFk
+kffFk
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klfffffffffffffFFk..
+.klfffffffffffffffFFk.
+klffffffwwwwwwffffffFk
+klffffffwwwwwwffffffFk
+klffffffwwwwwwffffffFk
+klfffffffwwwwfffffffFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+[layers.head]
+at = [6, 4]
+grid = """
+....kkkkkkkkkkkk....
+..kkllllllllllffkk..
+.kllffffffffffffFFk.
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klffffffffffffffffFk
+klffffwwwwwwffffffFk
+klfffwwwMMwwwffffFFk
+.kffffwwMwwMwwffFFk.
+..kFFffwwwwwwffFFk..
+...kkFFFFFFFFFFkk...
+"""
+
+[layers.ears]
+at = [7, 1]
+follows = "head"
+grid = """
+.k..............k.
+klk............kFk
+klfk..........kfFk
+klpfk........kfpFk
+klppfk......kfppFk
+"""
+
+[layers."ears.flick"]
+at = [6, 1]
+follows = "head"
+grid = """
+.................k.
+k...............kFk
+klk............kfFk
+klpfk.........kfpFk
+klppfk.......kfppFk
+.kllff.............
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [15, 12]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [15, 11]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."mouth.open"]
+at = [14, 13]
+follows = "head"
+grid = """
+kkkk
+kppk
+kppk
+"""
+
+[layers.paws]
+at = [9, 17]
+grid = """
+.FFFF....FFFF.
+FllllF..FllllF
+klFlFk..klFlFk
+"""

@@ -1,0 +1,238 @@
+# Pigeon on bird-perched. A small grey head on a plump body, an iridescent
+# green-and-violet collar, orange eyes, a dark beak with a white cere, two
+# black wing bars, and pink feet. Its small head shows shoulders, which no
+# other perched bird has. Signature: the chest puffs up and it coos.
+# Rare: it struts along the rim, head bobbing with every step.
+id = "pigeon"
+name = "Pigeon"
+category = "birds"
+aliases = ["dove"]
+accent = "slate"
+extends = "bird-perched"
+
+[palette]
+"l" = "grey-1"      # feathers light
+"f" = "grey-2"      # feathers
+"F" = "grey-3"      # feather shadow
+"w" = "grey-1"      # chest
+"m" = "grey-2"
+"t" = "teal"        # collar sheen
+"P" = "purple-2"    # collar sheen
+"d" = "grey-4"      # wing bars
+"e" = "orange-2"    # iris
+"c" = "white"       # cere
+"b" = "grey-4"      # beak
+"B" = "grey-3"      # beak shadow
+"n" = "pink-2"      # feet
+
+[layers.body]
+at = [5, 12]
+grid = """
+..kkllllllllllllffkk..
+.klllfttttttttttffFFk.
+kllftttttPPPPtttttfFFk
+klffttttPPPPPPttttffFk
+klfffftttwwwwwwtttffFk
+klffffwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwwffFk
+klfffwwwwwwwwwwwwwffFk
+klfffwwwwwwwwwwwwwffFk
+klffffwwwwwwwwwwwfffFk
+klffffwwwwwwwwwwwfffFk
+klfffffwwwwwwwwwffffFk
+klfffffwwwwwwwwfffffFk
+klffffffwwwwwwffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+"""
+
+# Chest puffed: the collar spreads and the breast swells forward.
+[layers."body.puff"]
+at = [3, 11]
+grid = """
+....kkkkllllllllllkkkk....
+..kklllfttttttttttfffFkk..
+.klllftttttPPPPPPtttttFFk.
+klllfttttPPPPPPPPPPttttFFk
+klffttttttPPPPPPttttttfFFk
+klffftttwwwwwwwwwwwtttffFk
+klffffwwwwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwwwwwwffFk
+klfffwwwwwwwwwwwwwwwwwffFk
+klfffwwwwwwwwwwwwwwwwwffFk
+klffffwwwwwwwwwwwwwwwfffFk
+klffffwwwwwwwwwwwwwwwfffFk
+klfffffwwwwwwwwwwwwwffffFk
+klfffffwwwwwwwwwwwwfffffFk
+klffffffwwwwwwwwwwffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+klffffffffffffffffffffffFk
+"""
+
+[layers.wings]
+at = [3, 15]
+grid = """
+.kk....................kk.
+klfk..................kfFk
+kldFk................kFdFk
+kfdFk................kFdFk
+kffFFk..............kFFFFk
+kfdFFk..............kFFdFk
+.kfdFk..............kFdFk.
+.kffFFk............kFFFFk.
+..kffFk............kFFFk..
+..kkfFk............kFFkk..
+....kkk............kkk....
+"""
+
+[layers."wings.open"]
+at = [0, 12]
+grid = """
+.kk..........................kk.
+klfk........................kfFk
+kfdFk......................kFdFk
+.kfdFk....................kFdFk.
+.kffFFk..................kFFFFk.
+..kfdFk..................kFdFk..
+..kkfFk..................kFFkk..
+....kkk..................kkk....
+"""
+
+# A small round head: the shoulders show on both sides.
+[layers.head]
+at = [8, 4]
+grid = """
+....kkkkkkkk....
+..kklllllfffkk..
+.kllffffffffFFk.
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+.kffffffffffffk.
+..kffffffffffk..
+"""
+
+[layers.eyes]
+at = [10, 8]
+follows = "head"
+grid = """
+.e........e.
+eke......eke
+.e........e.
+"""
+
+[layers."eyes.closed"]
+at = [10, 9]
+follows = "head"
+grid = """
+kkk......kkk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+.e........e.
+kee......kee
+.e........e.
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+follows = "head"
+grid = """
+.e........e.
+eek......eek
+.e........e.
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.k........k.
+k.k......k.k
+"""
+
+[layers.beak]
+at = [14, 9]
+follows = "head"
+grid = """
+.cc.
+.cc.
+kbbk
+.kk.
+"""
+
+[layers."mouth.open"]
+at = [14, 9]
+follows = "head"
+grid = """
+.cc.
+.cc.
+kbbk
+kkkk
+.kk.
+"""
+
+[layers.feet]
+at = [10, 18]
+grid = """
+.knnk....knnk.
+knknk....knknk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "bob"
+weight = 4
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the chest swells, the collar flashes, and a coo rolls out.
+[[actions]]
+name = "coo"
+weight = 5
+frames = [
+  { ops = ["body=puff", "head+0,-1"], ms = 220 },
+  { ops = ["body=puff", "head+0,-1", "eyes=closed"], ms = 500 },
+  { ops = ["body=puff", "head+0,-2", "eyes=closed"], ms = 260 },
+  { ops = ["body=puff", "head+0,-1", "eyes=happy"], ms = 600 },
+  { ops = ["head+0,1"], ms = 160 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: struts along the rim, the head bobbing forward with every step.
+[[actions]]
+name = "strut"
+weight = 1
+frames = [
+  { ops = ["head+0,1", "eyes=left"], ms = 180 },
+  { ops = ["all+-2,0", "eyes=left"], ms = 180 },
+  { ops = ["all+-2,0", "head+0,1", "eyes=left"], ms = 180 },
+  { ops = ["all+-4,0", "eyes=left"], ms = 180 },
+  { ops = ["all+-4,0", "eyes=right"], ms = 400 },
+  { ops = ["all+-4,0", "flipx", "head+0,1", "eyes=left"], ms = 180 },
+  { ops = ["all+-2,0", "flipx", "eyes=left"], ms = 180 },
+  { ops = ["all+-2,0", "flipx", "head+0,1", "eyes=left"], ms = 180 },
+  { ops = ["flipx", "eyes=left"], ms = 180 },
+  { ops = ["head+0,1"], ms = 180 },
+  { ops = [], ms = 300 },
+]

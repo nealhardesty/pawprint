@@ -1,0 +1,218 @@
+# Base: big-cat (SPEC §12.8). A large feline head with a broad muzzle and
+# small round ears, framed by a mane, with heavy paws on the rim and a tufted
+# tail up the right side. Members: lion, tiger.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)    l f F  fur light / base / shadow
+#   w M    muzzle and chest light / its shadow (mouth lines)
+#   s S    mane and tail tuft / their shadow
+#   e iris (the glint in the default eyes)   h eye highlight (unused)
+#   n nose   p inner ear and mouth inside
+#
+# Slots, in drawing order: tail (+flick), body, mane, head, ears (+flick),
+# eyes (+closed, left, right, happy), nose (+sniff), mouth (.open only,
+# hidden at rest: a roar), paws. ears, eyes, nose, and mouth follow head;
+# the mane does not, so a mane shake is `mane+1,0` / `mane+-1,0`.
+#
+# A maneless big cat (tiger) hides the mane with `rest` listing every slot
+# but "mane", or replaces `mane` with cheek ruffs of its own.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "orange-1"
+"f" = "yellow-2"
+"F" = "orange-3"
+"w" = "cream"
+"M" = "orange-1"
+"s" = "brown-2"
+"S" = "brown-3"
+"e" = "amber"
+"h" = "white"
+"n" = "brown-3"
+"p" = "pink-2"
+
+[layers.tail]
+at = [25, 11]
+grid = """
+.kkk.
+kSSSk
+kSsSk
+.kSk.
+.kfk.
+.kfk.
+.kfk.
+kfFk.
+kfFk.
+"""
+
+[layers."tail.flick"]
+at = [25, 11]
+grid = """
+..kkk.
+.kSSSk
+.kSsSk
+.kSk..
+.kfk..
+.kfk..
+.kfk..
+kfFk..
+kfFk..
+"""
+
+[layers.body]
+at = [4, 14]
+grid = """
+....klffffffffffffFk....
+...klfffffffffffffFFk...
+.kklffffffwwwwffffffFkk.
+klfffffffwwwwwwffffffFFk
+klfffffffwwwwwwffffffFFk
+klffffffffwwwwfffffffFFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+klffffffffffffffffffffFk
+"""
+
+[layers.mane]
+at = [1, 1]
+grid = """
+..........kkkkkkkkkk..........
+.......kkksssssssssskkk.......
+.....kksssssssssssssssskk.....
+...kkssssSssssssssssSsssskk...
+..kssssSssssssssssssssSssssk..
+.kssssSssssssssssssssssSssssk.
+.kssssSssssssssssssssssSssssk.
+ksssSssssssssssssssssssssSsssk
+ksssSssssssssssssssssssssSsssk
+kssSssssssssssssssssssssssSssk
+kssSssssssssssssssssssssssSssk
+ksssSssssssssssssssssssssSsssk
+.kssSssssssssssssssssssssSssk.
+.ksssSssssssssssssssssssSsssk.
+.kssSsssssSssssssssSsssssSssk.
+..ksssssssSssssssssSsssssssk..
+...kksssssssSssssSssssssskk...
+.....kkkssssssSSsssssskkk.....
+........kkksssssssskkk........
+"""
+
+[layers.head]
+at = [5, 4]
+grid = """
+.....kkkkkkkkkkkk.....
+...kkllllllllllffkk...
+..kllffffffffffffFFk..
+.klfffffffffffffffFFk.
+.klfffffffffffffffFFk.
+.klfffffffffffffffFFk.
+.klfffffffffffffffFFk.
+.klffffwwwwwwwwffffFk.
+klfffwwwwwwwwwwwwffFFk
+klffwwwwwMMwwwwwwwfFFk
+klffwwwMwwwwMwwwwffFFk
+.kfFfwwwwwwwwwwwwfFFk.
+...kkFFwwwwwwwwFFkk...
+"""
+
+[layers.ears]
+at = [7, 3]
+follows = "head"
+grid = """
+.kkk..........kkk.
+klppk........kpplk
+klpfk........kfplk
+"""
+
+[layers."ears.flick"]
+at = [6, 3]
+follows = "head"
+grid = """
+.kkk...........kkk.
+klppk.........kpplk
+klpfk.........kfplk
+.kff...............
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+ek......ke
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+ek......ek
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+ke......ke
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [14, 12]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 11]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."mouth.open"]
+at = [13, 14]
+follows = "head"
+grid = """
+kkkkkk
+kpkkpk
+kppppk
+.kkkk.
+"""
+
+[layers.paws]
+at = [7, 17]
+grid = """
+.FFFFF......FFFFF.
+FllllfF....FllllfF
+klFlFlk....klFlFlk
+"""

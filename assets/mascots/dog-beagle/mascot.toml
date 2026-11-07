@@ -1,0 +1,219 @@
+# Beagle on dog-sit. Tricolor: a tan head with a white blaze and muzzle,
+# long, low-set floppy ears in deep brown that hang past the jaw, a black
+# saddle over the shoulders, a white chest, and a white-tipped flag tail.
+# `ears.flap` lifts the ears out like wings; the rare action flaps them so
+# hard the beagle takes off.
+id = "dog-beagle"
+name = "Beagle"
+category = "cats-dogs"
+aliases = ["beagle"]
+accent = "ochre"
+extends = "dog-sit"
+
+[palette]
+"h" = "grey-3"      # catchlight: white would vanish into the light fur at 1x
+"l" = "brown-1"     # tan light
+"f" = "brown-2"     # tan
+"F" = "brown-3"     # tan shadow
+"w" = "white"       # blaze, muzzle, chest, paws, tail tip
+"M" = "grey-1"      # shadow on the white
+"s" = "brown-3"     # ears
+"S" = "brown-4"     # ear shadow
+"x" = "fur-black"   # the saddle
+"X" = "grey-4"      # sheen on the saddle
+"p" = "pink-2"      # tongue
+
+# The white-tipped flag tail.
+[layers.tail]
+at = [25, 11]
+grid = """
+..kk.
+.kwk.
+.kwMk
+kxXxk
+kxXxk
+kxxxk
+kxxxk
+kxxxk
+kxxxk
+"""
+
+[layers."tail.flick"]
+at = [25, 10]
+grid = """
+...kk.
+..kwk.
+..kwMk
+.kxXxk
+kxXxk.
+kxxxk.
+kxxxk.
+kxxxk.
+kxxxk.
+kxxxk.
+"""
+
+# The black saddle over the shoulders, a white chest.
+[layers.body]
+at = [5, 14]
+grid = """
+...kXxxxxxxxxxxxxxxk..
+..kXxxxwwwwwwwwxxxxxk.
+.kXxxxwwwwwwwwwwxxxxxk
+kXxxxxwwwwwwwwwwxxxxxk
+kXxxxxwwwwwwwwwwxxxxxk
+kXxxxffwwwwwwwwffxxxxk
+klfffffwwwwwwwwffffFFk
+klffffffwwwwwwfffffFFk
+klfffffffwwwwffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# Domed tan head, a white blaze widening into a square white muzzle.
+[layers.head]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllwwffffkk...
+..kllllffwwffffFFk..
+.kllffffwwwwffffFFk.
+klfffffffwwfffffFFFk
+klfffffffwwfffffffFk
+klffffffwwwwffffffFk
+.kffffwwwwwwwwffffk.
+.kffwwwwwwwwwwwwFFk.
+..kwwwwwwMMwwwwwwk..
+..kwwwwMwwwwMwwwwk..
+...kwwwwwwwwwwwwk...
+....kkkMMMMMMkkk....
+"""
+
+# Long, low-set ears hanging past the jaw.
+[layers.ears]
+at = [3, 4]
+grid = """
+..kkk................kkk..
+.klssk..............kssSk.
+klsssk..............ksssSk
+klsssk..............ksssSk
+klsssk..............ksssSk
+klsssk..............ksssSk
+ksssSk..............kSsssk
+ksssSk..............kSsssk
+ksssSk..............kSsssk
+ksssSk..............kSsssk
+kssSSk..............kSSssk
+.kSSk................kSSk.
+..kk..................kk..
+"""
+
+[layers."ears.flick"]
+at = [3, 3]
+grid = """
+.....................kkk..
+..kkk...............kssSk.
+.klssk..............ksssSk
+klsssk..............ksssSk
+klsssk..............ksssSk
+klsssk..............ksssSk
+klsssk..............kSsssk
+ksssSk..............kSsssk
+ksssSk..............kSsssk
+ksssSk..............kSSssk
+ksssSk...............kSSk.
+kssSSk................kk..
+.kSSk.....................
+..kk......................
+"""
+
+# Ears lifted out to the sides like wings.
+[layers."ears.flap"]
+at = [0, 4]
+grid = """
+...kkkk..................kkkk...
+.kksssslk..............kSsssskk.
+kSSsssssk..............ksssssSSk
+kSSSsssk................ksssSSSk
+.kkSSkk..................kkSSkk.
+...kk......................kk...
+"""
+
+# The upstroke: ears raised high.
+[layers."ears.up"]
+at = [0, 1]
+grid = """
+.kk..........................kk.
+kSSkk......................kkSSk
+kSSssk....................kssSSk
+.kssssk..................kssssk.
+..kssslk................kSsssk..
+...kksssk..............ksssskk..
+.....kkkk..............kkkk.....
+"""
+
+[layers.nose]
+at = [14, 11]
+grid = """
+nnnn
+.nn.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 4
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: nose up, sniffing the air, then the ears flap.
+[[actions]]
+name = "air-sniff"
+weight = 4
+frames = [
+  { ops = ["head+0,-1", "eyes=closed"], ms = 250 },
+  { ops = ["head+0,-1", "eyes=closed", "nose=sniff"], ms = 150 },
+  { ops = ["head+0,-1", "eyes=closed"], ms = 150 },
+  { ops = ["head+0,-1", "eyes=closed", "nose=sniff"], ms = 150 },
+  { ops = ["head+0,-1"], ms = 300 },
+  { ops = ["ears=flap"], ms = 140 },
+  { ops = [], ms = 140 },
+  { ops = ["ears=flap"], ms = 140 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: flaps the ears so hard it lifts off, hovers, and lands.
+[[actions]]
+name = "ear-copter"
+weight = 1
+frames = [
+  { ops = ["ears=flap"], ms = 100 },
+  { ops = ["ears=up"], ms = 100 },
+  { ops = ["ears=flap", "all+0,-1"], ms = 100 },
+  { ops = ["ears=up", "all+0,-2", "eyes=happy"], ms = 100 },
+  { ops = ["ears=flap", "all+0,-3", "eyes=happy"], ms = 100 },
+  { ops = ["ears=up", "all+0,-4", "eyes=happy"], ms = 100 },
+  { ops = ["ears=flap", "all+0,-4", "eyes=happy"], ms = 100 },
+  { ops = ["ears=up", "all+0,-4", "eyes=happy"], ms = 100 },
+  { ops = ["ears=flap", "all+0,-3", "eyes=happy"], ms = 100 },
+  { ops = ["ears=up", "all+0,-1"], ms = 100 },
+  { ops = ["all+0,1"], ms = 120 },
+  { ops = ["prop:sweat@24,5"], ms = 500 },
+  { ops = [], ms = 200 },
+]

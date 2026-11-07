@@ -1,0 +1,204 @@
+# Shiba Inu on dog-sit. Thick upright ears, an orange bridge running down
+# to a big dog nose between fluffy cream cheeks (urajiro), cream eyebrow
+# dots, an open shiba smile at rest, and the curled tail: a fluffy ring over
+# the right of its back. `eyes.smug` and `mouth.smile` (a closed smirk) make
+# the side-eye smile; `mouth.scream` is for the rare shiba scream.
+id = "dog-shiba"
+name = "Shiba Inu"
+category = "cats-dogs"
+aliases = ["shiba", "doge"]
+accent = "ochre"
+extends = "dog-sit"
+
+[palette]
+"l" = "orange-1"    # fur light
+"f" = "orange-2"    # fur
+"F" = "orange-3"    # fur shadow
+"w" = "cream"       # urajiro: cheeks, brows, chest, tail underside
+"M" = "brown-1"     # shadow on the cream
+"p" = "pink-2"      # tongue
+
+# The curled tail: a ring over the back, cream on its underside.
+[layers.tail]
+at = [22, 7]
+grid = """
+..kkkk..
+.kllllk.
+kllwwlFk
+klw..wFk
+klw..wFk
+kllwwfFk
+.kffFFFk
+..kffFk.
+..kffFk.
+"""
+
+[layers."tail.flick"]
+at = [22, 6]
+grid = """
+..kkkkk.
+.kllllFk
+kllwwlFk
+klw..wFk
+klw..wFk
+kllwwfFk
+.kffFFk.
+..kfFFk.
+..kffFk.
+..kffFk.
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klffffwwwwwwfffFFk..
+.klfffffwwwwwwffffFFk.
+klfffffwwwwwwwwffffFFk
+klfffffwwwwwwwwffffFFk
+klfffffwwwwwwwwffffFFk
+klffffffwwwwwwfffffFFk
+klfffffffwwwwffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# The cream cheeks flare past the skull; an orange bridge runs down to the
+# nose, and shadow edges the muzzle so it reads as a dog's snout.
+[layers.head]
+at = [5, 4]
+grid = """
+......kkkkkkkkkk......
+....kkllllllllffkk....
+...kllllffffffffFFk...
+..kllwwlffffffwwfFFk..
+.klllffffffffffffffFk.
+.klfffffffffffffffFFk.
+klfwwwwffffffffwwwwFFk
+kwwwwwwMwffffwMwwwwwFk
+kwwwwwwMwwwwwwMwwwwwFk
+.kwwwwwMwwwwwwMwwwwMk.
+..kMwwwMwwwwwwMwwwMk..
+...kkMMwwwwwwwwMMkk...
+.....kkkMMMMMMkkk.....
+"""
+
+# Thick upright triangles, cream inside.
+[layers.ears]
+at = [6, 0]
+grid = """
+.kk..............kk.
+klfk............kfFk
+klwfk..........kfwFk
+klwwfk........kfwwFk
+klwwwfk......kfwwwFk
+klwwwff......ffwwwFk
+kllfff........fffFFk
+"""
+
+[layers."ears.flick"]
+at = [6, 0]
+grid = """
+.kk.................
+klfk.............kk.
+klwfk...........kfFk
+klwwfk.........kfwFk
+klwwwfk.......kfwwFk
+klwwwff......ffwwwFk
+kllfff........fffFFk
+"""
+
+# Half-lidded, pupils slid to one side: the smug side-eye.
+[layers."eyes.smug"]
+at = [11, 9]
+grid = """
+kkkk..kkkk
+hk....hk..
+"""
+
+[layers."mouth.smile"]
+at = [12, 13]
+grid = """
+k......k
+.kMMMMk.
+"""
+
+[layers."mouth.scream"]
+at = [12, 13]
+grid = """
+.kkkkkk.
+kppppppk
+kppppppk
+.kppppk.
+"""
+
+[layers.paws]
+at = [8, 17]
+grid = """
+.MMMM......MMMM.
+MwwwwM....MwwwwM
+kwMwMk....kwMwMk
+"""
+
+# The open shiba smile, tongue showing, at rest.
+[layers.mouth]
+at = [13, 13]
+follows = "head"
+grid = """
+k.kk.k
+.kppk.
+..kk..
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "tail-flick"
+weight = 4
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a smug side-eye smile, then the curled tail bounces.
+[[actions]]
+name = "side-eye-smile"
+weight = 4
+frames = [
+  { ops = ["eyes=smug"], ms = 500 },
+  { ops = ["eyes=smug", "mouth=smile"], ms = 900 },
+  { ops = ["eyes=smug", "mouth=smile", "tail=flick"], ms = 200 },
+  { ops = ["eyes=smug", "mouth=smile"], ms = 200 },
+  { ops = ["eyes=smug", "mouth=smile", "tail=flick"], ms = 200 },
+  { ops = ["mouth=smile", "eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the shiba scream, for no reason at all.
+[[actions]]
+name = "shiba-scream"
+weight = 1
+frames = [
+  { ops = ["eyes=closed", "head+0,1"], ms = 300 },
+  { ops = ["eyes=closed", "head+0,-1", "mouth=scream", "prop:bang@26,1"], ms = 150 },
+  { ops = ["eyes=closed", "head+0,-1", "mouth=scream", "prop:bang@26,1", "all+1,0"], ms = 100 },
+  { ops = ["eyes=closed", "head+0,-1", "mouth=scream", "prop:bang@26,1", "all+-1,0"], ms = 100 },
+  { ops = ["eyes=closed", "head+0,-1", "mouth=scream", "prop:bang@26,1", "all+1,0"], ms = 100 },
+  { ops = ["eyes=closed", "head+0,-1", "mouth=scream", "prop:bang@26,1", "all+-1,0"], ms = 100 },
+  { ops = ["eyes=closed", "head+0,-1", "mouth=scream", "prop:bang@26,1"], ms = 400 },
+  { ops = ["eyes=smug"], ms = 700 },
+  { ops = [], ms = 200 },
+]

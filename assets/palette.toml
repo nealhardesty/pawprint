@@ -1,0 +1,36 @@
+# Master palette (SPEC §12.9). All bundled art uses these names, never raw
+# hex. `clear` (transparency) is built in and not listed. Frozen once M2
+# lands: renaming a color breaks every source that uses it.
+[colors]
+ink = "#1b1b1f"         # outlines and pupils only
+white = "#f7f5ef"
+cream = "#f2efe6"
+grey-1 = "#d4d2cc"
+grey-2 = "#9a9893"
+grey-3 = "#5d5c59"
+grey-4 = "#34343a"
+fur-black = "#2b2833"   # black fur that doesn't read as outline
+brown-1 = "#d9b48a"
+brown-2 = "#a8784d"
+brown-3 = "#74502f"
+brown-4 = "#4a311d"
+orange-1 = "#f6c27a"
+orange-2 = "#e8912d"
+orange-3 = "#b8612a"
+yellow-1 = "#f9e27d"
+yellow-2 = "#e2b43c"
+red-1 = "#e86a5f"
+red-2 = "#b23a3a"
+pink-1 = "#f4b7c4"
+pink-2 = "#d77a91"
+green-1 = "#a8cf6a"
+green-2 = "#5f9a3f"
+green-3 = "#2f6b4f"
+blue-1 = "#bfe3f2"
+blue-2 = "#5b9bd5"
+blue-3 = "#2f5f8f"
+purple-1 = "#b39ddb"
+purple-2 = "#6e4b9e"
+teal = "#2a8c87"
+amber = "#f0a830"
+blush = "#ee9a9a"

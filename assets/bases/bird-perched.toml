@@ -1,0 +1,160 @@
+# Base: bird-perched (SPEC §12.8). An upright round bird gripping the crate
+# rim, big eyes, a short beak, wings folded at its sides. Members: owl, crow,
+# parrot, eagle, pigeon, toucan, kiwi, hummingbird.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)   l f F  feathers light / base / shadow
+#   w m    breast light / breast markings
+#   e iris (unused by the default eyes; add it in your own eyes)
+#   h eye highlight           b B    beak and feet / their shadow
+#
+# Slots, in drawing order: body, wings (+open), head, eyes (+closed, left,
+# right, happy), beak, mouth (.open only: an open beak, for yawn), feet.
+# eyes, beak, and mouth follow head. Add ear tufts or a crest as an `ears`
+# slot (with `follows = "head"`) so ear-flick works.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "brown-1"
+"f" = "brown-2"
+"F" = "brown-3"
+"w" = "cream"
+"m" = "brown-1"
+"e" = "amber"
+"h" = "white"
+"b" = "orange-2"
+"B" = "orange-3"
+
+[layers.body]
+at = [5, 12]
+grid = """
+..kkllllllllllllffkk..
+.klllfffffffffffffFFk.
+kllffffffwwwwffffffFFk
+klfffffwwwwwwwwfffffFk
+klffffwwwwwwwwwwffffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwmwwwwmwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwmwwmwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klffffwwwmwwmwwwffffFk
+klffffwwwwwwwwwwffffFk
+klfffffwwwwwwwwfffffFk
+klfffffwwwwwwwwfffffFk
+klffffffwwwwwwffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+"""
+
+[layers.wings]
+at = [3, 15]
+grid = """
+.kk....................kk.
+klFk..................kFfk
+kfFk..................kFFk
+kfFFk................kFFFk
+kfFFk................kFFFk
+kffFk................kFFFk
+.kfFk................kFFk.
+.kfFFk..............kFFFk.
+..kfFk..............kFFk..
+..kkFk..............kFkk..
+"""
+
+[layers."wings.open"]
+at = [0, 12]
+grid = """
+.kk..........................kk.
+klFk........................kFfk
+kfFFk......................kFFFk
+.kfFFk....................kFFFk.
+.kffFk....................kFFFk.
+..kfFk....................kFFk..
+..kkFk....................kFkk..
+"""
+
+[layers.head]
+at = [6, 3]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllllllffkk...
+..kllllfffffffffFk..
+.kllfffffffffffffFk.
+kllfffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klfffffffwwfffffffFk
+.kffffffwwwwffffFk..
+..fffffwwwwwwffff...
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk....kk.
+k..k..k..k
+"""
+
+[layers.beak]
+at = [14, 10]
+follows = "head"
+grid = """
+kbbk
+kbBk
+.kk.
+"""
+
+[layers."mouth.open"]
+at = [14, 10]
+follows = "head"
+grid = """
+kbbk
+kkkk
+kBBk
+.kk.
+"""
+
+[layers.feet]
+at = [10, 18]
+grid = """
+.kbbk....kbbk.
+kbkbk....kbkbk
+"""

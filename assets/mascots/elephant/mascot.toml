@@ -1,0 +1,233 @@
+# Elephant, bespoke (no base). Grey, with huge fan ears (pink inside) that
+# spread nearly the width of the crate, a domed head with small eyes, short
+# white tusks, and a wrinkled trunk that hangs down the middle and curls
+# over the rim. `trunk.up` raises the trunk up in front of the face for the
+# signature trumpet; the rare one is a shower, sprayed over its own head.
+id = "elephant"
+name = "Elephant"
+category = "mammals"
+aliases = []
+accent = "slate"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "grey-1"      # skin light
+"f" = "grey-2"      # skin
+"F" = "grey-3"      # skin shadow, trunk wrinkles
+"p" = "pink-1"      # inside the ears and trunk tip
+"m" = "pink-2"      # mouth
+"t" = "white"       # tusks
+"h" = "white"       # eye glint
+
+[layers.body]
+at = [4, 14]
+grid = """
+....kkffffffffffffkk....
+..kklffffffffffffffFkk..
+.klfffffffffffffffffffk.
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+klffffffffffffffffffFFFk
+"""
+
+[layers.ears]
+at = [1, 3]
+grid = """
+..kkkkkk..............kkkkkk..
+.klllllfk............kffffffk.
+kllfffffFk..........kFfffffffk
+klffppffFk..........kFffppfffk
+klfpppffFk..........kFffpppffk
+klfpppffFk..........kFffpppffk
+klfpppffFk..........kFffpppffk
+kffppfffFk..........kFfffppffk
+kffffffFFk..........kFFffffffk
+.kffffffFk..........kFffffffk.
+.kFfffFFk............kFFfffFk.
+..kFFFFk..............kFFFFk..
+...kkkk................kkkk...
+"""
+
+# A flap: the right ear swings out and up.
+[layers."ears.flick"]
+at = [1, 2]
+grid = """
+.......................kkkkkk..
+..kkkkkk..............kffffffk.
+.klllllfk............kFfffffffk
+kllfffffFk...........kFffppfffk
+klffppffFk...........kFffpppffk
+klfpppffFk...........kFffpppffk
+klfpppffFk...........kFffpppffk
+klfpppffFk...........kFfffppffk
+kffppfffFk...........kFFffffffk
+kffffffFFk...........kFffffffk.
+.kffffffFk............kFFfffFk.
+.kFfffFFk..............kFFFFk..
+..kFFFFk................kkkk...
+...kkkk........................
+"""
+
+[layers.head]
+at = [9, 3]
+grid = """
+...kkkkkkkk...
+.kkllllllllfk.
+klllffffffffFk
+klffffffffffFk
+klffffffffffFk
+klffffffffffFk
+klffffffffffFk
+klffffffffffFk
+.kfffffffffFk.
+..kfffffffFk..
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.tusks]
+at = [11, 12]
+follows = "head"
+grid = """
+kk......kk
+ktk....ktk
+.ktk..ktk.
+..k....k..
+"""
+
+[layers."mouth.open"]
+at = [14, 13]
+follows = "head"
+grid = """
+kmmk
+.kk.
+"""
+
+# The trunk hangs down the middle and curls over the rim.
+[layers.trunk]
+at = [13, 11]
+follows = "head"
+grid = """
+kfffFk
+kFFFFk
+.kffk.
+.kFFk.
+.kffk.
+.kFFk.
+.kffk.
+kffFk.
+kFFk..
+"""
+
+# Raised straight up in front of the face, flared tip open to trumpet.
+[layers."trunk.up"]
+at = [13, 0]
+follows = "head"
+grid = """
+.kkkk.
+kppppk
+kffFFk
+.kfFk.
+.kFFk.
+.kfFk.
+.kFFk.
+.kfFk.
+.kFFk.
+.kfFk.
+kffFFk
+kfffFk
+kFFFFk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 4
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the trunk curls up and it trumpets, ears out.
+[[actions]]
+name = "trumpet"
+weight = 4
+frames = [
+  { ops = ["trunk=up"], ms = 250 },
+  { ops = ["trunk=up", "head+0,-1", "+mouth.open"], ms = 200 },
+  { ops = ["trunk=up", "head+0,-1", "+mouth.open", "eyes=closed", "ears=flick", "prop:note@24,0"], ms = 700 },
+  { ops = ["trunk=up", "head+0,-1", "+mouth.open", "eyes=closed", "prop:note@25,0"], ms = 400 },
+  { ops = ["trunk=up", "eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: lifts its trunk and gives itself a shower.
+[[actions]]
+name = "shower"
+weight = 1
+frames = [
+  { ops = ["trunk=up", "eyes=right"], ms = 400 },
+  { ops = ["trunk=up", "eyes=closed", "prop:sweat@17,0"], ms = 250 },
+  { ops = ["trunk=up", "eyes=closed", "prop:sweat@12,1", "prop:sweat@20,2"], ms = 250 },
+  { ops = ["trunk=up", "eyes=happy", "prop:sweat@9,3", "prop:sweat@16,0", "prop:sweat@22,5"], ms = 300 },
+  { ops = ["eyes=happy", "prop:sweat@6,7", "prop:sweat@24,8"], ms = 300 },
+  { ops = ["eyes=happy", "all+1,0"], ms = 100 },
+  { ops = ["eyes=happy", "all+-1,0"], ms = 100 },
+  { ops = ["eyes=happy"], ms = 600 },
+]

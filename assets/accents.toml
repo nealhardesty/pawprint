@@ -1,0 +1,23 @@
+# Accent palette (SPEC Appendix B). ORDER IS FROZEN: the fallback accent is
+# palette[hash mod 16] over the first sixteen entries. Never reorder or
+# remove; new accents may only be appended after `charcoal`.
+# Each accent's shadow/highlight ramp is computed from its hex at build time
+# (pawprint_sprite::ramp), the same way as `#rrggbb` accents from config.
+accents = [
+  { name = "violet", hex = "#7b5ea7" },
+  { name = "pine", hex = "#2f6b4f" },
+  { name = "ochre", hex = "#c8962e" },
+  { name = "copper", hex = "#b8673a" },
+  { name = "slate", hex = "#4f6d8f" },
+  { name = "cranberry", hex = "#9e2b45" },
+  { name = "ice", hex = "#8fc3d9" },
+  { name = "marigold", hex = "#e8912d" },
+  { name = "plum", hex = "#6e3b62" },
+  { name = "honey", hex = "#d9a441" },
+  { name = "teal", hex = "#2a8c87" },
+  { name = "brick", hex = "#a4462f" },
+  { name = "moss", hex = "#6f7f3a" },
+  { name = "rose", hex = "#d77a91" },
+  { name = "sky", hex = "#5b9bd5" },
+  { name = "charcoal", hex = "#4a4a4f" },
+]
