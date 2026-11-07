@@ -9,10 +9,11 @@
 //! true. Everything else (state saving, config reloads and edits, the tray
 //! state, status, logging) happens here.
 
+use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
 use pawprint_core::badge::{Badge, Command, Effect, Event, Inputs};
-use pawprint_core::catalog::bundle;
+use pawprint_core::catalog::{Catalog, bundle};
 use pawprint_core::config::{Animation, Layer};
 use pawprint_core::config_edit;
 use pawprint_core::geom::PhysicalRect;
@@ -99,9 +100,7 @@ impl Shell {
             seed: clock::seed(),
             preview,
         };
-        let catalog = commands::catalog(&paths);
-        catalog.warnings().iter().for_each(|w| log::warn!("{w}"));
-        let badge = Badge::new(catalog, bundle(), inputs, Instant::now());
+        let badge = Badge::new(load_catalog(&paths), bundle(), inputs, Instant::now());
         let r = badge.resolved();
         log::info!(
             "mascot {} ({}), label {:?}",
@@ -283,6 +282,11 @@ impl Shell {
                     }
                 }
                 Effect::ReloadConfig => {
+                    // User mascots too, so `set mascot <new folder>` works.
+                    let effects = self
+                        .badge
+                        .set_catalog(load_catalog(&self.paths), clock::now());
+                    self.run(surface, effects);
                     self.config_mtime = modified(&self.paths);
                     let (config, note) = commands::load_config(&self.paths);
                     log::info!("reloaded config {note}");
@@ -334,6 +338,14 @@ impl Shell {
             moving: self.badge.is_moving(),
         }
     }
+}
+
+/// Bundled plus user mascots, read now (SPEC §12.7); invalid ones are
+/// left out with a warning in the log.
+fn load_catalog(paths: &Paths) -> Arc<Catalog> {
+    let catalog = Catalog::load(&paths.user_mascots);
+    catalog.warnings().iter().for_each(|w| log::warn!("{w}"));
+    Arc::new(catalog)
 }
 
 fn modified(paths: &Paths) -> Option<SystemTime> {

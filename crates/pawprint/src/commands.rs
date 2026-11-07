@@ -36,9 +36,9 @@ pub fn load_config(paths: &Paths) -> (Config, String) {
     }
 }
 
-/// Bundled plus user mascots, loaded once per process and shared by the
-/// badge and every command (SPEC §12.7). Invalid user mascots are left out
-/// and described in [`Catalog::warnings`].
+/// Bundled plus user mascots, loaded once per process and shared by every
+/// command (SPEC §12.7; the badge loads its own, again on each reload).
+/// Invalid user mascots are left out and described in [`Catalog::warnings`].
 pub fn catalog(paths: &Paths) -> &'static Catalog {
     static CATALOG: OnceLock<Catalog> = OnceLock::new();
     CATALOG.get_or_init(|| Catalog::load(&paths.user_mascots))

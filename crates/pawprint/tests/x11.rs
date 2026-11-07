@@ -846,6 +846,16 @@ fn tray_menu_and_config_edits_reach_the_badge() {
     let bad = env.pawprint(&["set", "mascot", "no-such-animal"]);
     assert_eq!(bad.status.code(), Some(2), "unknown mascots are refused");
     assert!(!env.config().contains("no-such-animal"));
+    // A user mascot added while the badge runs: the reload re-reads the
+    // folder, so `set` shows it at once (SPEC §12.7).
+    let zork = env.home().join(".config/pawprint/mascots/zork");
+    env.ok(&["mascot", "export", "walrus", zork.to_str().unwrap()]);
+    let toml = zork.join("mascot.toml");
+    let text = std::fs::read_to_string(&toml).unwrap();
+    std::fs::write(&toml, text.replace("id = \"walrus\"", "id = \"zork\"")).unwrap();
+    env.ok(&["set", "mascot", "zork"]);
+    assert!(env.ok(&["status"]).contains("mascot      zork"));
+    env.ok(&["unset", "mascot"]);
     assert!(env.ok(&["forget"]).contains("Nothing cached for owl"));
 
     // A hand edit is picked up at the next event, here an IPC request

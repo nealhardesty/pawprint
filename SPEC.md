@@ -742,7 +742,8 @@ buildbox = "capybara"
 
 ### 8.5 Reloading
 
-The running badge reloads config when `pawprint reload` is run, when the tray
+The running badge reloads its config and its user mascots
+([12.7](#127-png-bridges)) when `pawprint reload` is run, when the tray
 item **Reload config** is chosen, and when the config file's modification
 time changes. The last is checked only on display or IPC events and on the
 next animation deadline, so there is no file-watch thread: `Shell::tick`,
@@ -853,7 +854,8 @@ any OS. Each backend is a thin adapter that:
    file);
 3. executes `core::badge::Effect`s: `Present(Frame)` (already scaled),
    `Place(PhysicalRect)`, `SetInteractive(bool)`, `SetTray(TrayState)`,
-   `SaveState(State)` (write it atomically), `ReloadConfig` (re-read the file,
+   `SaveState(State)` (write it atomically), `ReloadConfig` (re-read the user
+   mascots into a new catalog for `Badge::set_catalog`, re-read the file,
    then send `ConfigTouched`), and `Exit`;
 4. blocks until the next native event or `core.next_deadline()`.
 
@@ -861,7 +863,7 @@ Driving the core, in full (every backend's loop has this shape):
 
 ```rust
 let inputs = Inputs { hostname, config, state, flags, seed: clock_seed };
-let mut badge = Badge::new(Catalog::bundled(), catalog::bundle(), inputs, Instant::now());
+let mut badge = Badge::new(Arc::new(Catalog::load(user_dir)), catalog::bundle(), inputs, Instant::now());
 let mut effects = badge.start(surface.displays(), now());
 loop {
     for effect in surface::apply(&mut surface, effects) {   // Present/Place/SetInteractive
@@ -1883,9 +1885,11 @@ shared by the badge and every command that uses the catalog (`run`,
 - An invalid user mascot is skipped with a warning (in the log for the
   badge, on stderr for commands); the bundled mascot of the same id, if
   any, stays. User mascots never stop the badge from starting.
-- The badge reads the folder when it starts; restart it (`pawprint quit`,
-  then `pawprint`) to pick up changes. `pawprint reload` re-reads only
-  `config.toml`.
+- The badge reads the folder when it starts and on every reload (`pawprint
+  reload`, `set`/`unset`, the tray, or a changed `config.toml`): the shell
+  loads a fresh `Catalog` and hands it to the badge (`Badge::set_catalog`,
+  which owns its catalog as an `Arc`), then re-reads the config. A mascot
+  whose folder was removed is resolved away at once.
 
 ### 12.8 Bases
 
@@ -2491,7 +2495,7 @@ directory and fails with the badge's log.
 | Wayland | headless sway + `swaybar` | the badge sits below the bar's exclusive zone (F3), pixel-exact |
 | Wayland | headless sway | output mode change; scale 2 crisp (every opaque pixel exact); scale 1.5 sized 96 px and placed right (crispness at fractional scales is an owner check, F34) |
 | X11 | Xvfb, move mode | the dashed accent outline appears on the badge edge (a dash in the transparent corner, art through a gap) and goes when move mode ends |
-| X11 | Xvfb + private `dbus-daemon` + a stand-in StatusNotifierWatcher (the test's own zbus object) | the item registers with `Id`, `Title`, `ToolTip`, and a 32 and 64 px `IconPixmap`; the dbusmenu layout has the shared menu with the right checks; **Size ▸ 128** (a dbusmenu `Event`) resizes the badge and appends `[hosts.owl] size = 128` after the untouched `config init` template; **Animation ▸ Static** is saved; `set`/`unset` reload the running badge; an unknown mascot is refused (exit 2) without writing; a hand edit is picked up at the next IPC request (mtime); `tray = false` removes the item and `unset tray` brings a new one; **Quit** exits; the saved choice survives the restart |
+| X11 | Xvfb + private `dbus-daemon` + a stand-in StatusNotifierWatcher (the test's own zbus object) | the item registers with `Id`, `Title`, `ToolTip`, and a 32 and 64 px `IconPixmap`; the dbusmenu layout has the shared menu with the right checks; **Size ▸ 128** (a dbusmenu `Event`) resizes the badge and appends `[hosts.owl] size = 128` after the untouched `config init` template; **Animation ▸ Static** is saved; `set`/`unset` reload the running badge; an unknown mascot is refused (exit 2) without writing; a user mascot added while the badge runs shows after `set mascot`; a hand edit is picked up at the next IPC request (mtime); `tray = false` removes the item and `unset tray` brings a new one; **Quit** exits; the saved choice survives the restart |
 | X11 | Xvfb | `pawprint preview owl`: a normal window (not override-redirect, no DOCK type, `WM_DELETE_WINDOW`), centered, the badge pixel-exact on the backdrop, the frame changes as actions play; Esc closes it, and so does a `WM_DELETE_WINDOW` message |
 | Wayland | headless sway | `pawprint preview owl`: an xdg toplevel (`app_id` `pawprint`) that sway floats (fixed size), focused, the badge pixel-exact on the backdrop; Esc closes it |
 

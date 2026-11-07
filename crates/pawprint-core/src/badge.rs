@@ -2,6 +2,7 @@
 //! [`Event`]s and execute the [`Effect`]s it returns, then sleep until
 //! [`Badge::next_deadline`] or the next native event.
 
+use std::sync::Arc;
 use std::time::Instant;
 
 use pawprint_sprite::{Bundle, Mascot, RgbaImage};
@@ -85,7 +86,9 @@ pub struct Inputs {
 }
 
 pub struct Badge<'c> {
-    catalog: &'c Catalog,
+    /// Owned, so a reload can swap in a catalog with the user mascots
+    /// re-read ([`Badge::set_catalog`]).
+    catalog: Arc<Catalog>,
     assets: &'c Bundle,
     hostname: String,
     config: Config,
@@ -101,7 +104,7 @@ pub struct Badge<'c> {
 }
 
 impl<'c> Badge<'c> {
-    pub fn new(catalog: &'c Catalog, assets: &'c Bundle, inputs: Inputs, now: Instant) -> Self {
+    pub fn new(catalog: Arc<Catalog>, assets: &'c Bundle, inputs: Inputs, now: Instant) -> Self {
         let Inputs {
             hostname,
             config,
@@ -115,7 +118,7 @@ impl<'c> Badge<'c> {
             &config,
             &state,
             &flags,
-            catalog,
+            &catalog,
             &assets.accents,
             false,
         );
@@ -161,6 +164,17 @@ impl<'c> Badge<'c> {
     /// The display the badge is on (SPEC §6.2).
     pub fn target(&self) -> Option<&DisplayInfo> {
         select_display(&self.displays, &self.resolved.settings.display.value)
+    }
+
+    /// Use this catalog from now on (the shell re-read the user mascots on
+    /// a reload), and show whatever that changes. A mascot that left the
+    /// catalog is resolved away at once.
+    pub fn set_catalog(&mut self, catalog: Arc<Catalog>, now: Now) -> Vec<Effect> {
+        let mut out = Vec::new();
+        self.catalog = catalog;
+        self.reresolve(now, &mut out);
+        self.refresh(&mut out);
+        out
     }
 
     /// First call after `new`: show the badge.
@@ -293,7 +307,7 @@ impl<'c> Badge<'c> {
             &self.config,
             &self.state,
             &self.flags,
-            self.catalog,
+            &self.catalog,
             &self.assets.accents,
             false,
         );
@@ -311,15 +325,12 @@ impl<'c> Badge<'c> {
             .configure(s.animation.value, s.interval.value, now.instant);
     }
 
-    fn mascot(&self) -> &'c Mascot {
-        self.catalog
-            .get(&self.resolved.mascot)
-            .expect("resolved mascots exist")
-    }
-
     /// Emit Place / Present / SetTray only for what actually changed.
     fn refresh(&mut self, out: &mut Vec<Effect>) {
-        let mascot = self.mascot();
+        let catalog = Arc::clone(&self.catalog);
+        let mascot: &Mascot = catalog
+            .get(&self.resolved.mascot)
+            .expect("resolved mascots exist");
         let tray = TrayState {
             icon: render::compose_1x(&self.assets.crate_art, mascot, 0, self.resolved.accent.rgb),
             visible: self.resolved.settings.tray.value,
@@ -431,7 +442,8 @@ mod tests {
                 seed: 42,
                 preview: false,
             };
-            let mut badge = Badge::new(Catalog::bundled(), bundle(), inputs, now.instant);
+            let catalog = Arc::new(Catalog::bundled().clone());
+            let mut badge = Badge::new(catalog, bundle(), inputs, now.instant);
             let mut surface = FakeSurface::new(vec![display("DP-1", 1920, 1080, true)]);
             let effects = badge.start(surface.displays(), now);
             let shell = apply(&mut surface, effects);
@@ -722,6 +734,28 @@ mod tests {
             rig.surface.rect(),
             Some(PhysicalRect::new(16, 1040 - 64 - 16, 64, 64))
         );
+    }
+
+    #[test]
+    fn a_new_catalog_brings_user_mascots_in_and_out() {
+        let mut rig = Rig::new("owl", "mascot = \"zork\"");
+        assert_eq!(rig.badge.resolved().mascot, "owl", "no zork yet");
+        let mut zork = Catalog::bundled().get("otter").unwrap().clone();
+        zork.id = "zork".into();
+        zork.aliases.clear();
+        let user = Catalog::with_user(bundle().mascots.clone(), vec![zork]);
+        let frames = rig.surface.frames.len();
+        let fx = rig.badge.set_catalog(Arc::new(user), rig.now);
+        apply(&mut rig.surface, fx);
+        assert_eq!(rig.badge.resolved().mascot, "zork");
+        assert_eq!(rig.surface.frames.len(), frames + 1, "zork on screen");
+        // Removed again (the folder was deleted): back to the owl, no panic.
+        let fx = rig
+            .badge
+            .set_catalog(Arc::new(Catalog::bundled().clone()), rig.now);
+        apply(&mut rig.surface, fx);
+        assert_eq!(rig.badge.resolved().mascot, "owl");
+        rig.advance_to_deadline();
     }
 
     #[test]

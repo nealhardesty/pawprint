@@ -301,8 +301,9 @@ select it with `pawprint set mascot <id>` or match it by hostname through its
 `bundled`, `user` (one you added), or `override` (yours, replacing a
 built-in). A mascot with a mistake in it is skipped with a warning (in
 `pawprint explain`, `pawprint list`, and the log) and never stops the badge.
-The badge reads the folder when it starts, so restart it (`pawprint quit`,
-then `pawprint`) after changing a mascot.
+The badge reads the folder when it starts and again on every reload, so
+`pawprint reload` (or `pawprint set mascot <id>`, which reloads) picks up a
+new or changed mascot.
 
 The rules, briefly:
 
