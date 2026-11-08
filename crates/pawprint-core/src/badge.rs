@@ -12,7 +12,7 @@ use crate::catalog::Catalog;
 use crate::config::{Animation, Config, Layer};
 use crate::geom::{PhysicalRect, Point};
 use crate::identity::{self, Resolved};
-use crate::layout::{self, Anchor, LabelSize};
+use crate::layout::{self, LabelSize};
 use crate::menu::{self, TrayState};
 use crate::movemode::{self, Key, MoveMode, Outcome};
 use crate::render::{self, BadgeSpec, Frame};
@@ -95,7 +95,6 @@ struct RenderKey {
     accent: Rgb,
     size: u32,
     label_size: LabelSize,
-    anchor: Anchor,
     scale: f64,
     moving: bool,
 }
@@ -391,7 +390,6 @@ impl<'c> Badge<'c> {
             accent: self.resolved.accent.rgb,
             size: s.size.value,
             label_size: s.label_size.value,
-            anchor: self.resolved.position.value.anchor,
             scale,
             moving: self.moving.is_some(),
         };
@@ -407,11 +405,9 @@ impl<'c> Badge<'c> {
                     accent: key.accent,
                     size: key.size,
                     label_size: key.label_size,
-                    anchor: key.anchor,
                     display_scale: key.scale,
                 };
-                let mut img =
-                    render::render_badge(&spec, &self.assets.crate_art, &self.assets.font);
+                let mut img = render::render_badge(&spec, self.assets);
                 if key.moving {
                     let p = layout::art_scale(key.size, key.scale);
                     movemode::draw_outline(&mut img, key.accent, p);
@@ -676,6 +672,11 @@ mod tests {
         rig.send(Event::Command(Command::Move));
         let moving = rig.surface.frames.last().unwrap().clone();
         assert_ne!(moving, resting, "a new frame with the outline");
+        // The outline is drawn over the badge's edge, never around it.
+        assert_eq!(
+            (moving.width, moving.height),
+            (resting.width, resting.height)
+        );
         // Top-left pixel: premultiplied BGRA of the accent.
         assert_eq!(&moving.bgra[..4], &[accent.2, accent.1, accent.0, 255]);
         rig.send(Event::Key(Key {
@@ -854,11 +855,11 @@ mod tests {
     }
 
     #[test]
-    fn long_labels_grow_the_badge_inward() {
-        let rig = Rig::new("prod-owl-02.lab.example", "");
+    fn long_labels_never_grow_the_badge() {
+        let rig = Rig::new("prod-database-primary-01.lab.example", "");
         assert_eq!(
             rig.surface.rect(),
-            Some(PhysicalRect::new(1920 - 142 - 16, 16, 142, 90))
+            Some(PhysicalRect::new(1920 - 64 - 16, 16, 64, 64))
         );
     }
 }

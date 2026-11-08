@@ -210,10 +210,14 @@ Schematic only; exact art-pixel geometry is in [4.2](#42-geometry-art-pixels).
      │  │    OWL     │  │   crate front + label strip (in front of the mascot)
      │  └────────────┘  │
      └──────────────────┘
-          ┌──────────────┐
-          │ PROD-OWL-02  │   nameplate: used only when the label doesn't fit
-          └──────────────┘
 ```
+
+**The badge is always exactly `size` × `size`** logical pixels (times the
+display scale, rounded to whole art pixels: [4.3](#43-sizes-and-scaling)),
+label included. Nothing is ever drawn outside that square: no nameplate, no
+side label, no wider crate, no margin. The label always sits on the crate's
+label strip and is fitted, then cut, to stay inside it
+([4.4](#44-label)).
 
 The badge is composed from three independent layers, back to front:
 
@@ -232,11 +236,12 @@ All art is authored at **1× in art pixels** and scaled by an integer factor.
 
 | Element | 1× geometry |
 |---|---|
-| Badge canvas (without nameplate) | 32 × 32 |
+| Badge canvas | 32 × 32, always: the whole badge, label included |
 | Mascot frame | 32 × 32, drawn at (0, 0) |
 | Crate back rim | rows 18–19 |
 | Crate front | rows 20–31 (12 rows), full width; the mascot is hidden behind it: outline (20), top rail (21), label strip, outline (31) |
-| Label strip on crate front | rows 22–30, columns 2–29 (28 × 9 usable) |
+| Label strip on crate front | rows 22–30, columns 2–29 (28 × 9 cream) |
+| Label area | the strip less 1 art pixel on every side: 26 × 7 |
 | Outline | 1 art-pixel dark outline around the crate for contrast on any wallpaper |
 
 Mascot art should keep its face and silhouette in rows 0–19 so it "peeks out"
@@ -251,85 +256,97 @@ except where the crate front art is transparent.
 - Art scale `s = size / 32`.
 - Physical pixels per art pixel `P = max(1, round(s × display_scale))`, where
   `display_scale` is the OS scale factor of the target display (1.0, 1.25,
-  1.5, 2.0, ...).
+  1.5, 2.0, ...). The badge image is `32P × 32P` physical pixels.
 - Scaling is always **nearest-neighbor by an integer factor**, so pixel art
   stays crisp. At fractional display scales the badge is a little larger or
   smaller than the nominal size. That is intended.
 
 ### 4.4 Label
 
-**Text.** Derived from the hostname ([5.2](#52-labels)) or configured.
-Rendered with PAWPRINT's own embedded bitmap font: 5 × 7 glyphs on a 6-pixel
-advance, covering printable ASCII (0x20–0x7E). Other characters render as `?`.
-Hostnames are restricted to letters, digits, and hyphens, so they always
-render cleanly. Labels longer than 20 characters are cut **in the middle**:
-the first 9 and the last 9 characters, joined by `..`
-(`jenkins-agent-linux-07` becomes `jenkins-a..-linux-07`), because the end of
-a name is what tells one machine from the next.
+**Text.** Derived from the hostname ([5.2](#52-labels)) or configured. A
+label from the hostname keeps only its letters and digits (`prod-owl-02`
+shows `PRODOWL02`); a label the user sets is shown exactly as written. Either
+way it is cut to its **first 20 characters**. Characters outside printable
+ASCII (0x20–0x7E) render as `?`.
 
-**Why 20, and why the middle** (measured in M4 with `pawprint render` over a
-corpus of default and fleet hostnames):
+**Fonts.** Two embedded bitmap fonts, both original to this repository and
+covering printable ASCII:
 
-| Short name (examples) | Length | Badge at 32 / 64 / 128 |
-|---|---|---|
-| `nas`, `db02` | 3–4 | 32×32 / 64×64 / 128×128: on the crate |
-| `web01`, `fedora`, `buildbox` | 5–8 | 67–85×32 / 70–106×90 / 128×128 (on the crate at 128 up to 9 characters) |
-| `prod-owl-02`, `raspberrypi`, `k8s-master-1` | 10–12 | 97–109×32 / 130–154×90 / 130–154×154 |
-| Windows defaults `DESKTOP-4F7Q2KL`, `WIN-3J8K2M4N5P6`; AWS `ip-172-31-45-201` | 15–16 | 127–133×32 / 190–202×90 / 190–202×154 |
-| macOS defaults `Johns-MacBook-Air`, `MacBook-Pro-de-Maria`; `build-agent-linux-07` | 17–20 | 139–157×32 / 214–250×90 / 214–250×154 |
-| `jenkins-agent-linux-07`, DigitalOcean `ubuntu-s-1vcpu-1gb-nyc1-01`, AKS/GKE nodes (33–35) | 22+ | cut to 20: 157×32 / 250×90 / 250×154 |
+| Font | Source | Glyph | Advance | Notes |
+|---|---|---|---|---|
+| Regular | `assets/font/font.toml` | 5 × 7 | 6 | True lowercase |
+| Micro | `assets/font/micro.toml` | 3 × 5 | 4 | Lowercase uses the capital forms: 3 × 5 has no room for a legible lowercase, nor for small caps |
 
-- Every default hostname scheme in the corpus (Windows, macOS, AWS, Raspberry
-  Pi, typical fleet names) fits in 20, so 20 stays. A 20-character
-  nameplate is 250 px wide at 64 and 128 (the font scale is 2 at both) and
-  157 px beside a size-32 crate: noticeable but still a corner badge.
-  A lower limit would cut the Windows and macOS defaults; a higher one
-  makes the plate wider than most panels' clear corners.
-- Only names of 22+ characters are cut, and for them the end matters most:
-  cloud node names share a long prefix (`gke-prod-default-pool-…`) and differ
-  in the suffix, and fleet names end in a number. Cutting the end (the
-  provisional rule) made every node of a pool look the same. Fleets with
-  such names are better served by an explicit `label` per `[hosts]` glob.
-- Remote-client scaling: a client showing a 4K desktop in a 1080p window
-  scales by 0.5. The default font scale 2 (size ≥ 64) then lands at one
-  screen pixel per font pixel, the smallest legible size; the size-32 label
-  (font scale 1) is not legible below about 0.75. Users of scaled clients
-  should keep `size` at 64 or more or set `label_size = "large"`.
+Both are validated the same way (`pawprint_sprite::Font::compile`): every
+printable ASCII character present, nothing else, every glyph exactly the
+font's size. In the micro font, digits and `-` `.` `_` are drawn first for
+clarity, since hostnames are mostly those and letters: `0` is square and `O`
+round, `8` is pinched and `B` is not, and `M`, `H`, and `W` differ by where
+their crossbar sits (top, middle, bottom).
 
-**Size.** `label_size` sets the font scale independently of the mascot:
+**Fit, then cut.** The label is drawn at **physical-pixel resolution** on
+top of the scaled badge (`pawprint_core::layout::fit_label`), so bigger
+badges show more and taller text. Its area is the strip less one art pixel
+on every side: `26P × 7P` physical pixels.
 
-| `label_size` | Font scale (logical px per font pixel) | Glyph height |
-|---|---|---|
-| `small` | 1 | 7 |
-| `medium` | 2 | 14 |
-| `large` | 3 | 21 |
-| `auto` (default) | `medium` at size ≥ 64, `small` at size 32 | — |
+1. **Candidates:** each font at every integer scale `f = 1, 2, 3, …` whose
+   glyph height (`7f` or `5f`) fits the area's height and the `label_size`
+   cap.
+2. **Fit:** of the candidates whose full label width (`6n − 1` or
+   `4n − 1` font pixels for `n` characters, times `f`) fits the area's
+   width, the **tallest wins**; on a tie, the 5 × 7 font. The text is
+   centered in the strip both ways (rounding down).
+3. **Cut:** if no candidate fits the whole label, the micro font at `f = 1`
+   draws as many **whole characters from the left** as fit, with no
+   ellipsis, left-aligned at the area's edge and centered vertically. The
+   left side of a name is what shows.
 
-**Placement.** Decided in this order:
+What each label gets (`label_size = "auto"`):
 
-1. **On the crate**, centered in the label strip, if the rendered text fits
-   the strip at the current scale.
-2. **Nameplate:** otherwise, a separate plate with the same accent and
-   outline, attached under the crate and centered. It can be wider than the
-   crate.
-3. At `size = 32` with `label_size` `auto`, the nameplate goes **beside** the
-   crate instead of under it, on the side facing the screen interior, so the
-   badge grows inward from its anchored corner.
+| Label | 32 (P = 1) | 64 (P = 2) | 128 (P = 4) | 128 at 200 % (P = 8) |
+|---|---|---|---|---|
+| `OWL` | 5×7 ×1 | 5×7 ×2 | 5×7 ×4 | 5×7 ×8 |
+| `MOOSE`, `OWL02` | 3×5 ×1 | 3×5 ×2 | 3×5 ×5 | 3×5 ×10 |
+| `ARMADILLO`, `PRODOWL02` | 3×5 ×1, cut to 6 (`PRODOW`) | 3×5 ×1 | 3×5 ×2 | 3×5 ×5 |
+| `DESKTOP4F7Q2KL` (14) | 3×5 ×1, cut to 6 | 3×5 ×1, cut to 13 | 5×7 ×1 | 3×5 ×3 |
+| `JENKINSAGENTLINUX07` (19) | 3×5 ×1, cut to 6 (`JENKIN`) | 3×5 ×1, cut to 13 | 3×5 ×1 | 3×5 ×2 |
 
-The label fits the strip when its width (`6n − 1` font pixels for `n`
-characters) and height (7) times the font scale fit the strip's 28 × 9 art
-pixels times the art scale. On the strip the text is centered both ways
-(rounding down). The strip is 9 rows, two more than a glyph, so the text
-clears the top rail and the bottom outline by at least one art pixel's worth
-at every preset: 1 px at 32 (small), 2 px at 64 (medium), 11 px at 128
-(medium). The nameplate's cream face is also 9 font pixels tall, so text sits
-the same way there. The nameplate is drawn in **font pixels**, so it
-scales with `label_size`, not `size`: `plate-left`, then `plate-mid` once per
-text column, then `plate-right` (all from `crate.toml`), with the text right
-after `plate-left` and centered vertically. Under the crate, the plate is
-centered horizontally; beside it, the plate's bottom lines up with the
-crate's. The anchor/offset position applies to the whole badge, nameplate
-included (`pawprint_core::layout::badge_layout`).
+At size 32, then, at most 6 characters show and at most 4 in the 5 × 7
+font; at 64, 13 and 8; at 128, every 20-character label fits whole.
+
+**Why the left side, and why letters and digits.** The owner's call: the
+label must stay inside the crate at every size, may be cut, and must keep
+its left-hand side; its height scales with the badge even where that makes
+it less legible. This replaced 1.0's nameplate, a board under or beside the
+crate that made the badge wider than `size` (up to 250 × 90 at size 64).
+The cost is known: pool nodes that differ only in their suffix
+(`gke-prod-default-pool-…-xyz9`, `jenkins-agent-linux-07` and `-08`) look
+alike at small sizes. Fleets like that are better served by an explicit
+`label` per `[hosts]` glob, or a larger `size`. Dropping punctuation from
+hostname labels fits more of the name: a `-` costs a whole glyph cell, and
+hostnames rarely need it to be read. User-set labels keep
+theirs, because they were typed on purpose. Twenty characters still covers
+every default hostname scheme measured in M4 (Windows `DESKTOP-4F7Q2KL`,
+macOS `Johns-MacBook-Air`, AWS `ip-172-31-45-201`, Raspberry Pi); only
+names of 21+ characters after stripping lose their end.
+
+**Remote-client scaling.** A client showing a 4K desktop in a 1080p window
+scales by 0.5. Text at `f = 1` is then below one screen pixel per font
+pixel and not legible; `f = 2` and up survive. Users of scaled clients
+should use `size = 128` or more and short labels.
+
+**Size.** `label_size` caps the glyph height, in logical pixels times the
+display scale; fitting and cutting work as above under the cap:
+
+| `label_size` | Tallest glyph |
+|---|---|
+| `auto` (default) | no cap: the tallest that fits |
+| `small` | 7 (5 × 7 at `f = 1`) |
+| `medium` | 14 |
+| `large` | 21 |
+
+A cap never hides the label: if no candidate is under it, the micro font at
+`f = 1` is used anyway.
 
 **Contrast.** Dark text (`#1b1b1f`) on a light strip (`#f2efe6`) with the
 accent around it. The strip and text colors are fixed for legibility. Only
@@ -337,6 +354,7 @@ the accent changes.
 
 **Case.** `label_case = "upper"` (default) renders the label like a shipping
 stamp. `"as-is"` keeps the configured or detected case. `"lower"` lowercases.
+In the micro font both cases look the same.
 
 ### 4.5 Pixel rules
 
@@ -348,7 +366,7 @@ stamp. `"as-is"` keeps the configured or detected case. `"lower"` lowercases.
   scales it by `P` into the backend's buffer. A redraw happens only when the
   frame, label, size, or scale changes. `Badge` keys the composed image on
   everything it depends on (mascot, frame, label, label size, accent, size,
-  anchor, scale, move-mode outline) and skips composition when the key
+  scale, move-mode outline) and skips composition when the key
   matches; the tray icon is likewise composed only when the mascot or
   accent changes.
 
@@ -372,11 +390,17 @@ stamp. `"as-is"` keeps the configured or detected case. `"lower"` lowercases.
    `.local`). `owl.lab.example` becomes `owl`, and `owl-02.lab.example`
    becomes `owl-02`.
 3. Label by `label` setting:
-   - `"auto"` (default): `short`
-   - `"full"`: `raw` lowercased
-   - `"none"`: no label, no strip text, no nameplate
-   - any other string: used literally
-4. Apply `label_case`, then truncate ([4.4](#44-label)).
+   - `"auto"` (default): `short`, letters and digits only (`prod-owl-02`
+     becomes `prodowl02`)
+   - `"full"`: `raw` lowercased, letters and digits only
+     (`owl.lab.example` becomes `owllabexample`)
+   - `"none"`: no label; the strip stays empty
+   - any other string: used literally, punctuation and all
+4. Apply `label_case`, then keep the first 20 characters. The strip may show
+   fewer: it is fitted, then cut from the right ([4.4](#44-label)). An
+   earlier rule cut long labels in the middle (`jenkins-a..-linux-07`) to
+   keep the suffix; it was dropped because the strip itself now shows the
+   left side, and the owner prefers the left side of a name.
 
 ### 5.3 Choosing a mascot
 
@@ -684,9 +708,9 @@ Every key is optional. The values shown are the defaults.
 mascot = "auto"            # "auto" | a mascot id from `pawprint list`
 
 # Text on the crate.
-label = "auto"             # "auto" (short hostname) | "full" | "none" | any text
+label = "auto"             # "auto" (short hostname) | "full" | "none" | any text, shown as written
 label_case = "upper"       # "upper" | "lower" | "as-is"
-label_size = "auto"        # "auto" | "small" | "medium" | "large"
+label_size = "auto"        # "auto" (tallest that fits) | "small" | "medium" | "large" (cap 7, 14, 21 px)
 
 # Mascot size in logical pixels. 32, 64, and 128 are the presets; any multiple of 32 works.
 size = 64
@@ -1122,7 +1146,7 @@ What is shared, and by whom:
 | Shared piece | Lives in | Used by |
 |---|---|---|
 | Hostname rules, matching, HRW, config, state, catalog | `pawprint-core` | All backends, CLI |
-| Layout, clamping, 3 × 3 snap, nameplate placement | `pawprint-core::layout` | All backends |
+| Layout, clamping, 3 × 3 snap, label fitting | `pawprint-core::layout` | All backends |
 | Move mode: drag math, constraint, nudge, Esc, 30 s timeout | `pawprint-core::movemode` | All backends report raw pointer/key events only |
 | Animation scheduler, `next_deadline()` | `pawprint-core::anim` | All backends |
 | Compositor, integer scaler, font | `pawprint-core::render` | All backends, `render`, `preview`, golden tests |
@@ -1678,7 +1702,7 @@ Why text:
 | Block | Location | What it is |
 |---|---|---|
 | **Master palette** | `assets/palette.toml` | 32 named colors ([12.9](#129-master-palette)). All art uses these names, never raw hex. `make palette` writes `assets/palette.gpl` from it for GIMP, Aseprite, and LibreSprite; a test fails if the `.gpl` is stale. |
-| **Crate** | `assets/crate/crate.toml` | Crate back, crate front, label strip, and nameplate parts, drawn with accent-ramp glyphs so any accent tints them |
+| **Crate** | `assets/crate/crate.toml` | Crate back, crate front, and label strip, drawn with accent-ramp glyphs so any accent tints them |
 | **Bases** | `assets/bases/<name>.toml` | Shared body plans in *role* colors (fur, fur-shadow, belly, ...) with standard layers. A mascot `extends` a base, maps roles to palette colors, and adds or overrides layers. |
 | **Motion templates** | `assets/motions/<name>.toml` | Reusable actions written as layer operations (blink, bob, duck, ...). They work on any mascot that has the layers they need. |
 | **Style guide** | `docs/ART.md` | How to author a mascot on a base, with worked examples and the art bible's practical gotchas |
@@ -2136,7 +2160,7 @@ minimum = 100
 `pawprint-core`'s `build.rs` uses `pawprint-sprite` (as a build-dependency)
 to compile every bundled source into indexed frame data (32 × 32 palette
 indices per distinct frame, identical frames shared) and validate the
-catalog. The result, a `pawprint_sprite::Bundle` (accents, font, crate,
+catalog. The result, a `pawprint_sprite::Bundle` (accents, both fonts, crate,
 mascots, catalog gates), is serialized with `postcard` to
 `$OUT_DIR/bundle.bin`, embedded with `include_bytes!`, and decoded once on
 first use (`pawprint_core::catalog::bundle()`). The binary needs no asset
@@ -2166,8 +2190,9 @@ pawprint/
 │   ├── catalog.toml
 │   ├── palette.toml          # master palette (12.9); pawdev also emits palette.gpl for pixel tools
 │   ├── accents.toml          # accent palette (Appendix B)
-│   ├── crate/crate.toml      # crate back/front, label strip, nameplate (text source)
+│   ├── crate/crate.toml      # crate back/front, label strip (text source)
 │   ├── font/font.toml        # 5x7 bitmap font (text source)
+│   ├── font/micro.toml       # 3x5 micro font for long labels (text source)
 │   ├── bases/                # shared body plans (12.8)
 │   ├── motions/              # motion templates (12.4)
 │   ├── props/                # shared props (12.2)
@@ -2607,7 +2632,9 @@ are clean machines).
   every nocturnal mascot has a night action and that every bundled mascot
   survives `pawprint mascot export` and recompiles to the same frames.
 - **Layout:** anchor/offset ↔ rectangle round-trips, clamping, the 3 × 3
-  snap, and nameplate placement at each size.
+  snap, and label fitting: the candidate each label gets at P = 1, 2, 3,
+  4, cutting from the right, the `label_size` caps, and the badge staying
+  exactly 32P × 32P for every label.
 - **Config:** precedence, globs, unknown-key warnings, and invalid-value
   fallback.
 - **Golden renders:** badge renders for a fixed set of (mascot, size,

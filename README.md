@@ -193,7 +193,7 @@ else on the screen are held back while move mode is on.)
 $ pawprint explain
 hostname    prod-owl-02.lab.example
 short name  prod-owl-02
-label       PROD-OWL-02            (auto: short hostname, upper case)
+label       PRODOWL02              (auto: short hostname, letters and digits, upper case)
 mascot      owl                    (rule 4: token "owl")
 accent      violet                 (from mascot)
 size        64                     (default)
@@ -221,7 +221,7 @@ The running badge picks up changes on its own. `pawprint reload` forces it.
 mascot = "auto"          # "auto" or a mascot id from `pawprint list`
 label = "auto"           # "auto" (short hostname) | "full" | "none" | any text
 label_case = "upper"     # "upper" | "lower" | "as-is"
-label_size = "auto"      # "auto" | "small" | "medium" | "large"
+label_size = "auto"      # "auto" (tallest that fits) | "small" | "medium" | "large"
 size = 64                # mascot size in pixels: 32, 64, 128 (any multiple of 32)
 position = "top-right"   # top-left, top, top-right, left, center, right, bottom-left, bottom, bottom-right
 offset = [16, 16]        # pixels in from that corner or edge
@@ -232,6 +232,17 @@ accent = "auto"          # crate color: "auto", a name, or "#rrggbb"
 tray = true              # show the tray / menu-bar icon
 backend = "auto"         # leave this alone unless `pawprint doctor` says otherwise
 ```
+
+**The label always fits on the crate.** The badge is exactly `size` ×
+`size` pixels, label included. PAWPRINT sets the label in the tallest text
+that fits the whole name, switching to a tiny 3×5 font for long names, and
+if even that is too wide it shows as much of the start of the name as fits
+(at size 32, `JENKINSAGENTLINUX07` shows `JENKIN`). A label from the
+hostname keeps only letters and digits, so more of it fits (`prod-owl-02`
+shows `PRODOWL02`), and at most its first 20 characters. A `label` you set
+yourself is shown exactly as you wrote it. `label_size` caps the text
+height (`small` 7, `medium` 14, `large` 21 px) if you'd rather it not grow
+with the badge.
 
 ### One config for every machine
 

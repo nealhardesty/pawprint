@@ -2,11 +2,11 @@
 //! receives (SPEC §4.5, §10.6).
 
 use pawprint_sprite::{
-    CrateArt, CrateColor, Font, IndexedLayer, Mascot, Ramp, Rgb, RgbaImage, Shade, ramp,
+    Bundle, CrateArt, CrateColor, Font, IndexedLayer, Mascot, Ramp, Rgb, RgbaImage, Shade, ramp,
 };
 
 use crate::geom::Point;
-use crate::layout::{self, Anchor, BadgeLayout, LabelSize, PlateMetrics};
+use crate::layout::{self, BadgeLayout, Face, LabelSize};
 
 /// Label text color, fixed for legibility (SPEC §4.4).
 pub const TEXT_COLOR: Rgb = Rgb(0x1b, 0x1b, 0x1f);
@@ -161,14 +161,6 @@ pub fn compose_1x(art: &CrateArt, mascot: &Mascot, frame: usize, accent: Rgb) ->
     img
 }
 
-pub fn plate_metrics(art: &CrateArt) -> PlateMetrics {
-    PlateMetrics {
-        left: art.plate_left.width,
-        right: art.plate_right.width,
-        height: art.plate_mid.height,
-    }
-}
-
 /// What to draw.
 #[derive(Debug, Clone, Copy)]
 pub struct BadgeSpec<'a> {
@@ -178,61 +170,46 @@ pub struct BadgeSpec<'a> {
     pub accent: Rgb,
     pub size: u32,
     pub label_size: LabelSize,
-    /// Decides which side a size-32 nameplate goes on.
-    pub anchor: Anchor,
     pub display_scale: f64,
 }
 
-pub fn layout_for(spec: &BadgeSpec<'_>, art: &CrateArt) -> BadgeLayout {
+pub fn layout_for(spec: &BadgeSpec<'_>) -> BadgeLayout {
     layout::badge_layout(
         spec.size,
         spec.label.map(|l| l.chars().count()),
         spec.label_size,
-        spec.anchor,
         spec.display_scale,
-        plate_metrics(art),
     )
 }
 
-/// Render the whole badge at physical resolution.
-pub fn render_badge(spec: &BadgeSpec<'_>, art: &CrateArt, font: &Font) -> RgbaImage {
-    let layout = layout_for(spec, art);
-    let mut img = RgbaImage::new(layout.width, layout.height);
-    let body = scale(
+/// Render the whole badge at physical resolution: the 1× composition
+/// scaled by `P`, then the label drawn onto the strip at physical pixels.
+/// The image is always the 32 × 32 art canvas times `P` (SPEC §4.2).
+pub fn render_badge(spec: &BadgeSpec<'_>, assets: &Bundle) -> RgbaImage {
+    let layout = layout_for(spec);
+    let art = &assets.crate_art;
+    let mut img = scale(
         &compose_1x(art, spec.mascot, spec.frame, spec.accent),
         layout.art_scale,
     );
-    blit(&mut img, &body, layout.crate_origin);
-
-    if let (Some(text), Some(label)) = (spec.label, layout.label) {
-        let f = layout.font_scale;
-        if let Some(plate) = label.plate {
-            let origin = Point::new(plate.x, plate.y);
-            draw_layer(&mut img, &art.plate_left, art, spec.accent, origin, f);
-            for col in 0..label.plate_columns {
-                let at = Point::new(
-                    origin.x + ((art.plate_left.width + col) * f) as i32,
-                    origin.y,
-                );
-                draw_layer(&mut img, &art.plate_mid, art, spec.accent, at, f);
-            }
-            let right = Point::new(
-                origin.x + ((art.plate_left.width + label.plate_columns) * f) as i32,
-                origin.y,
-            );
-            draw_layer(&mut img, &art.plate_right, art, spec.accent, right, f);
-        }
-        draw_text(&mut img, font, text, label.text, f);
+    if let (Some(text), Some(fit)) = (spec.label, layout.label) {
+        let font = match fit.face {
+            Face::Regular => &assets.font,
+            Face::Micro => &assets.micro_font,
+        };
+        let shown: String = text.chars().take(fit.chars).collect();
+        draw_text(&mut img, font, &shown, fit.at, fit.scale);
     }
     img
 }
 
 fn draw_text(img: &mut RgbaImage, font: &Font, text: &str, at: Point, f: u32) {
     let ink = [TEXT_COLOR.0, TEXT_COLOR.1, TEXT_COLOR.2, 255];
+    let m = font.metrics;
     for (i, c) in text.chars().enumerate() {
-        let gx = at.x + (i as u32 * Font::ADVANCE * f) as i32;
-        for y in 0..Font::HEIGHT {
-            for x in 0..Font::WIDTH {
+        let gx = at.x + (i as u32 * m.advance * f) as i32;
+        for y in 0..m.height {
+            for x in 0..m.width {
                 if font.ink(c, x, y) {
                     fill(img, gx + (x * f) as i32, at.y + (y * f) as i32, f, f, ink);
                 }
@@ -254,7 +231,6 @@ mod tests {
             accent: Rgb(0x7b, 0x5e, 0xa7),
             size,
             label_size: LabelSize::Auto,
-            anchor: Anchor::TopRight,
             display_scale: 1.0,
         }
     }
@@ -290,31 +266,110 @@ mod tests {
         assert_eq!(s.pixel(5, 2), [1, 2, 3, 255]);
     }
 
+    const LABELS: [Option<&str>; 8] = [
+        None,
+        Some("OWL"),
+        Some("MOOSE"),
+        Some("ARMADILLO"),
+        Some("PRODOWL02"),
+        Some("JENKINSAGENTLINUX07"),
+        Some("ABCDEFGHIJKLMNOPQRST"),
+        Some("WWWWWWWWWWWWWWWWWWWW"),
+    ];
+
+    /// The owner's rule: the badge is exactly size x size (times the
+    /// display scale, rounded to whole art pixels), whatever the label.
     #[test]
-    fn badge_has_only_binary_alpha_and_expected_size() {
-        for size in [32, 64, 128] {
-            let img = render_badge(
-                &owl_spec(Some("OWL"), size),
-                &bundle().crate_art,
-                &bundle().font,
-            );
-            assert_eq!((img.width, img.height), (size, size));
-            assert!(img.data.chunks(4).all(|p| p[3] == 0 || p[3] == 255));
+    fn badge_is_always_exactly_the_art_canvas_times_p() {
+        let b = bundle();
+        for scale in [1.0, 1.5, 2.0] {
+            for size in [32, 64, 128] {
+                let p = crate::layout::art_scale(size, scale);
+                for label in LABELS {
+                    for label_size in [
+                        LabelSize::Auto,
+                        LabelSize::Small,
+                        LabelSize::Medium,
+                        LabelSize::Large,
+                    ] {
+                        let spec = BadgeSpec {
+                            label,
+                            label_size,
+                            display_scale: scale,
+                            ..owl_spec(None, size)
+                        };
+                        let img = render_badge(&spec, b);
+                        assert_eq!(
+                            (img.width, img.height),
+                            (32 * p, 32 * p),
+                            "{size} at {scale}: {label:?} {label_size}"
+                        );
+                        assert!(img.data.chunks(4).all(|p| p[3] == 0 || p[3] == 255));
+                    }
+                }
+            }
         }
+    }
+
+    /// Pixels in `TEXT_COLOR`. The art's ink outline is the same color, so
+    /// callers subtract the unlabeled badge's.
+    fn ink_pixels(img: &RgbaImage) -> Vec<(u32, u32)> {
+        let text = [TEXT_COLOR.0, TEXT_COLOR.1, TEXT_COLOR.2, 255];
+        (0..img.height)
+            .flat_map(|y| (0..img.width).map(move |x| (x, y)))
+            .filter(|&(x, y)| img.pixel(x, y) == text)
+            .collect()
     }
 
     #[test]
     fn label_text_is_drawn_on_the_strip() {
         let b = bundle();
-        let img = render_badge(&owl_spec(Some("I"), 64), &b.crate_art, &b.font);
-        let text = [TEXT_COLOR.0, TEXT_COLOR.1, TEXT_COLOR.2, 255];
-        let count = |img: &RgbaImage| img.data.chunks(4).filter(|p| *p == text).count();
-        let without = render_badge(&owl_spec(None, 64), &b.crate_art, &b.font);
+        let img = render_badge(&owl_spec(Some("I"), 64), b);
+        let without = render_badge(&owl_spec(None, 64), b);
         // Ink pixels of 'I' at font scale 2 → 4 physical pixels each.
         let ink: u32 = (0..7)
             .map(|y| (0..5).filter(|&x| b.font.ink('I', x, y)).count() as u32)
             .sum();
-        assert_eq!(count(&img) - count(&without), (ink * 4) as usize);
+        assert_eq!(
+            ink_pixels(&img).len() - ink_pixels(&without).len(),
+            (ink * 4) as usize
+        );
+    }
+
+    #[test]
+    fn every_label_stays_inside_the_strip() {
+        let b = bundle();
+        for size in [32, 64, 128] {
+            let p = size / 32;
+            let without = ink_pixels(&render_badge(&owl_spec(None, size), b));
+            for label in LABELS.into_iter().flatten() {
+                let img = render_badge(&owl_spec(Some(label), size), b);
+                let ink: Vec<_> = ink_pixels(&img)
+                    .into_iter()
+                    .filter(|px| !without.contains(px))
+                    .collect();
+                assert!(!ink.is_empty(), "{label} at {size}");
+                let (sx, sy, sw, sh) = crate::layout::STRIP;
+                assert!(
+                    ink.iter().all(|&(x, y)| x >= sx * p
+                        && x < (sx + sw) * p
+                        && y >= sy * p
+                        && y < (sy + sh) * p),
+                    "{label} at {size}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_too_long_label_draws_its_left_side_in_the_micro_font() {
+        let b = bundle();
+        // At 32, PRODOWL02 shows PRODOW, left-aligned one pixel in from
+        // the strip edge (x = 3), in the 3 x 5 font one row lower (y = 24).
+        let img = render_badge(&owl_spec(Some("PRODOWL02"), 32), b);
+        let mut expect = render_badge(&owl_spec(None, 32), b);
+        draw_text(&mut expect, &b.micro_font, "PRODOW", Point::new(3, 24), 1);
+        assert_eq!(img, expect);
     }
 
     #[test]
@@ -336,13 +391,6 @@ mod tests {
         // Strip pixels are fixed cream regardless of accent.
         assert_eq!(a.pixel(15, 25), [0xf2, 0xef, 0xe6, 255]);
         assert_eq!(a.pixel(15, 25), c.pixel(15, 25));
-    }
-
-    #[test]
-    fn nameplate_badge_is_wider() {
-        let b = bundle();
-        let img = render_badge(&owl_spec(Some("PROD-OWL-02"), 64), &b.crate_art, &b.font);
-        assert_eq!((img.width, img.height), (142, 90));
     }
 
     #[test]

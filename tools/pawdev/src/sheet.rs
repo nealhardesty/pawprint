@@ -7,9 +7,9 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 
 use pawprint_core::catalog::bundle;
-use pawprint_core::layout::{Anchor, LabelSize};
+use pawprint_core::layout::LabelSize;
 use pawprint_core::render::{BadgeSpec, render_badge, scale};
-use pawprint_core::sprite::{Font, Mascot, Rgb, RgbaImage, compile_base};
+use pawprint_core::sprite::{Mascot, Metrics, Rgb, RgbaImage, compile_base};
 
 const BG: Rgb = Rgb(0xe6, 0xe2, 0xd8);
 const INK: Rgb = Rgb(0x1b, 0x1b, 0x1f);
@@ -41,9 +41,9 @@ fn blit(img: &mut RgbaImage, src: &RgbaImage, x: u32, y: u32) {
 fn text(img: &mut RgbaImage, s: &str, x: u32, y: u32, k: u32, c: Rgb) -> u32 {
     let font = &bundle().font;
     for (i, ch) in s.chars().enumerate() {
-        let gx = x + i as u32 * Font::ADVANCE * k;
-        for fy in 0..Font::HEIGHT {
-            for fx in 0..Font::WIDTH {
+        let gx = x + i as u32 * font.metrics.advance * k;
+        for fy in 0..font.metrics.height {
+            for fx in 0..font.metrics.width {
                 if font.ink(ch, fx, fy) {
                     fill(img, gx + fx * k, y + fy * k, k, k, c);
                 }
@@ -54,7 +54,7 @@ fn text(img: &mut RgbaImage, s: &str, x: u32, y: u32, k: u32, c: Rgb) -> u32 {
 }
 
 fn text_width(s: &str, k: u32) -> u32 {
-    Font::text_width(s.chars().count()) * k
+    Metrics::REGULAR.text_width(s.chars().count()) * k
 }
 
 fn accent_of(m: &Mascot) -> Rgb {
@@ -77,10 +77,9 @@ fn badge(m: &Mascot, frame: usize, size: u32, accent: Rgb) -> RgbaImage {
         accent,
         size,
         label_size: LabelSize::Auto,
-        anchor: Anchor::TopRight,
         display_scale: 1.0,
     };
-    render_badge(&spec, &b.crate_art, &b.font)
+    render_badge(&spec, b)
 }
 
 fn write_png(path: &Path, img: &RgbaImage) -> Result<(), String> {
@@ -417,10 +416,9 @@ pub fn building_blocks(root: &Path) -> Result<(), String> {
                 accent: *rgb,
                 size: 64,
                 label_size: LabelSize::Small,
-                anchor: Anchor::TopRight,
                 display_scale: 1.0,
             };
-            blit(&mut img, &render_badge(&spec, &b.crate_art, &b.font), x, y);
+            blit(&mut img, &render_badge(&spec, b), x, y);
         }
     }
     y += 64 + 7 + 6 + 16;

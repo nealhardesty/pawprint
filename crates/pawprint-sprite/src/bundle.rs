@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::source::CatalogFile;
 use crate::{
-    CrateArt, Diag, Font, Library, LibrarySources, Mascot, Origin, Report, Rgb, compile_base,
-    compile_dir, squash,
+    CrateArt, Diag, Font, Library, LibrarySources, Mascot, Metrics, Origin, Report, Rgb,
+    compile_base, compile_dir, squash,
 };
 
 /// Everything the binary embeds.
@@ -17,7 +17,10 @@ use crate::{
 pub struct Bundle {
     /// Accent palette in frozen fallback order.
     pub accents: Vec<(String, Rgb)>,
+    /// The 5 × 7 label font.
     pub font: Font,
+    /// The 3 × 5 micro font, for labels too long for the 5 × 7 one.
+    pub micro_font: Font,
     pub crate_art: CrateArt,
     /// Sorted by id.
     pub mascots: Vec<Mascot>,
@@ -90,11 +93,17 @@ pub fn build_bundle(assets: &Path) -> BundleReport {
     {
         report.error("catalog.toml", format!("unsupported version {}", c.version));
     }
-    let font = read("font/font.toml", &mut report).and_then(|s| {
-        Font::compile(&s)
-            .map_err(|r| report.absorb("font/font.toml", r))
-            .ok()
-    });
+    let mut font = |rel: &str, metrics: Metrics| {
+        read(rel, &mut report).and_then(|s| {
+            Font::compile(&s, metrics)
+                .map_err(|r| report.absorb(rel, r))
+                .ok()
+        })
+    };
+    let (font, micro_font) = (
+        font("font/font.toml", Metrics::REGULAR),
+        font("font/micro.toml", Metrics::MICRO),
+    );
     let crate_art = read("crate/crate.toml", &mut report).and_then(|s| {
         CrateArt::compile(&s, &lib)
             .map_err(|r| report.absorb("crate/crate.toml", r))
@@ -144,16 +153,21 @@ pub fn build_bundle(assets: &Path) -> BundleReport {
         );
     }
 
-    let bundle = match (catalog, font, crate_art) {
-        (Some(catalog), Some(font), Some(crate_art)) if report.errors.is_empty() => Some(Bundle {
-            accents: lib.accents,
-            font,
-            crate_art,
-            mascots,
-            required: catalog.required,
-            minimum: catalog.minimum,
-            library: sources,
-        }),
+    let bundle = match (catalog, font, micro_font, crate_art) {
+        (Some(catalog), Some(font), Some(micro_font), Some(crate_art))
+            if report.errors.is_empty() =>
+        {
+            Some(Bundle {
+                accents: lib.accents,
+                font,
+                micro_font,
+                crate_art,
+                mascots,
+                required: catalog.required,
+                minimum: catalog.minimum,
+                library: sources,
+            })
+        }
         _ => None,
     };
     BundleReport { bundle, report }
@@ -261,14 +275,18 @@ mod tests {
     fn bundle(mascots: Vec<Mascot>, required: &[&str], minimum: u32) -> Bundle {
         Bundle {
             accents: vec![],
-            font: Font { glyphs: vec![] },
+            font: Font {
+                metrics: Metrics::REGULAR,
+                glyphs: vec![],
+            },
+            micro_font: Font {
+                metrics: Metrics::MICRO,
+                glyphs: vec![],
+            },
             crate_art: CrateArt {
                 colors: vec![],
                 back: empty(),
                 front: empty(),
-                plate_left: empty(),
-                plate_mid: empty(),
-                plate_right: empty(),
             },
             mascots,
             required: required.iter().map(|r| r.to_string()).collect(),

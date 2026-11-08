@@ -22,7 +22,7 @@ pub use compile::{
 pub use export::export_png;
 pub use image::RgbaImage;
 pub use library::{Library, LibrarySources, Prop};
-pub use parts::{CrateArt, CrateColor, Font, IndexedLayer, Shade};
+pub use parts::{CrateArt, CrateColor, Font, IndexedLayer, Metrics, Shade};
 pub use source::When;
 
 use std::fmt;

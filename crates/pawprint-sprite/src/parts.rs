@@ -1,4 +1,4 @@
-//! The two non-mascot art sources: the bitmap font and the crate.
+//! The non-mascot art sources: the bitmap fonts and the crate.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -9,23 +9,54 @@ use crate::library::single_char;
 use crate::source::{CrateFile, FontFile};
 use crate::{Library, Report};
 
-/// PAWPRINT's 5 × 7 bitmap font for printable ASCII (SPEC §4.4).
+/// A bitmap font's cell in font pixels: glyph width and height, and the
+/// advance from one glyph to the next.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Metrics {
+    pub width: u32,
+    pub height: u32,
+    pub advance: u32,
+}
+
+impl Metrics {
+    /// The 5 × 7 label font, `assets/font/font.toml` (SPEC §4.4).
+    pub const REGULAR: Metrics = Metrics {
+        width: 5,
+        height: 7,
+        advance: 6,
+    };
+    /// The 3 × 5 micro font, `assets/font/micro.toml` (SPEC §4.4).
+    pub const MICRO: Metrics = Metrics {
+        width: 3,
+        height: 5,
+        advance: 4,
+    };
+
+    /// Width in font pixels of `n` characters (no trailing gap).
+    pub fn text_width(self, n: usize) -> u32 {
+        if n == 0 {
+            0
+        } else {
+            n as u32 * self.advance - (self.advance - self.width)
+        }
+    }
+}
+
+/// One of PAWPRINT's bitmap fonts for printable ASCII (SPEC §4.4).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Font {
-    /// One entry per character 0x20..=0x7E. Each row's bit 4 is the leftmost
-    /// column.
-    pub glyphs: Vec<[u8; 7]>,
+    pub metrics: Metrics,
+    /// One entry per character 0x20..=0x7E, one byte per row. Bit
+    /// `width - 1` of a row is its leftmost column.
+    pub glyphs: Vec<Vec<u8>>,
 }
 
 impl Font {
-    pub const WIDTH: u32 = 5;
-    pub const HEIGHT: u32 = 7;
-    pub const ADVANCE: u32 = 6;
     const FIRST: u32 = 0x20;
     const LAST: u32 = 0x7e;
 
     /// The glyph for `c`. Characters outside printable ASCII render as `?`.
-    pub fn glyph(&self, c: char) -> &[u8; 7] {
+    pub fn glyph(&self, c: char) -> &[u8] {
         let code = if (Self::FIRST..=Self::LAST).contains(&(c as u32)) {
             c as u32
         } else {
@@ -36,19 +67,11 @@ impl Font {
 
     /// Is the pixel at (x, y) of glyph `c` inked?
     pub fn ink(&self, c: char, x: u32, y: u32) -> bool {
-        self.glyph(c)[y as usize] & (0x10 >> x) != 0
+        self.glyph(c)[y as usize] & (1 << (self.metrics.width - 1 - x)) != 0
     }
 
-    /// Width in font pixels of `n` characters (no trailing gap).
-    pub fn text_width(n: usize) -> u32 {
-        if n == 0 {
-            0
-        } else {
-            n as u32 * Self::ADVANCE - (Self::ADVANCE - Self::WIDTH)
-        }
-    }
-
-    pub fn compile(src: &str) -> Result<Font, Report> {
+    /// Compile a font source; every glyph must be `metrics` in size.
+    pub fn compile(src: &str, metrics: Metrics) -> Result<Font, Report> {
         let mut report = Report::default();
         let file: FontFile = toml::from_str(src).map_err(|e| {
             report.error("", e.to_string());
@@ -61,7 +84,7 @@ impl Font {
                 report.error("glyphs", format!("missing glyph {c:?}"));
                 continue;
             };
-            match glyph_rows(text) {
+            match glyph_rows(text, metrics) {
                 Ok(rows) => glyphs.push(rows),
                 Err(e) => report.error(format!("glyph {c:?}"), e),
             }
@@ -79,25 +102,26 @@ impl Font {
             }
         }
         if report.errors.is_empty() {
-            Ok(Font { glyphs })
+            Ok(Font { metrics, glyphs })
         } else {
             Err(report)
         }
     }
 }
 
-fn glyph_rows(text: &str) -> Result<[u8; 7], String> {
+fn glyph_rows(text: &str, m: Metrics) -> Result<Vec<u8>, String> {
     let grid = parse_grid(text)?;
-    if (grid.width, grid.height) != (Font::WIDTH as usize, Font::HEIGHT as usize) {
+    let (w, h) = (m.width as usize, m.height as usize);
+    if (grid.width, grid.height) != (w, h) {
         return Err(format!(
-            "glyphs are 5x7 (got {}x{})",
+            "glyphs are {w}x{h} (got {}x{})",
             grid.width, grid.height
         ));
     }
-    let mut rows = [0u8; 7];
+    let mut rows = vec![0u8; h];
     for (i, g) in grid.glyphs.iter().enumerate() {
         match g {
-            '#' => rows[i / 5] |= 0x10 >> (i % 5),
+            '#' => rows[i / w] |= 1 << (w - 1 - i % w),
             '.' => {}
             other => return Err(format!("glyph pixels are '#' or '.', not {other:?}")),
         }
@@ -130,17 +154,13 @@ pub struct IndexedLayer {
     pub pixels: Vec<u8>,
 }
 
-/// The shared crate (SPEC §4.1–4.2). The nameplate is drawn in font-pixel
-/// units: left cap, the middle column repeated once per text column, right
-/// cap. Text starts after the left cap, vertically centered.
+/// The shared crate (SPEC §4.1–4.2): the back rim behind the mascot and the
+/// front, with its label strip, in front of it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CrateArt {
     pub colors: Vec<CrateColor>,
     pub back: IndexedLayer,
     pub front: IndexedLayer,
-    pub plate_left: IndexedLayer,
-    pub plate_mid: IndexedLayer,
-    pub plate_right: IndexedLayer,
 }
 
 impl CrateArt {
@@ -211,13 +231,7 @@ impl CrateArt {
             }
         }
 
-        let expect = [
-            ("back", Some((0, 18, 32, 2))),
-            ("front", Some((0, 20, 32, 12))),
-            ("plate-left", None),
-            ("plate-mid", None),
-            ("plate-right", None),
-        ];
+        let expect = [("back", (0, 18, 32, 2)), ("front", (0, 20, 32, 12))];
         for name in file.layers.keys() {
             if !expect.iter().any(|(n, _)| n == name) {
                 report.error(format!("layer {name}"), "unknown crate layer");
@@ -228,7 +242,7 @@ impl CrateArt {
                 (None, _) if report.errors.is_empty() => {
                     report.error("layers", format!("missing layer {name:?}"))
                 }
-                (Some(l), Some(g)) if (l.x, l.y, l.width, l.height) != g => {
+                (Some(l), g) if (l.x, l.y, l.width, l.height) != g => {
                     report.error(
                         format!("layer {name}"),
                         format!("must be at [{}, {}] and {}x{}", g.0, g.1, g.2, g.3),
@@ -241,27 +255,11 @@ impl CrateArt {
             return Err(report);
         }
         let mut take = |n: &str| layers.remove(n).expect("checked above");
-        let art = CrateArt {
+        Ok(CrateArt {
             colors,
             back: take("back"),
             front: take("front"),
-            plate_left: take("plate-left"),
-            plate_mid: take("plate-mid"),
-            plate_right: take("plate-right"),
-        };
-        let h = art.plate_mid.height;
-        if art.plate_mid.width != 1
-            || art.plate_left.height != h
-            || art.plate_right.height != h
-            || h < Font::HEIGHT + 2
-        {
-            report.error(
-                "nameplate",
-                "plate parts share one height (at least 9), and plate-mid is 1 column wide",
-            );
-            return Err(report);
-        }
-        Ok(art)
+        })
     }
 }
 
@@ -270,7 +268,8 @@ mod tests {
     use super::*;
     use crate::library::tests::lib_with;
 
-    fn font_src(skip: char, extra: &str) -> String {
+    /// A font source: `I` is `i_rows`, every other glyph `other_rows`.
+    fn font_src(skip: char, extra: &str, i_rows: &str, other_rows: &str) -> String {
         let mut s = String::from("[glyphs]\n");
         for code in 0x20u8..=0x7e {
             let c = code as char;
@@ -282,34 +281,58 @@ mod tests {
                 '\\' => "'\\'".to_string(),
                 _ => format!("\"{c}\""),
             };
-            let rows = if c == 'I' {
-                "#####\n..#..\n..#..\n..#..\n..#..\n..#..\n#####"
-            } else {
-                ".....\n.....\n.....\n.....\n.....\n.....\n#...#"
-            };
+            let rows = if c == 'I' { i_rows } else { other_rows };
             s.push_str(&format!("{key} = \"\"\"\n{rows}\n\"\"\"\n"));
         }
         s + extra
     }
 
+    fn regular_src(skip: char, extra: &str) -> String {
+        font_src(
+            skip,
+            extra,
+            "#####\n..#..\n..#..\n..#..\n..#..\n..#..\n#####",
+            ".....\n.....\n.....\n.....\n.....\n.....\n#...#",
+        )
+    }
+
     #[test]
     fn compiles_font() {
-        let f = Font::compile(&font_src('\0', "")).unwrap();
+        let f = Font::compile(&regular_src('\0', ""), Metrics::REGULAR).unwrap();
         assert_eq!(f.glyphs.len(), 95);
         assert_eq!(f.glyph('I')[0], 0b11111);
         assert_eq!(f.glyph('I')[1], 0b00100);
         assert!(f.ink('I', 2, 3) && !f.ink('I', 0, 3));
         assert_eq!(f.glyph('é'), f.glyph('?'));
-        assert_eq!(Font::text_width(0), 0);
-        assert_eq!(Font::text_width(1), 5);
-        assert_eq!(Font::text_width(3), 17);
+        assert_eq!(Metrics::REGULAR.text_width(0), 0);
+        assert_eq!(Metrics::REGULAR.text_width(1), 5);
+        assert_eq!(Metrics::REGULAR.text_width(3), 17);
+    }
+
+    #[test]
+    fn compiles_micro_font() {
+        let src = font_src(
+            '\0',
+            "",
+            "###\n.#.\n.#.\n.#.\n###",
+            "...\n...\n...\n...\n#.#",
+        );
+        let f = Font::compile(&src, Metrics::MICRO).unwrap();
+        assert_eq!(f.glyph('I'), &[0b111, 0b010, 0b010, 0b010, 0b111]);
+        assert!(f.ink('I', 0, 0) && f.ink('I', 1, 2) && !f.ink('I', 0, 2));
+        assert_eq!(Metrics::MICRO.text_width(1), 3);
+        assert_eq!(Metrics::MICRO.text_width(5), 19);
+        // A 5 x 7 source is not a micro font.
+        let wrong = Font::compile(&regular_src('\0', ""), Metrics::MICRO).unwrap_err();
+        assert!(wrong.errors.iter().any(|d| d.message.contains("3x5")));
     }
 
     #[test]
     fn font_errors() {
-        let missing = Font::compile(&font_src('Q', "")).unwrap_err();
+        let missing = Font::compile(&regular_src('Q', ""), Metrics::REGULAR).unwrap_err();
         assert!(missing.errors.iter().any(|d| d.message.contains("'Q'")));
-        let extra = Font::compile(&font_src('\0', "\"é\" = \".....\"\n")).unwrap_err();
+        let extra =
+            Font::compile(&regular_src('\0', "\"é\" = \".....\"\n"), Metrics::REGULAR).unwrap_err();
         assert!(extra.errors.iter().any(|d| d.message.contains("printable")));
     }
 
@@ -341,12 +364,6 @@ k2ssssssssssssssssssssssssssss2k
 k222222222222222222222222222222k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 """
-[layers.plate-left]
-grid = "k\nk\nk\nk\nk\nk\nk\nk\nk"
-[layers.plate-mid]
-grid = "k\ns\ns\ns\ns\ns\ns\ns\nk"
-[layers.plate-right]
-grid = "k\nk\nk\nk\nk\nk\nk\nk\nk"
 "#;
 
     #[test]
@@ -361,7 +378,6 @@ grid = "k\nk\nk\nk\nk\nk\nk\nk\nk"
             .unwrap() as u8
             + 1;
         assert_eq!(art.back.pixels[33], accent_index);
-        assert_eq!(art.plate_mid.height, 9);
     }
 
     #[test]

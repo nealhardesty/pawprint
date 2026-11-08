@@ -125,7 +125,7 @@ fn check_assets(package: bool) -> Result<(), String> {
         ));
     };
     println!(
-        "assets OK: {} mascot(s), {} accents, font and crate valid",
+        "assets OK: {} mascot(s), {} accents, fonts and crate valid",
         bundle.mascots.len(),
         bundle.accents.len()
     );

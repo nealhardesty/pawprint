@@ -104,7 +104,9 @@ them in their headers. Your mascot may add any glyph it likes.
 | 20–31 | hidden behind the crate front; keep the body going so `duck` and `hop` never show a gap |
 
 The mascot spans roughly columns 2–29. The crate front's label strip is
-rows 22–30 and is always plain cream: never rely on art showing there.
+rows 22–30 and is always plain cream: never rely on art showing there. The
+label is always drawn inside that strip, and nothing is ever drawn outside
+the 32 × 32 canvas.
 
 ## Gotchas
 

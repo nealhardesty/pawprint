@@ -1,21 +1,15 @@
 # The shared crate (SPEC §4.1-4.2), drawn in accent shades so any accent
 # tints it. Back rim: rows 18-19 behind the mascot. Front: rows 20-31 in front
 # of it, with the cream label strip at rows 22-30, columns 2-29. The strip
-# stays plain cream: the label is stenciled onto it at any font scale.
+# stays plain cream: the label is stenciled onto it at physical resolution,
+# always inside it (SPEC §4.4). There is nothing outside the 32 x 32 canvas.
 #
 # Glyphs: k ink outline, 3 lit wood (top, left), 2 wood, 1 shaded wood
-# (bottom, right, inside), n nail heads (ink) on the top rails, o nail
-# heads on the nameplate's bottom rail, s cream label.
+# (bottom, right, inside), n nail heads (ink) on the top rail, s cream label.
 #
 # The crate front has a top rail only: the strip runs down to the bottom
-# outline so it is 9 rows tall, like the nameplate's. A 7-row glyph then
-# gets one clear row above and below at every preset (one art pixel at 1x
-# small, two physical pixels at 2x medium) instead of touching the rail.
-#
-# The nameplate (used when the label doesn't fit the strip) is a board
-# nailed under or beside the crate, drawn in font pixels: plate-left, then
-# plate-mid once per text column, then plate-right. Text starts right after
-# plate-left and is centered vertically.
+# outline so it is 9 rows tall. A 7-row glyph then gets one clear row above
+# and below at 1x instead of touching the rail.
 
 [palette]
 "." = "clear"
@@ -24,7 +18,6 @@
 "2" = "accent"
 "3" = "accent-highlight"
 "n" = "ink"
-"o" = "ink"
 "s" = "cream"
 
 # The far wall seen over the front: a lit top edge, then its shaded inside
@@ -54,53 +47,3 @@ k2ssssssssssssssssssssssssssss1k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 """
 
-[layers.plate-left]
-grid = """
-kkk
-k3n
-k3s
-k3s
-k2s
-k2s
-k2s
-k2s
-k2s
-k2s
-k2s
-k2o
-kkk
-"""
-
-[layers.plate-mid]
-grid = """
-k
-3
-s
-s
-s
-s
-s
-s
-s
-s
-s
-1
-k
-"""
-
-[layers.plate-right]
-grid = """
-kkk
-n3k
-s1k
-s1k
-s1k
-s1k
-s1k
-s1k
-s1k
-s1k
-s1k
-o1k
-kkk
-"""

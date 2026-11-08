@@ -18,9 +18,9 @@ pub const TEMPLATE: &str = r##"# PAWPRINT configuration. Every key is optional; 
 mascot = "auto"            # "auto" | a mascot id from `pawprint list`
 
 # Text on the crate.
-label = "auto"             # "auto" (short hostname) | "full" | "none" | any text
+label = "auto"             # "auto" (short hostname) | "full" | "none" | any text, shown as written
 label_case = "upper"       # "upper" | "lower" | "as-is"
-label_size = "auto"        # "auto" | "small" | "medium" | "large"
+label_size = "auto"        # "auto" (tallest that fits) | "small" | "medium" | "large" (cap 7, 14, 21 px)
 
 # Mascot size in logical pixels. 32, 64, and 128 are the presets; any multiple of 32 works.
 size = 64

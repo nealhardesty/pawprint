@@ -99,8 +99,8 @@ pub fn explain(host: Option<String>, recompute: bool) -> CmdResult {
     let s: &Settings = &r.settings;
     let row = |key: &str, value: &str, why: &str| println!("{key:<12}{value:<23}({why})");
     let label_how = match LabelSetting::parse(&s.label.value) {
-        LabelSetting::Auto => "auto: short hostname",
-        LabelSetting::Full => "full: full hostname",
+        LabelSetting::Auto => "auto: short hostname, letters and digits",
+        LabelSetting::Full => "full: full hostname, letters and digits",
         LabelSetting::None => "none",
         LabelSetting::Text(_) => "literal text",
     };
@@ -252,10 +252,9 @@ pub fn render(id: &str, out: &Path, size: u32, label: Option<String>, frame: usi
         accent: r.accent.rgb,
         size,
         label_size: r.settings.label_size.value,
-        anchor: r.position.value.anchor,
         display_scale: 1.0,
     };
-    let img = render::render_badge(&spec, &bundle().crate_art, &bundle().font);
+    let img = render::render_badge(&spec, bundle());
     std::fs::write(out, img.encode_png())
         .map_err(|e| (exit::ERROR, format!("cannot write {}: {e}", out.display())))?;
     println!("wrote {} ({}x{})", out.display(), img.width, img.height);

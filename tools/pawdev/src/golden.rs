@@ -8,7 +8,7 @@ use std::path::Path;
 use pawprint_core::catalog::{Catalog, bundle};
 use pawprint_core::config::{Config, Layer};
 use pawprint_core::identity;
-use pawprint_core::layout::{Anchor, LabelSize};
+use pawprint_core::layout::LabelSize;
 use pawprint_core::render::{BadgeSpec, render_badge};
 use pawprint_core::sprite::{Rgb, RgbaImage};
 use pawprint_core::state::State;
@@ -19,8 +19,10 @@ pub const CASES: &[(&str, &str, usize, u32, Option<&str>)] = &[
     ("owl-64", "owl", 0, 64, Some("OWL")),
     ("owl-128", "owl", 0, 128, Some("OWL")),
     ("owl-64-blink", "owl", 1, 64, None),
-    ("owl-64-nameplate", "owl", 0, 64, Some("PROD-OWL-02")),
-    ("owl-32-nameplate-beside", "owl", 0, 32, Some("PROD-OWL-02")),
+    ("owl-32-micro", "owl", 0, 32, Some("MOOSE")),
+    ("owl-32-truncated", "owl", 0, 32, Some("PRODOWL02")),
+    ("owl-64-micro", "owl", 0, 64, Some("PRODOWL02")),
+    ("owl-128-micro", "owl", 0, 128, Some("JENKINSAGENTLINUX07")),
 ];
 
 const VIOLET: Rgb = Rgb(0x7b, 0x5e, 0xa7);
@@ -35,10 +37,9 @@ pub fn render(mascot: &str, frame: usize, size: u32, label: Option<&str>) -> Rgb
         accent: VIOLET,
         size,
         label_size: LabelSize::Auto,
-        anchor: Anchor::TopRight,
         display_scale: 1.0,
     };
-    render_badge(&spec, &bundle().crate_art, &bundle().font)
+    render_badge(&spec, bundle())
 }
 
 pub fn write_all(root: &Path) -> Result<(), String> {
