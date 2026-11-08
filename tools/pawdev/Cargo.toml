@@ -13,3 +13,7 @@ pawprint-core.workspace = true
 pawprint-sprite.workspace = true
 gif.workspace = true
 toml.workspace = true
+
+# `make power-check` on macOS reads proc_pid_rusage.
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"

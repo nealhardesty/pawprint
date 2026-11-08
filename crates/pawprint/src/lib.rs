@@ -7,6 +7,7 @@
 // The Windows and macOS backends are stubs until they land (M1), so the
 // shared runtime they will drive is unused there. Remove with them.
 
+mod autostart;
 mod backend;
 mod clock;
 mod commands;
@@ -79,9 +80,11 @@ enum Cmd {
         #[arg(long)]
         accents: bool,
     },
-    /// Open a window showing a mascot cycling through its actions
+    /// Open a window showing a mascot cycling through all its actions (Esc closes it)
     Preview {
+        /// Mascot id (see `pawprint list`)
         id: String,
+        /// Mascot size in pixels: 32, 64, 128, or any multiple of 32
         #[arg(long, value_name = "N", default_value_t = 128, value_parser = parse_size)]
         size: u32,
     },
@@ -102,9 +105,14 @@ enum Cmd {
         #[arg(long, value_name = "N", default_value_t = 0)]
         frame: usize,
     },
-    /// Set a key in this host's [hosts] table, then reload
-    Set { key: String, value: String },
-    /// Remove a key from this host's [hosts] table
+    /// Set a key in this host's [hosts] table, then reload (e.g. `set mascot otter`)
+    Set {
+        /// mascot, label, label_case, label_size, size, position, offset, display, animation, interval, accent, tray, backend
+        key: String,
+        /// The value, as in config.toml; quotes are optional
+        value: String,
+    },
+    /// Remove a key from this host's [hosts] table, then reload
     Unset { key: String },
     /// Drop this host's cached fallback mascot
     Forget,
@@ -141,7 +149,7 @@ enum MascotCmd {
 }
 
 #[derive(Clone, ValueEnum)]
-enum Toggle {
+pub(crate) enum Toggle {
     On,
     Off,
     Status,
@@ -200,15 +208,15 @@ pub fn main() -> ExitCode {
         Some(Cmd::Quit) => send(ipc::Request::Quit).map(|_| println!("PAWPRINT stopped.")),
         Some(Cmd::Status) => status(),
         Some(Cmd::Doctor) => doctor::run(),
-        Some(Cmd::Preview { .. }) => not_yet("preview", "M2"),
-        Some(Cmd::Set { .. }) => not_yet("set", "M4"),
-        Some(Cmd::Unset { .. }) => not_yet("unset", "M4"),
-        Some(Cmd::Forget) => not_yet("forget", "M4"),
-        Some(Cmd::Config(ConfigCmd::Init)) => not_yet("config init", "M4"),
+        Some(Cmd::Preview { id, size }) => preview(&id, size),
+        Some(Cmd::Set { key, value }) => commands::set(&key, &value),
+        Some(Cmd::Unset { key }) => commands::unset(&key),
+        Some(Cmd::Forget) => commands::forget(),
+        Some(Cmd::Config(ConfigCmd::Init)) => commands::config_init(),
         Some(Cmd::Config(ConfigCmd::Path)) => commands::config_path(),
         Some(Cmd::Mascot(MascotCmd::Export { id, dir })) => commands::mascot_export(&id, &dir),
         Some(Cmd::Mascot(MascotCmd::Check { dir })) => commands::mascot_check(&dir),
-        Some(Cmd::Autostart { .. }) => not_yet("autostart", "M4"),
+        Some(Cmd::Autostart { action }) => autostart::cli(action),
         Some(Cmd::GnomeExtension { .. }) => not_yet("gnome-extension", "M1, only if needed"),
         Some(Cmd::Explain { host, recompute }) => commands::explain(host, recompute),
         Some(Cmd::List { category, accents }) => commands::list(category, accents),
@@ -269,6 +277,24 @@ fn run(verbose: bool) -> CmdResult {
         .and_then(|shell| backend::run(shell, listener));
     instance::release(&endpoint);
     result.map_err(|(code, msg)| fail(code, msg))
+}
+
+/// `pawprint preview <id>`: the same backend and shell as the badge, in
+/// preview mode (a normal window, every action in turn), until the window
+/// is closed.
+fn preview(id: &str, size: u32) -> CmdResult {
+    if pawprint_core::catalog::Catalog::bundled().get(id).is_none() {
+        return Err((
+            exit::ERROR,
+            format!("no mascot {id:?}; see `pawprint list`"),
+        ));
+    }
+    let paths = paths::Paths::detect()
+        .ok_or((exit::ERROR, "cannot find the home directory".to_string()))?;
+    println!(
+        "Previewing {id} at {size} px: every action in turn. Esc or closing the window ends it."
+    );
+    backend::preview(shell::Shell::preview(paths, id, size)?)
 }
 
 /// Send one command to this session's badge.

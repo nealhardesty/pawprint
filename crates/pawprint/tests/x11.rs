@@ -1,11 +1,15 @@
 //! The X11 backend against a real X server (SPEC §11.3): Xvfb alone, with a
-//! compositing manager, and with a window manager. Needs `Xvfb`,
-//! `xcompmgr`, and `openbox`; run with `make test-x11`.
+//! compositing manager, and with a window manager; plus what any Linux
+//! backend shares: the StatusNotifierItem tray on a private session bus,
+//! config edits and reloads, and `pawprint preview`. Needs `Xvfb`,
+//! `xcompmgr`, `openbox`, and `dbus-daemon`; run with `make test-x11`.
 
 #![cfg(target_os = "linux")]
 
 mod common;
 
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use common::{Env, Image, Proc, assert_badge_at, wait_for};
@@ -278,6 +282,179 @@ enum Prop {
     Text(String),
 }
 
+/// What a desktop panel provides: a StatusNotifierWatcher. It records the
+/// bus names of the items that register.
+struct Watcher {
+    items: Arc<Mutex<Vec<String>>>,
+}
+
+#[zbus::interface(name = "org.kde.StatusNotifierWatcher")]
+impl Watcher {
+    fn register_status_notifier_item(&self, service: &str) {
+        self.items.lock().unwrap().push(service.to_string());
+    }
+
+    fn register_status_notifier_host(&self, _service: &str) {}
+
+    #[zbus(property)]
+    fn is_status_notifier_host_registered(&self) -> bool {
+        true
+    }
+
+    #[zbus(property)]
+    fn protocol_version(&self) -> i32 {
+        0
+    }
+
+    #[zbus(property)]
+    fn registered_status_notifier_items(&self) -> Vec<String> {
+        self.items.lock().unwrap().clone()
+    }
+}
+
+const SNI: &str = "org.kde.StatusNotifierItem";
+const MENU: &str = "com.canonical.dbusmenu";
+
+/// A dbusmenu layout node: id, properties, children.
+/// An SNI pixmap: width, height, ARGB32 bytes.
+type Pixmap = (i32, i32, Vec<u8>);
+/// An SNI tooltip: icon name, pixmaps, title, description.
+type ToolTip = (String, Vec<Pixmap>, String, String);
+
+type Node = (
+    i32,
+    HashMap<String, zbus::zvariant::OwnedValue>,
+    Vec<zbus::zvariant::OwnedValue>,
+);
+
+/// A private session bus (`dbus-daemon`) with a [`Watcher`] on it.
+struct Bus {
+    conn: zbus::blocking::Connection,
+    items: Arc<Mutex<Vec<String>>>,
+    _daemon: Proc,
+}
+
+impl Bus {
+    fn start(env: &mut Env) -> Bus {
+        let addr = format!("unix:path={}", env.dir.join("bus").display());
+        let daemon = env.spawn(
+            "dbus-daemon",
+            &[
+                "--session",
+                "--nofork",
+                "--nopidfile",
+                &format!("--address={addr}"),
+            ],
+        );
+        env.set("DBUS_SESSION_BUS_ADDRESS", &addr);
+        let items = Arc::new(Mutex::new(Vec::new()));
+        let conn = wait_for("dbus-daemon", || {
+            zbus::blocking::connection::Builder::address(addr.as_str())
+                .ok()?
+                .serve_at(
+                    "/StatusNotifierWatcher",
+                    Watcher {
+                        items: items.clone(),
+                    },
+                )
+                .ok()?
+                .name("org.kde.StatusNotifierWatcher")
+                .ok()?
+                .build()
+                .ok()
+        });
+        Bus {
+            conn,
+            items,
+            _daemon: daemon,
+        }
+    }
+
+    /// The bus name of the newest registered item other than `not`.
+    fn item(&self, not: Option<&str>) -> String {
+        wait_for("the badge's StatusNotifierItem", || {
+            self.items
+                .lock()
+                .unwrap()
+                .last()
+                .filter(|i| Some(i.as_str()) != not && self.has_owner(i))
+                .cloned()
+        })
+    }
+
+    fn has_owner(&self, name: &str) -> bool {
+        let dbus = zbus::blocking::fdo::DBusProxy::new(&self.conn).unwrap();
+        dbus.name_has_owner(name.try_into().unwrap())
+            .unwrap_or(false)
+    }
+
+    fn property<T>(&self, item: &str, name: &str) -> T
+    where
+        T: TryFrom<zbus::zvariant::OwnedValue>,
+        T::Error: std::fmt::Debug,
+    {
+        let props = zbus::blocking::fdo::PropertiesProxy::builder(&self.conn)
+            .destination(item.to_string())
+            .unwrap()
+            .path("/StatusNotifierItem")
+            .unwrap()
+            .build()
+            .unwrap();
+        let value = props.get(SNI.try_into().unwrap(), name).unwrap();
+        T::try_from(value).unwrap()
+    }
+
+    fn layout(&self, item: &str) -> Node {
+        let reply = self
+            .conn
+            .call_method(
+                Some(item),
+                "/MenuBar",
+                Some(MENU),
+                "GetLayout",
+                &(0i32, -1i32, Vec::<String>::new()),
+            )
+            .unwrap();
+        reply.body().deserialize::<(u32, Node)>().unwrap().1
+    }
+
+    /// The menu item at `path` (labels): its id and whether it is checked.
+    fn find(&self, item: &str, path: &[&str]) -> (i32, bool) {
+        fn walk(node: &Node, path: &[&str]) -> Option<(i32, bool)> {
+            let [first, rest @ ..] = path else {
+                let checked = node
+                    .1
+                    .get("toggle-state")
+                    .and_then(|v| i32::try_from(v).ok());
+                return Some((node.0, checked == Some(1)));
+            };
+            node.2.iter().find_map(|child| {
+                let child = Node::try_from(child.try_clone().ok()?).ok()?;
+                let label = child
+                    .1
+                    .get("label")
+                    .and_then(|v| String::try_from(v.try_clone().ok()?).ok())?;
+                (label == *first).then(|| walk(&child, rest)).flatten()
+            })
+        }
+        walk(&self.layout(item), path).unwrap_or_else(|| panic!("no menu item {path:?}"))
+    }
+
+    fn click(&self, item: &str, path: &[&str]) {
+        let (id, _) = self.find(item, path);
+        let data = zbus::zvariant::Value::from(0i32);
+        self.conn
+            .call_method(
+                Some(item),
+                "/MenuBar",
+                Some(MENU),
+                "Event",
+                &(id, "clicked", data, 0u32),
+            )
+            .unwrap();
+    }
+}
+
 const BG_PIXEL: u32 = 0x336699;
 /// Inside the label strip of a 64 px badge at the default top-right spot.
 const LABEL: (i16, i16) = (1232, 60);
@@ -313,6 +490,9 @@ fn bare_server_shaped_override_redirect_and_move_mode() {
     ] {
         assert!(state.contains(&x.atom(s)), "{s}");
     }
+    // No session bus: no tray, and doctor says so.
+    let doctor = env.ok(&["doctor"]);
+    assert!(doctor.contains("no tray"), "{doctor}");
     // Transparent through the bounding shape, pixel for pixel.
     assert_badge_at(&x.capture(), &expected, 1200, 16, BACKGROUND);
 
@@ -343,8 +523,22 @@ fn bare_server_shaped_override_redirect_and_move_mode() {
     env.ok(&["move"]);
     x.key(0xff53, false);
     env.wait_rect([268, 358, 64, 64]);
+    // Move mode shows the dashed accent outline (SPEC §6.3): a dash in the
+    // transparent top-left corner, the art through the gaps.
+    let accent = wait_for("the move-mode outline", || {
+        let p = x.capture().px(268, 358);
+        (p[..3] != BACKGROUND).then_some(p)
+    });
+    let screen = x.capture();
+    assert_eq!(screen.px(268 + 63, 358), accent, "top-right dash");
+    if expected.px(4, 0)[3] == 0 {
+        assert_eq!(screen.px(268 + 4, 358)[..3], BACKGROUND, "a gap");
+    }
     x.key(0xff1b, false);
     env.wait_rect([267, 358, 64, 64]);
+    wait_for("the outline to go", || {
+        (x.capture().px(267, 358)[..3] == BACKGROUND).then_some(())
+    });
 
     // Display changes: a top panel in the work area, then 2x via Xft.dpi.
     env.ok(&["reset-position"]);
@@ -546,4 +740,195 @@ fn single_instance_and_detached_start() {
         "socket removed on quit"
     );
     assert!(first.exited().is_some());
+}
+
+#[test]
+#[ignore = "needs Xvfb and dbus-daemon; run `make test-x11`"]
+fn tray_menu_and_config_edits_reach_the_badge() {
+    let mut env = Env::new("x11-tray");
+    let x = X::start(&mut env);
+    x.background(false, (0, 0, W, H), BG_PIXEL);
+    let bus = Bus::start(&mut env);
+
+    // `config init` writes every default once.
+    env.ok(&["config", "init"]);
+    let template = env.config();
+    assert!(template.contains("size = 64") && template.contains("tray = true"));
+    assert!(
+        !env.pawprint(&["config", "init"]).status.success(),
+        "never over a file"
+    );
+
+    let mut badge = env.run_badge();
+    x.mapped_badge();
+    env.wait_rect([1200, 16, 64, 64]);
+
+    // The StatusNotifierItem: identity, tooltip, and the rest frame as icon.
+    let item = bus.item(None);
+    assert_eq!(bus.property::<String>(&item, "Id"), "pawprint");
+    assert_eq!(bus.property::<String>(&item, "Title"), "PAWPRINT");
+    let icons: Vec<Pixmap> = bus.property(&item, "IconPixmap");
+    let sizes: Vec<(i32, i32)> = icons.iter().map(|i| (i.0, i.1)).collect();
+    assert_eq!(sizes, [(32, 32), (64, 64)]);
+    assert!(icons[0].2.chunks(4).any(|p| p[0] == 255), "an opaque pixel");
+    let (_, _, title, _): ToolTip = bus.property(&item, "ToolTip");
+    assert_eq!(title, "PAWPRINT: OWL (owl)");
+
+    let doctor = env.ok(&["doctor"]);
+    assert!(
+        doctor.contains("StatusNotifierItem host available"),
+        "{doctor}"
+    );
+
+    // Autostart: an XDG entry that runs this binary.
+    assert!(env.ok(&["autostart", "status"]).starts_with("off"));
+    env.ok(&["autostart", "on"]);
+    let entry =
+        std::fs::read_to_string(env.home().join(".config/autostart/pawprint.desktop")).unwrap();
+    assert!(
+        entry.contains(&format!("Exec={} run\n", env!("CARGO_BIN_EXE_pawprint"))),
+        "{entry}"
+    );
+    assert!(env.ok(&["doctor"]).contains("run at login"));
+    env.ok(&["autostart", "off"]);
+    assert!(env.ok(&["autostart", "status"]).starts_with("off"));
+
+    // The shared menu, checked where the settings are.
+    assert!(bus.find(&item, &["Size", "64"]).1);
+    assert!(bus.find(&item, &["Animation", "Idle"]).1);
+
+    // Size > 128: the badge grows, and the choice lands in this host's table
+    // without touching the rest of the file.
+    bus.click(&item, &["Size", "128"]);
+    env.wait_rect([1280 - 128 - 16, 16, 128, 128]);
+    let config = env.config();
+    assert!(config.starts_with(&template), "{config}");
+    assert!(
+        config.ends_with("[hosts]\n\n[hosts.owl]\nsize = 128\n"),
+        "{config}"
+    );
+    wait_for("the 128 check", || {
+        bus.find(&item, &["Size", "128"]).1.then_some(())
+    });
+    bus.click(&item, &["Animation", "Static"]);
+    wait_for("animation saved", || {
+        env.config()
+            .contains("animation = \"static\"")
+            .then_some(())
+    });
+
+    // `pawprint set` and `unset` reach the running badge too.
+    let out = env.ok(&["set", "size", "32"]);
+    assert!(out.contains("reloaded"), "{out}");
+    env.wait_rect([1280 - 32 - 16, 16, 32, 32]);
+    env.ok(&["unset", "size"]);
+    env.wait_rect([1200, 16, 64, 64]);
+    let bad = env.pawprint(&["set", "mascot", "no-such-animal"]);
+    assert_eq!(bad.status.code(), Some(2), "unknown mascots are refused");
+    assert!(!env.config().contains("no-such-animal"));
+    assert!(env.ok(&["forget"]).contains("Nothing cached for owl"));
+
+    // A hand edit is picked up at the next event, here an IPC request
+    // (mtime check, SPEC §8.5).
+    env.write_config(
+        &env.config()
+            .replace("position = \"top-right\"", "position = \"top-left\""),
+    );
+    env.ok(&["status"]);
+    env.wait_rect([16, 16, 64, 64]);
+
+    // tray = false removes the item; turning it back on brings a new one.
+    env.ok(&["set", "tray", "false"]);
+    wait_for("the item to go", || (!bus.has_owner(&item)).then_some(()));
+    env.ok(&["unset", "tray"]);
+    let item = bus.item(Some(&item));
+
+    // Quit from the menu; the saved choice outlives the badge.
+    bus.click(&item, &["Quit"]);
+    wait_for("the badge to exit", || badge.exited());
+    let _badge = env.run_badge();
+    env.wait_rect([16, 16, 64, 64]);
+    let explain = env.ok(&["explain"]);
+    assert!(
+        explain
+            .lines()
+            .any(|l| l.starts_with("animation") && l.contains("static")),
+        "{explain}"
+    );
+}
+
+#[test]
+#[ignore = "needs Xvfb; run `make test-x11`"]
+fn preview_is_a_normal_window_that_cycles_and_closes() {
+    const BACKDROP: [u8; 3] = [0x5a, 0x60, 0x6b];
+    let mut env = Env::new("x11-preview");
+    let x = X::start(&mut env);
+    x.background(false, (0, 0, W, H), BG_PIXEL);
+    assert!(
+        !env.pawprint(&["preview", "no-such-animal"])
+            .status
+            .success()
+    );
+
+    let preview = |env: &Env| {
+        env.spawn(
+            env!("CARGO_BIN_EXE_pawprint"),
+            &["preview", "owl", "--size", "64"],
+        )
+    };
+    let mut first = preview(&env);
+    let win = x.mapped_badge();
+    let attrs = x.conn.get_window_attributes(win).unwrap().reply().unwrap();
+    assert!(!attrs.override_redirect, "a normal window");
+    assert!(x.atoms(win, "_NET_WM_WINDOW_TYPE").is_empty(), "not a dock");
+    assert!(
+        x.atoms(win, "WM_PROTOCOLS")
+            .contains(&x.atom("WM_DELETE_WINDOW"))
+    );
+
+    // Centered, the badge on a backdrop with a 16 px margin.
+    let geo = x.conn.get_geometry(win).unwrap().reply().unwrap();
+    let (wx, wy): (i16, i16) = ((1280 - 96) / 2, (720 - 96) / 2);
+    assert_eq!((geo.x, geo.y, geo.width, geo.height), (wx, wy, 96, 96));
+    let expected = env.expected(64);
+    let rest = wait_for("the preview on screen", || {
+        let s = x.capture();
+        (s.px(wx as u32, wy as u32)[..3] == BACKDROP).then_some(s)
+    });
+    let (bx, by) = (i32::from(wx) + 16, i32::from(wy) + 16);
+    assert_badge_at(&rest, &expected, bx, by, BACKDROP);
+
+    // Every action in turn: the frame changes within a few seconds.
+    wait_for("an action to play", || {
+        let s = x.capture();
+        let changed = (0..64).any(|y| {
+            (0..64).any(|dx| {
+                let (sx, sy) = ((bx + dx) as u32, (by + y) as u32);
+                s.px(sx, sy) != rest.px(sx, sy)
+            })
+        });
+        changed.then_some(())
+    });
+
+    // Esc closes it (the pointer gives it the keyboard without a WM).
+    x.pointer_to(wx + 48, wy + 48);
+    x.key(0xff1b, false);
+    let status = wait_for("Esc to close the preview", || first.exited());
+    assert!(status.success());
+
+    // So does the window manager's close button (WM_DELETE_WINDOW).
+    let mut second = preview(&env);
+    let win = x.mapped_badge();
+    let event = ClientMessageEvent::new(
+        32,
+        win,
+        x.atom("WM_PROTOCOLS"),
+        [x.atom("WM_DELETE_WINDOW"), 0, 0, 0, 0],
+    );
+    x.conn
+        .send_event(false, win, EventMask::NO_EVENT, event)
+        .unwrap();
+    x.conn.flush().unwrap();
+    let status = wait_for("WM_DELETE_WINDOW to close the preview", || second.exited());
+    assert!(status.success());
 }

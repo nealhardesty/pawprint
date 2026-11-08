@@ -36,11 +36,13 @@ on Wayland, and GNOME on Wayland (Ubuntu 24.04 LTS and newer).
 > **Status: pre-release.** PAWPRINT is being built now. This README describes
 > how 1.0 will work. Today **the badge runs on Linux** (X11, Wayland
 > compositors with layer-shell such as KDE Plasma and Sway, and GNOME
-> through XWayland), with `pawprint`, `run`, `move`, `reset-position`,
-> `reload`, `quit`, `status`, and `doctor`, plus the backend-free commands
-> (`explain`, `list`, `render`, `paths`, `mascot export`, `mascot check`,
-> `--version`). **Windows** and
-> **macOS** run the badge too (no tray icon or autostart yet). There are no
+> through XWayland) with its tray icon, `autostart`, `set`/`unset`,
+> `config init`, `forget`, and `preview`, plus `pawprint`, `run`, `move`,
+> `reset-position`, `reload`, `quit`, `status`, `doctor`, and the
+> backend-free commands (`explain`, `list`, `render`, `paths`,
+> `mascot export`, `mascot check`, `--version`). **Windows** and **macOS** run
+> the badge with its tray icon (the menu bar on macOS), `autostart`, and
+> `preview` too. There are no
 > release builds or installers yet, so build from source
 > (see [Development](#development)). All 100 mascots are drawn, and your
 > own mascots already work ([Custom mascots](#custom-mascots)). See [`ROADMAP.md`](ROADMAP.md) for progress and
@@ -130,6 +132,11 @@ pawprint
 On macOS, a binary downloaded **with a browser** is quarantined by
 Gatekeeper. Clear that with `xattr -d com.apple.quarantine ./pawprint`. The
 curl installer doesn't have this problem.
+
+On macOS, `pawprint autostart on` adds a LaunchAgent
+(`~/Library/LaunchAgents/io.github.nealhardesty.pawprint.plist`) and starts
+the badge right away. macOS says "Background Items Added" and lists it under
+System Settings → General → Login Items.
 </details>
 
 Install locations: `~/.local/bin/pawprint` on Linux and macOS, and
@@ -142,16 +149,18 @@ Install locations: `~/.local/bin/pawprint` on Linux and macOS, and
 | You want to... | Do this |
 |---|---|
 | Start it | `pawprint` (it starts automatically at login after install) |
-| Move it | Tray/menu-bar icon → **Move**, or `pawprint move`. Drag the badge, then let go. **Esc** cancels. |
+| Move it | Tray/menu-bar icon → **Move**, or `pawprint move`. A dashed outline shows it's ready: drag the badge, then let go. **Esc** cancels. |
 | Put it back in the corner | `pawprint reset-position` |
 | See why it chose that animal | `pawprint explain` |
 | Pick a different animal | `pawprint list`, then `pawprint set mascot otter` |
 | Change the label | `pawprint set label "BUILD-7"` (or `none` to hide it) |
-| Make it bigger or smaller | `pawprint set size 128` (presets: 32, 64, 128) |
-| Stop the animation | `pawprint set animation static` |
+| Make it bigger or smaller | Tray → **Size**, or `pawprint set size 128` (presets: 32, 64, 128) |
+| Stop the animation | Tray → **Animation ▸ Static**, or `pawprint set animation static` |
+| Undo a `set` | `pawprint unset size` (any key) |
 | Change the crate color | `pawprint set accent teal` (`pawprint list --accents` shows them all) |
-| Preview a mascot | `pawprint preview walrus` |
+| Preview a mascot | `pawprint preview walrus` opens a window that plays every animation; Esc closes it |
 | Stop it | `pawprint quit`, or tray → **Quit** |
+| Start it at login | `pawprint autostart on` (`status` shows what is registered) |
 | Stop it starting at login | `pawprint autostart off` |
 | Find out what's wrong | `pawprint doctor` |
 
@@ -240,8 +249,17 @@ mascot = "cat-maine-coon-black"
 accent = "cranberry"     # every production box gets a red crate
 ```
 
-`pawprint set ...` writes into the current host's section for you and keeps
-your comments and formatting.
+`pawprint set <key> <value>` writes into the current host's section
+(`[hosts.<short hostname>]`) for you, keeps your comments and formatting,
+checks the value first, and tells the running badge. The tray's **Size**
+and **Animation** choices are saved the same way, so they survive a
+restart; `pawprint unset <key>` takes one back out. Because they go into
+this host's own section, they win over patterns and top-level settings, and
+copying the file to another machine doesn't carry them over.
+
+The tray menu (the menu bar on macOS): **Move**,
+**Size ▸ 32/64/128**, **Animation ▸ Idle/Static**, **Reset position**,
+**Reload config**, **Quit**. Set `tray = false` to hide it.
 
 A dragged position is saved separately (in PAWPRINT's state file) so your
 config file is never rewritten behind your back. `pawprint reset-position`
@@ -348,7 +366,7 @@ Backend
   transparency        bounding shape from the badge mask (pixel-identical)
   RandR monitors      yes (1.5)
   display             DP-1 1920x1080+0+0 scale 1 usable 1920x1040+0+40 (primary)  <- badge
-  tray                StatusNotifierItem host available (tray arrives in M4)
+  tray                StatusNotifierItem host available
 
 No problems found.
 ```
@@ -409,7 +427,7 @@ work. Contributor rules for humans and coding agents are in
 | macOS | Xcode Command Line Tools: `xcode-select --install` (provides `make`, `lipo`, `codesign`) |
 | Windows | Visual Studio Build Tools (C++ workload) and GNU Make: `winget install ezwinports.make`. Run targets from PowerShell. |
 | Publishing | [GitHub CLI](https://cli.github.com), authenticated with `gh auth login` |
-| Linux display tests (optional) | `make test-x11` and `make test-wayland` drive real display servers. On Ubuntu: `sudo apt-get install xvfb xcompmgr openbox sway swaybg grim foot wtype` |
+| Linux display tests (optional) | `make test-x11` and `make test-wayland` drive real display servers (and `make power-check` uses Xvfb). On Ubuntu: `sudo apt-get install xvfb xcompmgr openbox sway swaybg grim foot wtype dbus` |
 | Windows display test (optional) | `make test-windows-display` runs the badge on your own desktop: nothing to install, but quit any running badge first and leave the mouse alone for a few seconds |
 
 ### Make targets
@@ -430,13 +448,14 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make help` | List targets (what `make` on its own runs) |
 | `make build` | Debug build |
 | `make run` | Build and run the badge in the foreground (`ARGS="--verbose"` passes flags) |
-| `make preview MASCOT=owl` | Show one mascot cycling through its animations |
+| `make preview MASCOT=owl` | Open a window with one mascot cycling through all its animations (`SIZE=64` for another size) |
+| `make power-check` | Build the release badge and measure startup time, CPU and wakeups in idle and static mode, memory, and binary size against the power budget (`POWER_SECONDS=120` per mode). Linux: under Xvfb. Windows: on your desktop, with your config file swapped out and restored. macOS: on your desktop with a private HOME, from a universal binary. CI jobs run it on `windows-latest` and `macos-latest` |
 | `make test` | Unit tests, golden image tests, and mascot catalog validation |
-| `make test-x11` | Linux: run the badge under Xvfb (bare, with the `xcompmgr` compositor, with the `openbox` window manager) and check its pixels, click-through, move mode, and single instance |
-| `make test-wayland` | Linux: run the badge under headless Sway and check placement, click-through, move mode, panels, and output changes from screenshots |
+| `make test-x11` | Linux: run the badge under Xvfb (bare, with the `xcompmgr` compositor, with the `openbox` window manager) and check its pixels, click-through, move mode and its outline, single instance, the tray menu over a private D-Bus, `set`/`unset` and reloads, and the preview window |
+| `make test-wayland` | Linux: run the badge under headless Sway and check placement, click-through, move mode, panels, output changes, and the preview window from screenshots |
 | `make test-linux-display` | Both display-server suites (a separate CI job runs this) |
-| `make test-macos-display` | macOS: run the badge in your logged-in desktop and check its window level, placement, IPC, and (with Screen Recording and Accessibility granted to the terminal) pixels, drag, and keys; a CI job runs it on `macos-latest` |
-| `make test-windows-display` | Windows: run `pawprintw.exe` on this desktop and check its window styles, top-right placement, topmost, click-through, a real move-mode drag, work-area changes, the named pipe, and its pixels on screen (a separate CI job runs this on `windows-latest`) |
+| `make test-macos-display` | macOS: run the badge in your logged-in desktop and check its window level, placement, IPC, menu-bar item, `autostart` against launchd, and the preview window, and (with Screen Recording and Accessibility granted to the terminal) pixels, drag, keys, and a menu choice; a CI job runs it on `macos-latest` |
+| `make test-windows-display` | Windows: run `pawprintw.exe` on this desktop and check its window styles, top-right placement, topmost, click-through, a real move-mode drag, work-area changes, the named pipe, its pixels on screen, the tray icon and a real click through its menu, `autostart` writing the `Run` value, and the preview window (a separate CI job runs this on `windows-latest`). It restores your state file, config file, and autostart value afterwards |
 | `make check-assets` | Validate the mascot catalog only |
 | `make lint` | Format check and clippy (warnings are errors) |
 | `make fmt` | Format the code |

@@ -35,10 +35,10 @@ impl FileLogger {
 }
 
 impl log::Log for FileLogger {
-    /// Debug records only from PAWPRINT itself, not its dependencies.
+    /// Dependencies (zbus logs every D-Bus call at info) only from warn up.
     fn enabled(&self, metadata: &log::Metadata) -> bool {
         metadata.level() <= log::max_level()
-            && (metadata.level() <= log::Level::Info || metadata.target().starts_with("pawprint"))
+            && (metadata.level() <= log::Level::Warn || metadata.target().starts_with("pawprint"))
     }
 
     fn log(&self, record: &log::Record) {

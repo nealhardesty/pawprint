@@ -8,14 +8,16 @@ CARGO ?= cargo
 PAWDEV = $(CARGO) run --quiet --package pawdev --
 ARGS ?=
 MASCOT ?= owl
+SIZE ?= 128
 PNG ?=
 ANIMATED ?=
+POWER_SECONDS ?= 120
 
 # Every release target (keep in sync with rust-toolchain.toml).
 TARGETS = x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows-msvc
 
 .DEFAULT_GOAL := help
-.PHONY: help build run preview test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden golden-hosts contact-sheet building-blocks palette art-export art-import ci release package publish install uninstall doctor clean check-all-targets spike-f22
+.PHONY: help build run preview power-check test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden golden-hosts contact-sheet building-blocks palette art-export art-import ci release package publish install uninstall doctor clean check-all-targets spike-f22
 
 help: ## List targets
 	@$(PAWDEV) help $(firstword $(MAKEFILE_LIST))
@@ -26,8 +28,11 @@ build: ## Debug build of pawprint (and pawprintw on Windows)
 run: ## Build and run the badge in the foreground; ARGS="..." passes arguments
 	$(CARGO) run --package pawprint -- run $(ARGS)
 
-preview: ## Preview a mascot: make preview MASCOT=owl
-	@$(PAWDEV) todo preview M2
+preview: ## Open a window cycling through a mascot's actions: make preview MASCOT=owl SIZE=128
+	$(CARGO) run --package pawprint -- preview $(MASCOT) --size $(SIZE)
+
+power-check: ## Measure the release badge against the power budget (SPEC 7.2): Linux under Xvfb, macOS and Windows on this desktop (macOS from a universal binary); POWER_SECONDS=120 per mode
+	$(PAWDEV) power-check $(POWER_SECONDS)
 
 test: ## Unit tests, golden render tests, and asset validation
 	$(CARGO) test --workspace

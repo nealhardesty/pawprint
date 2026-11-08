@@ -34,6 +34,26 @@ struct WindowInfo {
     /// Global points, top-left origin: x, y, width, height.
     bounds: [f64; 4],
     sharing: i64,
+    /// The title; the window server shares it only with Screen Recording
+    /// permission.
+    name: Option<String>,
+    pid: u32,
+    #[allow(dead_code)] // shown in failure messages
+    owner: String,
+}
+
+impl WindowInfo {
+    /// A menu-bar item: a thin window along the top of the screen at the
+    /// status level, above the menu bar's own window (24).
+    fn in_menu_bar(&self) -> bool {
+        self.layer >= STATUS_LEVEL && self.at_top()
+    }
+
+    /// Along the top of the screen, in the menu bar: menu-bar items, and a
+    /// regular app's own menu-bar windows (layer 0).
+    fn at_top(&self) -> bool {
+        self.bounds[1] < 1.0 && self.bounds[3] <= 40.0
+    }
 }
 
 fn number(dict: &NSDictionary<NSString, AnyObject>, key: &NSString) -> Option<f64> {
@@ -41,33 +61,112 @@ fn number(dict: &NSDictionary<NSString, AnyObject>, key: &NSString) -> Option<f6
     Some(value.downcast_ref::<NSNumber>()?.as_f64())
 }
 
-/// The on-screen window that `pid` owns, if there is exactly one.
-fn window_of(pid: u32) -> Option<WindowInfo> {
-    let list = CGWindowListCopyWindowInfo(CGWindowListOption::OptionOnScreenOnly, 0)?;
+/// The window server's windows, front to back for on-screen ones.
+fn windows(option: CGWindowListOption) -> Vec<WindowInfo> {
+    let Some(list) = CGWindowListCopyWindowInfo(option, 0) else {
+        return Vec::new();
+    };
     // SAFETY: a CFArray of CFDictionaries is toll-free bridged to NSArray
     // of NSDictionary, and `list` outlives the borrow.
     let list: &NSArray<NSDictionary<NSString, AnyObject>> = unsafe { &*(&raw const *list).cast() };
-    let mut ours = list
+    let text = |w: &NSDictionary<NSString, AnyObject>, k: &NSString| {
+        w.objectForKey(k)
+            .and_then(|n| n.downcast_ref::<NSString>().map(|s| s.to_string()))
+    };
+    list.iter()
+        .filter_map(|w| {
+            let bounds = w.objectForKey(ns_string!("kCGWindowBounds"))?;
+            let bounds = bounds.downcast_ref::<NSDictionary>()?;
+            // SAFETY: the bounds dictionary has NSString keys.
+            let bounds: &NSDictionary<NSString, AnyObject> =
+                unsafe { &*(bounds as *const NSDictionary).cast() };
+            let b = |k: &NSString| number(bounds, k).unwrap_or(f64::NAN);
+            Some(WindowInfo {
+                layer: number(&w, ns_string!("kCGWindowLayer"))? as i64,
+                bounds: [
+                    b(ns_string!("X")),
+                    b(ns_string!("Y")),
+                    b(ns_string!("Width")),
+                    b(ns_string!("Height")),
+                ],
+                sharing: number(&w, ns_string!("kCGWindowSharingState"))? as i64,
+                name: text(&w, ns_string!("kCGWindowName")),
+                pid: number(&w, ns_string!("kCGWindowOwnerPID"))? as u32,
+                owner: text(&w, ns_string!("kCGWindowOwnerName")).unwrap_or_default(),
+            })
+        })
+        .collect()
+}
+
+/// Every on-screen window that `pid` owns.
+fn windows_of(pid: u32) -> Vec<WindowInfo> {
+    windows(CGWindowListOption::OptionOnScreenOnly)
+        .into_iter()
+        .filter(|w| w.pid == pid)
+        .collect()
+}
+
+/// The frontmost window at the normal level belongs to `pid`.
+fn in_front(pid: u32) -> bool {
+    windows(CGWindowListOption::OptionOnScreenOnly)
         .iter()
-        .filter(|w| number(w, ns_string!("kCGWindowOwnerPID")) == Some(f64::from(pid)));
-    let w = ours.next()?;
-    assert!(ours.next().is_none(), "the badge owns one window");
-    let bounds = w.objectForKey(ns_string!("kCGWindowBounds"))?;
-    let bounds = bounds.downcast_ref::<NSDictionary>()?;
-    // SAFETY: the bounds dictionary has NSString keys.
-    let bounds: &NSDictionary<NSString, AnyObject> =
-        unsafe { &*(bounds as *const NSDictionary).cast() };
-    let b = |k: &NSString| number(bounds, k).unwrap_or(f64::NAN);
-    Some(WindowInfo {
-        layer: number(&w, ns_string!("kCGWindowLayer"))? as i64,
-        bounds: [
-            b(ns_string!("X")),
-            b(ns_string!("Y")),
-            b(ns_string!("Width")),
-            b(ns_string!("Height")),
-        ],
-        sharing: number(&w, ns_string!("kCGWindowSharingState"))? as i64,
-    })
+        .find(|w| w.layer == 0)
+        .is_some_and(|w| w.pid == pid)
+}
+
+/// The badge's window: the one window `pid` owns outside the menu bar.
+fn window_of(pid: u32) -> Option<WindowInfo> {
+    let mut ours: Vec<WindowInfo> = windows_of(pid)
+        .into_iter()
+        .filter(|w| !w.at_top())
+        .collect();
+    assert!(ours.len() <= 1, "the badge owns one window: {ours:?}");
+    ours.pop()
+}
+
+/// Every menu-bar item's window on screen, whoever owns it.
+fn menu_bar_items() -> Vec<WindowInfo> {
+    windows(CGWindowListOption::OptionOnScreenOnly)
+        .into_iter()
+        .filter(WindowInfo::in_menu_bar)
+        .collect()
+}
+
+/// Wait up to 10 s for exactly `n` menu-bar items.
+fn menu_bar_count(n: usize, why: &str) -> Vec<WindowInfo> {
+    let start = Instant::now();
+    loop {
+        let items = menu_bar_items();
+        if items.len() == n {
+            return items;
+        }
+        assert!(
+            start.elapsed() < Duration::from_secs(10),
+            "{why}: want {n} menu-bar items, have {items:#?}"
+        );
+        std::thread::sleep(Duration::from_millis(100));
+    }
+}
+
+/// The badge's menu-bar item, found by turning it off and on: the window
+/// server may give its window to the app or, as on macOS 26, to Control
+/// Center, so ownership doesn't tell. It is the rightmost window whose
+/// place `tray = false` changed (items to its left shift; items to its
+/// right stay). Checks on the way that `tray = false` removes the item and
+/// that it comes back.
+fn find_menu_bar_item(env: &Env) -> WindowInfo {
+    std::thread::sleep(Duration::from_secs(1));
+    let on = menu_bar_items();
+    assert!(!on.is_empty(), "no menu-bar items at all");
+    env.ok(&["set", "tray", "false"]);
+    let off = menu_bar_count(on.len() - 1, "tray = false removes the item");
+    env.ok(&["unset", "tray"]);
+    let back = menu_bar_count(on.len(), "the item comes back");
+    let place = |w: &WindowInfo| (w.bounds[0], w.bounds[2]);
+    back.into_iter()
+        .filter(|w| !off.iter().any(|o| place(o) == place(w)))
+        .max_by(|a, b| a.bounds[0].total_cmp(&b.bounds[0]))
+        .expect("a menu-bar window that tray = false removed")
 }
 
 fn status_field(env: &Env, key: &str) -> String {
@@ -125,12 +224,14 @@ fn capture(env: &Env) -> Option<Image> {
     (ok && path.exists()).then(|| Image::load(&path))
 }
 
-/// Opaque badge pixels that differ on screen at (x, y).
+/// Opaque badge pixels that differ on screen at (x, y). The outer art pixel
+/// (2 px at size 64) is skipped: the check runs in move mode, which draws
+/// its dashed outline there (SPEC §6.3).
 fn wrong_pixels(screen: &Image, badge: &Image, x: i32, y: i32) -> (usize, usize) {
     let mut wrong = 0;
     let mut total = 0;
-    for by in 0..badge.height {
-        for bx in 0..badge.width {
+    for by in 2..badge.height - 2 {
+        for bx in 2..badge.width - 2 {
             let b = badge.px(bx, by);
             if b[3] != 255 {
                 continue;
@@ -234,6 +335,41 @@ fn drag_and_keys(env: &Env, rect: [i32; 4], scale: f64) -> [i32; 4] {
     nudged
 }
 
+/// Size > 32 from the menu-bar item with posted input: a click opens the
+/// menu, the arrow keys walk it, Return chooses. The badge shrinks and the
+/// choice lands in this host's table (SPEC §8.6).
+fn menu_choice(env: &Env, pid: u32, rect: [i32; 4], scale: f64) {
+    let item = find_menu_bar_item(env);
+    let b = item.bounds;
+    let at = (b[0] + b[2] / 2.0, b[1] + b[3] / 2.0);
+    post_mouse(CGEventType::MouseMoved, at);
+    post_mouse(CGEventType::LeftMouseDown, at);
+    post_mouse(CGEventType::LeftMouseUp, at);
+    std::thread::sleep(Duration::from_millis(500));
+    // Move, Size, into the submenu (its first item, 32), choose.
+    for key in [125, 125, 124, 36] {
+        post_key(key);
+        std::thread::sleep(Duration::from_millis(150));
+    }
+    let start = Instant::now();
+    loop {
+        let now = env.badge_rect();
+        if now.is_some_and(|r| r[2] == rect[2] / 2) {
+            break;
+        }
+        assert!(
+            start.elapsed() < Duration::from_secs(10),
+            "the menu choice didn't land: badge {now:?}, was {rect:?}\nwindows {:?}\nbadge log:\n{}",
+            windows_of(pid),
+            env.log()
+        );
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    let config = env.config();
+    assert!(config.contains("[hosts.owl]\nsize = 32\n"), "{config}");
+    eprintln!("menu: Size > 32 resized the badge and saved size = 32 (scale {scale})");
+}
+
 #[test]
 #[ignore = "needs a logged-in macOS desktop; run with `make test-macos-display`"]
 fn badge_in_a_gui_session() {
@@ -267,6 +403,12 @@ fn badge_in_a_gui_session() {
         "window at {:?} points, status says {want:?}",
         window.bounds
     );
+
+    // The menu-bar item: gone with `tray = false`, back without it.
+    let item = find_menu_bar_item(&env);
+    eprintln!("menu-bar item: {item:?}");
+    let doctor = env.ok(&["doctor"]);
+    assert!(doctor.contains("NSStatusItem"), "{doctor}");
 
     // An accessory app that never becomes frontmost, even in move mode.
     let app = NSRunningApplication::runningApplicationWithProcessIdentifier(pid as i32)
@@ -318,6 +460,7 @@ fn badge_in_a_gui_session() {
         env.wait_rect(moved);
         env.ok(&["reset-position"]);
         env.wait_rect(rect);
+        menu_choice(&env, badge.0.id(), rect, scale);
     } else {
         eprintln!(
             "SKIP drag and key checks: this process may not post events \
@@ -377,4 +520,194 @@ fn hostname_matches_scutil() {
         .find_map(|l| l.trim().strip_prefix("hostname"))
         .map(str::trim);
     assert_eq!(got, Some(want.as_str()));
+}
+
+/// Static mode (SPEC §7.2): with nothing to animate and nobody asking, the
+/// loop never wakes, menu-bar item included. (The process still shows a
+/// few wakeups a second from AppKit's own threads; `make power-check`
+/// reports them.)
+#[test]
+#[ignore = "needs a logged-in macOS desktop; run with `make test-macos-display`"]
+fn static_mode_loop_sleeps() {
+    let mut env = Env::new("macos-static");
+    env.set("TMPDIR", env.runtime().to_string_lossy());
+    env.write_config("animation = \"static\"\n");
+    let mut badge = env.run_badge();
+    wait_for("the badge to be placed", || {
+        if let Some(code) = badge.exited() {
+            panic!("the badge exited ({code}):\n{}", env.log());
+        }
+        env.badge_rect()
+    });
+    std::thread::sleep(Duration::from_secs(5));
+    let woke = |log: &str| log.matches("macos: woke").count();
+    let before = woke(&env.log());
+    assert!(before > 0, "no wakeup lines with --verbose:\n{}", env.log());
+    std::thread::sleep(Duration::from_secs(15));
+    let log = env.log();
+    assert_eq!(woke(&log), before, "the loop woke in static mode:\n{log}");
+    eprintln!("static mode: no loop wakeup in 15 s");
+}
+
+const LABEL: &str = "io.github.nealhardesty.pawprint";
+
+/// `launchctl print gui/<uid>/<LABEL>`, if launchd has the agent.
+fn launchctl_print() -> Option<String> {
+    // SAFETY: getuid has no preconditions.
+    let uid = unsafe { libc::getuid() };
+    let out = std::process::Command::new("/bin/launchctl")
+        .arg("print")
+        .arg(format!("gui/{uid}/{LABEL}"))
+        .output()
+        .unwrap();
+    out.status
+        .success()
+        .then(|| String::from_utf8_lossy(&out.stdout).into_owned())
+}
+
+/// `autostart on|off|status`: the LaunchAgent file and launchd agree
+/// (SPEC §11.2). `on` loads the agent, which starts a badge; `off` boots it
+/// out, which stops that badge, and removes the file.
+#[test]
+#[ignore = "needs a logged-in macOS desktop; run with `make test-macos-display`"]
+fn autostart_round_trip() {
+    if launchctl_print().is_some() {
+        eprintln!("SKIP autostart: {LABEL} is already loaded for this user; not touching it");
+        return;
+    }
+    let env = Env::new("macos-autostart");
+    let plist = env
+        .home()
+        .join(format!("Library/LaunchAgents/{LABEL}.plist"));
+    assert!(env.ok(&["autostart", "status"]).starts_with("off"));
+
+    let on = env.ok(&["autostart", "on"]);
+    eprintln!("{on}");
+    let text = std::fs::read_to_string(&plist).unwrap();
+    for want in [
+        format!(
+            "<string>{}</string>\n        <string>run</string>",
+            env!("CARGO_BIN_EXE_pawprint")
+        ),
+        "<key>LimitLoadToSessionType</key>\n    <string>Aqua</string>".into(),
+        "<key>SuccessfulExit</key>\n        <false/>".into(),
+        "<key>RunAtLoad</key>\n    <true/>".into(),
+        "<key>ProcessType</key>\n    <string>Interactive</string>".into(),
+    ] {
+        assert!(text.contains(&want), "no {want:?} in\n{text}");
+    }
+    let lint = std::process::Command::new("/usr/bin/plutil")
+        .arg("-lint")
+        .arg(&plist)
+        .output()
+        .unwrap();
+    assert!(lint.status.success(), "{lint:?}");
+
+    assert!(launchctl_print().is_some(), "autostart on loads the agent");
+    let status = env.ok(&["autostart", "status"]);
+    assert!(
+        status.starts_with("on: ") && !status.contains("not loaded"),
+        "{status}"
+    );
+    assert!(env.ok(&["doctor"]).contains("run at login"));
+    // The agent runs `pawprint run`, which stays up: no badge ran before.
+    let pid = wait_for("launchd to start the badge", || {
+        launchctl_print()?
+            .lines()
+            .find_map(|l| l.trim().strip_prefix("pid = ")?.parse::<i32>().ok())
+    });
+    eprintln!("autostart: launchd started the badge as pid {pid}");
+
+    let off = env.ok(&["autostart", "off"]);
+    assert!(off.contains("Autostart is off"), "{off}");
+    assert!(
+        launchctl_print().is_none(),
+        "autostart off boots the agent out"
+    );
+    assert!(!plist.exists());
+    assert!(env.ok(&["autostart", "status"]).starts_with("off"));
+    wait_for("the launchd badge to stop", || {
+        // SAFETY: signal 0 only checks that the process exists.
+        (unsafe { libc::kill(pid, 0) } != 0).then_some(())
+    });
+    assert!(env.ok(&["autostart", "off"]).contains("already off"));
+}
+
+/// `pawprint preview`: a normal titled window (window layer 0) of a
+/// regular app at the front, which Esc and the close button end.
+#[test]
+#[ignore = "needs a logged-in macOS desktop; run with `make test-macos-display`"]
+fn preview_window() {
+    let env = Env::new("macos-preview");
+    let items = menu_bar_items().len();
+    let open = || {
+        let mut p = env.spawn(env!("CARGO_BIN_EXE_pawprint"), &["preview", "owl"]);
+        let pid = p.0.id();
+        let w = wait_for("the preview window", || {
+            if let Some(code) = p.exited() {
+                panic!("preview exited ({code}):\n{}", env.log());
+            }
+            window_of(pid)
+        });
+        (p, w)
+    };
+    let (mut p, w) = open();
+    let pid = p.0.id();
+    eprintln!("preview window: {w:?}");
+    assert_eq!(w.layer, 0, "a normal window, not the overlay level");
+    match &w.name {
+        Some(name) => assert_eq!(name, "PAWPRINT preview"),
+        None => eprintln!("SKIP preview title: the window server withholds window names"),
+    }
+    // 128 px and a 16 px margin on each side, plus a title bar, at scale 1
+    // (the runner's display).
+    let content = 128.0 + 2.0 * 16.0;
+    assert!(
+        (w.bounds[2] - content).abs() < 0.01 && w.bounds[3] > content,
+        "preview frame {:?}",
+        w.bounds
+    );
+    let app = NSRunningApplication::runningApplicationWithProcessIdentifier(pid as i32)
+        .expect("the preview is a running application");
+    assert_eq!(
+        app.activationPolicy(),
+        NSApplicationActivationPolicy::Regular
+    );
+    assert!(
+        menu_bar_items().len() <= items,
+        "no menu-bar item of its own"
+    );
+
+    if !CGPreflightPostEventAccess() {
+        eprintln!("SKIP preview Esc and close: this process may not post events");
+        return;
+    }
+    wait_for("the preview to be in front", || in_front(pid).then_some(()));
+    post_key(53); // escape
+    let code = wait_for("Esc to end the preview", || p.exited());
+    assert!(code.success(), "exit {code}");
+
+    // The close button, pressed through Accessibility (its place in the
+    // title bar differs between macOS releases, and a miss drags the
+    // window).
+    let (mut p, _) = open();
+    let script = format!(
+        "tell application \"System Events\" to click (first button whose subrole is \
+         \"AXCloseButton\") of window 1 of (first process whose unix id is {})",
+        p.0.id()
+    );
+    let out = std::process::Command::new("/usr/bin/osascript")
+        .args(["-e", &script])
+        .output()
+        .unwrap();
+    if !out.status.success() {
+        eprintln!(
+            "SKIP preview close button: osascript failed (Accessibility for System Events?): {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+        return;
+    }
+    let code = wait_for("the close button to end the preview", || p.exited());
+    assert!(code.success(), "exit {code}");
+    eprintln!("preview: Esc and the close button each end it");
 }

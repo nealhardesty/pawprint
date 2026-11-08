@@ -9,11 +9,15 @@
 //! size is known, so the usable area is placed at the output's origin, and
 //! the badge is positioned by margins measured from the anchored edges,
 //! which the compositor applies relative to the real usable area (F3).
+//!
+//! `pawprint preview` uses the same surface code with the `preview` flag:
+//! an xdg-shell toplevel (a normal window) instead of the layer surface,
+//! closed by the compositor or Esc.
 
 use std::collections::HashMap;
 
 use calloop::EventLoop;
-use pawprint_core::badge::Event;
+use pawprint_core::badge::{Command, Event};
 use pawprint_core::geom::{PhysicalRect, Point};
 use pawprint_core::layout::{self, Axis};
 use pawprint_core::movemode::{Key, KeyCode};
@@ -29,6 +33,10 @@ use smithay_client_toolkit::shell::WaylandSurface;
 use smithay_client_toolkit::shell::wlr_layer::{
     Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface,
     LayerSurfaceConfigure,
+};
+use smithay_client_toolkit::shell::xdg::XdgShell;
+use smithay_client_toolkit::shell::xdg::window::{
+    Window, WindowConfigure, WindowDecorations, WindowHandler,
 };
 use smithay_client_toolkit::shm::slot::{Buffer, SlotPool};
 use smithay_client_toolkit::shm::{Shm, ShmHandler};
@@ -80,9 +88,11 @@ struct Probe {
     usable: Option<(u32, u32)>,
 }
 
-/// The badge's layer surface. Its output is fixed at creation (F5).
+/// The badge's layer surface (its output is fixed at creation, F5), or a
+/// preview's toplevel window.
 struct Badge {
-    layer: LayerSurface,
+    layer: Option<LayerSurface>,
+    window: Option<Window>,
     output: String,
     viewport: Option<wp_viewport::WpViewport>,
     configured: bool,
@@ -113,6 +123,8 @@ pub struct Wl {
     seats: SeatState,
     compositor: CompositorState,
     layer_shell: Option<LayerShell>,
+    xdg_shell: Option<XdgShell>,
+    preview: bool,
     shm: Shm,
     pool: SlotPool,
     viewporter: Option<wp_viewporter::WpViewporter>,
@@ -266,6 +278,30 @@ impl Wl {
     }
 
     fn create_badge(&mut self, display: &DisplayInfo) {
+        if self.preview {
+            let Some(xdg) = &self.xdg_shell else {
+                log::error!("wayland: the compositor has no xdg_wm_base for a preview window");
+                return;
+            };
+            let surface = self.compositor.create_surface(&self.qh);
+            let viewport = self
+                .viewporter
+                .as_ref()
+                .map(|v| v.get_viewport(&surface, &self.qh, ()));
+            let window = xdg.create_window(surface, WindowDecorations::RequestServer, &self.qh);
+            window.set_title("PAWPRINT preview");
+            window.set_app_id("pawprint");
+            window.commit();
+            self.badge = Some(Badge {
+                layer: None,
+                window: Some(window),
+                output: display.name.clone(),
+                viewport,
+                configured: false,
+                buffer: None,
+            });
+            return;
+        }
         let (Some(shell), Some(output)) = (&self.layer_shell, self.output_named(&display.name))
         else {
             return;
@@ -288,7 +324,8 @@ impl Wl {
         layer.commit();
         log::info!("wayland: badge surface on {}", display.name);
         self.badge = Some(Badge {
-            layer,
+            layer: Some(layer),
+            window: None,
             output: display.name.clone(),
             viewport,
             configured: false,
@@ -308,7 +345,7 @@ impl Wl {
         if self
             .badge
             .as_ref()
-            .is_some_and(|b| b.output != display.name)
+            .is_some_and(|b| b.output != display.name && b.layer.is_some())
         {
             self.badge = None; // its output is fixed, so make a new one
         }
@@ -346,10 +383,21 @@ impl Wl {
             logical(rect.width as i32).max(1),
             logical(rect.height as i32).max(1),
         );
-        badge.layer.set_anchor(anchor);
-        badge.layer.set_margin(m[0], m[1], m[2], m[3]);
-        badge.layer.set_size(w as u32, hgt as u32);
-        let surface = badge.layer.wl_surface().clone();
+        let surface = match (&badge.layer, &badge.window) {
+            (Some(layer), _) => {
+                layer.set_anchor(anchor);
+                layer.set_margin(m[0], m[1], m[2], m[3]);
+                layer.set_size(w as u32, hgt as u32);
+                layer.wl_surface().clone()
+            }
+            (None, Some(window)) => {
+                // Fixed size, which also makes tiling compositors float it.
+                window.set_min_size(Some((w as u32, hgt as u32)));
+                window.set_max_size(Some((w as u32, hgt as u32)));
+                window.wl_surface().clone()
+            }
+            (None, None) => unreachable!("a badge has a layer or a window"),
+        };
         let frame = self.frame.as_ref().expect("checked above");
         match &badge.viewport {
             Some(vp) => vp.set_destination(w, hgt),
@@ -378,8 +426,10 @@ impl Wl {
         }
         // Click-through: an empty input region (F4), always; move mode
         // takes input through the catcher.
-        surface.set_input_region(empty.as_ref().map(Region::wl_region));
-        badge.layer.commit();
+        if badge.layer.is_some() {
+            surface.set_input_region(empty.as_ref().map(Region::wl_region));
+        }
+        surface.commit();
         self.dirty = false;
         if !self.interactive {
             self.catcher = None;
@@ -449,6 +499,19 @@ impl Wl {
     }
 }
 
+impl Wl {
+    /// The compositor configured the badge's surface: draw it.
+    fn badge_configured(&mut self) {
+        if let Some(badge) = self.badge.as_mut() {
+            badge.configured = true;
+            self.dirty = true;
+            if badge.buffer.is_none() {
+                self.new_frame = true;
+            }
+        }
+    }
+}
+
 impl Surface for Wl {
     fn displays(&self) -> Vec<DisplayInfo> {
         self.displays.clone()
@@ -495,6 +558,10 @@ impl WlApp {
         let shm = Shm::bind(&globals, &qh).map_err(|e| format!("wl_shm: {e}"))?;
         let pool = SlotPool::new(64 * 64 * 4, &shm).map_err(|e| format!("shm pool: {e}"))?;
         let layer_shell = LayerShell::bind(&globals, &qh).ok();
+        let preview = shell.as_ref().is_some_and(Shell::is_preview);
+        let xdg_shell = preview
+            .then(|| XdgShell::bind(&globals, &qh).ok())
+            .flatten();
         if shell.is_some() && layer_shell.is_none() {
             return Err("the compositor has no zwlr_layer_shell_v1".into());
         }
@@ -511,6 +578,8 @@ impl WlApp {
                 seats: SeatState::new(&globals, &qh),
                 compositor,
                 layer_shell,
+                xdg_shell,
+                preview,
                 shm,
                 pool,
                 viewporter,
@@ -560,7 +629,7 @@ impl App for WlApp {
     }
 }
 
-pub fn run(shell: Shell, listener: ipc::Listener) -> CmdResult {
+pub fn run(shell: Shell, listener: Option<ipc::Listener>) -> CmdResult {
     let (mut app, queue) = WlApp::connect(Some(shell)).map_err(|e| {
         (
             exit::NO_SESSION,
@@ -666,7 +735,12 @@ impl OutputHandler for WlApp {
 
 impl LayerShellHandler for WlApp {
     fn closed(&mut self, _: &Connection, _: &QueueHandle<Self>, layer: &LayerSurface) {
-        if self.wl.badge.as_ref().is_some_and(|b| &b.layer == layer) {
+        if self
+            .wl
+            .badge
+            .as_ref()
+            .is_some_and(|b| b.layer.as_ref() == Some(layer))
+        {
             log::info!("wayland: badge surface closed by the compositor; recreating");
             self.wl.badge = None;
             self.wl.new_frame = true;
@@ -686,12 +760,12 @@ impl LayerShellHandler for WlApp {
         _: u32,
     ) {
         let wl = &mut self.wl;
-        if let Some(badge) = wl.badge.as_mut().filter(|b| &b.layer == layer) {
-            badge.configured = true;
-            wl.dirty = true;
-            if badge.buffer.is_none() {
-                wl.new_frame = true;
-            }
+        if wl
+            .badge
+            .as_ref()
+            .is_some_and(|b| b.layer.as_ref() == Some(layer))
+        {
+            wl.badge_configured();
         } else if wl.catcher.as_ref().is_some_and(|c| &c.layer == layer) {
             wl.fill_catcher(configure.new_size);
         } else if let Some(probe) = wl.probes.iter_mut().find(|p| &p.layer == layer) {
@@ -879,6 +953,15 @@ impl Dispatch<wl_keyboard::WlKeyboard, ()> for WlApp {
                 key,
                 state: WEnum::Value(wl_keyboard::KeyState::Pressed),
                 ..
+            } if app.wl.preview => {
+                if app.wl.keys.get(&key) == Some(&KeyCode::Escape) {
+                    app.send(Event::Command(Command::Quit));
+                }
+            }
+            wl_keyboard::Event::Key {
+                key,
+                state: WEnum::Value(wl_keyboard::KeyState::Pressed),
+                ..
             } if app.wl.interactive => {
                 if let Some(&code) = app.wl.keys.get(&key) {
                     let shift = app.wl.shift;
@@ -914,6 +997,24 @@ impl Dispatch<kde_output_order_v1::KdeOutputOrderV1, ()> for WlApp {
 
 delegate_noop!(WlApp: ignore wp_viewporter::WpViewporter);
 delegate_noop!(WlApp: ignore wp_viewport::WpViewport);
+
+/// A preview's toplevel window.
+impl WindowHandler for WlApp {
+    fn request_close(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &Window) {
+        self.send(Event::Command(Command::Quit));
+    }
+
+    fn configure(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &Window,
+        _: WindowConfigure,
+        _: u32,
+    ) {
+        self.wl.badge_configured();
+    }
+}
 
 impl ShmHandler for WlApp {
     fn shm_state(&mut self) -> &mut Shm {

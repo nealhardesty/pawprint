@@ -262,9 +262,39 @@ except where the crate front art is transparent.
 Rendered with PAWPRINT's own embedded bitmap font: 5 × 7 glyphs on a 6-pixel
 advance, covering printable ASCII (0x20–0x7E). Other characters render as `?`.
 Hostnames are restricted to letters, digits, and hyphens, so they always
-render cleanly. Labels longer than 20 characters are truncated and end in `..`.
-The limit of 20 is provisional. It will be measured against real hostnames
-and remote-client scaling (roadmap M2) and adjusted here.
+render cleanly. Labels longer than 20 characters are cut **in the middle**:
+the first 9 and the last 9 characters, joined by `..`
+(`jenkins-agent-linux-07` becomes `jenkins-a..-linux-07`), because the end of
+a name is what tells one machine from the next.
+
+**Why 20, and why the middle** (measured in M4 with `pawprint render` over a
+corpus of default and fleet hostnames):
+
+| Short name (examples) | Length | Badge at 32 / 64 / 128 |
+|---|---|---|
+| `nas`, `db02` | 3–4 | 32×32 / 64×64 / 128×128: on the crate |
+| `web01`, `fedora`, `buildbox` | 5–8 | 67–85×32 / 70–106×90 / 128×128 (on the crate at 128 up to 9 characters) |
+| `prod-owl-02`, `raspberrypi`, `k8s-master-1` | 10–12 | 97–109×32 / 130–154×90 / 130–154×154 |
+| Windows defaults `DESKTOP-4F7Q2KL`, `WIN-3J8K2M4N5P6`; AWS `ip-172-31-45-201` | 15–16 | 127–133×32 / 190–202×90 / 190–202×154 |
+| macOS defaults `Johns-MacBook-Air`, `MacBook-Pro-de-Maria`; `build-agent-linux-07` | 17–20 | 139–157×32 / 214–250×90 / 214–250×154 |
+| `jenkins-agent-linux-07`, DigitalOcean `ubuntu-s-1vcpu-1gb-nyc1-01`, AKS/GKE nodes (33–35) | 22+ | cut to 20: 157×32 / 250×90 / 250×154 |
+
+- Every default hostname scheme in the corpus (Windows, macOS, AWS, Raspberry
+  Pi, typical fleet names) fits in 20, so 20 stays. A 20-character
+  nameplate is 250 px wide at 64 and 128 (the font scale is 2 at both) and
+  157 px beside a size-32 crate: noticeable but still a corner badge.
+  A lower limit would cut the Windows and macOS defaults; a higher one
+  makes the plate wider than most panels' clear corners.
+- Only names of 22+ characters are cut, and for them the end matters most:
+  cloud node names share a long prefix (`gke-prod-default-pool-…`) and differ
+  in the suffix, and fleet names end in a number. Cutting the end (the
+  provisional rule) made every node of a pool look the same. Fleets with
+  such names are better served by an explicit `label` per `[hosts]` glob.
+- Remote-client scaling: a client showing a 4K desktop in a 1080p window
+  scales by 0.5. The default font scale 2 (size ≥ 64) then lands at one
+  screen pixel per font pixel, the smallest legible size; the size-32 label
+  (font scale 1) is not legible below about 0.75. Users of scaled clients
+  should keep `size` at 64 or more or set `label_size = "large"`.
 
 **Size.** `label_size` sets the font scale independently of the mascot:
 
@@ -473,7 +503,9 @@ The badge is click-through by default. To move it, the user enters
 In move mode:
 
 1. The badge accepts the pointer and shows a 1-art-pixel dashed outline in the
-   accent color.
+   accent color: two art pixels on, two off, drawn over the edge of the badge
+   image (`movemode::draw_outline`, by the core, so every backend shows it).
+   The gaps keep the art underneath, so transparent corners stay transparent.
 2. **Drag** it anywhere on the target display. It is constrained to the
    usable area.
 3. **Release** to save. The new anchor is the ninth (3 × 3 grid) of the
@@ -531,6 +563,84 @@ shows which one is in effect.
 
 The event loop blocks on OS events with a timeout equal to the next animation
 deadline. There is no fixed tick.
+
+**Measured** with `make power-check` (Linux): the release build runs
+under Xvfb with a private session bus (so the tray's threads count), first
+in idle and then in static mode, 180 s each. CPU is `utime + stime` from
+`/proc/<pid>/stat`; wakeups are the voluntary context switches of every
+thread (`/proc/<pid>/task/*/status`); startup is process start until
+`pawprint status` reports a placed badge, which the loop answers only
+after the first frame is flushed.
+
+| Metric (Linux X11, M4) | Measured | Budget |
+|---|---|---|
+| Startup to visible | 16 ms (9 ms on a warm run) | < 300 ms |
+| CPU, idle mode | 0.011% of a core | < 0.1% |
+| Wakeups, idle mode | 49 in 180 s (each action's frames plus one per rest) | deadlines only |
+| CPU, static mode | 0.000% | 0% |
+| Wakeups, static mode | **0 in 180 s** | zero |
+| Resident memory | 12.2 MB peak | < 30 MB |
+| Binary size | 7.1 MB (glibc release build, 100 mascots; the musl build is M5) | < 15 MB |
+| Threads | 5 (loop, IPC, tray service, D-Bus reactor, and one idle) | — |
+
+The first run found 39 wakeups in 20 s in static mode: an idle `blocking`
+pool thread that zbus leaves behind and that, from `blocking` 1.7, never
+exits (F36). Pinning `blocking` 1.6.2 removed them.
+
+**Windows** (`make power-check` on Windows, run by the `windows-display` CI
+job on `windows-latest`, 150 s per mode): the release `pawprintw.exe`
+runs on the current desktop with its tray icon. CPU is `Get-Process`'s
+`TotalProcessorTime`; wakeups are each thread's raw
+`ContextSwitchesPersec` counter (`Win32_PerfRawData_PerfProc_Thread`,
+counted per thread); memory is the working set; startup is the same
+`pawprint status` poll. Win32 known folders can't be redirected, so it
+swaps in its own `config.toml` and restores the user's config and state
+files afterwards.
+
+| Metric (Windows Server, `windows-latest`, M4) | Measured | Budget |
+|---|---|---|
+| Startup to visible | 38 ms | < 300 ms |
+| CPU, idle mode | 0.000% of a core (below `TotalProcessorTime`'s 15.6 ms resolution over 150 s, so < 0.01%) | < 0.1% |
+| Wakeups, idle mode | 50 in 150 s (each action's frames plus one per rest) | deadlines only |
+| CPU, static mode | 0.000% | 0% |
+| Wakeups, static mode | **0 in 150 s** | zero |
+| Working set | 19.8 MB peak, 16.3 MB after 150 s | < 30 MB |
+| Binary size | `pawprintw.exe` 4.5 MB, `pawprint.exe` 4.5 MB (release, 100 mascots) | < 15 MB |
+| Threads | 2 (loop and IPC) | — |
+
+The first Windows run summed every thread's counter and went backwards
+when a short-lived loader thread exited between samples, so wakeups are
+counted per thread id on Linux and Windows.
+
+**macOS**: `make power-check` runs the universal release binary (`lipo` of
+the arm64 and x86_64 builds) in the logged-in desktop with its own HOME and
+TMPDIR, menu-bar item included, 150 s per mode in CI. Counters come from
+`proc_pid_rusage` (what `top` and `powermetrics` read; no root): CPU is
+user + system time (Mach units converted with `mach_timebase_info`),
+wakeups are interrupt wakeups with package-idle wakeups in parentheses,
+memory is the physical footprint (Activity Monitor's "Memory").
+
+| Metric (macOS 26.6 on `macos-latest`, Apple Silicon VM, M4; three runs) | Measured | Budget |
+|---|---|---|
+| Startup to visible | 198, 240, 211 ms (cold CI runner) | < 300 ms |
+| CPU, idle mode, whole process | 0.047%, 0.152%, 0.051% of a core | < 0.1% |
+| CPU, idle over static (animating) | 0.016%, 0.076%, −0.011% of a core (inside the noise) | < 0.1% |
+| Wakeups, idle mode | 383, 417, 379 in 150 s (75, 249, 119 package-idle) | deadlines only |
+| CPU, static mode | 0.032%, 0.077%, 0.062% of a core (AppKit's threads) | 0% |
+| Wakeups, static mode | 346, 368, 383 in 150 s (53, 266, 262 package-idle); **the badge's loop: 0** | zero |
+| Memory footprint | 15.7, 16.8, 16.8 MB peak (resident size 45 to 54 MB, mostly shared framework pages) | < 30 MB |
+| Binary size | 8.0 to 8.1 MB universal (arm64 + x86_64, 100 mascots) | < 15 MB |
+| Threads | 4 to 5 | — |
+
+In static mode the main thread sleeps in `nextEventMatchingMask` and
+receives no event at all (each wakeup is logged at debug level, and
+`make test-macos-display` asserts none in 15 s; FM7). The remaining
+wakeups and CPU belong to AppKit's and the system's own threads in every
+Cocoa process, varied from run to run (77 to 358 in 20 s, with or without
+the menu-bar item), and the shared VM makes them swing between runs, so
+`power-check` reports the whole-process static rows and idle CPU as
+`over*` rather than failing on them, and judges **idle over static**, what
+animating adds, against the idle budget.
 
 ---
 
@@ -635,7 +745,43 @@ buildbox = "capybara"
 The running badge reloads config when `pawprint reload` is run, when the tray
 item **Reload config** is chosen, and when the config file's modification
 time changes. The last is checked only on display or IPC events and on the
-next animation deadline, so there is no file-watch thread.
+next animation deadline, so there is no file-watch thread: `Shell::tick`,
+which runs after every wakeup of the loop, compares one `stat` with the
+modification time recorded at the last read. A static badge with no events
+therefore notices an edit at its next event (`pawprint status` is one).
+
+### 8.6 Editing the config: `set`, `unset`, and the tray
+
+`pawprint set <key> <value>`, `pawprint unset <key>`, and the tray's **Size**
+and **Animation** choices all edit the config the same way
+(`pawprint_core::config_edit`):
+
+- **Where:** the exact `[hosts."<short>"]` table for this host's short name
+  (an existing table that matches it case-insensitively, else a new one,
+  appended at the end). An exact host table outranks globs and top-level
+  keys (8.3), so the choice always takes effect, and a config copied to
+  another machine doesn't carry it over. Only `pawprint run` flags rank
+  higher.
+- **How:** with `toml_edit`, so comments, order, and formatting stay. A
+  value already in the table keeps its trailing comment. `unset` removes
+  the key, then the table if it is left empty without comments, then an
+  empty implicit `[hosts]`. A file that isn't valid TOML is left alone and
+  the command fails. The write is atomic (temporary file, then rename) and
+  goes to a symlink's target, so dotfile managers keep their link.
+- **Values** are read as TOML (`64`, `false`, `[8, 20]`, `"quoted"`) and
+  otherwise as a plain string (`otter`), then checked by the parser that
+  loads the file (`config::check_value`). `set` also resolves the host
+  with the new file and refuses values that would only produce a warning
+  (a mascot or accent that doesn't exist), before writing anything.
+- **Then:** `set` and `unset` send `reload` to this session's badge if one
+  runs. The tray writes, then reloads. If the file can't be written, a tray
+  choice still applies until the badge restarts (as a session-only
+  override) and the log says why.
+
+`pawprint config init` writes the commented template
+(`config_edit::TEMPLATE`, 8.2 with the host examples commented out and an
+empty `[hosts]` at the end, so host tables land after the examples) and
+never overwrites a file.
 
 ---
 
@@ -655,16 +801,16 @@ badge reaches the instance **in the current graphical session**.
 | `pawprint status` | Is it running? Backend, display, mascot, label, position. |
 | `pawprint explain [--host NAME] [--recompute]` | Show the hostname pipeline, each mascot rule's result, which one won and why, and the effective settings with their source. Works without a running badge. |
 | `pawprint list [--category C] [--accents]` | List mascots (id, name, category, aliases, source: bundled/user/override), or the accent palette. |
-| `pawprint preview <id> [--size N]` | Open a temporary, normal (focusable, closable) window showing that mascot cycling through all its actions. |
+| `pawprint preview <id> [--size N]` | Open a temporary, normal (focusable, closable) window showing that mascot cycling through all its actions (every action in file order, `when` ignored, 1 s apart), on a slate backdrop with a 16 px margin, centered, at size 128 by default. Esc or closing the window ends it. It uses this host's label and accent and the badge's own backend surface in preview mode; it writes nothing. |
 | `pawprint render <id> --out FILE.png [--size N] [--label TEXT] [--frame N]` | Write a badge image. Used for docs and golden tests. |
-| `pawprint set <key> <value>` | Write `<key>` into this host's `[hosts."<short>"]` table using `toml_edit` (keeps comments and formatting), then reload. Example: `pawprint set mascot otter`. |
-| `pawprint unset <key>` | Remove that key from this host's table. |
-| `pawprint forget` | Drop this host's cached fallback assignment. |
+| `pawprint set <key> <value>` | Write `<key>` into this host's `[hosts."<short>"]` table using `toml_edit` (keeps comments and formatting), then reload ([8.6](#86-editing-the-config-set-unset-and-the-tray)). Example: `pawprint set mascot otter`. Exit code 2 for an unknown key or invalid value. |
+| `pawprint unset <key>` | Remove that key from this host's table, then reload. |
+| `pawprint forget` | Drop this host's cached fallback assignment (through the running badge if there is one, which picks again and saves; else in the state file) and say what the hash picks now. A host whose mascot comes from another rule has nothing to forget. |
 | `pawprint config init` | Write a commented `config.toml` if none exists. |
 | `pawprint config path` | Print the config path. |
 | `pawprint mascot export <id> <dir>` | Write a bundled mascot into the folder `<dir>` (created if needed; existing files are never overwritten) in the simple PNG form ([12.7](#127-png-bridges)) as a starting point for custom art. |
 | `pawprint mascot check <dir>` | Validate a custom mascot directory with the same rules as the build ([12.11](#1211-validation-rules)), report alias collisions with the bundled catalog, and say whether it replaces a bundled mascot or adds one. Exits 1 on errors. |
-| `pawprint autostart on\|off\|status` | Register or remove launch at graphical login for this user. |
+| `pawprint autostart on\|off\|status` | Register or remove launch at graphical login for this user: an entry that runs `<this executable> run` (on Windows `pawprintw.exe run`). Linux: `$XDG_CONFIG_HOME/autostart/pawprint.desktop`. Windows and macOS: [11.1.5](#1115-tray-and-autostart), [11.2](#112-macos). |
 | `pawprint doctor` | Diagnose the environment: session type, chosen backend and why, compositor/WM, layer-shell, ARGB visual, compositing manager, displays with names, scales and work areas, primary detection, GNOME fractional-scaling blur (with the fix), tray availability, IPC endpoint, autostart state, config warnings. |
 | `pawprint paths` | Print every file location ([8.1](#81-files-and-locations)). |
 | `pawprint gnome-extension install\|remove` | Plan B only ([11.5.3](#1153-plan-b-the-presenter-extension)): install or remove the GNOME presenter extension. |
@@ -701,7 +847,8 @@ any OS. Each backend is a thin adapter that:
 2. translates native events into `core::badge::Event`: `Deadline`,
    `DisplaysChanged(Vec<DisplayInfo>)`, `DragStart/DragMove/DragEnd(Point)`,
    `Key(Key)`, `Command(Command)` (from IPC or the tray menu: `Move`,
-   `ResetPosition`, `Reload`, `Quit`, `SetSize(n)`, `SetAnimation(mode)`),
+   `ResetPosition`, `Reload`, `Quit`, `SetSize(n)`, `SetAnimation(mode)`,
+   `Forget`),
    and `ConfigTouched(Config)` (the shell noticed a change and re-read the
    file);
 3. executes `core::badge::Effect`s: `Present(Frame)` (already scaled),
@@ -746,10 +893,17 @@ in `pawprint::shell::Shell`:
 | `Shell::timeout()` | Before sleeping: how long the native wait may last (`None` = until an event) |
 | `Shell::tick(&mut surface)` | After every wakeup; sends `Deadline` once it has passed |
 | `Shell::done()` | After every wakeup; true after `Quit` |
+| `Shell::set_tray(Box<dyn Tray>)` | Once, to attach the platform's tray; the shell calls `Tray::show(&TrayState)` with every `SetTray` (also at once, if the core already described it) |
+| `Shell::menu(&mut surface, command)` | For each tray menu choice. Size and Animation are saved first (8.6), then everything is the same `Command` IPC sends |
+| `Shell::is_preview()` | When creating the surface: true for `pawprint preview` (a normal window) |
 
 The shell runs the surface effects through `surface::apply`, writes
-`SaveState` atomically, re-reads the config on `ReloadConfig`, logs, and
-builds the `status` answer. On Linux, `backend::linux::drive` is the whole
+`SaveState` atomically, re-reads the config on `ReloadConfig` (and when its
+modification time changes, 8.5), hands `SetTray` to the tray, logs, and
+builds the `status` answer. In preview mode it wraps the surface in an
+adapter that draws each frame on the backdrop with the margin and grows the
+window to match, writes no state, and has no IPC or tray, so a backend's
+preview is its own surface with a flag. On Linux, `backend::linux::drive` is the whole
 loop for both backends.
 
 ### 10.2 Why not winit, Tauri, or Qt
@@ -775,8 +929,8 @@ large C++ runtime for a 64-pixel image. Direct platform APIs come to four small 
 | macOS | `objc2`, `objc2-foundation`, `objc2-app-kit` |
 | X11 | `x11rb` 0.14 (pure Rust; features `shape`, `xfixes`, `randr`) |
 | Wayland | `smithay-client-toolkit` 0.21 (`default-features = false, features = ["calloop"]`: the default `xkbcommon` feature links libxkbcommon), `wayland-client` 0.31 (no features: `system`/`dlopen` load libwayland and `log` compiles a C shim), `wayland-protocols`, `wayland-protocols-wlr`, `wayland-protocols-plasma`, `calloop` 0.14 |
-| Linux tray | `ksni` 0.3 (`default-features = false, features = ["blocking", "async-io"]`, which avoids tokio) over `zbus` 5 (`default-features = false, features = ["async-io", "blocking-api"]`; ksni 0.3 needs zbus 5, and zbus 6 has no `blocking` module); `zbus` also carries the Plan B presenter protocol |
-| Logging | `log` + a minimal file logger (`pawprint::logger`: 1 MB cap, one rotation; dependencies log at info and above only) |
+| Linux tray | `ksni` 0.3 (`default-features = false, features = ["blocking", "async-io"]`, which avoids tokio) over `zbus` 5 (`default-features = false, features = ["async-io", "blocking-api"]`; ksni 0.3 needs zbus 5, and zbus 6 has no `blocking` module); `zbus` also carries the Plan B presenter protocol. `blocking` is pinned to 1.6 (F36) |
+| Logging | `log` + a minimal file logger (`pawprint::logger`: 1 MB cap, one rotation to `pawprint.log.1`; dependencies log at warn and above only, since zbus logs every D-Bus call at info) |
 | IPC encoding | `serde_json` |
 | Unix calls | `libc`: `localtime_r` (the local hour, `Now::local_hour`), `setsid` (detached start), `getuid`. Windows uses `GetLocalTime` from `windows-sys`. |
 
@@ -838,7 +992,7 @@ Newline-delimited JSON, one request and one response per connection:
 {"v":1,"ok":false,"error":"no target display"}
 ```
 
-Commands: `status`, `move`, `reset-position`, `reload`, `quit`. `status`
+Commands: `status`, `move`, `reset-position`, `reload`, `quit`, `forget`. `status`
 returns the same fields `pawprint status` prints, under `"status"`: `pid`,
 `backend`, `session`, `display`, `rect` (`[x, y, w, h]`, physical),
 `scale`, `mascot`, `label`, `position`, `position_source`, `size`,
@@ -891,12 +1045,14 @@ What is shared, and by whom:
 | Animation scheduler, `next_deadline()` | `pawprint-core::anim` | All backends |
 | Compositor, integer scaler, font | `pawprint-core::render` | All backends, `render`, `preview`, golden tests |
 | **One pixel format**: premultiplied little-endian ARGB8888 (bytes B, G, R, A) plus a 1-bit mask | `pawprint-core::render` | Windows `UpdateLayeredWindow`, X11 32-bit visual, `wl_shm` `ARGB8888`, macOS `CGImage`, presenter extension (F30); the mask feeds the X11 shape fallback |
-| Tray menu model (items, checks, actions) | `pawprint-core::menu` | Windows tray, macOS menu bar, `ksni` |
+| Tray menu model (items, checks, actions) | `pawprint-core::menu` | Windows tray, macOS menu bar (`backend::menubar`), `ksni` |
 | Sprite compiler | `pawprint-sprite` crate | `build.rs`, runtime user mascots, `pawdev`, `pawprint mascot check` |
 | IPC protocol and server loop | `pawprint::ipc` | Unix-socket transport shared by Linux and macOS; named-pipe transport on Windows |
-| Autostart interface (`on`/`off`/`status`) | `pawprint::autostart` | Three small implementations behind one interface |
+| Autostart interface (`on`/`off`/`status`) | `pawprint::autostart` | Three small implementations behind one interface: Linux XDG entry, Windows HKCU `Run`, macOS LaunchAgent |
+| Config edits (`set`, `unset`, tray choices, `config init`) | `pawprint-core::config_edit` | CLI, `Shell::menu` |
 | X11 backend | `pawprint::backend::x11` | Native X11 **and** GNOME via XWayland (profile flag) |
-| `calloop` event loop, `ksni` tray, Linux scale helpers | `pawprint::backend::linux` | X11, Wayland, GNOME |
+| `calloop` event loop, Linux scale helpers | `pawprint::backend::linux` | X11, Wayland, GNOME |
+| StatusNotifierItem tray (`ksni`) | `pawprint::backend::sni` | X11, Wayland, GNOME |
 | Detach / single-instance startup | `pawprint::instance` | All platforms (only the session-key function differs) |
 | The shell around `Badge`: effects, state saving, reloads, status, log | `pawprint::shell` | All backends |
 | Doctor report and the shared checks | `pawprint::doctor` | All platforms; each backend adds its own section |
@@ -936,14 +1092,26 @@ Each backend must deliver the same **contract**, using the shared pieces in
   SWP_NOACTIVATE)`, which re-asserts topmost every time; `Present` copies the
   shared frame into the DIB section and calls `UpdateLayeredWindow` with no
   destination point, so it never moves the window.
-- The loop (`backend::windows::run`): drain the message queue, hand the
-  events `wndproc` recorded and the queued IPC requests to the shell, `tick`,
-  then `MsgWaitForMultipleObjects(QS_ALLINPUT)` with `Shell::timeout()`. The
+- The loop (`backend::windows::run`, and `preview` without IPC): drain the
+  message queue, hand the events and tray choices `wndproc` recorded and the
+  queued IPC requests to the shell, `tick`, then
+  `MsgWaitForMultipleObjects(QS_ALLINPUT)` with `Shell::timeout()`. The
   IPC thread queues each request on a channel and wakes the loop with
-  `PostMessageW(WM_APP)`. `wndproc` only records core events in a
-  thread-local queue: Win32 calls such as `SetWindowPos` send messages
-  synchronously, and this keeps the shell from being re-entered. `WM_CLOSE`
-  and `WM_QUIT` quit cleanly.
+  `PostMessageW(WM_APP)`. `wndproc` only records core events and tray
+  choices in thread-local queues: Win32 calls such as `SetWindowPos` send
+  messages synchronously, and this keeps the shell from being re-entered.
+  `WM_CLOSE` and `WM_QUIT` quit cleanly.
+- **Preview** (`pawprint preview`, `Shell::is_preview`): the same window
+  and loop, made normal. Class `PawprintPreview`, title `PAWPRINT preview`,
+  style `WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX` with no
+  extended style, so it has a taskbar button, takes the focus, and is not
+  topmost or click-through. It isn't layered: `Present` copies the frame
+  into the DIB section and `WM_PAINT` `BitBlt`s it; `Place` grows the
+  client rectangle by the frame (`AdjustWindowRectExForDpi`) and shows the
+  window activated. Windows keeps a captioned window at least `SM_CXMIN`
+  wide (120 px of client at 96 DPI on the runner), so a narrower preview is
+  widened about its center and the frame is centered on the class's
+  backdrop brush. Esc and `WM_CLOSE` quit.
 - Never call `SetWindowDisplayAffinity`. `WDA_EXCLUDEFROMCAPTURE` would hide
   the badge from Parsec, Apollo, and Jump.
 
@@ -989,17 +1157,36 @@ move the window outside the core's constraint, snap, and save):
 
 #### 11.1.5 Tray and autostart
 
-*M4.* The loop is ready for the tray: its callback message goes next to
-`WM_APP` in `wndproc`, which turns menu choices into `Event::Command(..)` like
-any other recorded event, and `TaskbarCreated` re-adds the icon after
-Explorer restarts. `Effect::SetTray` is already routed to the shell.
-
-- Tray: `Shell_NotifyIconW` with the mascot's rest frame as a 16/32-pixel
-  icon. Menu: **Move**, **Size ▸ 32/64/128**, **Animation ▸ Idle/Static**,
-  **Reset position**, **Reload config**, **Quit**.
-- Autostart: `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, value
-  `pawprint` = `"<install dir>\pawprintw.exe" run`. HKCU Run entries run at
-  every interactive logon, RDP logons included.
+- Tray: `backend::windows::NotifyIcon` implements `shell::Tray`, attached
+  with `Shell::set_tray` once the badge is shown. One `Shell_NotifyIconW`
+  icon (id 1) on the badge window, `NOTIFYICON_VERSION_4`, with the
+  callback message `WM_APP + 1` and the tooltip from `TrayState`. The icon
+  is the rest frame in its crate (`TrayState.icon`, 32 × 32) at the
+  system's small-icon size (`SM_CXSMICON`: 16 px at 100%, 32 at 200%):
+  each icon pixel is a box of source pixels, opaque when at least half of
+  them are, with their average color, so the 16-pixel icon keeps binary
+  alpha. `tray = false` removes it (`NIM_DELETE`); quitting removes it
+  before the window goes.
+- Menu: **Move**, **Size ▸ 32/64/128**, **Animation ▸ Idle/Static**,
+  **Reset position**, **Reload config**, **Quit**, built on each opening
+  from the core's menu model: an item with children is a submenu, a
+  `checked` item gets a check mark, and each command gets an id.
+  `NIN_SELECT` (left click), `NIN_KEYSELECT` (keyboard), and
+  `WM_CONTEXTMENU` (right click) all open it at the point the shell gives,
+  with the classic rule: `SetForegroundWindow` on the owner first, then
+  `TrackPopupMenu(TPM_RETURNCMD)`, then a posted `WM_NULL`. `wndproc`
+  queues the chosen command and the loop hands it to `Shell::menu`, so
+  Size and Animation are saved like `pawprint set` (8.6). The menu's modal
+  loop runs inside `wndproc`, so animation and IPC wait while it is open.
+- `TaskbarCreated` (registered at startup) adds the icon again after
+  Explorer restarts, and `wndproc` keeps what it needs (the icon data and
+  the menu model) in a thread-local, so neither needs the shell.
+- Autostart (`pawprint::autostart`):
+  `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, value
+  `pawprint` = `"<dir>\pawprintw.exe" run` (`REG_SZ`), where `<dir>` holds
+  the running `pawprint.exe`. `status` reads the value back, `off`
+  deletes it (already off is fine). HKCU Run entries run at every
+  interactive logon, RDP logons included.
 
 #### 11.1.6 Two executables on Windows
 
@@ -1067,10 +1254,10 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   keep their arrangement and never overlap in physical space.
 - Event loop: `nextEventMatchingMask(any, untilDate: deadline,
   NSDefaultRunLoopMode)` waits for the next event or `Shell::timeout()`.
-  The IPC thread and the screen-change observer wake it by posting an
+  The IPC thread, menu choices, and the screen-change observer wake it by posting an
   application-defined `NSEvent` from the main dispatch queue. Every event
-  the badge doesn't consume goes to `NSApplication.sendEvent`, so a status
-  item's menu (M4) works without changing the loop (while a menu is open,
+  the badge doesn't consume goes to `NSApplication.sendEvent`, so the status
+  item's menu runs from there (while a menu is open,
   AppKit tracks it in its own loop, and IPC answers wait until it closes).
 - Move mode: `ignoresMouseEvents = false` and `makeKeyWindow` (a
   non-activating panel takes the keyboard without activating the app, so the
@@ -1085,13 +1272,44 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   (a three-line FFI; no binding crate covers `AuthSession.h`) gives the audit
   session id for the endpoint ([10.4](#104-single-instance-per-graphical-session))
   and whether the session has window server access (`doctor` shows both).
-- Menu bar: `NSStatusItem` with the same menu as the Windows tray (M4).
+- Menu bar (`backend::menubar`, the `shell::Tray`): a square
+  `NSStatusItem`, created after `finishLaunching` and attached with
+  `Shell::set_tray` after `Shell::start`. Its button image is the 32 × 32
+  rest frame in an 18-point box with a 1-point margin, as two bitmaps
+  (36 px at 2x, the art 1:1; 18 px at 1x, every other art pixel), so AppKit
+  never interpolates; it is colorful, so not a template image. The tooltip
+  is the tray tooltip. The `NSMenu` is rebuilt from `TrayState.menu` on
+  every change: an item with children is a submenu, `checked` is the
+  item's state checkmark, and each command item's tag indexes a command
+  list held by one target object (`PawprintMenuTarget`). Its `choose:`
+  action only queues `Inbox::Menu(command)` on the channel IPC uses and
+  wakes the loop, which calls `Shell::menu`. `tray = false` removes the
+  item; turning it back on creates a new one.
+- Preview (`pawprint preview`): the same loop without IPC or menu-bar item.
+  The app is **Regular** (a Dock icon and a place in the app switcher, so
+  the window can be found again) and the window an ordinary `NSWindow`,
+  titled "PAWPRINT preview", closable and miniaturizable, at the normal
+  level, taking mouse and keyboard. It is made key and the app activated
+  at the first `Place` (`activateIgnoringOtherApps`, since `activate` needs
+  macOS 14). The core's rect is the content rect; the frame adds the title
+  bar. Escape (`kVK_Escape`) or `NSWindowWillCloseNotification` sends
+  `Command::Quit`.
 - Autostart: `~/Library/LaunchAgents/io.github.nealhardesty.pawprint.plist`
   with `ProgramArguments = [<path>/pawprint, run]`, `RunAtLoad = true`,
-  `LimitLoadToSessionType = Aqua` (GUI sessions only), and
+  `LimitLoadToSessionType = Aqua` (GUI sessions only),
   `KeepAlive = { SuccessfulExit = false }` (restart on crash, not on
-  `pawprint quit`). macOS 13+ shows a "Background Items Added" notification
-  and lists the agent in System Settings → General → Login Items.
+  `pawprint quit`; `pawprint run` exits 0 when a badge already runs, so a
+  login with a running badge doesn't loop), and `ProcessType = Interactive`.
+  `autostart on` writes it and, unless the agent is already loaded, loads
+  it now with `launchctl bootstrap gui/<uid> <plist>`, which starts the
+  badge (a failure, e.g. from an SSH login, is logged; the agent still
+  loads at the next GUI login). `off` runs `launchctl bootout
+  gui/<uid>/io.github.nealhardesty.pawprint`, which stops a badge launchd
+  started, and removes the file. `status` reads the file's
+  `ProgramArguments` and says whether launchd has the agent loaded
+  (`launchctl print`). macOS 13+ shows a "Background Items Added"
+  notification and lists the agent in System Settings → General → Login
+  Items.
 - Gatekeeper: binaries fetched with `curl` don't get the
   `com.apple.quarantine` attribute, so curl-installed binaries run without a
   prompt. Browser downloads are quarantined. The README documents
@@ -1219,7 +1437,21 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   Up, Down, Return, KP_Enter, and Escape, so virtual keyboards with their
   own keymaps (remote desktop servers, `wtype`) work. Without a usable
   keymap it falls back to the evdev codes. Shift is XKB modifier 0.
-- Tray: StatusNotifierItem via `ksni`. Plasma supports it natively.
+- Tray: StatusNotifierItem via `ksni` (`backend::sni`), shared with X11 and
+  GNOME. Plasma supports it natively. The item (`Id` `pawprint`, title
+  `PAWPRINT`, the tooltip from `TrayState`) shows the core's menu model
+  over `com.canonical.dbusmenu`: submenus for children, checkmark items for
+  checks. A left click opens the menu (`ItemIsMenu`), as on Windows and
+  macOS. The icon is the rest frame in its crate at 32 × 32 and 64 × 64
+  (nearest neighbor), ARGB32 in network byte order; the host scales it.
+  Menu callbacks run on ksni's thread and post the command into the
+  `calloop` channel that IPC uses (`linux::Inbox::Menu`), so both reach
+  `Shell::menu`/`Shell::request` on the loop. The tray joins after the
+  first frame is on screen, so the session bus never delays the badge. It
+  is spawned with `assume_sni_available`: without a StatusNotifierWatcher
+  it waits quietly for one (a panel that starts later or restarts); without
+  a session bus there is no tray, and `doctor` reports either case as a
+  problem. `tray = false` stops the item and a reload brings it back.
 
 ### 11.5 GNOME Wayland (Ubuntu)
 
@@ -1858,7 +2090,8 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
 | `help` (default) | List targets |
 | `build` | Debug build of `pawprint` (and `pawprintw` on Windows) |
 | `run` | Build and run the badge in the foreground; `ARGS="..."` passes arguments |
-| `preview` | Preview a mascot: `make preview MASCOT=owl` |
+| `preview` | Open a preview window: `make preview MASCOT=owl SIZE=128` (`pawprint preview`) |
+| `power-check` | Measure the release badge against [7.2](#72-power-budget): Linux under Xvfb, Windows on the current desktop; `POWER_SECONDS=120` per mode |
 | `test` | Unit tests, golden render tests, and asset validation |
 | `check-assets` | Validate the mascot catalog only |
 | `lint` | `cargo fmt --check` and `clippy -D warnings` |
@@ -2047,7 +2280,7 @@ and user mascots are in separate directories and are never touched except by
 `make test-x11` and `make test-wayland` run the real `pawprint run` against
 real display servers and check the screen. They are `#[ignore]`d in
 `make test` because they need the servers installed; a separate Linux CI
-job installs them (`xvfb xcompmgr openbox sway swaybg grim foot wtype`) and
+job installs them (`xvfb xcompmgr openbox sway swaybg grim foot wtype dbus`) and
 runs `make test-linux-display`. Each test gets its own HOME and runtime
 directory and fails with the badge's log.
 
@@ -2062,6 +2295,10 @@ directory and fails with the badge's log.
 | Wayland | headless sway | move-mode drag far outside the badge (F7) saves the right position and is pixel-exact; `wtype` arrow keys, Enter, Escape with exclusive keyboard |
 | Wayland | headless sway + `swaybar` | the badge sits below the bar's exclusive zone (F3), pixel-exact |
 | Wayland | headless sway | output mode change; scale 2 crisp (every opaque pixel exact); scale 1.5 sized 96 px and placed right (crispness at fractional scales is an owner check, F34) |
+| X11 | Xvfb, move mode | the dashed accent outline appears on the badge edge (a dash in the transparent corner, art through a gap) and goes when move mode ends |
+| X11 | Xvfb + private `dbus-daemon` + a stand-in StatusNotifierWatcher (the test's own zbus object) | the item registers with `Id`, `Title`, `ToolTip`, and a 32 and 64 px `IconPixmap`; the dbusmenu layout has the shared menu with the right checks; **Size ▸ 128** (a dbusmenu `Event`) resizes the badge and appends `[hosts.owl] size = 128` after the untouched `config init` template; **Animation ▸ Static** is saved; `set`/`unset` reload the running badge; an unknown mascot is refused (exit 2) without writing; a hand edit is picked up at the next IPC request (mtime); `tray = false` removes the item and `unset tray` brings a new one; **Quit** exits; the saved choice survives the restart |
+| X11 | Xvfb | `pawprint preview owl`: a normal window (not override-redirect, no DOCK type, `WM_DELETE_WINDOW`), centered, the badge pixel-exact on the backdrop, the frame changes as actions play; Esc closes it, and so does a `WM_DELETE_WINDOW` message |
+| Wayland | headless sway | `pawprint preview owl`: an xdg toplevel (`app_id` `pawprint`) that sway floats (fixed size), focused, the badge pixel-exact on the backdrop; Esc closes it |
 
 What these can't show stays in the manual checks below and the facts ledger:
 real Plasma and GNOME, real input devices, and remote clients.
@@ -2082,8 +2319,22 @@ Recording permission it compares every opaque badge pixel in a
 `screencapture` with `pawprint render` (scale 1 only); with Accessibility
 permission it drags the badge with posted mouse events and checks the
 saved, snapped position (and that it survives a restart), an arrow nudge,
-Enter, and Escape. Without a permission, that check prints `SKIP` and why.
-Click-through, Spaces, full-screen apps, and Retina scales stay owner
+Enter, and Escape, and chooses **Size ▸ 32** from the menu-bar item (a
+posted click opens it, posted arrow keys walk it, Return chooses), which
+must shrink the badge and write `size = 32` into `[hosts.owl]`. The
+menu-bar item must go with `tray = false` and come back: it is found as
+the menu-bar window (layer 25 along the top of the screen, whoever owns
+it; Control Center on macOS 26, FM6) that turning `tray` off removes. `autostart on` must write the LaunchAgent (checked with
+`plutil -lint` and for every key), load it (`launchctl print
+gui/<uid>/io.github.nealhardesty.pawprint` succeeds and shows the badge it
+started), and `off` must boot it out, stop that badge, and remove the file
+(skipped if the agent is already loaded for the user). `pawprint preview
+owl` must open a Regular app's window titled "PAWPRINT preview" at layer 0,
+160 points wide (128 + 2 × 16), without a menu-bar item, in front of other
+normal windows (by window-server order), that Escape and then its close
+button (pressed through Accessibility, FM9) each end with exit 0. In
+static mode the badge's loop must not wake for 15 s (one debug line per
+wakeup; FM7). Without a permission, that check prints `SKIP` and why. Click-through, Spaces, full-screen apps, and Retina scales stay owner
 checks ([16.2](#162-backend-smoke-checks-manual-per-backend-every-release)).
 
 #### 16.1.3 Desktop test (Windows)
@@ -2094,7 +2345,7 @@ file) on the current desktop and checks it with Win32 calls from the test
 that keeps dispatching messages, so they never stall the shell's
 synchronous broadcasts, and a watchdog fails the test after two minutes. It is `#[ignore]`d in `make test`; a
 `windows-latest` CI job runs it. It refuses to start while a badge runs in
-the session, and restores the user's state file afterwards.
+the session, and restores the user's state file, config file, and autostart value afterwards.
 Win32 known folders can't be redirected, so it uses the real profile.
 
 | Check | How |
@@ -2106,6 +2357,9 @@ Win32 known folders can't be redirected, so it uses the real profile.
 | Move mode | `pawprint move` clears `TRANSPARENT`; `WindowFromPoint` finds the badge on the art and the backdrop on a transparent pixel; a `SendInput` drag moves it, saves the position, and is pixel-exact; arrow keys and Enter when Windows grants the foreground |
 | Work area | an app bar docked at the top (40 px) moves the badge down 40 px, and back when it goes (FW5) |
 | IPC and instances | `status`, `move`, `reset-position`, `quit` over the pipe; a second `run` says "already running"; bare `pawprint` starts `pawprintw.exe` detached |
+| Tray | `Shell_NotifyIconGetRect` finds the badge's icon (else a no-op `NIM_MODIFY` must succeed); a posted `WM_CONTEXTMENU` callback opens the menu, which is read from the test process (`MN_GETHMENU`: the six labels, Size ▸ 64 checked); `SendInput` clicks on **Size** and **128** resize the badge in place and write `size = 128` into `[hosts.owl]`; `pawprint unset size` brings it back |
+| Autostart | `autostart on` writes the `Run` value `"<dir>\pawprintw.exe" run` (read back with `RegGetValueW`), `status` shows it, `off` deletes it, a second `off` says "already off"; the user's value is restored |
+| Preview | `pawprintw.exe preview owl --size 64` opens `PawprintPreview`: caption and system menu, no `WS_POPUP`, none of the overlay's extended styles, title `PAWPRINT preview`, a client area 96 px tall and at least 96 wide on the slate backdrop; `WM_CLOSE` and Esc each end it with exit code 0 |
 
 Pixel, click, drag, and key checks are skipped, with a message, when the
 session has no visible desktop (the capture shows one flat color).
@@ -2185,8 +2439,8 @@ true instead.
 | F12 | macOS windows default to `sharingType = .readOnly`; `.none` hides them from capture. | Leave the default | **Confirmed** for the default (macOS 26.7 on `macos-latest`: the panel's `kCGWindowSharingState` is 1, read-only, and `screencapture` sees it pixel-exact); `.none` hiding it is documented |
 | F13 | macOS `gethostname()` can reflect a network-assigned name; `LocalHostName` is stable. | Hostname source order | Documented; the SystemConfiguration read equals `scutil --get` (FM4) |
 | F14 | `curl` downloads don't get `com.apple.quarantine`; browser downloads do. | curl installer avoids Gatekeeper prompts | Documented (verify) |
-| F15 | Apple Silicon requires signed arm64 code; ad-hoc signing suffices for local execution. | Re-sign after `lipo` | **Verify** |
-| F16 | `LimitLoadToSessionType = Aqua` restricts a LaunchAgent to GUI sessions. | No badge attempts in SSH sessions | Documented |
+| F15 | Apple Silicon requires signed arm64 code; ad-hoc signing suffices for local execution. | Re-sign after `lipo` | **Partly confirmed**: a `lipo -create` universal binary of two linker-signed (ad hoc) slices runs on Apple Silicon without re-signing (`make power-check` on `macos-latest`). Downloaded (quarantined) binaries and `codesign --verify` are still to check in M5 |
+| F16 | `LimitLoadToSessionType = Aqua` restricts a LaunchAgent to GUI sessions. | No badge attempts in SSH sessions | Documented; an Aqua agent bootstrapped into `gui/<uid>` from the GUI session loads and starts the badge (`make test-macos-display`). The SSH side is unverified |
 | F17 | X11 ARGB transparency needs a compositing manager (`_NET_WM_CM_S<n>` owner). Without one, the Shape extension's bounding mask gives 1-bit transparency. | Binary alpha + shape fallback | **Confirmed** (Xvfb with and without `xcompmgr`, switched live; both pixel-identical to `pawprint render`) |
 | F18 | xrdp and Xvnc sessions are X11 even when the console runs Wayland. | X11 backend covers Linux RDP/VNC sessions | Documented |
 | F19 | macOS ships GNU Make 3.81. | Makefile stays 3.81-compatible | Documented |
@@ -2206,6 +2460,9 @@ true instead.
 | F33 | `x11rb` 0.14 connects through the `/tmp/.X11-unix` socket or TCP, not the abstract socket namespace. Where `/tmp/.X11-unix` is read-only (WSLg), a test Xvfb listens on abstract sockets only. | Tests run Xvfb with `-listen tcp`; real X servers always create the filesystem socket | **Confirmed** |
 | F34 | Headless sway 1.9 with the pixman renderer filters the whole output at fractional scales (even swaybg's solid color comes out uneven); about 85% of the badge's pixels at 1.5 were exact. At integer scales every pixel is exact. | Fractional-scale crispness can't be judged there | **Confirmed on headless sway**; crispness at 125%/150% is an owner check on Plasma |
 | F35 | wlroots `keyboard_interactivity = exclusive` on an overlay layer surface sends it the keys at once; virtual keyboards (`wtype`, remote-desktop servers) send keycodes from their own keymaps. | Exclusive keyboard in move mode; keycodes read from the keymap (11.4) | **Confirmed on sway 1.9**; verify on Plasma |
+| F36 | zbus 5 (async-io) runs its socket setup (peer credentials, the SASL zero byte) on the `blocking` crate's thread pool. From `blocking` 1.7 an idle pool thread never exits (it exits only above the thread limit) and wakes every 500 ms; 1.6 lets it exit after 500 ms idle. | `blocking` is pinned to `=1.6.2`, so the badge has zero wakeups at rest with the tray running (7.2) | **Confirmed** (`make power-check`: 39 wakeups in 20 s in static mode with 1.7.0, 0 with 1.6.2) |
+| F37 | `toml_edit` keeps a document's trailing comments after its last table, so a table added to a file that ends in comments lands above them. | The `config init` template ends with an empty `[hosts]`, so host tables go after the commented examples (8.6) | **Confirmed** (`config_edit` tests) |
+| F38 | A `ksni` item with `MENU_ON_ACTIVATE` and the dbusmenu layout can be driven entirely over D-Bus: a stand-in StatusNotifierWatcher on a private `dbus-daemon` receives the registration, and a dbusmenu `Event(id, "clicked")` runs the item's callback. | The tray is tested end to end in `make test-x11` without a desktop (16.1.1) | **Confirmed**; real hosts (Plasma, Ubuntu's AppIndicator) are owner checks |
 
 **macOS facts (M1 macOS backend).** Learned on GitHub's `macos-latest`
 runner (macOS 26.7.2, Apple Silicon, one 1024 × 768 "Apple Virtual"
@@ -2218,6 +2475,10 @@ display at scale 1, auto-logged-in GUI session) by `make test-macos-display`.
 | FM3 | GitHub's macOS runner job runs inside the auto-logged-in GUI login: `SessionGetInfo` reports an audit session with window server access, `screencapture` captures other apps' windows, and `CGPreflightPostEventAccess` is true, so synthetic drags and keys reach the panel. | The backend is tested end to end in CI (11.2, 16.1) | **Confirmed** |
 | FM4 | `HostName` from the SystemConfiguration preferences path `/System/System`, else `SCDynamicStoreCopyLocalHostName`, equals `scutil --get HostName`/`LocalHostName`. (The runner's is a generated `sat12-…-FE304CC6C67E.local`.) | No `scutil` subprocess (5.1) | **Confirmed** |
 | FM5 | Posted mouse events reach a panel that just stopped ignoring the mouse; drags keep arriving outside the panel while the button is held, and `NSEvent.mouseLocation` tracks them in global points. | Move-mode drag without a pointer grab (11.2) | **Confirmed** on the runner |
+| FM6 | On macOS 26 an `NSStatusItem`'s window belongs to **Control Center**, not the app: `CGWindowListCopyWindowInfo` lists it as an `Item-0` window at layer 25 along the top of the screen, owned by Control Center's pid. A posted click on it opens the app's `NSMenu`, posted arrow keys walk the menu and its submenus, and Return chooses. | The test finds the item by turning `tray` off and on, and drives the menu with posted input (16.1.2) | **Confirmed** on the runner (macOS 26.6) |
+| FM7 | In static mode the badge's main thread sleeps in `nextEventMatchingMask` with no event for as long as measured, but the process still shows a few interrupt wakeups a second and about 0.03% CPU from AppKit's and the system's own threads, with or without the menu-bar item. | The static-mode budget holds for the badge's loop; the process-wide numbers are reported, not failed (7.2) | **Confirmed** on the runner |
+| FM8 | `NSEvent.subtype` raises an Objective-C exception for event types without a subtype (mouse and key events), which aborts a Rust process. | Never read `subtype` on arbitrary events | **Confirmed** (a diagnostic log line did it) |
+| FM9 | A posted click in a titled window's title bar that misses the traffic lights drags the window. The close button's inset differs between releases (macOS 26 has a 32-point title bar). | The test presses the preview's close button through Accessibility (`AXCloseButton` via System Events), not by coordinates | **Confirmed** on the runner |
 
 **Windows facts (M1 Windows backend).** Learned on GitHub's `windows-latest` runner
 (Windows Server, an interactive desktop at 1024 × 768, scale 1, the taskbar
@@ -2233,6 +2494,9 @@ taking the bottom 48 px) through `make test-windows-display`.
 | FW6 | `AllowSetForegroundWindow(ASFW_ANY)` from the process running `pawprint move`, then `SetForegroundWindow` in the badge, gives the badge the keyboard when that process may set the foreground. | Arrow-key nudging works from a terminal (11.1.4) | **Confirmed on the runner**; verify from Windows Terminal and conhost on a desktop |
 | FW7 | `CreateNamedPipeW` with `FILE_FLAG_FIRST_PIPE_INSTANCE` fails with `ERROR_ACCESS_DENIED` when the name exists, and a pipe name vanishes when its last server handle closes. | The pipe is the instance lock; no stale endpoints (10.4) | **Confirmed** (`make test` on windows-latest; the desktop test's crash-free restarts) |
 | FW8 | `std::process::Command` on Windows creates children with handle inheritance on, so a child inherits every inheritable handle, including the parent's own redirected stdout and stderr, even when its stdio is set to null. | Bare `pawprint` marks its stdio handles non-inheritable before starting the detached badge; otherwise `pawprint \| more` or a script capturing its output would wait until the badge quits | **Confirmed** (the desktop test hung until this was fixed) |
+| FW9 | `Shell_NotifyIconGetRect` returns a newly added notification icon's rectangle on the runner (`[797, 720, 32, 48]`, in the taskbar below the 720-px work area): new icons are shown, not hidden in the overflow. | The desktop test finds the tray icon directly; a no-op `NIM_MODIFY` is its fallback where an icon sits in the overflow | **Confirmed** |
+| FW10 | Another process can read and drive a menu shown by `TrackPopupMenu`: `FindWindowExW("#32768")` + `MN_GETHMENU` give its `HMENU`, `GetMenuStringW`, `GetMenuState`, `GetSubMenu`, and `GetMenuItemRect(NULL, ..)` work on it, and `SendInput` clicks choose items (`TPM_RETURNCMD` returns the id). | The tray menu is tested end to end with real clicks (16.1.3) | **Confirmed** |
+| FW11 | Windows keeps a `WS_CAPTION \| WS_SYSMENU \| WS_MINIMIZEBOX` window at least `SM_CXMIN` wide: a 96-px client area came out 120 px at 96 DPI. | The preview widens about its center and centers the frame on its backdrop brush (11.1.1) | **Confirmed** |
 
 ---
 

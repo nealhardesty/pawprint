@@ -1,6 +1,8 @@
 //! The tray / menu-bar menu, described once for every platform
 //! (SPEC §11.1.5). Backends only draw it and report the chosen command.
 
+use pawprint_sprite::RgbaImage;
+
 use crate::badge::Command;
 use crate::config::Animation;
 
@@ -45,6 +47,9 @@ impl MenuItem {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TrayState {
     pub visible: bool,
+    /// The rest frame in its crate, without the label, at 1× (32 × 32,
+    /// straight RGBA, binary alpha). Backends scale it to the icon size.
+    pub icon: RgbaImage,
     pub tooltip: String,
     pub menu: Vec<MenuItem>,
 }

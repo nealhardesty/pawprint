@@ -189,7 +189,7 @@ to end on the mascots that matter most.
 - [x] Bases, templates, and props embedded in the bundle for text-format user mascots
 - [x] Layer `follows` so head motions carry the face
 - [x] `make contact-sheet` (+ `ANIMATED=1`), `make building-blocks`, `make art-export`, `make art-import`
-- [ ] `make preview` (needs the M1 window backends)
+- [x] `make preview` / `pawprint preview` on Linux X11 and Wayland (M4; the Windows and macOS hooks are listed under M4)
 - [x] Art review checklist as a PR template ([SPEC §12.6](SPEC.md#126-production-process))
 - [x] Style guide with worked examples: [`docs/ART.md`](docs/ART.md)
 - [x] Reference owl on `bird-perched` (replaces the M0 placeholder)
@@ -211,8 +211,10 @@ rare action:
 - [x] `cat-tuxedo`: blink / tail-flick / signature tucks a white paw / rare: formal bow
 
 - [x] Readability review at 1× with labels covered: moose vs. elk, cow cat vs. tuxedo (all showcase mascots also have `doze` for night, per SPEC §12.5)
-- [ ] **Measure the 20-character label limit** against real hostnames and
+- [x] **Measure the 20-character label limit** against real hostnames and
       remote-client scaling at each size. Record the result in SPEC §4.4.
+      (*Done in M4: 20 stays; long names are now cut in the middle so their
+      distinguishing end survives.*)
 
 **Exit:** all 12 pass validation and two review rounds. The contact sheet
 reads as one coherent set.
@@ -260,14 +262,19 @@ the full contact sheet passes review.
 
 Can run in parallel with M2/M3 once M1 passes.
 
-- [ ] Tray / menu bar / StatusNotifierItem from the shared menu model ([SPEC §11.1.5](SPEC.md#1115-tray-and-autostart))
-- [ ] `pawprint autostart on|off|status` (HKCU Run, LaunchAgent, XDG autostart)
-- [ ] `pawprint set` / `unset` via `toml_edit`, `config init`, `config path`
-- [ ] Config reload on `reload`, tray, and mtime change (*`pawprint reload` works since M1; tray and mtime remain*)
-- [ ] `explain --recompute`, `forget`
-- [ ] Move mode polish: arrow-key nudging, Esc cancel, 30 s timeout, dashed outline (*nudging, Esc, and the timeout work on X11 and Wayland since M1; the dashed outline remains*)
-- [x] Logging with size cap and rotation (done in M1)
-- [ ] Power check against [SPEC §7.2](SPEC.md#72-power-budget) on each OS; record numbers in SPEC
+- [x] Tray plumbing from the shared menu model: `shell::Tray`, `Shell::set_tray`, `Shell::menu` (one command path with IPC; Size and Animation saved like `pawprint set`, SPEC §8.6)
+- [x] Linux StatusNotifierItem via `ksni` for X11, Wayland, and GNOME/AppIndicator, tested over D-Bus in `make test-x11` ([SPEC §11.4](SPEC.md#114-linux-wayland-kde-plasma-6))
+- [x] Windows tray (`Shell_NotifyIconW`) and macOS menu bar (`NSStatusItem`) on the same `shell::Tray` ([SPEC §11.1.5](SPEC.md#1115-tray-and-autostart), §11.2)
+- [x] `pawprint autostart on|off|status` and the `autostart` interface, with XDG autostart on Linux
+- [x] Autostart on Windows (HKCU Run → `pawprintw.exe run`) and macOS (LaunchAgent): fill the hooks in `pawprint::autostart`
+- [x] `pawprint preview` on Windows and macOS: fill the `backend::{windows,macos}::preview` hooks (the shell's preview mode is shared)
+- [x] `pawprint set` / `unset` via `toml_edit`, `config init`, `config path`
+- [x] Config reload on `reload`, tray, and mtime change
+- [x] `explain --recompute`, `forget`
+- [x] Move mode polish: arrow-key nudging, Esc cancel, 30 s timeout, dashed outline (the outline is drawn by the core, so every backend shows it)
+- [x] Logging with size cap and rotation (done in M1; dependencies now log from warn up)
+- [x] Power check on Linux: `make power-check`, numbers in [SPEC §7.2](SPEC.md#72-power-budget) (it found and fixed a twice-a-second wakeup, F36)
+- [x] Power check on Windows and macOS (on macOS, AppKit's own threads keep a small static-mode floor; the check budgets our share, SPEC §7.2)
 
 **Exit:** a week of daily use across the owner's machines with no annoyances
 worth filing.

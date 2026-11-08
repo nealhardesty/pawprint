@@ -6,13 +6,17 @@
 //! 32-bit ARGB visual; without one, the default visual plus a bounding shape
 //! from the frame's 1-bit mask, which gives the same pixels because all art
 //! is binary-alpha. With no window manager it is override-redirect.
+//!
+//! `pawprint preview` uses the same window with the `preview` flag: a
+//! normal, managed, focusable window with a title, closed by the window
+//! manager or Esc.
 
 use std::collections::HashMap;
 use std::os::fd::AsFd;
 
 use calloop::generic::Generic;
 use calloop::{EventLoop, Interest, Mode, PostAction};
-use pawprint_core::badge::Event;
+use pawprint_core::badge::{Command, Event};
 use pawprint_core::geom::{PhysicalRect, Point};
 use pawprint_core::movemode::{Key, KeyCode};
 use pawprint_core::render::Frame;
@@ -51,6 +55,8 @@ x11rb::atom_manager! {
         _MOTIF_WM_HINTS,
         UTF8_STRING,
         RESOURCE_MANAGER,
+        WM_PROTOCOLS,
+        WM_DELETE_WINDOW,
     }
 }
 
@@ -250,6 +256,7 @@ fn intersect(a: PhysicalRect, b: PhysicalRect) -> Option<PhysicalRect> {
 pub struct X11 {
     server: Server,
     gnome: bool,
+    preview: bool,
     window: Window,
     /// The window manager's frame around ours, or the root.
     parent: Window,
@@ -268,7 +275,7 @@ pub struct X11 {
 }
 
 impl X11 {
-    fn new(gnome: bool) -> XResult<X11> {
+    fn new(gnome: bool, preview: bool) -> XResult<X11> {
         let server = Server::open()?;
         let (conn, root) = (&server.conn, server.root);
         conn.change_window_attributes(
@@ -293,6 +300,7 @@ impl X11 {
             displays: server.displays()?,
             server,
             gnome,
+            preview,
             window: x11rb::NONE,
             parent: x11rb::NONE,
             gc: x11rb::NONE,
@@ -321,11 +329,12 @@ impl X11 {
         }
         // Mutter always composites (SPEC §11.5.1), so GNOME never needs the
         // shape fallback.
+        // A preview's frames are opaque (drawn on a backdrop).
         let visual = s
             .argb_visual
-            .filter(|_| self.gnome || s.compositing().unwrap_or(false));
+            .filter(|_| !self.preview && (self.gnome || s.compositing().unwrap_or(false)));
         self.argb = visual.is_some();
-        self.override_redirect = s.wm_check()?.is_none();
+        self.override_redirect = !self.preview && s.wm_check()?.is_none();
         log::info!(
             "x11: {} visual, {}",
             if self.argb {
@@ -382,14 +391,13 @@ impl X11 {
             AtomEnum::STRING,
             b"pawprint\0Pawprint\0",
         )?;
-        conn.change_property8(
-            replace,
-            window,
-            AtomEnum::WM_NAME,
-            AtomEnum::STRING,
-            b"PAWPRINT",
-        )?;
-        conn.change_property8(replace, window, a._NET_WM_NAME, a.UTF8_STRING, b"PAWPRINT")?;
+        let title: &[u8] = if self.preview {
+            b"PAWPRINT preview"
+        } else {
+            b"PAWPRINT"
+        };
+        conn.change_property8(replace, window, AtomEnum::WM_NAME, AtomEnum::STRING, title)?;
+        conn.change_property8(replace, window, a._NET_WM_NAME, a.UTF8_STRING, title)?;
         conn.change_property32(
             replace,
             window,
@@ -397,6 +405,24 @@ impl X11 {
             AtomEnum::CARDINAL,
             &[std::process::id()],
         )?;
+        self.window = window;
+        self.parent = s.root;
+        self.gc = conn.generate_id()?;
+        conn.create_gc(self.gc, window, &CreateGCAux::new().graphics_exposures(0))?;
+        if self.preview {
+            // A normal window: closable through the window manager.
+            conn.change_property32(
+                replace,
+                window,
+                a.WM_PROTOCOLS,
+                AtomEnum::ATOM,
+                &[a.WM_DELETE_WINDOW],
+            )?;
+            if self.frame.is_some() {
+                self.draw()?;
+            }
+            return Ok(());
+        }
         conn.change_property32(
             replace,
             window,
@@ -431,10 +457,6 @@ impl X11 {
             ..WmHints::new()
         }
         .set(conn, window)?;
-        self.window = window;
-        self.parent = s.root;
-        self.gc = conn.generate_id()?;
-        conn.create_gc(self.gc, window, &CreateGCAux::new().graphics_exposures(0))?;
         self.set_input_shape()?;
         if self.frame.is_some() {
             self.draw()?;
@@ -443,7 +465,11 @@ impl X11 {
     }
 
     /// Click-through: an empty input shape. Move mode: the whole badge.
+    /// A preview keeps the default (the whole window).
     fn set_input_shape(&self) -> XResult<()> {
+        if self.preview {
+            return Ok(());
+        }
         let conn = &self.server.conn;
         let region = conn.generate_id()?;
         let r = self.rect.unwrap_or_default();
@@ -537,9 +563,14 @@ impl X11 {
         }
         if !self.mapped {
             let spec = WmSizeHintsSpecification::UserSpecified;
+            let fixed = self
+                .preview
+                .then_some((rect.width as i32, rect.height as i32));
             WmSizeHints {
                 position: Some((spec, rect.x, rect.y)),
                 size: Some((spec, rect.width as i32, rect.height as i32)),
+                min_size: fixed,
+                max_size: fixed,
                 ..WmSizeHints::new()
             }
             .set_normal_hints(conn, self.window)?;
@@ -600,6 +631,16 @@ impl X11 {
                 self.dragging = false;
                 self.server.conn.ungrab_pointer(e.time)?;
                 Some(Event::DragEnd(at(e.root_x, e.root_y)))
+            }
+            XEvent::KeyPress(e) if self.preview => (self.keys.get(&e.detail)
+                == Some(&KeyCode::Escape))
+            .then_some(Event::Command(Command::Quit)),
+            XEvent::ClientMessage(e)
+                if self.preview
+                    && e.type_ == self.server.atoms.WM_PROTOCOLS
+                    && e.data.as_data32()[0] == self.server.atoms.WM_DELETE_WINDOW =>
+            {
+                Some(Event::Command(Command::Quit))
             }
             XEvent::KeyPress(e) if self.interactive => self.keys.get(&e.detail).map(|&code| {
                 Event::Key(Key {
@@ -753,9 +794,9 @@ impl App for X11App {
     }
 }
 
-pub fn run(shell: Shell, listener: ipc::Listener, gnome: bool) -> CmdResult {
+pub fn run(shell: Shell, listener: Option<ipc::Listener>, gnome: bool) -> CmdResult {
     let no_x = |e: String| (exit::NO_SESSION, format!("cannot use the X11 display: {e}"));
-    let x = X11::new(gnome).map_err(|e| no_x(e.to_string()))?;
+    let x = X11::new(gnome, shell.is_preview()).map_err(|e| no_x(e.to_string()))?;
     let fd = x
         .server
         .conn

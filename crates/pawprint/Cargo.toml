@@ -25,6 +25,12 @@ libc = "0.2"
 # (F22): sctk without `xkbcommon`, wayland-client without `system`/`dlopen`/`log`.
 [target.'cfg(target_os = "linux")'.dependencies]
 calloop = "0.14"
+# The tray (SPEC §10.3): blocking API on async-io, so no tokio.
+ksni = { version = "0.3", default-features = false, features = ["blocking", "async-io"] }
+# Not used directly: zbus connects through `blocking`'s thread pool, and from
+# 1.7 an idle pool thread never exits and wakes twice a second, which breaks
+# the zero-wakeup budget (SPEC §7.2, F36). 1.6 lets it exit after 500 ms.
+blocking = "=1.6.2"
 smithay-client-toolkit = { version = "0.21", default-features = false, features = ["calloop"] }
 wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client", "staging"] }
@@ -38,7 +44,7 @@ zbus = { version = "5", default-features = false, features = ["async-io", "block
 block2 = "0.6"
 dispatch2 = { version = "0.3", default-features = false, features = ["std", "objc2"] }
 objc2 = "0.6"
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "objc2-core-foundation", "objc2-quartz-core", "block2", "objc2-core-graphics", "NSApplication", "NSColor", "NSColorSpace", "NSEvent", "NSGraphics", "NSGraphicsContext", "NSPanel", "NSResponder", "NSRunningApplication", "NSScreen", "NSView", "NSWindow"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "objc2-core-foundation", "objc2-quartz-core", "block2", "objc2-core-graphics", "NSApplication", "NSBitmapImageRep", "NSButton", "NSCell", "NSColor", "NSColorSpace", "NSControl", "NSEvent", "NSGraphics", "NSGraphicsContext", "NSImage", "NSImageRep", "NSMenu", "NSMenuItem", "NSPanel", "NSResponder", "NSRunningApplication", "NSScreen", "NSStatusBar", "NSStatusBarButton", "NSStatusItem", "NSView", "NSWindow"] }
 objc2-core-foundation = { version = "0.3", default-features = false, features = ["std", "CFString", "CFData", "CFCGTypes"] }
 objc2-core-graphics = { version = "0.3", default-features = false, features = ["std", "objc2", "CGColorSpace", "CGDataProvider", "CGImage"] }
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "block2", "NSArray", "NSDate", "NSEnumerator", "NSGeometry", "NSNotification", "NSObjCRuntime", "NSOperation", "NSProcessInfo", "NSRunLoop", "NSString", "NSThread"] }
@@ -55,12 +61,14 @@ windows-sys = { workspace = true, features = [
   "Win32_System_IO",
   "Win32_System_LibraryLoader",
   "Win32_System_Pipes",
+  "Win32_System_Registry",
   "Win32_System_RemoteDesktop",
   "Win32_System_SystemInformation",
   "Win32_System_Threading",
   "Win32_System_WindowsProgramming",
   "Win32_UI_HiDpi",
   "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_Shell",
   "Win32_UI_WindowsAndMessaging",
 ] }
 
@@ -71,6 +79,8 @@ png.workspace = true
 wayland-client = "0.31"
 wayland-protocols-wlr = { version = "0.3", features = ["client"] }
 x11rb = { version = "0.14", features = ["randr", "xtest"] }
+# A stand-in StatusNotifierWatcher on a private session bus (the tray test).
+zbus = { version = "5", default-features = false, features = ["async-io", "blocking-api"] }
 
 # The macOS GUI-session test (`make test-macos-display`) asks the window
 # server about the badge's window and posts synthetic input.
@@ -88,6 +98,7 @@ png.workspace = true
 windows-sys = { workspace = true, features = [
   "Win32_Foundation",
   "Win32_Graphics_Gdi",
+  "Win32_System_Registry",
   "Win32_UI_HiDpi",
   "Win32_UI_Input_KeyboardAndMouse",
   "Win32_UI_Shell",

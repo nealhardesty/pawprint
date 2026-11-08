@@ -31,6 +31,9 @@ pub struct Scheduler {
     interval: [u32; 2],
     rng: Rng,
     phase: Phase,
+    /// Preview mode: play every action in turn, ignoring weights and
+    /// `when`; this is the next one to try.
+    cycle: Option<usize>,
 }
 
 impl Scheduler {
@@ -40,9 +43,17 @@ impl Scheduler {
             interval,
             rng: Rng::new(seed),
             phase: Phase::Off,
+            cycle: None,
         };
         s.restart(now);
         s
+    }
+
+    /// Preview mode (`pawprint preview`): every action in file order, one
+    /// after another, with the configured rest between them.
+    pub fn cycle_all(&mut self, now: Instant) {
+        self.cycle = Some(0);
+        self.restart(now);
     }
 
     /// Return to rest and schedule the next action (or nothing, in static mode).
@@ -102,8 +113,18 @@ impl Scheduler {
             Phase::Off => {}
             Phase::Resting { until } | Phase::Playing { until, .. } if now < until => {}
             Phase::Resting { .. } => {
-                let roll = self.rng.next_u64();
-                self.phase = match pick_action(mascot, local_hour, roll) {
+                let pick = match self.cycle.as_mut() {
+                    Some(next) => {
+                        let n = mascot.actions.len();
+                        let found = (0..n)
+                            .map(|i| (*next + i) % n)
+                            .find(|&i| !mascot.actions[i].frames.is_empty());
+                        *next = found.map_or(0, |i| i + 1);
+                        found
+                    }
+                    None => pick_action(mascot, local_hour, self.rng.next_u64()),
+                };
+                self.phase = match pick {
                     Some(action) => {
                         let ms = mascot.actions[action].frames[0].ms;
                         Phase::Playing {
@@ -281,6 +302,27 @@ pub(crate) mod tests {
             "nocturnal: night actions weigh 3x"
         );
         assert_eq!(pick_action(&mascot(&[]), 12, 5), None);
+    }
+
+    #[test]
+    fn preview_cycles_every_action_in_order() {
+        let m = mascot(&[
+            ("a", 6, When::Any, &[(1, 100)]),
+            ("empty", 1, When::Any, &[]),
+            ("b", 1, When::Night, &[(2, 100)]),
+        ]);
+        let t0 = Instant::now();
+        let mut s = Scheduler::new(Animation::Idle, [1, 1], 3, t0);
+        s.cycle_all(t0);
+        let mut played = Vec::new();
+        for _ in 0..8 {
+            let t = s.next_deadline().unwrap();
+            s.on_deadline(t, 12, &m);
+            if let Some(a) = s.playing(&m) {
+                played.push(a.name.clone());
+            }
+        }
+        assert_eq!(played, ["a", "b", "a", "b"], "night actions too, by day");
     }
 
     #[test]

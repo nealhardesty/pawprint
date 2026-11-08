@@ -50,7 +50,7 @@ jobs:
         run: rustup toolchain install
 
       - name: Install display servers and test tools
-        run: sudo apt-get update && sudo apt-get install -y xvfb xcompmgr openbox sway swaybg grim foot wtype
+        run: sudo apt-get update && sudo apt-get install -y xvfb xcompmgr openbox sway swaybg grim foot wtype dbus
 
       - uses: Swatinem/rust-cache@v2
 
@@ -74,12 +74,18 @@ jobs:
       - name: make test-macos-display
         run: make test-macos-display
 
+      # The power budget (SPEC §7.2) from the universal release binary.
+      - name: make power-check
+        if: always()
+        run: make power-check POWER_SECONDS=150
+
       - name: pawprint doctor
         if: always()
         run: make doctor
 
   # The Windows backend on the runner's desktop: window styles, placement,
-  # click-through, move mode, IPC, and screen pixels (SPEC §16.1.2).
+  # click-through, move mode, IPC, screen pixels, the tray menu, autostart,
+  # and the preview window (SPEC §16.1.3), then the power budget (§7.2).
   windows-display:
     name: make test-windows-display (windows)
     runs-on: windows-latest
@@ -97,6 +103,10 @@ jobs:
 
       - name: make test-windows-display
         run: make test-windows-display
+
+      # The power budget on a real Windows desktop (SPEC §7.2).
+      - name: make power-check
+        run: make power-check POWER_SECONDS=150
 
       - name: pawprint doctor
         if: always()

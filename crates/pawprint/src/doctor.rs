@@ -71,7 +71,10 @@ pub fn run() -> CmdResult {
         }
         report.row("state", paths.state_file.display().to_string());
         report.row("log", paths.log_file.display().to_string());
-        report.row("autostart", "not available yet (M4)");
+        match crate::autostart::status() {
+            Ok(s) => report.row("autostart", crate::autostart::describe(&s)),
+            Err(e) => report.row("autostart", e),
+        }
     } else {
         report.problem("cannot find the home directory");
     }

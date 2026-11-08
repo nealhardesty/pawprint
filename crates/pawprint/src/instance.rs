@@ -233,18 +233,23 @@ pub fn running(endpoint: &std::path::Path) -> Result<Option<Status>, CallError> 
     }
 }
 
-/// The command that runs the badge detached from this terminal: a new
-/// session with no controlling terminal and null stdio on Unix, a detached
-/// process on Windows.
-fn detached_badge() -> io::Result<Command> {
+/// The executable that runs the badge: this one, or on Windows the
+/// GUI-subsystem twin next to it, so no console window opens (SPEC
+/// §11.1.6). Detached starts and autostart entries both use it.
+pub fn badge_exe() -> io::Result<PathBuf> {
     let exe = std::env::current_exe()?;
-    // Windows: the GUI-subsystem twin next to us, so no console window
-    // opens (SPEC §11.1.6).
     #[cfg(windows)]
     let exe = Some(exe.with_file_name("pawprintw.exe"))
         .filter(|w| w.exists())
         .unwrap_or(exe);
-    let mut cmd = Command::new(exe);
+    Ok(exe)
+}
+
+/// The command that runs the badge detached from this terminal: a new
+/// session with no controlling terminal and null stdio on Unix, a detached
+/// process on Windows.
+fn detached_badge() -> io::Result<Command> {
+    let mut cmd = Command::new(badge_exe()?);
     cmd.arg("run")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
