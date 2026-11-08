@@ -2,7 +2,9 @@
 //! that needs real logic runs through here, so recipes stay single commands
 //! that behave the same under `sh` and `cmd.exe` (SPEC §14.1).
 
+mod art;
 mod golden;
+mod sheet;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -13,6 +15,11 @@ commands:
   help <Makefile>          list make targets and their ## descriptions
   check-assets [--package] validate assets/; --package also enforces the catalog gates
   golden                   regenerate tests/golden/*.png
+  palette                  write assets/palette.gpl from assets/palette.toml
+  contact-sheet [--animated] docs/gallery.png (and docs/gallery.gif)
+  building-blocks          docs/building-blocks.png: accents, props, bases x templates
+  art-export <id>          out/art/<id>/: a PNG per layer and variant, plus frames.png
+  art-import <id> <png>    print a PNG layer as a [layers] table in <id>'s glyphs
   todo <target> <milestone> report a make target that is not implemented yet
   clean-dist               remove dist/";
 
@@ -24,6 +31,13 @@ fn main() -> ExitCode {
         ["check-assets"] => check_assets(false),
         ["check-assets", "--package"] => check_assets(true),
         ["golden"] => golden::write_all(&root()),
+        ["palette"] => art::write_palette_gpl(&root()),
+        ["contact-sheet"] => sheet::contact_sheet(&root(), false),
+        ["contact-sheet", "--animated"] => sheet::contact_sheet(&root(), true),
+        ["building-blocks"] => sheet::building_blocks(&root()),
+        ["art-export", id] => art::export(&root(), id),
+        ["art-import", id, png] => art::import(&root(), id, Path::new(png)),
+        ["art-import", _] => Err("usage: make art-import MASCOT=<id> PNG=<file>".into()),
         ["todo", target, milestone] => Err(format!(
             "make {target}: not implemented yet ({milestone}); see ROADMAP.md"
         )),
@@ -155,6 +169,8 @@ mod tests {
             "contact-sheet",
             "art-export",
             "art-import",
+            "building-blocks",
+            "palette",
             "ci",
             "release",
             "package",

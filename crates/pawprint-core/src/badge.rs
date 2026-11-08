@@ -145,6 +145,16 @@ impl<'c> Badge<'c> {
         self.moving.is_some()
     }
 
+    /// Where the badge was last placed, in physical desktop pixels.
+    pub fn placed(&self) -> Option<PhysicalRect> {
+        self.placed
+    }
+
+    /// The display the badge is on (SPEC §6.2).
+    pub fn target(&self) -> Option<&DisplayInfo> {
+        select_display(&self.displays, &self.resolved.settings.display.value)
+    }
+
     /// First call after `new`: show the badge.
     pub fn start(&mut self, displays: Vec<DisplayInfo>, now: Now) -> Vec<Effect> {
         let mut out = vec![Effect::SetInteractive(false)];
@@ -277,10 +287,6 @@ impl<'c> Badge<'c> {
         }
         self.anim
             .configure(s.animation.value, s.interval.value, now.instant);
-    }
-
-    fn target(&self) -> Option<&DisplayInfo> {
-        select_display(&self.displays, &self.resolved.settings.display.value)
     }
 
     fn mascot(&self) -> &'c Mascot {
@@ -652,10 +658,9 @@ mod tests {
             })
             .collect();
         assert_eq!(saves.len(), 1);
-        assert_eq!(
-            saves[0].assignments.get("buildbox").map(String::as_str),
-            Some("owl")
-        );
+        // Any bundled mascot may be picked; which one depends on the catalog.
+        let picked = &saves[0].assignments["buildbox"];
+        assert!(Catalog::bundled().get(picked).is_some());
         let cached = Rig::with_state("buildbox", "", saves[0].clone());
         assert!(
             !cached

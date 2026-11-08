@@ -1,0 +1,10 @@
+# Motion template (SPEC §12.4). Use it with `use = "hop"` in [[actions]].
+name = "hop"
+summary = "A 2 px jump with a 1 px squash on landing"
+needs = []
+frames = [
+  { ops = ["all+0,-1"], ms = 90 },
+  { ops = ["all+0,-2"], ms = 180 },
+  { ops = ["all+0,-1"], ms = 90 },
+  { ops = ["all+0,1"], ms = 140 },
+]

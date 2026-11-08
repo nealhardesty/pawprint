@@ -1,0 +1,276 @@
+# Cow cat, a showcase cat on cat-sit. White all over with lopsided black
+# patches: a black ear and eye patch on the left, a spot on the crown, a
+# patch on the right cheek, a black right flank, a black tail, and one black
+# front paw. A loose board (`flap`) lies on the left of the rim; the
+# signature paws at it with the black paw, and the rare one sets it swinging.
+id = "cat-cow"
+name = "Cow Cat"
+category = "cats-dogs"
+aliases = ["cowcat", "moo"]
+accent = "teal"
+extends = "cat-sit"
+
+[palette]
+"l" = "white"       # fur light
+"f" = "white"       # fur
+"F" = "grey-1"      # fur shadow
+"w" = "white"       # muzzle and chest
+"M" = "grey-2"      # mouth lines
+"P" = "fur-black"   # NEW: patches
+"Q" = "grey-4"      # NEW: patch light
+"e" = "green-2"     # iris
+"o" = "brown-1"     # NEW: loose board, light
+"c" = "brown-2"     # NEW: loose board
+"C" = "brown-3"     # NEW: loose board, shadow
+
+[layers.tail]
+at = [26, 11]
+grid = """
+.kk.
+kQPk
+kQPk
+kPPk
+kPPk
+kPPk
+kPPk
+kPPk
+kPPk
+kPPk
+"""
+
+[layers."tail.flick"]
+at = [26, 10]
+grid = """
+..kk.
+.kQPk
+.kQPk
+kPPPk
+kPPk.
+kPPk.
+kPPk.
+kPPk.
+kPPk.
+kPPk.
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klfffffffffPPPPk...
+..klffffffffffPPPPPk..
+.klffPfffffffffPPPPPk.
+klffffffwwwwwwffPPPPPk
+klffffffwwwwwwfffPPPPk
+klffffffwwwwwwffffPPPk
+klfffffffwwwwffffPPPPk
+klfffffffffffffffPPPPk
+klfffffffffffffffPPPPk
+klfffffffffffffffPPPPk
+klfffffffffffffffPPPPk
+klfffffffffffffffPPPPk
+klfffffffffffffffPPPPk
+klfffffffffffffffPPPPk
+klfffffffffffffffPPPPk
+klfffffffffffffffPPPPk
+klfffffffffffffffPPPPk
+klfffffffffffffffPPPPk
+"""
+
+[layers.head]
+at = [6, 4]
+grid = """
+....kkkkkkkkkkkk....
+..kkQQPPllllPPffkk..
+.kQPPPPPffffPPfffFk.
+kQPPPPPPfffffffffFFk
+kQPPPPPPPffffffffFFk
+klfPPPPPPffffffffFFk
+klffPPPPPffffffffFFk
+klfffPPPfffffffffQPk
+klffffwwwwwwfffQPPPk
+klfffwwwwMMwwwfQPPPk
+.kffffwwMwwMwwfQPPk.
+..kFFffwwwwwwffPPk..
+...kkFFFFFFFFFFkk...
+"""
+
+# The left ear is black, the right one white.
+[layers.ears]
+at = [7, 1]
+grid = """
+.k..............k.
+kQk............kFk
+kQPk..........kfFk
+kQpPk........kfpFk
+kQppPk......kfppFk
+"""
+
+[layers."ears.flick"]
+at = [6, 1]
+grid = """
+.................k.
+k...............kFk
+kQk............kfFk
+kQpPk.........kfpFk
+kQppPk.......kfppFk
+.kQQPP.............
+"""
+
+# Green eyes; the left one sits on the black patch, so its closed and happy
+# lines are light.
+[layers.eyes]
+at = [11, 9]
+grid = """
+he......he
+ek......ek
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+grid = """
+FF......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+grid = """
+eh......eh
+ke......ke
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+grid = """
+he......he
+ek......ek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.FF......kk.
+F..F....k..k
+"""
+
+# One black paw (the left, the one that does the pawing), one white.
+[layers.paws]
+at = [9, 17]
+grid = """
+.PPPP....FFFF.
+PQQQQP..FllllF
+kQPQPk..klFlFk
+"""
+
+# The black paw raised over the board, then batting it flat.
+[layers."paws.swipe"]
+at = [3, 12]
+grid = """
+.kkkk...............
+kQQQQk..............
+kQPQPk..............
+.kkkk...............
+....................
+..............FFFF..
+..............FllllF
+..............klFlFk
+"""
+
+[layers."paws.bat"]
+at = [2, 14]
+grid = """
+.kkkk................
+kQQQQk...............
+kQPQPk...............
+................FFFF.
+...............FllllF
+...............klFlFk
+"""
+
+# The loose board on the left of the rim, nailed at its right end.
+[layers.flap]
+at = [1, 15]
+grid = """
+kk......
+kokk....
+kCcokk..
+.kkCcokk
+...kkCck
+"""
+
+[layers."flap.down"]
+at = [1, 17]
+grid = """
+kkkkkkkk
+koooocck
+kkCCCCCk
+"""
+
+[layers."flap.up"]
+at = [1, 12]
+grid = """
+kk......
+kok.....
+kcok....
+kCcok...
+.kCcok..
+..kCcok.
+...kCcok
+....kkkk
+"""
+
+[layers."flap.over"]
+at = [3, 10]
+grid = """
+.kk.
+kook
+kcok
+kcok
+kcok
+kCck
+kCck
+kCck
+kkkk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 4
+
+[[actions]]
+use = "doze"
+
+# Signature: eyes on the loose board, then two quick bats with the black paw.
+[[actions]]
+name = "paw-flap"
+weight = 4
+frames = [
+  { ops = ["eyes=left"], ms = 400 },
+  { ops = ["eyes=left", "paws=swipe"], ms = 200 },
+  { ops = ["eyes=left", "paws=bat", "flap=down"], ms = 160 },
+  { ops = ["eyes=left", "paws=swipe", "flap=up"], ms = 160 },
+  { ops = ["eyes=left", "paws=bat", "flap=down"], ms = 160 },
+  { ops = ["eyes=left", "paws=swipe", "flap=up"], ms = 160 },
+  { ops = ["eyes=left"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: one bat too hard sets the board swinging; it slaps down and the cat
+# startles (the startle template's frames, with the board kept on the rim).
+[[actions]]
+name = "flap-swing"
+weight = 1
+frames = [
+  { ops = ["eyes=left", "paws=swipe"], ms = 200 },
+  { ops = ["eyes=left", "paws=bat", "flap=down"], ms = 140 },
+  { ops = ["eyes=left", "flap=up"], ms = 110 },
+  { ops = ["eyes=left", "flap=over"], ms = 160 },
+  { ops = ["eyes=left", "flap=up"], ms = 110 },
+  { ops = ["all+0,-1", "flap+0,1", "flap=down", "prop:bang@26,0"], ms = 120 },
+  { ops = ["flap=down", "prop:bang@26,1"], ms = 700 },
+  { ops = ["prop:bang@26,1"], ms = 100 },
+  { ops = [], ms = 300 },
+]

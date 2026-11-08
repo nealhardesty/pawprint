@@ -7,7 +7,10 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::source::CatalogFile;
-use crate::{CrateArt, Diag, Font, Library, Mascot, Origin, Report, Rgb, compile_dir, squash};
+use crate::{
+    CrateArt, Diag, Font, Library, LibrarySources, Mascot, Origin, Report, Rgb, compile_base,
+    compile_dir, squash,
+};
 
 /// Everything the binary embeds.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -21,6 +24,9 @@ pub struct Bundle {
     /// Catalog gates, enforced only when packaging.
     pub required: Vec<String>,
     pub minimum: u32,
+    /// Palette, accents, bases, motion templates, and props as source text,
+    /// so text-format user mascots can use them at runtime.
+    pub library: LibrarySources,
 }
 
 impl Bundle {
@@ -34,6 +40,12 @@ impl Bundle {
 
     pub fn mascot(&self, id: &str) -> Option<&Mascot> {
         self.mascots.iter().find(|m| m.id == id)
+    }
+
+    /// The building blocks user mascots compile against. The build already
+    /// validated them, so this cannot fail for a bundle from `build_bundle`.
+    pub fn library(&self) -> Result<Library, Report> {
+        Library::from_sources(&self.library)
     }
 }
 
@@ -50,8 +62,10 @@ pub struct BundleReport {
 /// (rule 9) are separate: see [`check_gates`].
 pub fn build_bundle(assets: &Path) -> BundleReport {
     let mut report = Report::default();
-    let lib = match Library::load(assets) {
-        Ok(lib) => lib,
+    let loaded = LibrarySources::read(assets)
+        .and_then(|src| Library::from_sources(&src).map(|lib| (src, lib)));
+    let (sources, lib) = match loaded {
+        Ok(pair) => pair,
         Err(r) => {
             report.absorb("assets", r);
             return BundleReport {
@@ -93,6 +107,14 @@ pub fn build_bundle(assets: &Path) -> BundleReport {
         );
     }
 
+    // Every base must stand on its own as a generic animal, with every
+    // template whose needs it meets, even before any mascot extends it.
+    for (name, _) in &sources.bases {
+        let mut compiled = compile_base(&lib, name);
+        compiled.report.errors.append(&mut compiled.report.warnings);
+        report.absorb(&format!("bases/{name}.toml"), compiled.report);
+    }
+
     let mut mascots = Vec::new();
     let mut dirs: Vec<_> = std::fs::read_dir(assets.join("mascots"))
         .map(|rd| {
@@ -130,6 +152,7 @@ pub fn build_bundle(assets: &Path) -> BundleReport {
             mascots,
             required: catalog.required,
             minimum: catalog.minimum,
+            library: sources,
         }),
         _ => None,
     };
@@ -249,6 +272,7 @@ mod tests {
             mascots,
             required: required.iter().map(|r| r.to_string()).collect(),
             minimum,
+            library: LibrarySources::default(),
         }
     }
 

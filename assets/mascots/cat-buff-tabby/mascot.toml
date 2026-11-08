@@ -1,0 +1,235 @@
+# Buff tabby, a showcase cat on cat-sit. Chunky: a low, round, wide head with
+# jowly cheeks, small wide-set ears, a broad body, soft stripes, and a ringed
+# tail wrapped around its paws on the rim. `head.melt` is the squashed
+# pancake head of the signature melt; `body.loaf` is the rare overflow.
+id = "cat-buff-tabby"
+name = "Buff Tabby"
+category = "cats-dogs"
+aliases = ["bufftabby", "buff", "chonk"]
+accent = "honey"
+extends = "cat-sit"
+
+# The base tail is left out: this cat's tail is `wrap`, drawn in front.
+rest = ["body", "head", "ears", "eyes", "nose", "paws", "stripes", "wrap"]
+
+[palette]
+"l" = "cream"       # fur light
+"f" = "orange-1"    # fur
+"F" = "brown-1"     # fur shadow
+"s" = "brown-2"     # NEW: soft tabby stripes
+"w" = "white"       # muzzle and chest
+"M" = "brown-1"     # mouth lines
+
+[layers.body]
+at = [2, 14]
+grid = """
+....klfffffffffffffffFFk....
+..klfffffffffffffffffffFFk..
+.klffffffffffffffffffffFFFk.
+klfssffffwwwwwwwwwwffffssFFk
+klfffffffwwwwwwwwwwfffffFFFk
+klffssfffwwwwwwwwwwfffssfFFk
+klfffffffwwwwwwwwwwfffffFFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+"""
+
+# Rare: paws tucked, the loaf spreads past both crate corners.
+[layers."body.loaf"]
+at = [0, 12]
+grid = """
+....kkkkkkkkkkkkkkkkkkkkkkkk....
+..kklffffffffffffffffffffffFkk..
+.klffffffffffffffffffffffffffFk.
+klfssfffffffffffffffffffffffsFFk
+klfffffffffffffffffffffffffffFFk
+klffssffffffffffffffffffffssfFFk
+klffffffffffffffffffffffffffFFFk
+klfssfffwwwwwwwwwwwwwwwwfffssFFk
+klffffffwwwwwwwwwwwwwwwwffffFFFk
+klffffffffffffffffffffffffffFFFk
+klffffffffffffffffffffffffffFFFk
+klffffffffffffffffffffffffffFFFk
+klffffffffffffffffffffffffffFFFk
+klffffffffffffffffffffffffffFFFk
+klffffffffffffffffffffffffffFFFk
+klffffffffffffffffffffffffffFFFk
+klffffffffffffffffffffffffffFFFk
+klffffffffffffffffffffffffffFFFk
+klffffffffffffffffffffffffffFFFk
+klffffffffffffffffffffffffffFFFk
+"""
+
+[layers.head]
+at = [2, 4]
+grid = """
+.........kkkkkkkkkk.........
+......kkklllllllfffkkk......
+....kkllffffffffffffFFkk....
+...klfffffffffffffffffFFk...
+..klfffffffffffffffffffFFk..
+.klfffffffffffffffffffffFFk.
+.klfffffffffffffffffffffFFk.
+klfffffffffffffffffffffffFFk
+klfffffffffwwwwwwfffffffFFFk
+klfffffffwwwwMMwwwwfffffFFFk
+klfffffffwwwMwwMwwwfffffFFFk
+.klfffffffwwwwwwwwffffffFFk.
+..kFffffffFFFFFFFFffffffFk..
+...kkFFFFF........FFFFFkk...
+"""
+
+# The signature melt: the same crown, with the cheeks spread flat.
+[layers."head.melt"]
+at = [0, 4]
+grid = """
+...........kkkkkkkkkk...........
+........kkklllllllfffkkk........
+......kkllffffffffffffFFkk......
+.....klfffffffffffffffffFFk.....
+....klfffffffffffffffffffFFk....
+..kklfffffffffffffffffffffFFkk..
+.klfffffffffffffffffffffffffFFk.
+klffffffffffffffffffffffffffFFFk
+klfffffffffffwwwwwwfffffffffFFFk
+klfffffffffwwwwMMwwwwfffffffFFFk
+.klffffffffwwwMwwMwwwfffffffFFk.
+..kkFFFFFFFFFFFFFFFFFFFFFFFFkk..
+"""
+
+# Small, round, wide-set ears.
+[layers.ears]
+at = [4, 2]
+grid = """
+...kk..............kk...
+..klfk............kfFk..
+.klppfk..........kfppFk.
+.klppffk........kffppFk.
+"""
+
+[layers."ears.flick"]
+at = [3, 2]
+grid = """
+.....................kk...
+..kk................kfFk..
+.klfk..............kfppFk.
+.klppfk...........kffppFk.
+..klppffk.................
+"""
+
+# Soft stripes: an M on the forehead and two dashes on each cheek.
+[layers.stripes]
+at = [3, 5]
+follows = "head"
+grid = """
+..........s.ss.s..........
+..........s.ss.s..........
+...........s..s...........
+..........................
+..........................
+..........................
+.ss....................ss.
+..........................
+ss......................ss
+"""
+
+[layers.eyes]
+at = [10, 9]
+grid = """
+hk........hk
+kk........kk
+"""
+
+[layers."eyes.closed"]
+at = [9, 10]
+grid = """
+Fkk......kkF
+"""
+
+[layers."eyes.left"]
+at = [9, 9]
+grid = """
+hk........hk
+kk........kk
+"""
+
+[layers."eyes.right"]
+at = [11, 9]
+grid = """
+hk........hk
+kk........kk
+"""
+
+[layers."eyes.happy"]
+at = [9, 9]
+grid = """
+.kk........kk.
+k..k......k..k
+"""
+
+[layers.paws]
+at = [8, 17]
+grid = """
+.FFFF......FFFF.
+FllllF....FllllF
+klFlFk....klFlFk
+"""
+
+# The ringed tail, wrapped around the right paw along the rim.
+[layers.wrap]
+at = [20, 16]
+grid = """
+........kkk
+.kkkkkkkfsk
+klfsflsffFk
+kFsFFsFFFk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "content"
+weight = 4
+
+[[actions]]
+use = "doze"
+
+# Signature: a slow blink, then it melts into the crate until only the ears
+# and the spread cheeks show over the rim.
+[[actions]]
+name = "melt"
+weight = 4
+frames = [
+  { ops = ["eyes=closed"], ms = 500 },
+  { ops = [], ms = 250 },
+  { ops = ["eyes=closed"], ms = 600 },
+  { ops = ["eyes=closed", "head=melt", "all+0,2"], ms = 250 },
+  { ops = ["eyes=closed", "head=melt", "all+0,5"], ms = 300 },
+  { ops = ["eyes=happy", "head=melt", "all+0,8"], ms = 1200 },
+  { ops = ["eyes=closed", "head=melt", "all+0,4"], ms = 200 },
+  { ops = ["all+0,1"], ms = 200 },
+]
+
+# Rare: tucks its paws and the loaf spills over both crate corners.
+[[actions]]
+name = "loaf-overflow"
+weight = 1
+frames = [
+  { ops = ["-paws", "head+0,2"], ms = 250 },
+  { ops = ["-paws", "-wrap", "head+0,2", "body=loaf", "eyes=closed"], ms = 400 },
+  { ops = ["-paws", "-wrap", "head+0,2", "body=loaf", "eyes=happy"], ms = 1400 },
+  { ops = ["-paws", "-wrap", "head+0,2", "body=loaf", "eyes=closed"], ms = 400 },
+  { ops = ["-paws", "head+0,2"], ms = 250 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,19 @@
+# Question mark, for curious. 8x8; drawn with `prop:question@x,y`
+# (x, y is where the top-left lands).
+name = "question"
+grid = """
+..kkkk..
+.kbbbbk.
+kbbkkbBk
+.kkkbBk.
+..kbBk..
+...kk...
+..kbBk..
+...kk...
+"""
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"b" = "blue-1"
+"B" = "blue-2"

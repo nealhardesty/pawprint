@@ -1,3 +1,4 @@
+# Motion template (SPEC §12.4). Use it with `use = "blink"` in [[actions]].
 name = "blink"
 summary = "Eyes close for 140 ms"
 needs = ["eyes.closed"]

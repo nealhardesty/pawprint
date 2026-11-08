@@ -1,0 +1,10 @@
+# Motion template (SPEC §12.4). Use it with `use = "shiver"` in [[actions]].
+name = "shiver"
+summary = "A quick 1 px horizontal jitter"
+needs = []
+frames = [
+  { ops = ["all+1,0"], ms = 80 },
+  { ops = ["all+-1,0"], ms = 80 },
+  { ops = ["all+1,0"], ms = 80 },
+  { ops = ["all+-1,0"], ms = 80 },
+]

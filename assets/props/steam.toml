@@ -1,0 +1,19 @@
+# Two curls of steam. 8x8; drawn with `prop:steam@x,y`
+# (x, y is where the top-left lands).
+name = "steam"
+grid = """
+..k...k.
+.kwk.kwk
+kwwkkwwk
+kwk.kwk.
+kggkkggk
+.kgk.kgk
+kggkkgk.
+.kk..k..
+"""
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"w" = "white"
+"g" = "grey-1"

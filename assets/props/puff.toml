@@ -1,0 +1,18 @@
+# A little cloud of dust or breath. 9x6; drawn with `prop:puff@x,y`
+# (x, y is where the top-left lands).
+name = "puff"
+grid = """
+.kkkkkkk.
+kkwwkwwkk
+kwwwwwwgk
+kgwwgwgGk
+kkGgGGkkk
+.kkkkkk..
+"""
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"w" = "white"
+"g" = "grey-1"
+"G" = "grey-2"

@@ -1,0 +1,164 @@
+# Chipmunk (chippy), a showcase mascot on rodent-upright. Small and bright:
+# a narrow orange head with the dark crown stripe and the white-dark-white
+# face stripes, the dorsal stripes running down both flanks, a cream belly,
+# and cheek pouches (`cheeks`, hidden at rest) that puff out when it stashes
+# a seed.
+id = "chipmunk"
+name = "Chipmunk"
+category = "mammals"
+aliases = ["chippy"]
+accent = "marigold"
+extends = "rodent-upright"
+
+[palette]
+"l" = "orange-1"    # fur light
+"f" = "brown-1"     # fur
+"F" = "brown-2"     # fur shadow
+"w" = "cream"       # belly and muzzle
+"M" = "brown-1"     # muzzle shadow
+"n" = "brown-4"     # nose
+"D" = "brown-4"     # NEW: dark stripes
+"c" = "white"       # NEW: pale stripes and pouches
+"r" = "orange-2"    # NEW: rufous flanks and tail
+"R" = "orange-3"    # NEW: rufous shadow
+
+[layers.tail]
+at = [24, 11]
+grid = """
+.kkk..
+kDrrk.
+kDrrRk
+kDrRRk
+.kDRRk
+.kDRRk
+.kDRk.
+kDrRk.
+kDRRk.
+"""
+
+[layers."tail.flick"]
+at = [24, 10]
+grid = """
+..kkk..
+.kDrrk.
+.kDrrRk
+kDrrRRk
+kDrRRk.
+.kDRRk.
+.kDRRk.
+.kDRk..
+kDrRk..
+kDRRk..
+"""
+
+# Narrower than the base body, with a dark-pale-dark stripe down each flank.
+[layers.body]
+at = [6, 12]
+grid = """
+...kllffffffffFFk...
+..krDcDrwwwwrDcDRk..
+.krDcDrwwwwwwrDcDRk.
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+krDcDrwwwwwwwwrDcDRk
+"""
+
+# A narrower, rounder head: the crown stripe down the middle, and
+# white-dark-white stripes running out from each eye.
+[layers.head]
+at = [7, 3]
+grid = """
+.....kkkkkkkk.....
+...kklllDDfffkk...
+..kllllfDDfffFFk..
+.kllffffDDfffffFk.
+.klffffffffffffFk.
+kcccffffffffffccck
+kDDffffffffffffDDk
+kDDffffffffffffDDk
+kcccffffffffffccck
+.kccwwwwwwwwwwcMk.
+..kcwwwwwwwwwwMk..
+....FFwwwwwwFF....
+"""
+
+# Cheek pouches: hidden at rest, puffed while stashing, then over-full.
+[layers."cheeks.puff"]
+at = [4, 10]
+follows = "head"
+grid = """
+..kk................kk..
+.klff..............ffFk.
+kllff..............ffFFk
+kffww..............wwffk
+.kwww..............wwwk.
+..kkw..............wkk..
+"""
+
+[layers."cheeks.full"]
+at = [2, 9]
+follows = "head"
+grid = """
+..kkk..................kkk..
+.kllff................ffFFk.
+kllffff..............ffffFFk
+klfffff..............fffffFk
+kffffww..............wwffffk
+.kfwwww..............wwwwfk.
+..kkkww..............wwkkk..
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 5
+
+[[actions]]
+use = "doze"
+
+# Signature: holds a seed, tucks it into a cheek, cheeks puff, chews.
+[[actions]]
+name = "stash-seed"
+weight = 4
+frames = [
+  { ops = ["prop:seed@13,14"], ms = 500 },
+  { ops = ["mouth=open", "prop:seed@13,12"], ms = 160 },
+  { ops = ["+cheeks.puff", "eyes=happy"], ms = 500 },
+  { ops = ["+cheeks.puff", "nose=sniff"], ms = 120 },
+  { ops = ["+cheeks.puff"], ms = 120 },
+  { ops = ["+cheeks.puff", "nose=sniff"], ms = 120 },
+  { ops = ["+cheeks.puff"], ms = 600 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: one seed too many. The cheeks over-fill and a seed pops out.
+[[actions]]
+name = "seed-pop"
+weight = 1
+frames = [
+  { ops = ["+cheeks.puff"], ms = 300 },
+  { ops = ["+cheeks.full", "eyes=closed"], ms = 600 },
+  { ops = ["+cheeks.full"], ms = 200 },
+  { ops = ["+cheeks.puff", "mouth=open", "prop:seed@14,8", "all+0,-1"], ms = 140 },
+  { ops = ["+cheeks.puff", "prop:seed@19,3"], ms = 140 },
+  { ops = ["+cheeks.puff", "eyes=right", "prop:seed@24,0"], ms = 140 },
+  { ops = ["+cheeks.puff", "eyes=right"], ms = 500 },
+  { ops = [], ms = 300 },
+]

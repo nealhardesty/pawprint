@@ -1,71 +1,157 @@
-# Placeholder owl (M0). The showcase owl replaces it in M2 (ROADMAP).
+# Owl, the reference mascot for the art pipeline (docs/ART.md). Built on
+# bird-perched: it replaces the head (adding the facial disc) and the eyes
+# (big amber irises), and adds ear tufts as the `ears` slot. The head has
+# `turn` and `back` variants for the head turn and the night spin.
 id = "owl"
 name = "Owl"
 category = "birds"
 aliases = ["owls", "hoot"]
 accent = "violet"
 nocturnal = true
+extends = "bird-perched"
 
 [palette]
-"." = "clear"
-"k" = "ink"
+"l" = "brown-1"     # feathers light
 "f" = "brown-2"     # feathers
-"F" = "brown-3"     # feather shadow
-"l" = "brown-1"     # belly
-"w" = "cream"       # facial disc
+"F" = "brown-3"     # feather shadow, facial disc rim
+"w" = "cream"       # facial disc and breast
+"m" = "brown-3"     # breast speckles, back-of-head bars
 "e" = "amber"       # iris
-"h" = "white"       # eye highlight
-"b" = "orange-2"    # beak and talons
-
-[layers.body]
-at = [6, 12]
-grid = """
-..kkkkkkkkkkkkkkkk..
-.kffffffffffffffffk.
-kFfffllllllllllfffFk
-kFffllFllllllFllffFk
-kFffllllllllllllffFk
-kFfflllFllllFlllffFk
-kFffllllllllllllffFk
-kFfflbbllllllbblffFk
-kFffffffffffffffffFk
-kFffffffffffffffffFk
-"""
+"b" = "yellow-2"    # beak and talons
+"B" = "orange-3"    # beak shadow
 
 [layers.head]
-at = [7, 1]
+at = [6, 3]
 grid = """
-kk..............kk
-kfk............kfk
-kffk..........kffk
-kfffkkkkkkkkkkfffk
-kffffffffffffffffk
-kffwwwwffffwwwwffk
-kfwwwwwwffwwwwwwfk
-kfwwwwwwwwwwwwwwfk
-kfwwwwwwwwwwwwwwfk
-kfwwwwwwwwwwwwwwfk
-kffwwwwwbbwwwwwffk
-kfffwwwwbbwwwwfffk
-kffffffffffffffffk
+.....kkkkkkkkkk.....
+...kkllllllllffkk...
+..kllllfffffffffFk..
+.kllFFFFFffFFFFFfFk.
+kllFwwwwwFFwwwwwFfFk
+klFwwwwwwwwwwwwwwFFk
+klFwwwwwwwwwwwwwwFFk
+klFwwwwwwwwwwwwwwFFk
+klFwwwwwwwwwwwwwwFFk
+.kfFwwwwwwwwwwwwFk..
+..fffFFwwwwwwFFff...
+"""
+
+[layers."head.turn"]
+at = [6, 3]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllllllffkk...
+..kllllfffffffffFk..
+.kllffFFFFFffFFFFFk.
+kllffFwwwwwFFwwwwwFk
+klffFwwwwwwwwwwwwwwF
+klffFwwwwwwwwwwwwwwF
+klffFwwwwwwwwwwwwwwF
+klffFwwwwwwwwwwwwwwF
+.kfffFwwwwwwwwwwwwF.
+..fffffFFwwwwwwFF...
+"""
+
+[layers."head.back"]
+at = [6, 3]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllllllffkk...
+..kllllfffffffffFk..
+.kllfffffffffffffFk.
+kllfffmffmffmfffffFk
+klfffffmffmfffffffFk
+klffffmffmffmfffffFk
+klffffffffffffffffFk
+klfffffffwwfffffffFk
+.kffffffwwwwffffFk..
+..fffffwwwwwwffff...
 """
 
 [layers.eyes]
-at = [10, 7]
+at = [10, 8]
+follows = "head"
 grid = """
-.ee.....ee..
+.ee......ee.
 ehke....ehke
 ekke....ekke
-.ee.....ee..
+.ee......ee.
 """
 
 [layers."eyes.closed"]
-at = [10, 7]
+at = [10, 9]
+follows = "head"
 grid = """
-............
-............
+Feef....Feef
 kkkk....kkkk
-............
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+.ee......ee.
+hkee....hkee
+kkee....kkee
+.ee......ee.
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+follows = "head"
+grid = """
+.ee......ee.
+eehk....eehk
+eekk....eekk
+.ee......ee.
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.beak]
+at = [14, 11]
+follows = "head"
+grid = """
+kbbk
+kbBk
+.kk.
+"""
+
+[layers."mouth.open"]
+at = [14, 11]
+follows = "head"
+grid = """
+kbbk
+kkkk
+kBBk
+.kk.
+"""
+
+# Ear tufts: a new slot, so ear-flick works on the owl.
+[layers.ears]
+at = [7, 1]
+follows = "head"
+grid = """
+kk..............kk
+klk............kFk
+.kfk..........kFk.
+..kfk........kFk..
+"""
+
+[layers."ears.flick"]
+at = [6, 1]
+follows = "head"
+grid = """
+kk...............kk
+kllk............kFk
+..kfk..........kFk.
+...kfk........kFk..
 """
 
 [[actions]]
@@ -73,12 +159,37 @@ use = "blink"
 weight = 6
 
 [[actions]]
-name = "head-turn"     # signature: one slow blink, then a sideways head turn
+use = "look-left"
+weight = 4
+
+[[actions]]
+use = "ear-flick"
 weight = 3
+
+# Signature: one slow blink, then the face swings sideways and holds.
+[[actions]]
+name = "head-turn"
+weight = 4
 frames = [
-  { ops = ["eyes=closed"], ms = 160 },
-  { ops = [], ms = 200 },
-  { ops = ["head+1,0", "eyes+1,0"], ms = 220 },
-  { ops = ["head+2,0", "eyes+2,0"], ms = 900 },
-  { ops = ["head+1,0", "eyes+1,0"], ms = 200 },
+  { ops = ["eyes=closed"], ms = 400 },
+  { ops = [], ms = 250 },
+  { ops = ["head=turn", "eyes+1,0", "beak+1,0", "ears+1,0"], ms = 120 },
+  { ops = ["head=turn", "eyes+2,0", "beak+2,0", "eyes=right"], ms = 1100 },
+  { ops = ["head=turn", "eyes+2,0", "beak+2,0"], ms = 300 },
+  { ops = ["eyes+1,0", "beak+1,0"], ms = 140 },
+]
+
+# Rare, at night: the head spins all the way round.
+[[actions]]
+name = "full-spin"
+weight = 1
+when = "night"
+frames = [
+  { ops = ["head=turn", "eyes+2,0", "beak+2,0"], ms = 160 },
+  { ops = ["head=back", "-eyes", "-beak"], ms = 180 },
+  { ops = ["head=back", "-eyes", "-beak", "flipx"], ms = 180 },
+  { ops = ["flipx", "head=turn", "eyes+2,0", "beak+2,0"], ms = 160 },
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = [], ms = 300 },
+  { ops = ["eyes=closed"], ms = 140 },
 ]

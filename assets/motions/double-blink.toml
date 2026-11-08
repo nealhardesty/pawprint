@@ -1,0 +1,9 @@
+# Motion template (SPEC §12.4). Use it with `use = "double-blink"` in [[actions]].
+name = "double-blink"
+summary = "Two quick blinks"
+needs = ["eyes.closed"]
+frames = [
+  { ops = ["eyes=closed"], ms = 110 },
+  { ops = [], ms = 130 },
+  { ops = ["eyes=closed"], ms = 110 },
+]

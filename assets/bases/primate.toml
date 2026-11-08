@@ -1,0 +1,166 @@
+# Base: primate (SPEC §12.8). A round-headed monkey: a light heart-shaped
+# face mask, big round ears at the sides, long arms hanging down with hands
+# gripping the rim. Members: monkey, sloth.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)    l f F  fur light / base / shadow
+#   w M    face, chest, and hands / their shadow (mouth line, nostrils)
+#   e iris (unused by the default eyes; add it in your own eyes)
+#   h eye highlight   p inner ear and tongue
+#
+# Slots, in drawing order: body, ears (+flick), head, eyes (+closed, left,
+# right, happy), nose (+sniff), mouth (.open only, hidden at rest), paws
+# (the arms and hands). ears, eyes, nose, and mouth follow head.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "brown-2"
+"f" = "brown-3"
+"F" = "brown-4"
+"w" = "brown-1"
+"M" = "brown-2"
+"e" = "amber"
+"h" = "white"
+"p" = "pink-2"
+
+[layers.body]
+at = [6, 14]
+grid = """
+...klffffffffffFk...
+.kklffffffffffffFkk.
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffwwwwwwffffFFk
+klffffwwwwwwwwfffFFk
+klffffwwwwwwwwfffFFk
+klffffwwwwwwwwfffFFk
+klffffwwwwwwwwfffFFk
+klffffwwwwwwwwfffFFk
+klfffffwwwwwwffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+"""
+
+[layers.ears]
+at = [2, 7]
+follows = "head"
+grid = """
+..kkk..................kkk..
+.kllfk................kFffk.
+klppfk................kFppfk
+klppFk................kFppfk
+.kfFFk................kFFFk.
+..kkk..................kkk..
+"""
+
+[layers."ears.flick"]
+at = [2, 6]
+follows = "head"
+grid = """
+..kkk.......................
+.kllfk.................kkk..
+klppfk................kFffk.
+klppFk................kFppfk
+.kfFFk................kFppfk
+..kkk.................kFFFk.
+.......................kkk..
+"""
+
+[layers.head]
+at = [7, 3]
+grid = """
+....kkkkkkkkkk....
+..kkllllllllffkk..
+.kllffffffffffFFk.
+klffffffffffffffFk
+klfwwwwffffwwwwfFk
+klwwwwwwffwwwwwwFk
+klwwwwwwffwwwwwwFk
+klwwwwwwwwwwwwwwFk
+klfwwwwwwwwwwwwfFk
+klfwwwwwwwwwwwwfFk
+klffwwMMMMMMwwffFk
+.kFfwwwwwwwwwwfFk.
+..kkFFwwwwwwFFkk..
+....kkkkkkkkkk....
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [15, 11]
+follows = "head"
+grid = """
+MM
+"""
+
+[layers."nose.sniff"]
+at = [14, 11]
+follows = "head"
+grid = """
+M..M
+"""
+
+[layers."mouth.open"]
+at = [13, 12]
+follows = "head"
+grid = """
+kkkkkk
+kppppk
+.kkkk.
+"""
+
+[layers.paws]
+at = [3, 13]
+grid = """
+.kk....................kk.
+klfk..................kffk
+klfFk................kFffk
+kfffk................kfffk
+kwwwwk..............kwwwwk
+kwwMwMk............kMwMwwk
+.kwkwk..............kwkwk.
+"""

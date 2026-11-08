@@ -4,6 +4,8 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
+use serde::{Deserialize, Serialize};
+
 use crate::grid::parse_grid;
 use crate::source::{AccentsFile, MascotFile, MotionFile, PaletteFile, PropFile};
 use crate::{Diag, Report, Rgb, is_kebab};
@@ -27,13 +29,43 @@ pub struct Library {
 }
 
 /// Source text for every library file, keyed by file stem where relevant.
-#[derive(Debug, Default)]
-pub struct LibrarySources<'a> {
-    pub palette: &'a str,
-    pub accents: &'a str,
+/// The bundle embeds it so user mascots can extend bases and use templates
+/// and props at runtime (SPEC §12.13).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LibrarySources {
+    pub palette: String,
+    pub accents: String,
     pub bases: Vec<(String, String)>,
     pub motions: Vec<(String, String)>,
     pub props: Vec<(String, String)>,
+}
+
+impl LibrarySources {
+    /// Read from an `assets/` directory. Missing `bases/`, `motions/`, or
+    /// `props/` directories are treated as empty.
+    pub fn read(assets: &Path) -> Result<LibrarySources, Report> {
+        let mut report = Report::default();
+        let read = |rel: &str, report: &mut Report| match std::fs::read_to_string(assets.join(rel))
+        {
+            Ok(s) => s,
+            Err(e) => {
+                report.error(rel, format!("cannot read: {e}"));
+                String::new()
+            }
+        };
+        let sources = LibrarySources {
+            palette: read("palette.toml", &mut report),
+            accents: read("accents.toml", &mut report),
+            bases: read_dir_toml(&assets.join("bases"), &mut report),
+            motions: read_dir_toml(&assets.join("motions"), &mut report),
+            props: read_dir_toml(&assets.join("props"), &mut report),
+        };
+        if report.errors.is_empty() {
+            Ok(sources)
+        } else {
+            Err(report)
+        }
+    }
 }
 
 impl Library {
@@ -44,42 +76,24 @@ impl Library {
             .map(|(_, c)| *c)
     }
 
+    pub fn prop(&self, name: &str) -> Option<&Prop> {
+        self.props.get(name)
+    }
+
     pub fn motion_names(&self) -> impl Iterator<Item = &str> {
         self.motions.keys().map(String::as_str)
     }
 
-    /// Load from an `assets/` directory. Missing `bases/`, `motions/`, or
-    /// `props/` directories are treated as empty.
+    /// Load from an `assets/` directory.
     pub fn load(assets: &Path) -> Result<Library, Report> {
-        let mut report = Report::default();
-        let read = |rel: &str, report: &mut Report| match std::fs::read_to_string(assets.join(rel))
-        {
-            Ok(s) => s,
-            Err(e) => {
-                report.error(rel, format!("cannot read: {e}"));
-                String::new()
-            }
-        };
-        let palette = read("palette.toml", &mut report);
-        let accents = read("accents.toml", &mut report);
-        let sources = LibrarySources {
-            palette: &palette,
-            accents: &accents,
-            bases: read_dir_toml(&assets.join("bases"), &mut report),
-            motions: read_dir_toml(&assets.join("motions"), &mut report),
-            props: read_dir_toml(&assets.join("props"), &mut report),
-        };
-        if !report.errors.is_empty() {
-            return Err(report);
-        }
-        Library::from_sources(&sources)
+        Library::from_sources(&LibrarySources::read(assets)?)
     }
 
-    pub fn from_sources(src: &LibrarySources<'_>) -> Result<Library, Report> {
+    pub fn from_sources(src: &LibrarySources) -> Result<Library, Report> {
         let mut report = Report::default();
         let mut lib = Library::default();
 
-        match toml::from_str::<PaletteFile>(src.palette) {
+        match toml::from_str::<PaletteFile>(&src.palette) {
             Ok(file) => {
                 for (name, hex) in file.colors {
                     match Rgb::parse_hex(&hex) {
@@ -96,7 +110,7 @@ impl Library {
             Err(e) => report.error("palette.toml", e.to_string()),
         }
 
-        match toml::from_str::<AccentsFile>(src.accents) {
+        match toml::from_str::<AccentsFile>(&src.accents) {
             Ok(file) => {
                 for a in file.accents {
                     match Rgb::parse_hex(&a.hex) {
@@ -127,6 +141,16 @@ impl Library {
                                 identity.join(", ")
                             ),
                         );
+                    }
+                    for (glyph, color) in &file.palette {
+                        if color != "clear" && !lib.palette.contains_key(color) {
+                            report.error(
+                                &ctx,
+                                format!(
+                                    "palette {glyph:?}: {color:?} is not a master palette name"
+                                ),
+                            );
+                        }
                     }
                     lib.bases.insert(name.clone(), file);
                 }
@@ -283,8 +307,8 @@ accents = [
                 .collect()
         };
         Library::from_sources(&LibrarySources {
-            palette: PALETTE,
-            accents: ACCENTS,
+            palette: PALETTE.into(),
+            accents: ACCENTS.into(),
             bases: own(bases),
             motions: own(motions),
             props: own(props),
@@ -310,8 +334,8 @@ accents = [
         );
         let bad_base = ("cat", "id = \"cat\"");
         let err = Library::from_sources(&LibrarySources {
-            palette: PALETTE,
-            accents: ACCENTS,
+            palette: PALETTE.into(),
+            accents: ACCENTS.into(),
             bases: vec![(bad_base.0.into(), bad_base.1.into())],
             motions: vec![(bad_motion.0.into(), bad_motion.1.into())],
             props: vec![(bad_prop.0.into(), bad_prop.1.into())],
