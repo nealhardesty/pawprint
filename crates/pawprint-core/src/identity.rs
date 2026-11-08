@@ -406,7 +406,7 @@ mod tests {
     fn label_and_position() {
         let r = run("prod-owl-02.lab.example", "", &State::default());
         assert_eq!(r.short, "prod-owl-02");
-        assert_eq!(r.label.as_deref(), Some("PROD-OWL-02"));
+        assert_eq!(r.label.as_deref(), Some("PRODOWL02"));
         assert_eq!(r.position.value, Position::default());
         assert_eq!(r.position.source, Source::Default);
 

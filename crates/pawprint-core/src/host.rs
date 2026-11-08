@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-/// Labels longer than this are cut in the middle (SPEC §4.4, measured in M4).
+/// Labels longer than this keep only their first this-many characters (SPEC §4.4).
 pub const MAX_LABEL: usize = 20;
 
 /// `raw` lowercased and cut at the first `.`: `owl-02.lab.example` → `owl-02`.
@@ -65,11 +65,13 @@ impl fmt::Display for LabelCase {
     }
 }
 
-/// The text drawn on the crate, or `None` for no label.
+/// The text drawn on the crate, or `None` for no label. A label from the
+/// hostname keeps only its letters and digits (`prod-owl-02` → `prodowl02`),
+/// so more of it fits on the crate; literal text is kept as written.
 pub fn label(raw: &str, setting: &LabelSetting, case: LabelCase) -> Option<String> {
     let text = match setting {
-        LabelSetting::Auto => short_name(raw),
-        LabelSetting::Full => raw.trim().to_lowercase(),
+        LabelSetting::Auto => alphanumeric(&short_name(raw)),
+        LabelSetting::Full => alphanumeric(&raw.trim().to_lowercase()),
         LabelSetting::None => return None,
         LabelSetting::Text(t) => t.clone(),
     };
@@ -82,18 +84,14 @@ pub fn label(raw: &str, setting: &LabelSetting, case: LabelCase) -> Option<Strin
     (!text.is_empty()).then_some(text)
 }
 
-/// Cut to [`MAX_LABEL`] characters by replacing the middle with `..`, so
-/// both the start and the end survive: the end is what tells
-/// `jenkins-agent-linux-07` from `-08` and one cloud node from the next.
+fn alphanumeric(s: &str) -> String {
+    s.chars().filter(char::is_ascii_alphanumeric).collect()
+}
+
+/// The first [`MAX_LABEL`] characters. The left side is what the strip
+/// shows when even these don't all fit (SPEC §4.4), so it is what is kept.
 pub fn truncate(s: &str) -> String {
-    let chars: Vec<char> = s.chars().collect();
-    if chars.len() <= MAX_LABEL {
-        return s.to_string();
-    }
-    let keep = (MAX_LABEL - 2) / 2;
-    let head = chars[..keep].iter();
-    let tail = chars[chars.len() - (MAX_LABEL - 2 - keep)..].iter();
-    head.chain(['.', '.'].iter()).chain(tail).collect()
+    s.chars().take(MAX_LABEL).collect()
 }
 
 #[cfg(test)]
@@ -119,52 +117,59 @@ mod tests {
     fn labels() {
         use LabelCase::*;
         let long = "a".repeat(63);
+        let text = |t: &str| LabelSetting::Text(t.into());
         let cases = [
             ("owl.lab.example", LabelSetting::Auto, Upper, Some("OWL")),
+            // From the hostname: letters and digits only.
             (
                 "OWL-02.LAB.EXAMPLE",
                 LabelSetting::Auto,
                 AsIs,
-                Some("owl-02"),
+                Some("owl02"),
             ),
+            ("prod-owl-02", LabelSetting::Auto, Upper, Some("PRODOWL02")),
+            ("build_box", LabelSetting::Auto, Upper, Some("BUILDBOX")),
             (
                 "owl.lab.example",
                 LabelSetting::Full,
                 Upper,
-                Some("OWL.LAB.EXAMPLE"),
+                Some("OWLLABEXAMPLE"),
             ),
             (
-                "owl.lab.example",
+                "Owl-02.lab.example",
                 LabelSetting::Full,
                 AsIs,
-                Some("owl.lab.example"),
+                Some("owl02labexample"),
             ),
             ("owl", LabelSetting::None, Upper, None),
+            // Literal text is kept as written, punctuation and all.
+            ("owl", text("Build-7"), AsIs, Some("Build-7")),
+            ("owl", text("Build-7"), Lower, Some("build-7")),
+            ("owl", text("Build-7"), Upper, Some("BUILD-7")),
+            ("owl", text("a.b_c d"), AsIs, Some("a.b_c d")),
+            // 20 characters at most, counted after stripping, from the left.
             (
-                "owl",
-                LabelSetting::Text("Build-7".into()),
-                AsIs,
-                Some("Build-7"),
-            ),
-            (
-                "owl",
-                LabelSetting::Text("Build-7".into()),
-                Lower,
-                Some("build-7"),
+                "jenkins-agent-linux-07",
+                LabelSetting::Auto,
+                Upper,
+                Some("JENKINSAGENTLINUX07"),
             ),
             (
                 "prod-database-primary-01",
                 LabelSetting::Auto,
                 Upper,
-                Some("PROD-DATA..RIMARY-01"),
+                Some("PRODDATABASEPRIMARY0"),
             ),
             (
-                long.as_str(),
-                LabelSetting::Auto,
-                Lower,
-                Some("aaaaaaaaa..aaaaaaaaa"),
+                "owl",
+                text("prod-database-primary-01"),
+                Upper,
+                Some("PROD-DATABASE-PRIMAR"),
             ),
+            (long.as_str(), LabelSetting::Auto, Lower, Some(&long[..20])),
             ("", LabelSetting::Auto, Upper, None),
+            // Nothing left after stripping: no label.
+            ("---", LabelSetting::Auto, Upper, None),
         ];
         for (raw, setting, case, want) in cases {
             assert_eq!(
@@ -176,13 +181,12 @@ mod tests {
     }
 
     #[test]
-    fn truncation_boundary() {
+    fn truncation_keeps_the_left_side() {
         assert_eq!(truncate(&"x".repeat(20)), "x".repeat(20));
-        assert_eq!(truncate(&"x".repeat(21)).chars().count(), 20);
-        assert_eq!(truncate("jenkins-agent-linux-07"), "jenkins-a..-linux-07");
+        assert_eq!(truncate(&"x".repeat(21)), "x".repeat(20));
         assert_eq!(
-            truncate("gke-prod-default-pool-1a2b3c4d-xyz9"),
-            "gke-prod-..3c4d-xyz9"
+            truncate("gkeproddefaultpool1a2b3c4dxyz9"),
+            "gkeproddefaultpool1a"
         );
     }
 
