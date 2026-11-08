@@ -1,0 +1,85 @@
+name: Release
+
+# Pushing a tag `v<version>` (matching [workspace.package].version) builds the
+# release on each OS and publishes it, all through make targets (SPEC §15.3):
+#   1. Linux runs `make package` + `make publish`, which creates the draft
+#      release and uploads both musl archives and the installers.
+#   2. macOS and Windows then do the same into that draft. They wait for
+#      Linux because drafts don't reserve their tag, so two jobs creating the
+#      release at once would make two drafts.
+#   3. `make release-finalize` checks every asset is present and makes the
+#      release public, so `releases/latest/download/install.sh` works.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  linux:
+    name: package and publish (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - name: Install qemu (runs the aarch64 binary as a check)
+        run: sudo apt-get update && sudo apt-get install -y qemu-user-static
+
+      - name: make package
+        run: make package
+
+      - name: make publish
+        run: make publish
+
+  others:
+    name: package and publish (${{ matrix.os }})
+    needs: linux
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - name: Install GNU Make (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: command -v make || choco install make --no-progress -y
+
+      - name: make package
+        run: make package
+
+      - name: make publish
+        run: make publish
+
+  finalize:
+    name: make release-finalize
+    needs: [linux, others]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install
+
+      - name: make release-finalize
+        run: make release-finalize

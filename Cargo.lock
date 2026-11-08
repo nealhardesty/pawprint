@@ -1001,7 +1001,7 @@ checksum = "2ee67f1008b1ba2321834326597b8e186293b049a023cdef258527550b9935b4"
 
 [[package]]
 name = "pawdev"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "flate2",
  "gif",
@@ -1016,7 +1016,7 @@ dependencies = [
 
 [[package]]
 name = "pawprint"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "block2",
  "blocking",
@@ -1050,7 +1050,7 @@ dependencies = [
 
 [[package]]
 name = "pawprint-core"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "pawprint-sprite",
  "serde",
@@ -1060,7 +1060,7 @@ dependencies = [
 
 [[package]]
 name = "pawprint-sprite"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "png",
  "postcard",

@@ -267,7 +267,8 @@ Can run in parallel with M2/M3 once M1 passes.
 - [x] `make release`: universal macOS binary (re-signed ad hoc, F15), static musl Linux (x86_64 + aarch64), Windows MSVC; every binary checked and run ([SPEC §14.5](SPEC.md#145-release-builds))
 - [x] `make package`: archives + `.sha256` sidecars into `dist/`
 - [x] `make publish`: create a draft GitHub release via `gh` and upload `dist/` + installers; refuses a dirty tree, a tag off `HEAD`, or a `dist/` packaged from another commit; `make release-finalize` publishes the draft once all ten assets are there; `DRY_RUN=1` of both tested in CI
-- [ ] **(owner)** First real release: `make package && make publish` on each OS, then `make release-finalize`
+- [x] Release workflow: a `v*` tag push runs `make package` + `make publish` on each OS and `make release-finalize` (`.github/workflows/release.yml`)
+- [ ] First real release: `v1.0.0`
 - [x] `install.sh` (POSIX sh) and `install.ps1` (PS 5.1 + 7) per [SPEC §15](SPEC.md#15-packaging-release-and-install), including `--archive`, `--uninstall`, `--purge`
 - [x] `make install` / `make uninstall` for local builds
 - [x] `make test-install`: the installers end to end under sh, dash, bash, PowerShell 5.1, and PowerShell 7, in CI on all three OSes ([SPEC §15.7](SPEC.md#157-installer-tests))
@@ -291,7 +292,6 @@ Ideas worth doing, roughly by value. None are commitments.
 | **Respect OS "reduce motion"** | Accessibility | Windows `SPI_GETCLIENTAREAANIMATION`, macOS `accessibilityDisplayShouldReduceMotion`, KDE/GNOME animation settings → static |
 | **Shy mode** | See what's under the badge without moving it | Fade when the pointer hovers. Needs global pointer position, which Wayland doesn't give; maybe Windows/macOS/X11 only. |
 | **Modifier-drag** | Move without opening move mode | Hold a configurable modifier over the badge. Same Wayland caveat. |
-| **Release builds in CI** | Fewer manual steps | Public repo means free runners; keep local `make publish` as the fallback |
 | **Code signing and notarization** | No Gatekeeper/SmartScreen friction for browser downloads | Needs an Apple Developer ID and a Windows signing certificate |
 | **Windows ARM64 build** | Snapdragon laptops and ARM VMs | `aarch64-pc-windows-msvc` |
 | **Package managers** | Discoverability | Homebrew tap, Scoop/winget manifest, AUR, a `.deb`/PPA for Ubuntu. Flatpak's sandbox doesn't fit a desktop overlay. |
