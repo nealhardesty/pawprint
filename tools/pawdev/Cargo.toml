@@ -11,3 +11,5 @@ publish = false
 [dependencies]
 pawprint-core.workspace = true
 pawprint-sprite.workspace = true
+gif.workspace = true
+toml.workspace = true

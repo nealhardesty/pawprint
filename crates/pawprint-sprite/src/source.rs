@@ -80,6 +80,9 @@ impl MascotFile {
 #[serde(deny_unknown_fields)]
 pub struct LayerSrc {
     pub at: Option<[i32; 2]>,
+    /// Another slot whose offsets this layer's slot also takes, so `head+1,0`
+    /// carries the eyes, ears, and nose with it.
+    pub follows: Option<String>,
     pub grid: String,
 }
 

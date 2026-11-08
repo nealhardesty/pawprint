@@ -1,0 +1,9 @@
+# Motion template (SPEC §12.4). Use it with `use = "curious"` in [[actions]].
+name = "curious"
+summary = "A question mark and a 1 px head tilt"
+needs = ["head"]
+frames = [
+  { ops = ["head+1,0", "prop:question@24,0"], ms = 900 },
+  { ops = ["head+1,0", "prop:question@24,1"], ms = 500 },
+  { ops = ["prop:question@24,1"], ms = 120 },
+]

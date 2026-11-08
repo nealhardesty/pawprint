@@ -1,0 +1,143 @@
+# Base: critter (SPEC §12.8). A small, wide-mouthed critter with big eyes
+# bulging on top of its head and splayed toes on the crate rim; it reads as
+# a frog with the default colors. Members: gecko, frog, snake, tortoise,
+# snail.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)   l f F  skin light / base / shadow (F also
+#                                    draws the mouth line and nostrils)
+#   w      throat and belly    e iris (unused by the default eyes)
+#   h eye highlight            p mouth inside and tongue
+#
+# Slots, in drawing order: body, head, eyes (+closed, left, right, happy),
+# nose (+sniff: the nostrils), mouth (.open only, hidden at rest), tongue
+# (.out only, hidden at rest: `+tongue.out`), feet. Everything on the face
+# follows head.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "green-1"
+"f" = "green-2"
+"F" = "green-3"
+"w" = "yellow-1"
+"e" = "amber"
+"h" = "white"
+"p" = "pink-2"
+
+[layers.body]
+at = [4, 16]
+grid = """
+.klffwwwwwwwwwwwwwwFFfk.
+klfffwwwwwwwwwwwwwwFFFfk
+klfffwwwwwwwwwwwwwwFFFfk
+klffffwwwwwwwwwwwwFFFFfk
+klffffwwwwwwwwwwwwFFFFfk
+klfffffwwwwwwwwwwFFFFFfk
+klffffffffffFFFFFFFFFFfk
+klffffffffffFFFFFFFFFFfk
+klffffffffffFFFFFFFFFFfk
+klffffffffffFFFFFFFFFFfk
+klffffffffffFFFFFFFFFFfk
+klffffffffffFFFFFFFFFFfk
+klffffffffffFFFFFFFFFFfk
+klffffffffffFFFFFFFFFFfk
+klffffffffffFFFFFFFFFFfk
+klffffffffffFFFFFFFFFFfk
+"""
+
+[layers.head]
+at = [4, 4]
+grid = """
+.....kkkk......kkkk.....
+....kllffk....kffFFk....
+...klffffFk..kffffFFk...
+..klfffffffkkfffffffFk..
+..klffffffffffffffffFk..
+.klffffffffffffffffffFk.
+klffffffffffffffffffffFk
+kFffffffffffffffffffffFk
+kfFFFFFFFFFFFFFFFFFFFFfk
+kwwwwwwwwwwwwwwwwwwwwwwk
+.kwwwwwwwwwwwwwwwwwwwwk.
+..wwwwwwwwwwwwwwwwwwww..
+"""
+
+[layers.eyes]
+at = [9, 6]
+follows = "head"
+grid = """
+hkk........hkk
+kkk........kkk
+"""
+
+[layers."eyes.closed"]
+at = [9, 7]
+follows = "head"
+grid = """
+kkk........kkk
+"""
+
+[layers."eyes.left"]
+at = [8, 6]
+follows = "head"
+grid = """
+hkk........hkk
+kkk........kkk
+"""
+
+[layers."eyes.right"]
+at = [10, 6]
+follows = "head"
+grid = """
+hkk........hkk
+kkk........kkk
+"""
+
+[layers."eyes.happy"]
+at = [9, 6]
+follows = "head"
+grid = """
+.k..........k.
+k.k........k.k
+"""
+
+[layers.nose]
+at = [14, 10]
+follows = "head"
+grid = """
+F..F
+"""
+
+[layers."nose.sniff"]
+at = [14, 9]
+follows = "head"
+grid = """
+F..F
+"""
+
+[layers."mouth.open"]
+at = [7, 12]
+follows = "head"
+grid = """
+kkkkkkkkkkkkkkkkkk
+.kppppppppppppppk.
+..kkkkkkkkkkkkkk..
+"""
+
+[layers."tongue.out"]
+at = [14, 12]
+follows = "head"
+grid = """
+kppk
+kppk
+kppk
+.kk.
+"""
+
+[layers.feet]
+at = [5, 18]
+grid = """
+.kffk............kFFk.
+kfkfkfk........kFkFkFk
+"""

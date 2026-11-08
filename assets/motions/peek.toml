@@ -1,0 +1,12 @@
+# Motion template (SPEC §12.4). Use it with `use = "peek"` in [[actions]].
+name = "peek"
+summary = "Ducks, then rises with only the eyes over the rim for a beat"
+needs = []
+frames = [
+  { ops = ["all+0,4"], ms = 100 },
+  { ops = ["all+0,12"], ms = 400 },
+  { ops = ["all+0,9"], ms = 900 },
+  { ops = ["all+0,12"], ms = 200 },
+  { ops = ["all+0,4"], ms = 120 },
+  { ops = ["all+0,1"], ms = 120 },
+]

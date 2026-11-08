@@ -1,0 +1,22 @@
+# Sleep letters, a big Z and a small one, for doze. 11x11; drawn with `prop:zzz@x,y`
+# (x, y is where the top-left lands).
+name = "zzz"
+grid = """
+.....kkkkk.
+....kwwwwwk
+.....kkkwk.
+......kwk..
+.....kwkkk.
+.kkkkwwwwwk
+kgggkkkkkk.
+.kgk.......
+kgkk.......
+kgggk......
+.kkk.......
+"""
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"w" = "white"
+"g" = "blue-1"

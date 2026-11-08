@@ -126,6 +126,143 @@ pub fn compile(
     Compiled { mascot, report }
 }
 
+/// Compile a base on its own, with its default role colors, as a stand-in
+/// mascot named after it. Its actions are every motion template whose
+/// `needs` the base meets. `build_bundle` uses this to validate bases that no
+/// mascot extends yet; `pawdev building-blocks` uses it to draw them. The
+/// first action is always `rest`, a single rest frame.
+pub fn compile_base(lib: &Library, name: &str) -> Compiled {
+    let mut report = Report::default();
+    let Some(base) = lib.bases.get(name) else {
+        report.error("extends", format!("no base named {name:?}"));
+        return Compiled {
+            mascot: None,
+            report,
+        };
+    };
+    // A one-frame `rest` action keeps the "at least one action" rule happy
+    // for a base that meets no template's needs.
+    let rest = ActionSrc {
+        name: Some("rest".into()),
+        template: None,
+        weight: None,
+        when: None,
+        frames: Some(vec![FrameSrc::Step(StepSrc::default())]),
+        duration_ms: None,
+    };
+    let actions = std::iter::once(rest)
+        .chain(
+            lib.motions
+                .values()
+                .filter(|m| m.needs.iter().all(|n| base.layers.contains_key(n)))
+                .map(|m| ActionSrc {
+                    name: None,
+                    template: Some(m.name.clone()),
+                    weight: None,
+                    when: None,
+                    frames: None,
+                    duration_ms: None,
+                }),
+        )
+        .collect();
+    let file = MascotFile {
+        id: Some(name.to_string()),
+        name: Some(name.to_string()),
+        category: Some(CATEGORIES[0].to_string()),
+        accent: Some("#7b5ea7".into()),
+        extends: Some(name.to_string()),
+        actions,
+        ..MascotFile::default()
+    };
+    let mascot = compile_file(
+        file,
+        None,
+        lib,
+        Origin::User,
+        &|n| Err(format!("bases cannot read {n}")),
+        &mut report,
+    );
+    Compiled {
+        mascot: mascot.filter(|_| report.errors.is_empty()),
+        report,
+    }
+}
+
+/// One layer of a text mascot, resolved to colors, for PNG export.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceLayer {
+    /// `slot` or `slot.variant`.
+    pub name: String,
+    pub x: i32,
+    pub y: i32,
+    pub width: usize,
+    pub height: usize,
+    pub pixels: Vec<Option<Rgb>>,
+}
+
+/// A text mascot's merged glyph table and layers (SPEC §12.7).
+#[derive(Debug, Clone, Default)]
+pub struct SourceLayers {
+    /// Glyph → palette value (`clear`, a master palette name, or `#rrggbb`).
+    pub palette: Vec<(char, String)>,
+    pub layers: Vec<SourceLayer>,
+}
+
+/// Resolve a text mascot's layers (after `extends`) without compiling its
+/// actions.
+pub fn source_layers(src: &str, lib: &Library, origin: Origin) -> Result<SourceLayers, Report> {
+    let mut report = Report::default();
+    let file = match toml::from_str::<MascotFile>(src) {
+        Ok(f) => f,
+        Err(e) => {
+            report.error("", e.to_string());
+            return Err(report);
+        }
+    };
+    if file.sprite.is_some() {
+        report.error(
+            "sprite",
+            "PNG mascots have no layers; edit the sprite strip",
+        );
+        return Err(report);
+    }
+    let file = match &file.extends {
+        Some(name) => match lib.bases.get(name) {
+            Some(b) => merge_base(b.clone(), file),
+            None => {
+                report.error("extends", format!("no base named {name:?}"));
+                return Err(report);
+            }
+        },
+        None => file,
+    };
+    let (_, model) = build_model(&file, lib, origin, &mut report);
+    if !report.errors.is_empty() {
+        return Err(report);
+    }
+    let palette = file
+        .palette
+        .iter()
+        .filter_map(|(k, v)| Some((single_char(k).ok()?, v.clone())))
+        .collect();
+    let layers = model
+        .layers
+        .into_iter()
+        .map(|l| SourceLayer {
+            name: match &l.variant {
+                Some(v) => format!("{}.{v}", l.slot),
+                None => l.slot.clone(),
+            },
+            x: l.x,
+            y: l.y,
+            width: l.width,
+            height: l.pixels.len() / l.width.max(1),
+            pixels: l.pixels,
+        })
+        .collect();
+    Ok(SourceLayers { palette, layers })
+}
+
 fn compile_file(
     file: MascotFile,
     dir_name: Option<&str>,
@@ -273,7 +410,15 @@ impl Identity {
 /// same name replace in place and new layers append, actions and frames add.
 fn merge_base(mut base: MascotFile, m: MascotFile) -> MascotFile {
     base.palette.extend(m.palette);
-    for (name, layer) in m.layers {
+    for (name, mut layer) in m.layers {
+        // A replaced layer keeps the base layer's `follows` unless it sets one.
+        if let (Some(old), Some(new)) = (
+            base.layers.get(&name).and_then(|l| l.get("follows")),
+            layer.as_table_mut(),
+        ) && !new.contains_key("follows")
+        {
+            new.insert("follows".into(), old.clone());
+        }
         base.layers.insert(name, layer);
     }
     base.actions.extend(m.actions);
@@ -350,6 +495,8 @@ struct LayerDef {
 /// Everything a pose is rendered from.
 struct Model<'a> {
     slots: Vec<String>,
+    /// Per slot: the slot whose offsets it also takes (`follows`).
+    follows: Vec<Option<usize>>,
     layers: Vec<LayerDef>,
     grids: BTreeMap<String, Canvas>,
     lib: &'a Library,
@@ -524,6 +671,19 @@ impl Model<'_> {
         Ok(())
     }
 
+    /// A slot's own offset plus the offsets of the slots it follows.
+    fn offset(&self, pose: &Pose, slot: usize) -> (i32, i32) {
+        let (mut dx, mut dy) = (pose.slots[slot].dx, pose.slots[slot].dy);
+        let mut next = self.follows[slot];
+        // Chains are acyclic (checked at compile time), so this ends.
+        while let Some(i) = next {
+            dx += pose.slots[i].dx;
+            dy += pose.slots[i].dy;
+            next = self.follows[i];
+        }
+        (dx, dy)
+    }
+
     fn render(&self, pose: &Pose) -> Canvas {
         let mut canvas: Canvas = vec![None; N * N];
         let mut blit = |pixels: &Canvas, width: usize, x0: i32, y0: i32| {
@@ -543,11 +703,12 @@ impl Model<'_> {
             for (i, slot) in self.slots.iter().enumerate() {
                 let s = &pose.slots[i];
                 if let Some(layer) = self.layer(slot, s.variant.as_deref()).filter(|_| s.visible) {
+                    let (dx, dy) = self.offset(pose, i);
                     blit(
                         &layer.pixels,
                         layer.width,
-                        layer.x + s.dx + pose.all.0,
-                        layer.y + s.dy + pose.all.1,
+                        layer.x + dx + pose.all.0,
+                        layer.y + dy + pose.all.1,
                     );
                 }
             }
@@ -603,15 +764,13 @@ fn grid_pixels(
     Ok((grid.width, grid.height, pixels))
 }
 
-fn compile_text(
-    file: MascotFile,
-    lib: &Library,
+/// The glyph table and layers of a text mascot (after `extends` is merged).
+fn build_model<'a>(
+    file: &MascotFile,
+    lib: &'a Library,
     origin: Origin,
-    out: &mut Interner,
     report: &mut Report,
-) -> Option<Vec<Action>> {
-    let start = report.errors.len();
-
+) -> (HashMap<char, Option<Rgb>>, Model<'a>) {
     let mut glyphs = HashMap::new();
     for (key, value) in &file.palette {
         match (single_char(key), resolve_color(value, lib, origin)) {
@@ -624,11 +783,13 @@ fn compile_text(
 
     let mut model = Model {
         slots: Vec::new(),
+        follows: Vec::new(),
         layers: Vec::new(),
         grids: BTreeMap::new(),
         lib,
     };
-    for (name, value) in file.layers {
+    let mut follows: Vec<(String, String)> = Vec::new();
+    for (name, value) in file.layers.clone() {
         let ctx = format!("layer {name}");
         let (slot, variant) = split_layer_name(&name);
         if !is_kebab(&slot) || slot == "all" || variant.as_deref().is_some_and(|v| !is_kebab(v)) {
@@ -667,6 +828,16 @@ fn compile_text(
         if !model.slots.contains(&slot) {
             model.slots.push(slot.clone());
         }
+        if let Some(target) = src.follows {
+            match follows.iter().find(|(s, _)| *s == slot) {
+                Some((_, t)) if *t != target => report.error(
+                    &ctx,
+                    format!("every layer of slot {slot:?} must follow the same slot"),
+                ),
+                Some(_) => {}
+                None => follows.push((slot.clone(), target)),
+            }
+        }
         model.layers.push(LayerDef {
             slot,
             variant,
@@ -676,6 +847,45 @@ fn compile_text(
             pixels,
         });
     }
+    model.follows = vec![None; model.slots.len()];
+    for (slot, target) in &follows {
+        match model.slot(target) {
+            Ok(t) => {
+                let s = model.slot(slot).expect("pushed above");
+                model.follows[s] = Some(t);
+            }
+            Err(_) => report.error(
+                format!("layer {slot}"),
+                format!("follows {target:?}, which is not a layer slot"),
+            ),
+        }
+    }
+    for start in 0..model.slots.len() {
+        let mut next = model.follows[start];
+        for _ in 0..model.slots.len() {
+            next = next.and_then(|i| model.follows[i]);
+        }
+        if next.is_some() {
+            report.error(
+                format!("layer {}", model.slots[start]),
+                "`follows` forms a loop",
+            );
+            model.follows = vec![None; model.slots.len()];
+            break;
+        }
+    }
+    (glyphs, model)
+}
+
+fn compile_text(
+    file: MascotFile,
+    lib: &Library,
+    origin: Origin,
+    out: &mut Interner,
+    report: &mut Report,
+) -> Option<Vec<Action>> {
+    let start = report.errors.len();
+    let (glyphs, mut model) = build_model(&file, lib, origin, report);
 
     for (name, frame) in &file.frames {
         match grid_pixels(&frame.grid, &glyphs) {
@@ -1204,6 +1414,59 @@ frames = [{{ ops = ["eyes+1,0"], ms = 200 }}, {{ ops = ["all+0,1", "flipx"] }}]
             Some(AMBER),
             "added layer drawn after base layers"
         );
+    }
+
+    #[test]
+    fn follows_carries_offsets_and_survives_replacement() {
+        let base = format!(
+            "[palette]\n\".\" = \"clear\"\n\"f\" = \"brown-2\"\n\"e\" = \"amber\"\n[layers.body]\ngrid = \"\"\"\n{}\"\"\"\n[layers.head]\nat = [0, 0]\ngrid = \"ff\"\n[layers.eyes]\nat = [4, 4]\nfollows = \"head\"\ngrid = \"e\"\n[layers.\"eyes.closed\"]\nat = [4, 4]\ngrid = \"f\"\n",
+            full('f', 10..12)
+        );
+        let lib = lib_with(&[("perch", &base)], &[BLINK], &[]);
+        // The mascot replaces `eyes` without `follows`; it is inherited.
+        let src = "id = \"crow\"\nname = \"Crow\"\ncategory = \"birds\"\naccent = \"violet\"\nextends = \"perch\"\n[layers.eyes]\nat = [4, 4]\ngrid = \"e\"\n[[actions]]\nname = \"tilt\"\nframes = [{ ops = [\"head+1,2\"] }, { ops = [\"head+1,0\", \"eyes=closed\"] }]";
+        let c = compile(src, Some("crow"), &lib, Origin::Bundled, &no_files);
+        assert!(c.report.is_clean(), "{}", errors(&c));
+        let m = c.mascot.unwrap();
+        let f = m.actions[0].frames[0].frame as usize;
+        assert_eq!(px(&m, f, 5, 6), Some(AMBER), "eyes moved with the head");
+        assert_eq!(px(&m, f, 4, 4), None);
+        let f = m.actions[0].frames[1].frame as usize;
+        assert_eq!(px(&m, f, 5, 4), Some(BROWN), "variants follow too");
+
+        let looped = base.replace("[layers.head]\n", "[layers.head]\nfollows = \"eyes\"\n");
+        let lib = lib_with(&[("perch", &looped)], &[BLINK], &[]);
+        let c = compile(src, Some("crow"), &lib, Origin::Bundled, &no_files);
+        assert!(errors(&c).contains("loop"), "{}", errors(&c));
+    }
+
+    #[test]
+    fn bases_compile_alone_and_export_layers() {
+        let base = format!(
+            "[palette]\n\".\" = \"clear\"\n\"f\" = \"brown-2\"\n\"e\" = \"amber\"\n[layers.body]\ngrid = \"\"\"\n{}\"\"\"\n[layers.eyes]\nat = [1, 1]\ngrid = \"ee\"\n",
+            full('f', 0..8)
+        );
+        let lib = lib_with(&[("perch", &base)], &[BLINK], &[]);
+        let c = compile_base(&lib, "perch");
+        assert!(c.report.is_clean(), "{}", errors(&c));
+        let names: Vec<String> = c
+            .mascot
+            .unwrap()
+            .actions
+            .into_iter()
+            .map(|a| a.name)
+            .collect();
+        assert_eq!(names, ["rest"], "blink needs eyes.closed");
+
+        let src = "id = \"crow\"\nname = \"Crow\"\ncategory = \"birds\"\naccent = \"violet\"\nextends = \"perch\"\n[palette]\n\"f\" = \"fur-black\"\n";
+        let layers = source_layers(src, &lib, Origin::Bundled).unwrap();
+        assert!(layers.palette.contains(&('f', "fur-black".to_string())));
+        let eyes = &layers.layers[1];
+        assert_eq!(
+            (eyes.name.as_str(), eyes.x, eyes.y, eyes.width, eyes.height),
+            ("eyes", 1, 1, 2, 1)
+        );
+        assert_eq!(eyes.pixels, vec![Some(AMBER); 2]);
     }
 
     #[test]

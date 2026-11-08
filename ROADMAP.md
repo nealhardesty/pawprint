@@ -181,31 +181,36 @@ to end on the mascots that matter most.
 
 **Pipeline**
 
-- [ ] Master palette `assets/palette.toml` ([SPEC §12.9](SPEC.md#129-master-palette)), frozen at the end of M2; `pawdev` emits `palette.gpl` for pixel tools
-- [ ] Final crate, label strip, and nameplate, tinted by accent ramps
-- [ ] 15 props: `zzz`, `heart`, `bang`, `question`, `note`, `steam`, `sparkle`, `seed`, `leaf`, `bubble`, `star`, `sweat`, `puff`, `pebble`, `bamboo`
-- [ ] 16 motion templates ([SPEC §12.4](SPEC.md#124-motion-templates))
-- [ ] Bases needed by the showcase: `cat-sit`, `ungulate-head`, `bear`, `rodent-upright`, `bird-perched`, `pinniped`
-- [ ] `make preview`, `make contact-sheet` (+ `ANIMATED=1`), `make art-export`, `make art-import`
-- [ ] Art review checklist as a PR template ([SPEC §12.6](SPEC.md#126-production-process))
+- [x] Master palette `assets/palette.toml` ([SPEC §12.9](SPEC.md#129-master-palette)), frozen; `make palette` emits `palette.gpl` for pixel tools
+- [x] Final crate, label strip, and nameplate, tinted by accent ramps
+- [x] 15 props: `zzz`, `heart`, `bang`, `question`, `note`, `steam`, `sparkle`, `seed`, `leaf`, `bubble`, `star`, `sweat`, `puff`, `pebble`, `bamboo`
+- [x] 16 motion templates ([SPEC §12.4](SPEC.md#124-motion-templates)), as 17 files (`look-left` and `look-right` are separate)
+- [x] All 14 bases ([SPEC §12.8](SPEC.md#128-bases)), not only the showcase's, so the M3 waves can start in parallel
+- [x] Bases, templates, and props embedded in the bundle for text-format user mascots
+- [x] Layer `follows` so head motions carry the face
+- [x] `make contact-sheet` (+ `ANIMATED=1`), `make building-blocks`, `make art-export`, `make art-import`
+- [ ] `make preview` (needs the M1 window backends)
+- [x] Art review checklist as a PR template ([SPEC §12.6](SPEC.md#126-production-process))
+- [x] Style guide with worked examples: [`docs/ART.md`](docs/ART.md)
+- [x] Reference owl on `bird-perched` (replaces the M0 placeholder)
 
 **Showcase 12**: each with ≥ 2 template actions, a signature action, and a
 rare action:
 
-- [ ] `owl`: blink / look-left / signature head turn / rare full head spin (night)
-- [ ] `moose`: blink / ear-flick / signature heavy paddle-antler nod / rare: a bird lands on an antler
-- [ ] `elk`: blink / ear-flick / signature head raise / rare: silent bugle with a `note` prop
-- [ ] `marmot`: blink / duck / signature pop-up and double sniff / rare: whistle with `bang`
-- [ ] `armadillo`: blink / peek / signature curl and half roll / rare: rolls off the crate and back
-- [ ] `bear`: blink / doze / signature tiny yawn with paw on rim / rare: finds a `heart`-shaped honey drop
-- [ ] `walrus`: blink / bob / signature whisker twitch and tusk bob / rare: balances a `pebble` on its nose
-- [ ] `chipmunk`: blink / sniff / signature cheek-puff seed stash / rare: cheeks over-full, seed pops out
-- [ ] `cat-maine-coon-black`: blink / ear-flick / signature amber side-eye and tail flick / rare: ruff fluffs up
-- [ ] `cat-buff-tabby`: blink / content / signature melt into the crate until ears and cheeks remain / rare: loaf overflows the crate edge
-- [ ] `cat-cow`: blink / look-right / signature paws the loose crate flap / rare: flap swings, `startle`
-- [ ] `cat-tuxedo`: blink / tail-flick / signature tucks a white paw / rare: formal bow
+- [x] `owl`: blink / look-left / signature head turn / rare full head spin (night)
+- [x] `moose`: blink / ear-flick / signature heavy paddle-antler nod / rare: a bird lands on an antler
+- [x] `elk`: blink / ear-flick / signature head raise / rare: silent bugle with a `note` prop
+- [x] `marmot`: blink / duck / signature pop-up and double sniff / rare: whistle with `bang`
+- [x] `armadillo`: blink / peek / signature curl and half roll / rare: rolls off the crate and back
+- [x] `bear`: blink / doze / signature tiny yawn with paw on rim / rare: finds a `heart`-shaped honey drop
+- [x] `walrus`: blink / bob / signature whisker twitch and tusk bob / rare: balances a `pebble` on its nose
+- [x] `chipmunk`: blink / sniff / signature cheek-puff seed stash / rare: cheeks over-full, seed pops out
+- [x] `cat-maine-coon-black`: blink / ear-flick / signature amber side-eye and tail flick / rare: ruff fluffs up
+- [x] `cat-buff-tabby`: blink / content / signature melt into the crate until ears and cheeks remain / rare: loaf overflows the crate edge
+- [x] `cat-cow`: blink / look-right / signature paws the loose crate flap / rare: flap swings, `startle`
+- [x] `cat-tuxedo`: blink / tail-flick / signature tucks a white paw / rare: formal bow
 
-- [ ] Readability review at 1× with labels covered: moose vs. elk, cow cat vs. tuxedo
+- [x] Readability review at 1× with labels covered: moose vs. elk, cow cat vs. tuxedo (all showcase mascots also have `doze` for night, per SPEC §12.5)
 - [ ] **Measure the 20-character label limit** against real hostnames and
       remote-client scaling at each size. Record the result in SPEC §4.4.
 

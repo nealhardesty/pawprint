@@ -1,0 +1,9 @@
+# Motion template (SPEC §12.4). Use it with `use = "startle"` in [[actions]].
+name = "startle"
+summary = "A bang over the head and a 1 px hop"
+needs = []
+frames = [
+  { ops = ["all+0,-1", "prop:bang@26,0"], ms = 120 },
+  { ops = ["prop:bang@26,1"], ms = 700 },
+  { ops = ["prop:bang@26,1"], ms = 100 },
+]

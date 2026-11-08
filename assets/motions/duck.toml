@@ -1,0 +1,11 @@
+# Motion template (SPEC §12.4). Use it with `use = "duck"` in [[actions]].
+name = "duck"
+summary = "Sinks behind the crate front, waits, pops back up"
+needs = []
+frames = [
+  { ops = ["all+0,2"], ms = 120 },
+  { ops = ["all+0,6"], ms = 120 },
+  { ops = ["all+0,12"], ms = 900 },
+  { ops = ["all+0,5"], ms = 120 },
+  { ops = ["all+0,1"], ms = 160 },
+]

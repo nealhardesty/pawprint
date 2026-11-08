@@ -1,0 +1,19 @@
+# A musical eighth note. 7x8; drawn with `prop:note@x,y`
+# (x, y is where the top-left lands).
+name = "note"
+grid = """
+..kkkk.
+..kppkk
+..kpkpk
+..kpkkk
+kkkpk..
+kpppk..
+kpPPk..
+kkkkk..
+"""
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"p" = "purple-1"
+"P" = "purple-2"

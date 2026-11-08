@@ -1318,10 +1318,11 @@ Why text:
 
 | Block | Location | What it is |
 |---|---|---|
-| **Master palette** | `assets/palette.toml` | 32 named colors ([12.9](#129-master-palette)). All art uses these names, never raw hex. |
+| **Master palette** | `assets/palette.toml` | 32 named colors ([12.9](#129-master-palette)). All art uses these names, never raw hex. `make palette` writes `assets/palette.gpl` from it for GIMP, Aseprite, and LibreSprite; a test fails if the `.gpl` is stale. |
 | **Crate** | `assets/crate/crate.toml` | Crate back, crate front, label strip, and nameplate parts, drawn with accent-ramp glyphs so any accent tints them |
 | **Bases** | `assets/bases/<name>.toml` | Shared body plans in *role* colors (fur, fur-shadow, belly, ...) with standard layers. A mascot `extends` a base, maps roles to palette colors, and adds or overrides layers. |
 | **Motion templates** | `assets/motions/<name>.toml` | Reusable actions written as layer operations (blink, bob, duck, ...). They work on any mascot that has the layers they need. |
+| **Style guide** | `docs/ART.md` | How to author a mascot on a base, with worked examples and the art bible's practical gotchas |
 | **Props** | `assets/props/<name>.toml` | Small shared sprites: `zzz`, `heart`, `bang`, `question`, `note`, `steam`, `sparkle`, `seed`, `leaf`, `bubble`, `star`, `sweat`, `puff`, `pebble`, `bamboo` |
 | **Mascots** | `assets/mascots/<id>/mascot.toml` | One file per mascot: identity, palette mapping, layers, and actions |
 
@@ -1354,6 +1355,7 @@ extends = "bird-perched"            # optional base
 # `at` places a smaller grid; omitted means a full 32×32 grid at (0, 0).
 [layers."eyes"]
 at = [9, 7]
+follows = "head"       # takes the head's offsets: `head+1,0` moves the eyes too
 grid = """
 .kkk..kkk.
 kehk..kehk
@@ -1388,9 +1390,9 @@ weight = 3
 frames = [
   { ops = ["eyes=closed"], ms = 160 },
   { ops = [], ms = 200 },
-  { ops = ["head+1,0", "eyes+1,0"], ms = 220 },
-  { ops = ["head+2,0", "eyes+2,0"], ms = 900 },
-  { ops = ["head+1,0", "eyes+1,0"], ms = 200 },
+  { ops = ["head+1,0"], ms = 220 },
+  { ops = ["head+2,0"], ms = 900 },
+  { ops = ["head+1,0"], ms = 200 },
 ]
 
 [[actions]]
@@ -1433,6 +1435,13 @@ Details the compiler enforces:
   `+slot` shows a slot's default layer; `+slot.variant` and `slot=variant`
   show that variant.
 - Offsets are signed integers after a `+`: `head+-1,0` moves the head left.
+- **`follows = "<slot>"`** on a layer makes its slot take that slot's
+  offsets as well as its own, so `head+1,0` carries the eyes, ears, nose, and
+  mouth that follow `head`. Chains are allowed (`eyes` follows `disc`
+  follows `head`); loops and unknown slots are errors. Every layer of a slot
+  that sets `follows` must name the same slot. When a mascot replaces a base
+  layer and doesn't set `follows`, it keeps the base layer's. `follows`
+  affects offsets only, not visibility.
 - Props are drawn after the mascot (and after `flipx`) at mascot
   coordinates; `all+` does not move them.
 - `ms` defaults to 200 and `weight` to 5. A template action takes the
@@ -1447,12 +1456,17 @@ roll), an action frame can reference a full 32 × 32 grid from the mascot's
 `[frames.<name>]` table with `{ grid = "<name>", ms = ... }`. Each mascot has a few at most. A grid frame may also carry `all+`, `flipx`, and `prop:` ops, but no slot ops.
 
 **Bases.** A base file has the same format without identity fields. Its
-glyphs are *roles*. The mascot's `[palette]` maps them, so one cat base
+`[palette]` values are master palette names: a neutral default so the base
+alone renders as a recognizable generic animal. Its glyphs are *roles*. The mascot's `[palette]` maps them, so one cat base
 yields a black Maine Coon, a buff tabby, and a gray cat. Mascots then add
 pattern layers (tabby stripes, cow-cat patches, tuxedo bib) and species
 features. **A base is a starting point, not an identity:** the readability
 review ([12.6](#126-production-process)) fails any mascot that reads as a
-recolor of its neighbor.
+recolor of its neighbor. Every base also compiles **on its own** as a stand-in
+mascot (`pawprint_sprite::compile_base`) with every template whose `needs` it
+meets; the build fails if any base doesn't, so a broken base is caught before
+any mascot extends it. Shared role glyphs and standard slots are in
+[12.8](#128-bases).
 
 ### 12.4 Motion templates
 
@@ -1488,8 +1502,14 @@ The launch template set:
 | `yawn` | `mouth.open`, `eyes.closed` | Mouth opens slowly, eyes squeeze |
 | `doze` | `eyes.closed` | Eyes close, `zzz` prop rises; night only |
 | `startle` | — | `bang` prop, 1 px hop |
-| `curious` | — | `question` prop, head tilt via `head+1,0` |
+| `curious` | `head` | `question` prop, head tilt via `head+1,0` |
 | `content` | `eyes.happy` | Happy eyes, `heart` prop |
+
+That is 17 template files (`look-left` and `look-right` are separate). `doze`
+sets `when = "night"`. `peek` holds at `all+0,9`, so mascot rows 0–10 show
+over the rim: eyes belong in rows 8–10. Props in templates land in the top
+right (`zzz` from x 21, `bang` at x 26, `question` at x 24, `heart` at x 22),
+so keep that corner for them where the silhouette allows.
 
 ### 12.5 Animation extras that cost nothing at runtime
 
@@ -1530,7 +1550,13 @@ How 100 complete mascots get made:
    - `make contact-sheet` renders every mascot's rest frame at 1× and 2×,
      **with labels hidden**, grouped by base, into `docs/gallery.png`.
    - `make contact-sheet ANIMATED=1` also writes `docs/gallery.gif` with
-     every action playing.
+     every action playing: each mascot loops rest, then each action in turn
+     with 700 ms of rest between.
+   - `make building-blocks` renders `docs/building-blocks.png`: the crate in
+     all 16 accents with a label, every prop at 4×, and a grid of every base
+     with every motion template (each cell shows the template's most-changed
+     frame; `-` marks a template whose `needs` the base lacks).
+   - The checklist below is the art section of `.github/pull_request_template.md`.
 6. **Review checklist** (every mascot, recorded in the PR):
    - [ ] **Squint test:** recognizable at 1× (32 px) with the label covered
    - [ ] Distinct from every sibling on the same base
@@ -1546,11 +1572,19 @@ How 100 complete mascots get made:
 ### 12.7 PNG bridges
 
 - `make art-export MASCOT=<id>` writes `out/art/<id>/`: one PNG per layer
-  and variant, plus a frame strip, for editing in Aseprite, LibreSprite, or
-  Piskel.
+  and variant at the layer's own size, named `<slot>.png` or
+  `<slot>.<variant>.png` (base layers included, after `extends` is merged;
+  each line printed gives the layer's `at`), plus `frames.png`, a strip of
+  every distinct compiled 32 × 32 frame with rest first, for editing in
+  Aseprite, LibreSprite, or Piskel.
 - `make art-import MASCOT=<id> PNG=<file>` converts a PNG layer back into a
-  grid, mapping each color to the nearest master palette entry and reporting
-  any color that didn't map exactly.
+  grid and **prints** a ready-to-paste `[layers."<name>"]` table (it never
+  edits `mascot.toml`). The layer name is the file name without `.png`; a
+  layer the mascot already has keeps its `at`. Transparent pixels take the
+  glyph mapped to `clear`. Each opaque color snaps to the nearest master
+  palette entry (squared RGB distance), then to the mascot glyph mapped to
+  that name; inexact colors and colors with no glyph (written as `?`) are
+  reported on stderr. Partial alpha is an error.
 - **User mascots may skip the text format entirely:** a directory holding a
   `mascot.toml` with `sprite = "sprite.png"` (a horizontal strip of 32 × 32
   frames) and actions whose `frames` are frame indices is accepted as-is.
@@ -1564,7 +1598,7 @@ How 100 complete mascots get made:
 | Base | Body plan | Members (guide, not a rule) |
 |---|---|---|
 | `cat-sit` | Sitting cat, ears up, tail slot | All 12 cats |
-| `dog-sit` | Sitting dog; ear variants `prick`, `flop`, `fold`; snout lengths | All 12 dogs |
+| `dog-sit` | Sitting dog; floppy `ears` by default, with `ears.prick` and `ears.fold` to list in `rest` instead; snout | All 12 dogs |
 | `ungulate-head` | Head and shoulders over the crate; antler/horn slot | moose, elk, deer, bison, goat, llama |
 | `bear` | Round ears, broad muzzle, paws on rim | bear, panda, polar-bear, koala |
 | `rodent-upright` | Upright small mammal, paws to chest | marmot, chipmunk, squirrel, mouse, hamster, beaver |
@@ -1579,10 +1613,28 @@ How 100 complete mascots get made:
 | `bug` | Segmented body, wing and antenna slots | moth, beetle, bee |
 | *(bespoke)* | No base | armadillo, rabbit, capybara, elephant, wolf, octopus, jellyfish, crab, and all 8 oddballs |
 
+Conventions every base follows, so mascots and templates work across them
+(each base file's header lists its own roles and slots):
+
+- **Shared role glyphs:** `.` clear, `k` ink; `l` `f` `F` the main
+  material's light, base, and shadow; `w` `m` `M` the secondary material
+  (belly, muzzle, chest, facial disc); `e` iris; `h` eye highlight; `n`
+  nose; `p` inner ear, tongue, and mouth; `b` `B` beak or bill. Bases add
+  documented extras (antlers, water, markings).
+- **Standard slots**, where the animal has them: `tail` (+`flick`), `body`,
+  `head`, `ears` (+`flick`), `eyes` (+`closed`, `left`, `right`, `happy`),
+  `nose` (+`sniff`), `mouth.open` (hidden at rest; for `yawn`), and `paws`
+  (or feet, flippers, fins) on the rim. Face slots follow `head`.
+- **Geometry:** eyes in rows 8–10, face in rows 4–16, paws on the rim in
+  rows 17–19, the body continuing to row 31 behind the crate front so ducks
+  and hops never show a gap.
+- `make building-blocks` shows every base and every template applied to it.
+
 ### 12.9 Master palette
 
-Thirty-two named colors, frozen once M2 lands (renames break sources).
-`clear` is transparency and isn't counted.
+Thirty-two named colors, **frozen as of M2** (renames break sources).
+`clear` is transparency and isn't counted. `assets/palette.gpl` is generated
+from `palette.toml` (`make palette`).
 
 | Name | Hex | Name | Hex | Name | Hex | Name | Hex |
 |---|---|---|---|---|---|---|---|
@@ -1622,6 +1674,7 @@ reads as fur, not as a hole in the outline.
   settle frame before returning to rest. No full-body flashes or color
   cycling. Calm beats busy.
 - **Colors:** at most 16 per mascot, crate excluded.
+- Worked examples and the practical gotchas are in [`docs/ART.md`](docs/ART.md).
 
 ### 12.11 Validation rules
 
@@ -1634,7 +1687,8 @@ report the gates without failing, because the catalog stays small until
 M3. The build also fails if no mascot is eligible for the fallback.
 
 1. The source parses. `id` matches the directory and the ID grammar.
-   `extends`, `use`, and `prop:` references resolve.
+   `extends`, `use`, `follows`, and `prop:` references resolve. Every base
+   compiles on its own ([12.3](#123-mascot-source-format)).
 2. Every grid row has the declared width, and every grid glyph is in the
    palette. Every palette value is a master palette name (bundled) or a
    name/`#rrggbb` (user).
@@ -1677,9 +1731,10 @@ mascots, catalog gates), is serialized with `postcard` to
 `$OUT_DIR/bundle.bin`, embedded with `include_bytes!`, and decoded once on
 first use (`pawprint_core::catalog::bundle()`). The binary needs no asset
 files at runtime. Frames stay indexed; a frame is expanded to RGBA only
-when it is drawn. User mascots are compiled at load time by the same crate;
-text-format user mascots that use bases, templates, or props will need
-those library sources embedded too (M3).
+when it is drawn. The bundle also embeds the library as source text (palette, accents,
+bases, motion templates, props: `Bundle::library`), so text-format user
+mascots compiled at load time by the same crate can extend bases and use
+templates and props (`pawprint_core::catalog::library()`).
 
 ---
 
@@ -1715,7 +1770,9 @@ pawprint/
 ├── extras/
 │   └── gnome-presenter/      # Plan B GNOME Shell extension (only if needed, 11.5.3)
 ├── docs/
-│   └── gallery.png           # generated contact sheet (make contact-sheet)
+│   ├── ART.md                # mascot style guide with worked examples
+│   ├── gallery.png           # generated contact sheet (make contact-sheet; gallery.gif with ANIMATED=1)
+│   └── building-blocks.png   # every base x every template, props, accents (make building-blocks)
 ├── spikes/
 │   └── f22-static-musl/      # standalone spike crate (not a workspace member); make spike-f22
 ├── README.md  SPEC.md  ROADMAP.md  AGENTS.md  LICENSE
@@ -1761,6 +1818,8 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
 | `fmt` | Format the code |
 | `golden` | Regenerate golden images after an intentional rendering change |
 | `contact-sheet` | Render every mascot, labels hidden, grouped by base, into `docs/gallery.png` (`ANIMATED=1` adds `docs/gallery.gif`) |
+| `building-blocks` | Render the crate accents, props, and every base with every motion template into `docs/building-blocks.png` |
+| `palette` | Regenerate `assets/palette.gpl` from `assets/palette.toml` |
 | `art-export` | Export a mascot's layers and frames as PNGs: `make art-export MASCOT=owl` |
 | `art-import` | Convert a PNG layer into a grid: `make art-import MASCOT=owl PNG=eyes.png` |
 | `ci` | `lint` + `test` (what CI runs on every OS) |

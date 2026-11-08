@@ -1,0 +1,21 @@
+# A small green leaf on a stem. 7x8; drawn with `prop:leaf@x,y`
+# (x, y is where the top-left lands).
+name = "leaf"
+grid = """
+....kk.
+..kkllk
+.kllggk
+klgGggk
+klgGgGk
+.kGGGk.
+kskkk..
+.k.....
+"""
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "green-1"
+"g" = "green-2"
+"G" = "green-3"
+"s" = "brown-3"

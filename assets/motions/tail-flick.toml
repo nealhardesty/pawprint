@@ -1,0 +1,9 @@
+# Motion template (SPEC §12.4). Use it with `use = "tail-flick"` in [[actions]].
+name = "tail-flick"
+summary = "Tail flicks over the crate edge"
+needs = ["tail.flick"]
+frames = [
+  { ops = ["tail=flick"], ms = 160 },
+  { ops = [], ms = 140 },
+  { ops = ["tail=flick"], ms = 220 },
+]

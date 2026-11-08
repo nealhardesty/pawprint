@@ -1,0 +1,108 @@
+# Bear (grizzly), a showcase mascot on the bear base. A big brown bear with
+# massive shoulders that spread past its head under a pale, grizzled mantle,
+# round ears, a broad tan muzzle, and heavy clawed paws on the rim. It yawns
+# and lets one paw slump over the crate edge.
+id = "bear"
+name = "Bear"
+category = "mammals"
+aliases = ["grizzly", "brownbear"]
+accent = "cranberry"
+extends = "bear"
+
+[palette]
+"l" = "brown-2"     # fur light
+"f" = "brown-3"     # fur
+"F" = "brown-4"     # fur shadow
+"w" = "brown-1"     # muzzle and claws
+"M" = "brown-2"     # muzzle shadow
+"g" = "brown-1"     # NEW: silver tips on the crown and mantle
+
+# Shoulders wider than the head, frosted along the top (the grizzly hump).
+[layers.body]
+at = [2, 12]
+grid = """
+...kggggggggggggggggggggk...
+.kggllllllllllllllllllllggk.
+kgllffffffffffffffffffffllFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+"""
+
+# Silver-tipped crown: the head pales toward the top.
+[layers.head]
+at = [6, 4]
+grid = """
+....kkkkkkkkkkkk....
+..kkggggggggggllkk..
+.kggllllllllllllfFk.
+kgllfffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klffffwwwwwwwwfffFFk
+klfffwwwwwwwwwwffFFk
+klfffwwwwMMwwwwffFFk
+.kfffwwwMwwMwwwffFk.
+..kFFfwwwwwwwwfFFk..
+...kkFFFFFFFFFFkk...
+"""
+
+# One paw slumps over the right corner of the crate.
+[layers."paws.slump"]
+at = [7, 17]
+grid = """
+.FFFFF...........FFFFF.
+FlllllF.........FfffffF
+kwfwfwk.........kwfwfwk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "doze"
+weight = 4
+
+# Signature: a tiny yawn, then one paw flops over the crate edge.
+[[actions]]
+name = "yawn-slump"
+weight = 4
+frames = [
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = ["eyes=closed", "mouth=open"], ms = 700 },
+  { ops = ["eyes=closed", "mouth=open", "paws=slump", "head+1,0"], ms = 400 },
+  { ops = ["eyes=closed", "paws=slump", "head+1,1"], ms = 600 },
+  { ops = ["paws=slump", "head+1,0"], ms = 600 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: sniffs out a heart-shaped honey drop and is delighted.
+[[actions]]
+name = "honey-drop"
+weight = 1
+frames = [
+  { ops = ["nose=sniff"], ms = 120 },
+  { ops = [], ms = 120 },
+  { ops = ["nose=sniff"], ms = 120 },
+  { ops = ["eyes=right", "prop:heart@22,6"], ms = 600 },
+  { ops = ["eyes=happy", "prop:heart@22,5", "head+0,-1"], ms = 700 },
+  { ops = ["eyes=happy", "prop:heart@22,3"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = [], ms = 300 },
+]

@@ -1,0 +1,163 @@
+# Base: bear (SPEC §12.8). A big round bear: round ears, a broad light
+# muzzle with a large nose, heavy paws with claws over the rim. Members: bear,
+# panda, polar-bear, koala.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)    l f F  fur light / base / shadow
+#   w M    muzzle light (and claws) / muzzle shadow (mouth lines)
+#   e iris (unused by the default eyes; add it in your own eyes)
+#   h eye highlight   n nose   p inner ear and tongue
+#
+# Slots, in drawing order: body, ears (+flick), head, eyes (+closed, left,
+# right, happy), nose (+sniff), mouth (.open only, hidden at rest), paws.
+# ears, eyes, nose, and mouth follow head, so `head+1,0` tilts the face.
+# Panda and koala: recolor, then add eye-patch or fluffy-ear layers.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "brown-2"
+"f" = "brown-3"
+"F" = "brown-4"
+"w" = "brown-1"
+"M" = "brown-2"
+"e" = "amber"
+"h" = "white"
+"n" = "fur-black"
+"p" = "pink-2"
+
+[layers.body]
+at = [4, 14]
+grid = """
+....klffffffffffffFk....
+..kklfffffffffffffFFkk..
+.klffffffffffffffffffFk.
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+"""
+
+[layers.ears]
+at = [4, 2]
+follows = "head"
+grid = """
+..kkkk............kkkk..
+.kllffk..........kFFffk.
+klppfFk..........kFFppfk
+kfppFFk..........kFFppFk
+.kFFFk............kFFFk.
+"""
+
+[layers."ears.flick"]
+at = [3, 2]
+follows = "head"
+grid = """
+...................kkkk..
+..kkkk............kFFffk.
+.kllffk...........kFFppfk
+klppfFk...........kFFppFk
+kfppFFk............kFFFk.
+.kFFFk...................
+"""
+
+[layers.head]
+at = [6, 4]
+grid = """
+....kkkkkkkkkkkk....
+..kkllllllllllffkk..
+.kllfffffffffffffFk.
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klffffwwwwwwwwfffFFk
+klfffwwwwwwwwwwffFFk
+klfffwwwwMMwwwwffFFk
+.kfffwwwMwwMwwwffFk.
+..kFFfwwwwwwwwfFFk..
+...kkFFFFFFFFFFkk...
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [14, 11]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 10]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."mouth.open"]
+at = [14, 13]
+follows = "head"
+grid = """
+kkkk
+kppk
+kppk
+"""
+
+[layers.paws]
+at = [7, 17]
+grid = """
+.FFFFF......FFFFF.
+FlllllF....FfffffF
+kwfwfwk....kwfwfwk
+"""

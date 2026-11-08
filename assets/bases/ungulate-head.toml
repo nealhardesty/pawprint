@@ -1,0 +1,172 @@
+# Base: ungulate-head (SPEC §12.8). Head and shoulders of a deer over the
+# crate: a long face tapering to a light muzzle and dark nose, leaf-shaped
+# ears out to the sides, small antlers, a light throat patch. Members: moose,
+# elk, deer, bison, goat, llama.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)    l f F  hide light / base / shadow
+#   w M    muzzle and throat light / its shadow (mouth line)
+#   z x X  antler or horn light / base / shadow
+#   e iris (unused by the default eyes)   h eye highlight
+#   n nose   p inner ear and tongue
+#
+# Slots, in drawing order: body, ears (+flick), head, antlers, eyes
+# (+closed, left, right, happy), nose (+sniff), mouth (.open only, hidden at
+# rest). ears, antlers, eyes, nose, and mouth follow head. Replace `antlers`
+# with paddles, tall tines, or horns (it may use rows 0-5 and the full
+# width); remove it with an empty-looking layer or `rest` for llama.
+# There are no paws: hooves stay inside the crate.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "brown-1"
+"f" = "brown-2"
+"F" = "brown-3"
+"w" = "cream"
+"M" = "brown-1"
+"z" = "cream"
+"x" = "brown-1"
+"X" = "brown-3"
+"e" = "brown-4"
+"h" = "white"
+"n" = "fur-black"
+"p" = "pink-2"
+
+[layers.body]
+at = [4, 15]
+grid = """
+.......klfffffFFk.......
+......klfwwwwwwFFk......
+....klfffwwwwwwffFFk....
+..klfffffwwwwwwffffFFk..
+.klffffffwwwwwwfffffFFk.
+klfffffffwwwwwwffffffFFk
+klfffffffwwwwwwffffffFFk
+klfffffffwwwwwwffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+"""
+
+[layers.ears]
+at = [2, 6]
+follows = "head"
+grid = """
+.kkkk..................kkkk.
+kllffkk..............kkFFffk
+klpppffk............kFFpppfk
+.kFFFFk..............kFFFFk.
+..kkkk................kkkk..
+"""
+
+[layers."ears.flick"]
+at = [2, 5]
+follows = "head"
+grid = """
+.kkkk.......................
+kllffkk................kkkk.
+klpppffk.............kkFFffk
+.kFFFFk.............kFFpppfk
+..kkkk...............kFFFFk.
+......................kkkk..
+"""
+
+[layers.head]
+at = [8, 4]
+grid = """
+...kkkkkkkkkk...
+.kkllllllllffkk.
+kllffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+.klffffffffffFk.
+..klffwwwwffFk..
+...kfwwwwwwFk...
+...kfwwwwwwFk...
+...kfwwwwwwFk...
+....kwwMMwwk....
+.....kkkkkk.....
+"""
+
+[layers.antlers]
+at = [6, 0]
+follows = "head"
+grid = """
+.k...k........k...k.
+kzk.kzk......kzk.kzk
+kxk.kxk......kxk.kxk
+.kxkxk........kxkxk.
+..kxxk........kxxk..
+...kXk........kXk...
+"""
+
+[layers.eyes]
+at = [10, 8]
+follows = "head"
+grid = """
+hk........hk
+kk........kk
+"""
+
+[layers."eyes.closed"]
+at = [10, 9]
+follows = "head"
+grid = """
+kk........kk
+"""
+
+[layers."eyes.left"]
+at = [9, 8]
+follows = "head"
+grid = """
+hk........hk
+kk........kk
+"""
+
+[layers."eyes.right"]
+at = [11, 8]
+follows = "head"
+grid = """
+hk........hk
+kk........kk
+"""
+
+[layers."eyes.happy"]
+at = [9, 8]
+follows = "head"
+grid = """
+.kk........kk.
+k..k......k..k
+"""
+
+[layers.nose]
+at = [14, 13]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 12]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."mouth.open"]
+at = [14, 15]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""

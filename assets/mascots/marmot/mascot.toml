@@ -1,0 +1,151 @@
+# Marmot (groundhog, woodchuck), a showcase mascot on rodent-upright. A
+# chunky, round body that bulges past its broad, flat head; tiny ears; a dark
+# brown face with a pale blaze and muzzle; a tawny belly; and a short bushy
+# tail behind one shoulder. It pops up to sniff, and whistles an alarm.
+id = "marmot"
+name = "Marmot"
+category = "mammals"
+aliases = ["groundhog", "woodchuck"]
+accent = "ochre"
+extends = "rodent-upright"
+
+[palette]
+"l" = "brown-1"     # fur light
+"f" = "brown-2"     # fur
+"F" = "brown-3"     # fur shadow
+"w" = "orange-1"    # belly
+"M" = "brown-2"     # cheek shadow
+"n" = "fur-black"   # nose
+"d" = "brown-3"     # NEW: dark face
+"c" = "cream"       # NEW: blaze and muzzle
+"j" = "brown-1"     # NEW: cheeks
+
+[layers.tail]
+at = [25, 6]
+grid = """
+.kkk..
+klffk.
+kfffFk
+kffFFk
+.kfFFk
+.kfFFk
+.kfFk.
+kffFk.
+kfFFk.
+"""
+
+[layers."tail.flick"]
+at = [25, 5]
+grid = """
+..kkk..
+.klffk.
+.kfffFk
+kfffFFk
+kffFFk.
+.kfFFk.
+.kfFFk.
+.kfFk..
+kffFk..
+kfFFk..
+"""
+
+# Round and wide: the body bulges past the head on both sides.
+[layers.body]
+at = [3, 12]
+grid = """
+...klfffffffffffffffFFk...
+..klfffwwwwwwwwwwwwffFFk..
+.klfffwwwwwwwwwwwwwwffFFk.
+klfffwwwwwwwwwwwwwwwwffFFk
+klfffwwwwwwwwwwwwwwwwffFFk
+klffwwwwwwwwwwwwwwwwwwfFFk
+klffwwwwwwwwwwwwwwwwwwfFFk
+klffwwwwwwwwwwwwwwwwwwfFFk
+klffwwwwwwwwwwwwwwwwwwfFFk
+klffwwwwwwwwwwwwwwwwwwfFFk
+klffwwwwwwwwwwwwwwwwwwfFFk
+klffwwwwwwwwwwwwwwwwwwfFFk
+klfffwwwwwwwwwwwwwwwwffFFk
+klfffwwwwwwwwwwwwwwwwffFFk
+klfffwwwwwwwwwwwwwwwwffFFk
+klfffwwwwwwwwwwwwwwwwffFFk
+klffffwwwwwwwwwwwwwwfffFFk
+klffffwwwwwwwwwwwwwwfffFFk
+klfffffwwwwwwwwwwwwffffFFk
+klfffffwwwwwwwwwwwwffffFFk
+"""
+
+# A broad, flat-topped head: a dark brown band across the eyes, a pale blaze and muzzle.
+[layers.head]
+at = [5, 3]
+grid = """
+......kkkkkkkkkk......
+....kkllllllllffkk....
+..kkllllffffffffFFkk..
+.kllffffffffffffffFFk.
+klfffddddddddddddffFFk
+klffddddddddddddddfFFk
+klfdddddddccddddddddFk
+kljjddddddccddddddjjFk
+kljjjddddccccddddjjjFk
+.kjjjjjccccccccjjjjMk.
+..kjjjjjccccccjjjjMk..
+....FFjjjjjjjjjjFF....
+"""
+
+# Tiny ears, barely more than bumps.
+[layers.ears]
+at = [7, 3]
+grid = """
+.kk..............kk.
+kpfk............kfpk
+"""
+
+[layers."ears.flick"]
+at = [7, 2]
+grid = """
+.kk.................
+kpfk.............kk.
+.kk.............kfpk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "duck"
+weight = 4
+
+[[actions]]
+use = "doze"
+
+# Signature: pops up tall, sniffs twice, sinks back down.
+[[actions]]
+name = "pop-up-sniff"
+weight = 4
+frames = [
+  { ops = ["all+0,2"], ms = 160 },
+  { ops = ["all+0,-2"], ms = 120 },
+  { ops = ["all+0,-3", "nose=sniff"], ms = 120 },
+  { ops = ["all+0,-3"], ms = 120 },
+  { ops = ["all+0,-3", "nose=sniff"], ms = 120 },
+  { ops = ["all+0,-3"], ms = 500 },
+  { ops = ["all+0,-1"], ms = 140 },
+  { ops = ["all+0,2"], ms = 260 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: rears up and whistles an alarm.
+[[actions]]
+name = "whistle"
+weight = 1
+frames = [
+  { ops = ["all+0,-2"], ms = 160 },
+  { ops = ["all+0,-2", "mouth=open", "prop:bang@2,1"], ms = 500 },
+  { ops = ["all+0,-2", "prop:bang@2,1"], ms = 160 },
+  { ops = ["all+0,-2", "mouth=open", "prop:bang@2,0"], ms = 500 },
+  { ops = ["all+0,-2"], ms = 300 },
+  { ops = ["all+0,-1"], ms = 140 },
+  { ops = [], ms = 300 },
+]

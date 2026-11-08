@@ -268,7 +268,8 @@ The built-in mascots are written in a **text pixel format** instead: pixel
 grids in TOML, with shared body bases, reusable motions like `blink` and
 `duck`, and props like `zzz`. Your own mascots can use it too, and it's the
 way to contribute new built-ins. Both formats are documented in
-[SPEC.md §12](SPEC.md#12-mascot-assets).
+[SPEC.md §12](SPEC.md#12-mascot-assets), and [docs/ART.md](docs/ART.md) walks
+through drawing one on a shared body base, step by step.
 
 ---
 
@@ -406,9 +407,11 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make lint` | Format check and clippy (warnings are errors) |
 | `make fmt` | Format the code |
 | `make golden` | Regenerate golden images after an intentional rendering change |
-| `make contact-sheet` | Render every mascot (labels hidden, grouped by body base) into `docs/gallery.png`; `ANIMATED=1` adds an animated GIF |
-| `make art-export MASCOT=owl` | Export a mascot's layers and frames as PNGs for editing in a pixel-art tool |
-| `make art-import MASCOT=owl PNG=eyes.png` | Convert an edited PNG layer back into the text pixel format |
+| `make contact-sheet` | Render every mascot (labels hidden, grouped by body base) into `docs/gallery.png`; `ANIMATED=1` also writes `docs/gallery.gif` with every action playing |
+| `make building-blocks` | Render the crate in every accent, every prop, and every body base with every motion template into `docs/building-blocks.png` |
+| `make palette` | Regenerate `assets/palette.gpl`, the master palette for GIMP, Aseprite, and LibreSprite |
+| `make art-export MASCOT=owl` | Export a mascot's layers (one PNG each) and frames into `out/art/<id>/` for editing in a pixel-art tool |
+| `make art-import MASCOT=owl PNG=out/art/owl/eyes.png` | Print an edited PNG layer as a ready-to-paste grid in the mascot's own glyphs |
 | `make ci` | Everything CI checks (`lint` + `test`) |
 | `make release` | Optimized build (universal binary on macOS, static musl on Linux) |
 | `make package` | Release build, archive, and checksum into `dist/`. Fails if the catalog has fewer than 100 valid mascots or is missing a required one. |

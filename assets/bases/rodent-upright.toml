@@ -1,0 +1,201 @@
+# Base: rodent-upright (SPEC §12.8). A small mammal standing up in the crate:
+# a round head on a pear-shaped body, puffy cheeks, small round ears, buck
+# teeth, front paws held together at the chest, and a bushy tail on the
+# right. Its default colors make a marmot. Members: marmot, chipmunk,
+# squirrel, mouse, hamster, beaver.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)    l f F  fur light / base / shadow
+#   w M    cheeks, muzzle, and belly / their shadow
+#   t teeth   e iris (unused by the default eyes)   h eye highlight
+#   n nose    p inner ear and mouth inside
+#
+# Slots, in drawing order: tail (+flick), body, head, ears (+flick), eyes
+# (+closed, left, right, happy), nose (+sniff), mouth (the teeth; +open),
+# paws. ears, eyes, nose, and mouth follow head. The paws sit at the chest,
+# so a held prop (seed, pebble) goes at about prop:seed@14,14.
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "brown-1"
+"f" = "brown-2"
+"F" = "brown-3"
+"w" = "orange-1"
+"M" = "brown-1"
+"t" = "white"
+"e" = "brown-4"
+"h" = "white"
+"n" = "brown-4"
+"p" = "pink-2"
+
+[layers.tail]
+at = [24, 11]
+grid = """
+.kkk..
+klffk.
+kfffFk
+kffFFk
+.kfFFk
+.kfFFk
+.kfFk.
+kffFk.
+kfFFk.
+"""
+
+[layers."tail.flick"]
+at = [24, 10]
+grid = """
+..kkk..
+.klffk.
+.kfffFk
+kfffFFk
+kffFFk.
+.kfFFk.
+.kfFFk.
+.kfFk..
+kffFk..
+kfFFk..
+"""
+
+[layers.body]
+at = [6, 12]
+grid = """
+.klffffffffffffffFk.
+klfffffffffffffffFFk
+klffffwwwwwwwwffffFk
+klffwwwwwwwwwwwwffFk
+klffwwwwwwwwwwwwffFk
+klfwwwwwwwwwwwwwwfFk
+klfwwwwwwwwwwwwwwfFk
+klfwwwwwwwwwwwwwwfFk
+klfwwwwwwwwwwwwwwfFk
+klfwwwwwwwwwwwwwwfFk
+klffwwwwwwwwwwwwffFk
+klffwwwwwwwwwwwwffFk
+klffwwwwwwwwwwwwffFk
+klfffwwwwwwwwwwfffFk
+klfffwwwwwwwwwwfffFk
+klffffwwwwwwwwffffFk
+klffffwwwwwwwwffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+"""
+
+[layers.head]
+at = [5, 3]
+grid = """
+......kkkkkkkkkk......
+....kkllllllllffkk....
+...kllllfffffffffFk...
+..kllffffffffffffFFk..
+.klfffffffffffffffFFk.
+.klfffffffffffffffFFk.
+.klfffffffffffffffFFk.
+klwwwffffffffffffwwwFk
+klwwwfffwwwwwwfffwwwFk
+.kwwwwwwwwwwwwwwwwwMk.
+..kwwwwwwwwwwwwwwwMk..
+....FFwwwwwwwwwwFF....
+"""
+
+[layers.ears]
+at = [7, 2]
+follows = "head"
+grid = """
+.kkk..........kkk.
+klppk........kpplk
+kfpfk........kfpfk
+"""
+
+[layers."ears.flick"]
+at = [6, 2]
+follows = "head"
+grid = """
+...............kkk.
+.kkk..........kpplk
+klppk.........kfpfk
+kfpfk..............
+.kkf...............
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [15, 11]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [14, 10]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers.mouth]
+at = [14, 12]
+follows = "head"
+grid = """
+.FF.
+FttF
+"""
+
+[layers."mouth.open"]
+at = [14, 12]
+follows = "head"
+grid = """
+FkkF
+kttk
+kppk
+.kk.
+"""
+
+[layers.paws]
+at = [10, 15]
+grid = """
+.FFFF..FFFF.
+FffffFFffffF
+.FfFfFFfFfF.
+"""

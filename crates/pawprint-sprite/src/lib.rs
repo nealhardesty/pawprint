@@ -14,9 +14,12 @@ mod source;
 
 pub use bundle::{Bundle, BundleReport, build_bundle, check_gates};
 pub use color::{Ramp, Rgb, ramp};
-pub use compile::{Action, Compiled, FrameRef, Mascot, compile, compile_dir};
+pub use compile::{
+    Action, Compiled, FrameRef, Mascot, SourceLayer, SourceLayers, compile, compile_base,
+    compile_dir, source_layers,
+};
 pub use image::RgbaImage;
-pub use library::{Library, Prop};
+pub use library::{Library, LibrarySources, Prop};
 pub use parts::{CrateArt, CrateColor, Font, IndexedLayer, Shade};
 pub use source::When;
 

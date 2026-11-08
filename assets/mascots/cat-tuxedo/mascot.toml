@@ -1,0 +1,216 @@
+# Tuxedo cat, a showcase cat on cat-sit. Sleek and upright: a narrow head
+# with tall ears, a glossy dark coat with a 3-step sheen, a symmetric white
+# blaze from the brow down the muzzle, a white bib, and white paws. Its paws
+# have `tuck` (one tucked under the chest) and `chest` (one held to the bib).
+id = "cat-tuxedo"
+name = "Tuxedo Cat"
+category = "cats-dogs"
+aliases = ["tuxedo", "tux"]
+accent = "brick"
+extends = "cat-sit"
+
+[palette]
+"l" = "grey-3"      # coat sheen
+"f" = "grey-4"      # coat
+"F" = "fur-black"   # coat shadow
+"w" = "white"       # blaze, bib, and paws
+"M" = "grey-1"      # shadow on the white
+"e" = "yellow-1"    # iris
+"n" = "pink-2"      # nose
+"p" = "pink-2"      # inner ear
+
+[layers.tail]
+at = [25, 10]
+grid = """
+.kk.
+klfk
+klFk
+kfFk
+kfFk
+kfFk
+kfFk
+kfFk
+kfFk
+kfFk
+kfFk
+"""
+
+[layers."tail.flick"]
+at = [25, 9]
+grid = """
+..kk.
+.klfk
+.klFk
+kffFk
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+"""
+
+[layers.body]
+at = [6, 14]
+grid = """
+..klffffffffffffFk..
+.klfffffffffffffFFk.
+klffffwwwwwwwwffFFFk
+klfffwwwwwwwwwwffFFk
+klfffffwwwwwwffffFFk
+klffffffwwwwfffffFFk
+klffffffwwwwfffffFFk
+klfffffffwwffffffFFk
+klffffffffffffffFFFk
+klffffffffffffffFFFk
+klffffffffffffffFFFk
+klffffffffffffffFFFk
+klffffffffffffffFFFk
+klffffffffffffffFFFk
+klffffffffffffffFFFk
+klffffffffffffffFFFk
+klffffffffffffffFFFk
+klffffffffffffffFFFk
+"""
+
+[layers.head]
+at = [7, 4]
+grid = """
+....kkkkkkkkkk....
+..kkllllllffffkk..
+.kllffffffffffFFk.
+klfffffffffffffFFk
+klffffffwwfffffFFk
+kfffffffwwfffffFFk
+kffffffwwwwffffFFk
+kfffffwwwwwwfffFFk
+kffffwwwwwwwwffFFk
+kfffwwwwMMwwwwfFFk
+.kffwwwMwwMwwwfFk.
+..kfFwwwwwwwwFFk..
+...kkFMMMMMMFkk...
+"""
+
+# Tall, pointed ears.
+[layers.ears]
+at = [7, 1]
+grid = """
+..k............k..
+.klk..........kFk.
+.klpk........kpFk.
+klppfk......kfppFk
+klff..........ffFk
+"""
+
+[layers."ears.flick"]
+at = [6, 1]
+grid = """
+................k..
+k..............kFk.
+klk...........kpFk.
+klpfk........kfppFk
+.klppfk.......ffFk.
+..kllf.............
+"""
+
+[layers.eyes]
+at = [11, 9]
+grid = """
+he......he
+ek......ek
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+grid = """
+ll......ll
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+grid = """
+eh......eh
+ke......ke
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+grid = """
+he......he
+ek......ek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.ll......ll.
+l..l....l..l
+"""
+
+# White paws: both on the rim, one tucked under the chest, or one held to
+# the bib.
+[layers.paws]
+at = [9, 17]
+grid = """
+.MMMM....MMMM.
+MwwwwM..MwwwwM
+kwMwMk..kwMwMk
+"""
+
+[layers."paws.tuck"]
+at = [9, 17]
+grid = """
+.MMMM.........
+MwwwwM........
+kwMwMk........
+"""
+
+[layers."paws.chest"]
+at = [9, 15]
+grid = """
+..........kkkk.
+.........kwwwwk
+.MMMM....kwMwMk
+MwwwwM.........
+kwMwMk.........
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "tail-flick"
+weight = 4
+
+[[actions]]
+use = "doze"
+
+# Signature: sits up straight, tucks a white paw under its chest, and looks
+# pleased with itself.
+[[actions]]
+name = "paw-tuck"
+weight = 4
+frames = [
+  { ops = ["head+0,-1", "body+0,-1", "tail+0,-1"], ms = 200 },
+  { ops = ["head+0,-1", "body+0,-1", "tail+0,-1", "eyes=closed"], ms = 160 },
+  { ops = ["head+0,-1", "body+0,-1", "tail+0,-1"], ms = 400 },
+  { ops = ["head+0,-1", "body+0,-1", "tail+0,-1", "paws=tuck"], ms = 300 },
+  { ops = ["paws=tuck", "eyes=happy"], ms = 1200 },
+  { ops = ["paws=tuck"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a formal bow, one paw to the bib.
+[[actions]]
+name = "formal-bow"
+weight = 1
+frames = [
+  { ops = ["head+0,-1", "body+0,-1", "tail+0,-1", "paws=chest"], ms = 300 },
+  { ops = ["paws=chest", "eyes=closed", "head+0,1"], ms = 200 },
+  { ops = ["paws=chest", "eyes=closed", "head+0,2"], ms = 900 },
+  { ops = ["paws=chest", "eyes=closed", "head+0,1"], ms = 200 },
+  { ops = ["paws=chest", "eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]

@@ -8,12 +8,14 @@ CARGO ?= cargo
 PAWDEV = $(CARGO) run --quiet --package pawdev --
 ARGS ?=
 MASCOT ?= owl
+PNG ?=
+ANIMATED ?=
 
 # Every release target (keep in sync with rust-toolchain.toml).
 TARGETS = x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows-msvc
 
 .DEFAULT_GOAL := help
-.PHONY: help build run preview test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden contact-sheet art-export art-import ci release package publish install uninstall doctor clean check-all-targets spike-f22
+.PHONY: help build run preview test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden contact-sheet building-blocks palette art-export art-import ci release package publish install uninstall doctor clean check-all-targets spike-f22
 
 help: ## List targets
 	@$(PAWDEV) help $(firstword $(MAKEFILE_LIST))
@@ -58,14 +60,20 @@ fmt: ## Format the code
 golden: ## Regenerate golden images after an intentional rendering change
 	$(PAWDEV) golden
 
-contact-sheet: ## Render every mascot, labels hidden, grouped by base, into docs/gallery.png (ANIMATED=1 adds a GIF)
-	@$(PAWDEV) todo contact-sheet M2
+contact-sheet: ## Render every mascot, labels hidden, grouped by base, into docs/gallery.png (ANIMATED=1 adds docs/gallery.gif)
+	$(PAWDEV) contact-sheet $(if $(ANIMATED),--animated)
 
-art-export: ## Export a mascot's layers and frames as PNGs: make art-export MASCOT=owl
-	@$(PAWDEV) todo art-export M2
+building-blocks: ## Render the crate accents, props, and every base with every motion template into docs/building-blocks.png
+	$(PAWDEV) building-blocks
 
-art-import: ## Convert a PNG layer into a grid: make art-import MASCOT=owl PNG=eyes.png
-	@$(PAWDEV) todo art-import M2
+palette: ## Regenerate assets/palette.gpl (for GIMP, Aseprite, LibreSprite) from assets/palette.toml
+	$(PAWDEV) palette
+
+art-export: ## Export a mascot's layers and frames as PNGs into out/art/<id>/: make art-export MASCOT=owl
+	$(PAWDEV) art-export $(MASCOT)
+
+art-import: ## Print a PNG layer as a grid in the mascot's glyphs: make art-import MASCOT=owl PNG=out/art/owl/eyes.png
+	$(PAWDEV) art-import $(MASCOT) $(PNG)
 
 ci: lint test ## lint + test (what CI runs on every OS)
 
