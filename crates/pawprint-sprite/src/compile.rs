@@ -433,6 +433,7 @@ fn merge_base(mut base: MascotFile, m: MascotFile) -> MascotFile {
         nocturnal: m.nocturnal,
         extends: m.extends,
         sprite: None,
+        prop_offset: m.prop_offset.or(base.prop_offset),
         palette: base.palette,
         layers: base.layers,
         rest: m.rest.or(base.rest),
@@ -499,6 +500,8 @@ struct Model<'a> {
     follows: Vec<Option<usize>>,
     layers: Vec<LayerDef>,
     grids: BTreeMap<String, Canvas>,
+    /// `prop_offset`: added to the position of every prop a template draws.
+    prop_offset: (i32, i32),
     lib: &'a Library,
 }
 
@@ -786,6 +789,7 @@ fn build_model<'a>(
         follows: Vec::new(),
         layers: Vec::new(),
         grids: BTreeMap::new(),
+        prop_offset: file.prop_offset.map_or((0, 0), |[dx, dy]| (dx, dy)),
         lib,
     };
     let mut follows: Vec<(String, String)> = Vec::new();
@@ -1010,6 +1014,10 @@ fn text_action(
         }
     };
 
+    let prop_offset = match a.template {
+        Some(_) => model.prop_offset,
+        None => (0, 0),
+    };
     let mut frames = Vec::new();
     for (j, step) in steps.iter().enumerate() {
         let step = match step {
@@ -1022,7 +1030,7 @@ fn text_action(
                 return None;
             }
         };
-        match render_step(step, model, rest) {
+        match render_step(step, model, rest, prop_offset) {
             Ok(canvas) => frames.push((out.frame(&canvas, report), step.ms.unwrap_or(DEFAULT_MS))),
             Err(e) => report.error(format!("{ctx}, frame {}", j + 1), e),
         }
@@ -1030,7 +1038,12 @@ fn text_action(
     finish_action(&ctx, name, weight, when, a.template.clone(), frames, report)
 }
 
-fn render_step(step: &StepSrc, model: &Model<'_>, rest: &Pose) -> Result<Canvas, String> {
+fn render_step(
+    step: &StepSrc,
+    model: &Model<'_>,
+    rest: &Pose,
+    prop_offset: (i32, i32),
+) -> Result<Canvas, String> {
     let mut pose = rest.clone();
     if let Some(grid) = &step.grid {
         if !model.grids.contains_key(grid) {
@@ -1039,7 +1052,12 @@ fn render_step(step: &StepSrc, model: &Model<'_>, rest: &Pose) -> Result<Canvas,
         pose.grid = Some(grid.clone());
     }
     for op in &step.ops {
-        model.apply(&mut pose, &parse_op(op)?)?;
+        let mut op = parse_op(op)?;
+        if let Op::Prop { x, y, .. } = &mut op {
+            *x += prop_offset.0;
+            *y += prop_offset.1;
+        }
+        model.apply(&mut pose, &op)?;
     }
     Ok(model.render(&pose))
 }
@@ -1106,10 +1124,11 @@ fn compile_png(
         || !file.palette.is_empty()
         || !file.layers.is_empty()
         || !file.frames.is_empty()
+        || file.prop_offset.is_some()
     {
         report.error(
             "sprite",
-            "PNG mascots take no extends, palette, layers, or frames",
+            "PNG mascots take no extends, palette, layers, frames, or prop_offset",
         );
     }
     let img = match read_file(&sprite).and_then(|b| RgbaImage::decode_png(&b)) {
@@ -1370,6 +1389,44 @@ frames = [{{ ops = ["eyes+1,0"], ms = 200 }}, {{ ops = ["all+0,1", "flipx"] }}]
         );
         assert_eq!(px(&m, f2, 0, 5), Some(INK));
         assert_eq!(px(&m, f2, 0, 0), None);
+    }
+
+    #[test]
+    fn prop_offset_moves_template_props_only() {
+        const DOZE: (&str, &str) = (
+            "doze",
+            "name = \"doze\"\nframes = [{ ops = [\"prop:zzz@20,20\"] }]",
+        );
+        let src = owl_src(
+            "[[actions]]\nuse = \"doze\"\n\n[[actions]]\nname = \"own\"\nframes = [{ ops = [\"prop:zzz@20,20\"] }]",
+        );
+        let lib = lib_with(&[], &[BLINK, DOZE], &[ZZZ]);
+        let white = Some(Rgb(0xf7, 0xf5, 0xef));
+        let build = |src: &str| {
+            let c = compile(src, Some("owl"), &lib, Origin::Bundled, &no_files);
+            assert!(c.report.errors.is_empty(), "{}", errors(&c));
+            c.mascot.unwrap()
+        };
+        let frame = |m: &Mascot, name: &str| {
+            let a = m.actions.iter().find(|a| a.name == name).unwrap();
+            a.frames[0].frame as usize
+        };
+
+        let plain = build(&src);
+        assert_eq!(px(&plain, frame(&plain, "doze"), 20, 20), white);
+
+        let shifted = build(&src.replace(
+            "accent = \"violet\"",
+            "accent = \"violet\"\nprop_offset = [-18, 3]",
+        ));
+        let doze = frame(&shifted, "doze");
+        assert_eq!(px(&shifted, doze, 20, 20), None, "template prop moved");
+        assert_eq!(px(&shifted, doze, 2, 23), white);
+        assert_eq!(
+            px(&shifted, frame(&shifted, "own"), 20, 20),
+            white,
+            "the mascot's own props stay put"
+        );
     }
 
     #[test]

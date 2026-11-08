@@ -37,13 +37,26 @@ impl AliasTable {
     /// Build from `(id, aliases)`. Later entries win a collision, so user
     /// mascots listed after bundled ones override them.
     pub fn new<'a>(entries: impl IntoIterator<Item = (&'a str, &'a [String])>) -> AliasTable {
-        let mut map = HashMap::new();
+        let mut table = AliasTable::default();
         for (id, aliases) in entries {
-            for alias in std::iter::once(id).chain(aliases.iter().map(String::as_str)) {
-                map.insert(squash(alias), id.to_string());
+            table.insert(id, aliases);
+        }
+        table
+    }
+
+    /// Add a mascot's id and aliases, replacing earlier owners. Returns the
+    /// `(squashed alias, previous owner)` pairs it took from other mascots.
+    pub fn insert(&mut self, id: &str, aliases: &[String]) -> Vec<(String, String)> {
+        let mut taken = Vec::new();
+        for alias in std::iter::once(id).chain(aliases.iter().map(String::as_str)) {
+            let key = squash(alias);
+            if let Some(old) = self.map.insert(key.clone(), id.to_string())
+                && old != id
+            {
+                taken.push((key, old));
             }
         }
-        AliasTable { map }
+        taken
     }
 
     pub fn lookup(&self, squashed: &str) -> Option<&str> {

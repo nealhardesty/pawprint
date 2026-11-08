@@ -1,0 +1,204 @@
+# Poodle on dog-sit. A white poodle in a show clip: a big round pom-pom
+# topknot tied with a pink bow, round curly ear puffs, a narrow smooth face
+# with a longer muzzle, and a pom-pom on the end of a shaved tail. The
+# `topknot` slot bounces on its own; in the rare action it pops off like a
+# hat and lands back on.
+id = "dog-poodle"
+name = "Poodle"
+category = "cats-dogs"
+aliases = ["poodle"]
+accent = "rose"
+extends = "dog-sit"
+
+[palette]
+"l" = "white"       # curls
+"f" = "cream"       # smooth face, shaved tail
+"F" = "grey-1"      # curl shadow
+"w" = "cream"       # chest
+"M" = "grey-1"      # shadow on the chest
+"b" = "pink-2"      # bow
+"B" = "pink-1"      # bow highlight
+"p" = "pink-2"      # tongue
+"h" = "grey-3"      # catchlight (white would vanish on white curls)
+
+# The pom on the end of a shaved tail.
+[layers.tail]
+at = [24, 8]
+grid = """
+.kkkk.
+kllllk
+klllFk
+kllFFk
+.kkfk.
+..kfk.
+..kfk.
+..kfk.
+..kfk.
+..kfk.
+..kfk.
+"""
+
+[layers."tail.flick"]
+at = [25, 7]
+grid = """
+.kkkk.
+kllllk
+klllFk
+kllFFk
+.kkfk.
+..kfk.
+.kfk..
+.kfk..
+kfk...
+kfk...
+kfk...
+kfk...
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klllllllllllllFk...
+..kllFllllllllFllFFk..
+.kllllllFllllllllFFFk.
+klllFlllllllFllllFlFFk
+kllllllFlllllllFllFFFk
+klFlllllllFlllllllFFFk
+klllllFllllllllFllFFFk
+klllllllllllllllllFFFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+"""
+
+# A narrow, smooth face with a longer muzzle.
+[layers.head]
+at = [9, 5]
+grid = """
+..kkkkkkkkkk..
+.kllllllllffk.
+kllffffffffFFk
+klffffffffffFk
+klffffffffffFk
+klffffffffffFk
+.kfffffffffFk.
+..kffffffffk..
+..kffffffffk..
+..kfffMMfffk..
+...kfMffMfk...
+....kFFFFk....
+"""
+
+# Round curly ear puffs.
+[layers.ears]
+at = [3, 6]
+grid = """
+..kkk................kkk..
+.kllFk..............kFllk.
+kllllFk............kFllllk
+klFlllk............klllFlk
+kllllFk............kFllllk
+klFllFk............kFllFlk
+kllllFk............kFllllk
+klllFFk............kFFlllk
+kFlFlFk............kFlFlFk
+.kFFFk..............kFFFk.
+..kkk................kkk..
+"""
+
+# The pom-pom topknot and its bow.
+[layers.topknot]
+at = [9, 0]
+follows = "head"
+grid = """
+....kFFFFk....
+..kkllllllkk..
+.kllllFllllFk.
+klllFllllFlllk
+kllllllFlllFFk
+kFllbbkkbblFFk
+.kFFbBllBbFFk.
+"""
+
+[layers.nose]
+at = [14, 12]
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 11]
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."mouth.open"]
+at = [13, 14]
+grid = """
+.kkkk.
+.kppk.
+..kk..
+"""
+
+[layers.paws]
+at = [8, 17]
+grid = """
+.kkkk......kkkk.
+kllllk....kllllk
+klFlFk....klFlFk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a springy bounce; the pom-pom topknot and ear puffs lag behind.
+[[actions]]
+name = "pom-bounce"
+weight = 4
+frames = [
+  { ops = ["all+0,1"], ms = 120 },
+  { ops = ["all+0,-2", "topknot+0,1", "ears+0,1", "eyes=happy"], ms = 120 },
+  { ops = ["topknot+0,-1", "ears+0,-1", "eyes=happy", "tail=flick"], ms = 120 },
+  { ops = ["all+0,-2", "topknot+0,1", "ears+0,1", "eyes=happy"], ms = 120 },
+  { ops = ["topknot+0,-1", "ears+0,-1", "eyes=happy", "tail=flick"], ms = 120 },
+  { ops = ["all+0,1", "eyes=happy"], ms = 150 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the topknot pops off like a hat, hangs in the air, and drops back
+# on, perfectly coiffed.
+[[actions]]
+name = "hat-trick"
+weight = 1
+frames = [
+  { ops = ["topknot+0,-1", "all+0,1"], ms = 150 },
+  { ops = ["topknot+0,-3", "eyes=closed"], ms = 120 },
+  { ops = ["topknot+0,-4"], ms = 600 },
+  { ops = ["topknot+0,-2"], ms = 100 },
+  { ops = ["all+0,1", "eyes=closed"], ms = 150 },
+  { ops = ["eyes=happy", "prop:sparkle@23,1"], ms = 500 },
+  { ops = ["eyes=happy", "prop:sparkle@4,3"], ms = 400 },
+  { ops = [], ms = 200 },
+]

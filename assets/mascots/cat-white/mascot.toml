@@ -1,0 +1,221 @@
+# White cat on cat-sit: a dainty, silky semi-longhair, snow white with cool
+# blue-white shading. Odd eyes (one blue, one gold), tall pink ears with
+# pale wisps inside, fluffy cheek ruffs that zigzag out past the jaw, and a
+# feathery plume of a tail. `ears.flat` is the airplane-ears flinch of the
+# signature.
+id = "cat-white"
+name = "White Cat"
+category = "cats-dogs"
+aliases = ["whitecat"]
+accent = "ice"
+extends = "cat-sit"
+
+[palette]
+"l" = "white"       # fur light
+"f" = "white"       # fur
+"F" = "blue-1"      # fur shadow (cool, snowy)
+"w" = "white"       # muzzle and chest
+"M" = "grey-2"      # mouth lines
+"e" = "blue-2"      # left iris
+"E" = "yellow-1"    # NEW: right iris (odd eyes)
+"h" = "white"       # eye glint
+"n" = "pink-2"      # nose
+"p" = "pink-1"      # inner ear
+
+# A feathery plume, its edges ruffled.
+[layers.tail]
+at = [25, 6]
+grid = """
+..kkk.
+.klfFk
+klffFk
+klfffk
+.klfFk
+klffFk
+.kffFk
+klffFk
+.klfFk
+.kffFk
+.klfFk
+.kffk.
+.klfk.
+.kffk.
+"""
+
+[layers."tail.flick"]
+at = [24, 5]
+grid = """
+.kkk...
+klffk..
+klfFFk.
+.klfffk
+..klfFk
+.klffFk
+..kffFk
+.klffFk
+..klfFk
+..kffFk
+..klfFk
+..kffk.
+..klfk.
+..kffk.
+..kffk.
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klfffffffffffffFFk..
+.klfffffffffffffffFFk.
+klffffffwwwwwwffffffFk
+klfffffwwwwwwwwfffffFk
+klffffffwwwwwwffffffFk
+klfffffffwwwwfffffffFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# A rounded head with cheek ruffs that zigzag out at the jaw.
+[layers.head]
+at = [4, 4]
+grid = """
+.......kkkkkkkkkk.......
+.....kkllllllllffkk.....
+...kkllffffffffffFFkk...
+..klfffffffffffffffFFk..
+.klffffffffffffffffffFk.
+.klfffffffffffffffffFFk.
+.klfffffffffffffffffFFk.
+.klfffffffffffffffffFFk.
+klfffffffwwwwwwwwffffFFk
+.kfffffwwwwMMwwwwffffFk.
+kffffffwwwMwwMwwwfffffFk
+.kffffffffffffffffffFFk.
+...kkFFFFFFFFFFFFFFkk...
+"""
+
+# Tall ears with pale wisps inside.
+[layers.ears]
+at = [6, 0]
+grid = """
+.k................k.
+klk..............kFk
+klfk............kfFk
+klpfk..........kfpFk
+klppfk........kfppFk
+klplpff......ffplpFk
+kllf............ffFk
+"""
+
+[layers."ears.flick"]
+at = [5, 0]
+grid = """
+...................k.
+.k................kFk
+klk..............kfFk
+klfk............kfpFk
+klpfk..........kfppFk
+klppfk........ffplpFk
+klplpff..........ffFk
+kllf.................
+"""
+
+# Airplane ears: flattened out sideways.
+[layers."ears.flat"]
+at = [2, 4]
+grid = """
+....kkkk..................
+..kkllpff.........ffpFFkk.
+kklpppfff.........fffpppFk
+..kkFFFf...........fFFFkk.
+"""
+
+# Odd eyes: blue on the left, gold on the right.
+[layers.eyes]
+at = [11, 9]
+grid = """
+he......hE
+ek......Ek
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+grid = """
+eh......Eh
+ke......kE
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+grid = """
+he......hE
+ek......Ek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a noise off to the left. The ears flatten and it shrinks down
+# a pixel, listening; then the ears come back up and it relaxes.
+[[actions]]
+name = "flat-ears"
+weight = 4
+frames = [
+  { ops = ["eyes=left"], ms = 250 },
+  { ops = ["eyes=left", "ears=flat", "all+0,1"], ms = 1100 },
+  { ops = ["eyes=left", "ears=flat", "all+0,1", "eyes=closed"], ms = 150 },
+  { ops = ["eyes=left", "ears=flat"], ms = 500 },
+  { ops = ["ears=flick"], ms = 200 },
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a magic trick. It ducks into the crate in a puff of cloud, the crate
+# sits empty for a beat, and it pops back up to a sparkle: ta-da.
+[[actions]]
+name = "vanishing-act"
+weight = 1
+frames = [
+  { ops = ["eyes=closed"], ms = 250 },
+  { ops = ["all+0,12", "prop:puff@11,13"], ms = 200 },
+  { ops = ["all+0,12", "prop:puff@11,11"], ms = 400 },
+  { ops = ["all+0,12"], ms = 500 },
+  { ops = ["all+0,-1", "eyes=happy", "prop:sparkle@24,2"], ms = 350 },
+  { ops = ["eyes=happy", "prop:sparkle@24,1", "prop:sparkle@1,4"], ms = 600 },
+  { ops = [], ms = 200 },
+]

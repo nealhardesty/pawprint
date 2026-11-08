@@ -1,0 +1,137 @@
+# Lion on big-cat. The mane is the whole point: a spiky, streaked mane of
+# brown with orange highlights that fills the frame around a golden face,
+# plus the tufted tail up the right side. The face is a lion's, not a
+# kitten's: a heavy brow, a lit nose bridge into a broad nose, and whisker
+# pads either side of a mouth line. The signature
+# shakes the mane (which doesn't follow the head) and lets out a small
+# roar; the rare one winds up for a mighty roar and only a squeak comes out.
+id = "lion"
+name = "Lion"
+category = "mammals"
+aliases = []
+accent = "marigold"
+extends = "big-cat"
+
+[palette]
+"l" = "orange-1"    # fur light
+"f" = "yellow-2"    # fur
+"F" = "orange-3"    # fur shadow
+"w" = "cream"       # muzzle and chest
+"M" = "orange-1"    # mouth lines
+"q" = "orange-2"    # NEW: mane highlight
+"s" = "orange-3"    # mane
+"S" = "brown-3"     # mane shadow
+"e" = "amber"       # iris
+"n" = "brown-3"     # nose
+"p" = "pink-2"      # inner ear, mouth
+
+[layers.mane]
+at = [0, 1]
+grid = """
+..........kkkkkkkkkkkk..........
+.......kkksssssssssssskkk.......
+.....kksssssssssssssssssskk.....
+...kksssssssssssssssssssssskk...
+..kqsqssssssssssssssssssssssSk..
+.kqssssssssssssssssssssssssssSk.
+..kqsssssssssssssssssssssssSSk..
+kksssqsssssssssssssssssssssssskk
+.kqssssssssssssssssssssssssssSk.
+kqSssssssssssssssssssssssssSssSk
+.kqssqsssssssssssssssssssssssSk.
+kqssssssssssssssssssssssssssssSk
+.kqssssssssssssssssssssssssSsSk.
+.kqssqsssssssssssssssssssssssSk.
+..kqssssssssssssssssssssssssSk..
+....kqssssssssssssssssssssSk....
+.......kqssssssssssssssSk.......
+"""
+
+# Heavy brow, nose bridge, whisker pads.
+[layers.head]
+at = [5, 4]
+grid = """
+.....kkkkkkkkkkkk.....
+...kkllllllllllffkk...
+..kllffffffffffffFFk..
+.klfffffffllfffffffFk.
+.klfFFFFfllllfFFFFfFk.
+.klfffffFllllFfffffFk.
+.klffffffllllffffffFk.
+klffffwwwllllwwwffffFk
+klfffwwwwwwwwwwwwfffFk
+kfffwwwMwwwwwwMwwwffFk
+.kffwMwwwwwwwwwwMwfFk.
+..kfwwwwFwFFwFwwwwFk..
+...kkFFwwwwwwwwFFkk...
+"""
+
+[layers.nose]
+at = [13, 12]
+follows = "head"
+grid = """
+nnnnnn
+.nnnn.
+..nn..
+"""
+
+[layers."nose.sniff"]
+at = [13, 11]
+follows = "head"
+grid = """
+nnnnnn
+.nnnn.
+..nn..
+"""
+
+[layers."mouth.open"]
+at = [13, 15]
+follows = "head"
+grid = """
+kkkkkk
+kpkkpk
+kppppk
+.kkkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "tail-flick"
+weight = 4
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: shakes the mane side to side, then a small roar.
+[[actions]]
+name = "mane-shake-roar"
+weight = 4
+frames = [
+  { ops = ["eyes=closed", "mane+1,0", "head+1,0"], ms = 100 },
+  { ops = ["eyes=closed", "mane+-1,0", "head+-1,0"], ms = 100 },
+  { ops = ["eyes=closed", "mane+1,0", "head+1,0"], ms = 100 },
+  { ops = ["eyes=closed", "mane+-1,0"], ms = 100 },
+  { ops = [], ms = 400 },
+  { ops = ["head+0,-1", "mane+0,-1", "eyes=closed", "+mouth.open"], ms = 700 },
+  { ops = ["eyes=closed"], ms = 200 },
+]
+
+# Rare: draws itself up for a mighty roar; a tiny squeak comes out.
+[[actions]]
+name = "squeak"
+weight = 1
+frames = [
+  { ops = ["head+0,-1", "mane+0,-1", "all+0,-1"], ms = 400 },
+  { ops = ["head+0,-1", "mane+0,-1", "all+0,-1", "eyes=closed", "+mouth.open"], ms = 300 },
+  { ops = ["head+0,-1", "mane+0,-1", "all+0,-1", "eyes=closed", "+mouth.open", "prop:note@24,1"], ms = 600 },
+  { ops = ["eyes=left", "prop:note@24,0"], ms = 500 },
+  { ops = ["eyes=left", "prop:sweat@24,3"], ms = 800 },
+  { ops = ["eyes=closed"], ms = 200 },
+]

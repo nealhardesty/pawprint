@@ -1,0 +1,247 @@
+# Chihuahua on dog-sit. Enormous bat ears with pink insides that span
+# nearly the whole badge, a tiny apple-domed head with a short muzzle, big
+# glossy eyes, and a slight body. It trembles; the rare action burrows
+# into a blanket until only the ears and eyes show.
+id = "dog-chihuahua"
+name = "Chihuahua"
+category = "cats-dogs"
+aliases = ["chihuahua"]
+accent = "cranberry"
+extends = "dog-sit"
+
+[palette]
+"h" = "grey-3"      # catchlight: white would vanish into the light fur at 1x
+"l" = "cream"       # fawn light
+"f" = "orange-1"    # fawn
+"F" = "brown-1"     # fawn shadow
+"w" = "white"       # muzzle and chest
+"M" = "grey-1"      # shadow on the white
+"e" = "brown-3"     # iris
+"p" = "pink-1"      # inner ear
+"P" = "pink-2"      # tiny mouth
+"r" = "red-1"       # blanket
+"R" = "red-2"       # blanket shadow
+
+# A thin sickle tail.
+[layers.tail]
+at = [23, 10]
+grid = """
+..kk.
+.klFk
+.kfk.
+klFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+"""
+
+[layers."tail.flick"]
+at = [23, 9]
+grid = """
+...kk
+..klk
+.klFk
+.kfk.
+klFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+"""
+
+# A slight body under a tiny head.
+[layers.body]
+at = [8, 14]
+grid = """
+..klffffffffFk..
+.klffwwwwwwffFk.
+klfffwwwwwwfffFk
+klfffwwwwwwfffFk
+klffffwwwwffffFk
+klfffffwwfffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+"""
+
+# Tiny apple-domed head, short muzzle.
+[layers.head]
+at = [9, 5]
+grid = """
+...kkkkkkkk...
+.kkllllllffkk.
+kllllffffffFFk
+klffffffffffFk
+klffffffffffFk
+klffffffffffFk
+.kfffwwwwfffk.
+..kfwwwwwwFk..
+...kwwwwwwk...
+....kMMMMk....
+"""
+
+# Enormous bat ears.
+[layers.ears]
+at = [0, 0]
+grid = """
+.kk..........................kk.
+.klkk......................kkFk.
+.klppkk..................kkppFk.
+..klpppkk..............kkpppFk..
+..klppppfkk..........kkfppppFk..
+...klppppffk........kffppppFk...
+...klpppfffff......fffffpppFk...
+....klppffff........ffffppFk....
+.....klpfff..........fffpFk.....
+......kkkk............kkkk......
+"""
+
+[layers."ears.flick"]
+at = [0, 0]
+grid = """
+.kk.............................
+.klkk.........................kk
+.klppkk.....................kkFk
+..klpppkk.................kkppFk
+..klppppfkk.............kkpppFk.
+...klppppffk..........kkfppppFk.
+...klpppfffff........kffppppFk..
+....klppffff........fffffpppFk..
+.....klpfff..........ffffppFk...
+......kkkk............fffpFk....
+.......................kkkk.....
+"""
+
+# Big glossy eyes.
+[layers.eyes]
+at = [11, 9]
+grid = """
+hkk....hkk
+kek....kek
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+grid = """
+kkk....kkk
+"""
+
+[layers."eyes.left"]
+at = [11, 9]
+grid = """
+hkF....hkF
+ekF....ekF
+"""
+
+[layers."eyes.happy"]
+at = [11, 9]
+grid = """
+.k......k.
+k.k....k.k
+"""
+
+[layers.nose]
+at = [14, 11]
+grid = """
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 10]
+grid = """
+.nn.
+"""
+
+# A tiny bark.
+[layers."mouth.open"]
+at = [14, 12]
+grid = """
+.kk.
+kPPk
+.kk.
+"""
+
+[layers.paws]
+at = [10, 17]
+grid = """
+.FFF......FFF.
+FlllF....FlllF
+klFlk....klFlk
+"""
+
+# Rare: snuggled into a blanket up to the eyes.
+[layers."blanket.wrap"]
+at = [2, 12]
+grid = """
+.....kkkkkkkkkkkkkkkkkkkk.....
+...kkrrrrrrrrrrrrrrrrrrrrkk...
+.kkrrrrrRrrrrrrrrrrrRrrrrrrkk.
+krrrrrrRrrrrrrrrrrrrrRrrrrrrrk
+krrrrrRrrrrrrrRrrrrrrrRrrrrrrk
+krrrrRrrrrrrrRrrrrrrrrrRrrrrRk
+krrrRrrrrrrrRrrrrrrrrrrrRrrRRk
+krrRrrrrrrrRrrrrrrrrrrrrrRRRRk
+krrrrrrrrrRrrrrrrrrrrrrrrRRRRk
+krrrrrrrrRrrrrrrrrrrrrrrrRRRRk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 4
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: trembles, lets out one tiny bark, and trembles again.
+[[actions]]
+name = "tremble-bark"
+weight = 4
+frames = [
+  { ops = ["all+1,0"], ms = 80 },
+  { ops = ["all+-1,0"], ms = 80 },
+  { ops = ["all+1,0"], ms = 80 },
+  { ops = ["all+-1,0"], ms = 80 },
+  { ops = ["head+0,-1", "+mouth.open", "prop:bang@25,2"], ms = 300 },
+  { ops = ["prop:bang@25,2"], ms = 300 },
+  { ops = ["all+1,0"], ms = 80 },
+  { ops = ["all+-1,0"], ms = 80 },
+  { ops = ["all+1,0"], ms = 80 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: burrows into a blanket until only the ears and eyes show, blinks
+# contentedly, and pops back out.
+[[actions]]
+name = "blanket-burrito"
+weight = 1
+frames = [
+  { ops = ["all+0,4"], ms = 150 },
+  { ops = ["all+0,1", "+blanket.wrap"], ms = 400 },
+  { ops = ["all+0,1", "+blanket.wrap", "eyes=closed"], ms = 400 },
+  { ops = ["all+0,1", "+blanket.wrap", "eyes=happy", "prop:heart@22,1"], ms = 900 },
+  { ops = ["all+0,1", "+blanket.wrap", "ears=flick"], ms = 500 },
+  { ops = ["all+0,1", "+blanket.wrap"], ms = 300 },
+  { ops = [], ms = 200 },
+]

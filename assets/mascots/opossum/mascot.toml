@@ -1,0 +1,302 @@
+# Opossum, on small-quadruped. A grizzled grey body under a white face
+# with a long pointed snout and pink nose, dark patches round beady black
+# eyes, bare black ears with pink tips, pink hands, and a naked pink tail
+# curled up the right side. Nocturnal: busier after dark, napping by day.
+# The signature plays dead belly-up (custom frames `dead` and `dead-peek`);
+# `joeys` are the babies that ride along in the rare action.
+id = "opossum"
+name = "Opossum"
+category = "mammals"
+aliases = ["possum"]
+accent = "charcoal"
+nocturnal = true
+extends = "small-quadruped"
+
+[palette]
+"l" = "grey-1"      # fur light, guard hairs
+"f" = "grey-2"      # grizzled fur
+"F" = "grey-3"      # fur shadow, eye patches
+"w" = "white"       # face
+"M" = "grey-1"      # shadow on the white
+"E" = "fur-black"   # NEW: bare ears
+"r" = "pink-1"      # NEW: ear tips
+"s" = "pink-1"      # hands, feet, and tail light
+"S" = "pink-2"      # hands, feet, and tail
+"n" = "pink-2"      # nose
+"p" = "pink-1"      # tongue, mouth
+
+# A naked prehensile tail, hooked at the tip.
+[layers.tail]
+at = [23, 6]
+grid = """
+..kkkk..
+.ksssSk.
+kssk.kSk
+kSk..kSk
+.k..kSSk
+....kSk.
+...kSSk.
+...kSk..
+..kSSk..
+..kSk...
+.kSSk...
+.kSk....
+kSSk....
+kSk.....
+"""
+
+[layers."tail.flick"]
+at = [23, 5]
+grid = """
+..kkkk..
+.ksssSk.
+kssk.kSk
+kSk..kSk
+.k...kSk
+....kSSk
+....kSk.
+...kSSk.
+...kSk..
+..kSSk..
+..kSk...
+.kSSk...
+.kSk....
+kSSk....
+kSk.....
+"""
+
+# Grizzled: white-tipped guard hairs over grey.
+[layers.body]
+at = [6, 13]
+grid = """
+.klffffffffffffffFk.
+klflfffflfffflfffFFk
+klffffffffffffffffFk
+klfflffflllfffflffFk
+klffffflllllllfffFFk
+klfffffllllllffffFFk
+klfflffflllfffflffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+klffffffffffffffffFk
+"""
+
+# A white face tapering to a long snout, with a faint grey streak on the
+# crown and dark patches round the eyes.
+[layers.head]
+at = [4, 5]
+grid = """
+......kkkkkkkkkkkk......
+....kkwwwwwllwwwwwkk....
+...kwwwwwwwllwwwwwwMk...
+..kwwwwwwwwllwwwwwwwMk..
+..kwwwFwwFwwwwFwwFwwMk..
+..kwwwFwwFwwwwFwwFwwMk..
+.kwwwwwFFwwwwwwFFwwwwMk.
+kwwwwwwwwwwwwwwwwwwwwwMk
+.kwwwwwwwwwwwwwwwwwwwMk.
+...kwwwwwwwwwwwwwwwMk...
+.....kwwwwwwwwwwwMk.....
+.......kwwwwwwwMk.......
+.........kkkkkk.........
+"""
+
+[layers.ears]
+at = [5, 2]
+follows = "head"
+grid = """
+.kkk..............kkk.
+krrEk............kErrk
+kEEEk............kEEEk
+.kEEk............kEEk.
+"""
+
+[layers."ears.flick"]
+at = [5, 1]
+follows = "head"
+grid = """
+..................kkk.
+.kkk.............kErrk
+krrEk............kEEEk
+kEEEk.............kEEk
+.kEEk.................
+"""
+
+# A mouthful of tiny teeth, for the night-time grin.
+[layers."mouth.grin"]
+at = [12, 15]
+follows = "head"
+grid = """
+kkkkkkkk
+.kwkwkk.
+..kkkk..
+"""
+
+[layers.paws]
+at = [9, 17]
+grid = """
+.SSS......SSS.
+SsssS....SsssS
+kSsSk....kSsSk
+"""
+
+# Three babies riding along: one on the head and one peeking past each
+# shoulder.
+[layers."joeys.ride"]
+at = [2, 0]
+grid = """
+...........k.k...........
+..........kwwwk..........
+..........kkwkk..........
+...........kSk...........
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+.........................
+k.k...................k.k
+kwwk.................kwwk
+wkwk.................kwkw
+kSk...................kSk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 4
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+# Nocturnal, so it naps by day.
+[[actions]]
+use = "doze"
+when = "day"
+weight = 2
+
+# Signature: plays dead. It flops belly-up with X eyes and its tongue out,
+# holds it, peeks with one eye to see if it worked, then plays dead again.
+[[actions]]
+name = "play-dead"
+weight = 4
+frames = [
+  { ops = ["prop:bang@24,1"], ms = 200 },
+  { grid = "dead", ms = 1300 },
+  { grid = "dead-peek", ms = 700 },
+  { grid = "dead", ms = 600 },
+  { ops = ["all+0,2", "eyes=closed"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Night: a big toothy grin. Opossums have fifty teeth.
+[[actions]]
+name = "grin"
+weight = 4
+when = "night"
+frames = [
+  { ops = ["eyes=happy"], ms = 200 },
+  { ops = ["eyes=happy", "mouth=grin"], ms = 1200 },
+  { ops = ["eyes=closed", "mouth=grin"], ms = 160 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: three babies pop up and ride along on mum.
+[[actions]]
+name = "joeys"
+weight = 1
+frames = [
+  { ops = ["all+0,1"], ms = 200 },
+  { ops = ["joeys=ride", "joeys+0,2"], ms = 200 },
+  { ops = ["joeys=ride", "eyes=happy"], ms = 700 },
+  { ops = ["joeys=ride", "eyes=happy", "prop:heart@23,4"], ms = 700 },
+  { ops = ["joeys=ride", "eyes=happy", "prop:heart@23,2"], ms = 500 },
+  { ops = ["joeys=ride", "joeys+0,2"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+[frames.dead]
+grid = """
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+............kkk..kkk.kkk.kkk....
+...........kssSkkssSkssSkssSk...
+............kfk..kfk.kfk.kfk....
+....kkkkk...kfk..kfk.kfk.kfk....
+..kkwwwwwEk.kfk..kfkkkfk.kfk....
+.kwwwwwwwEEkkfkkkllllkfkkkfk....
+kwwkwkwwwwwkkllllllllllllkfk....
+kwwwkwwwwwwkllllllllllllllllk...
+nwwkwkwwwwwkfffffffffffffffffkkk
+nkwwwwwwwwkffffffffffffffffffssk
+.kpkwwwwwkfffffffffffffffffffkk.
+.kpkkkkkk.kFFFFFFFFFFFFFFFFFk...
+..k........kkFFFFFFFFFFFFFkk....
+.............kkkkFFFFFkkkk......
+.................kkkkk..........
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+[frames."dead-peek"]
+grid = """
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+............kkk..kkk.kkk.kkk....
+...........kssSkkssSkssSkssSk...
+............kfk..kfk.kfk.kfk....
+....kkkkk...kfk..kfk.kfk.kfk....
+..kkwwwwwEk.kfk..kfkkkfk.kfk....
+.kwwwwwwwEEkkfkkkllllkfkkkfk....
+kwwwwwwwwwwkkllllllllllllkfk....
+kwwhkwwwwwwkllllllllllllllllk...
+nwwkkwwwwwwkfffffffffffffffffkkk
+nkwwwwwwwwkffffffffffffffffffssk
+.kpkwwwwwkfffffffffffffffffffkk.
+.kpkkkkkk.kFFFFFFFFFFFFFFFFFk...
+..k........kkFFFFFFFFFFFFFkk....
+.............kkkkFFFFFkkkk......
+.................kkkkk..........
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""

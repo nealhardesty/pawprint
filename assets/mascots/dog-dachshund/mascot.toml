@@ -1,0 +1,301 @@
+# Dachshund on dog-sit. A black-and-tan doxie: a long tapering snout that
+# reaches the rim, tan brow dots, muzzle, and chest, and long floppy ears
+# hanging past the jaw. The signature slides the long body up out of the
+# crate; the rare action lies the whole sausage along the rim, head at one
+# end and wagging tail at the other.
+id = "dog-dachshund"
+name = "Dachshund"
+category = "cats-dogs"
+aliases = ["dachshund", "wiener", "doxie"]
+accent = "copper"
+extends = "dog-sit"
+
+[palette]
+"l" = "grey-3"      # coat sheen
+"f" = "grey-4"      # black coat
+"F" = "fur-black"   # coat shadow
+"w" = "orange-2"    # tan points: brows, muzzle, chest, paws
+"M" = "orange-3"    # shadow on the tan
+"s" = "grey-4"      # ears
+"S" = "fur-black"   # ear shadow
+"e" = "brown-1"     # iris: light enough to read against the black coat
+"p" = "pink-2"      # tongue
+
+[layers.tail]
+at = [24, 11]
+grid = """
+...kk
+..klk
+..kfk
+.klFk
+.kfk.
+klFk.
+kfFk.
+kfFk.
+kfFk.
+"""
+
+[layers."tail.flick"]
+at = [24, 10]
+grid = """
+.....kk
+....klk
+...klFk
+..kfFk.
+.klFk..
+.kfk...
+klFk...
+kfFk...
+kfFk...
+kfFk...
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klffffffffffffffFk..
+.klfffwwwffffwwwffFFk.
+klfffwwwwwffwwwwwffFFk
+klffffwwwwffwwwwfffFFk
+klfffffwwffffwwffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# A domed skull and a long tapering tan snout down to the rim.
+[layers.head]
+at = [8, 4]
+grid = """
+....kMMMMMMk....
+..kkllllllffkk..
+.kllllfffffffFk.
+klllfffffffffFFk
+klffwwffffwwffFk
+klffffffffffffFk
+klffffffffffffFk
+.kfffwwwwwwfffk.
+..kfwwwwwwwwFk..
+..kwwwwwwwwwMk..
+..kwwwwwwwwwMk..
+..kwwwwwwwwwMk..
+...kwwMMMMwMk...
+....kMMMMMMk....
+"""
+
+# Long floppy ears hanging past the jaw.
+[layers.ears]
+at = [4, 4]
+grid = """
+..kkk..............kkk..
+.klssk............kssFk.
+klsssk............ksssFk
+klsssk............ksssFk
+kssssk............kssSSk
+kssssk............kssSSk
+kssssk............kssSSk
+kssssk............kssSSk
+kssSSk............kSSSSk
+.kSSSk............kSSSk.
+..kSk..............kSk..
+...k................k...
+"""
+
+[layers."ears.flick"]
+at = [4, 3]
+grid = """
+...................kkk..
+..kkk.............kssFk.
+.klssk............ksssFk
+klsssk............ksssFk
+klsssk............kssSSk
+kssssk............kssSSk
+kssssk............kSSSSk
+kssssk............kSSSk.
+kssssk.............kSk..
+kssSSk..............k...
+.kSSSk..................
+..kSk...................
+...k....................
+"""
+
+# Dark eyes need a light rim on black fur.
+[layers.eyes]
+at = [12, 9]
+grid = """
+he....he
+ek....ek
+"""
+
+[layers."eyes.closed"]
+at = [12, 10]
+grid = """
+ll....ll
+"""
+
+[layers."eyes.happy"]
+at = [11, 9]
+grid = """
+.ll....ll.
+l..l..l..l
+"""
+
+[layers."eyes.left"]
+at = [11, 9]
+grid = """
+he....he
+ek....ek
+"""
+
+[layers.nose]
+at = [14, 14]
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 13]
+grid = """
+nnnn
+.nn.
+"""
+
+[layers.paws]
+at = [8, 17]
+grid = """
+.MMMM......MMMM.
+MwwwwM....MwwwwM
+kwMwMk....kwMwMk
+"""
+
+# Rare: the whole sausage, lying along the rim from end to end.
+[frames.sausage]
+grid = """
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+..kkkkk.........................
+.klsssk.kkkkk...................
+klsssklllllffk..................
+kssssklffffffFk.................
+ksssskfhefffFk..............kk..
+ksssskffffffFk.............klk..
+kssSSkfwwwwwwkk...........klFk..
+.kSSSkwwwwwwwffkkkkkkkkkkklfFk..
+..kSkkwwwwMnnflllllllllllfffFk..
+....kkMMMkkkffffffffffffffffFk..
+........kwwkfffffffffffffffFFk..
+........kwMkFFFFFFFFFFFFFFFFk...
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+[frames.sausage-wag]
+grid = """
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+..kkkkk.........................
+.klsssk.kkkkk...................
+klsssklllllffk..................
+kssssklffffffFk.................
+ksssskfhefffFk...............kk.
+ksssskffffffFk..............klk.
+kssSSkfwwwwwwkk............klFk.
+.kSSSkwwwwwwwffkkkkkkkkkkkklFk..
+..kSkkwwwwMnnflllllllllllfffFk..
+....kkMMMkkkffffffffffffffffFk..
+........kwwkfffffffffffffffFFk..
+........kwMkFFFFFFFFFFFFFFFFk...
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the long body slides up and further out of the crate, holds,
+# and slides back down.
+[[actions]]
+name = "long-slide"
+weight = 4
+frames = [
+  { ops = ["all+0,-1"], ms = 150 },
+  { ops = ["all+0,-2"], ms = 150 },
+  { ops = ["all+0,-3", "eyes=happy"], ms = 150 },
+  { ops = ["all+0,-4", "eyes=happy", "tail=flick"], ms = 900 },
+  { ops = ["all+0,-4", "eyes=happy"], ms = 300 },
+  { ops = ["all+0,-2"], ms = 200 },
+  { ops = ["all+0,-1"], ms = 150 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: ducks, then the whole dog lies along the rim, end to end, wagging.
+[[actions]]
+name = "full-length"
+weight = 1
+frames = [
+  { ops = ["all+0,4"], ms = 120 },
+  { ops = ["all+0,12"], ms = 250 },
+  { grid = "sausage", ms = 500 },
+  { grid = "sausage-wag", ms = 160 },
+  { grid = "sausage", ms = 160 },
+  { grid = "sausage-wag", ms = 160 },
+  { grid = "sausage", ms = 700 },
+  { ops = ["all+0,12"], ms = 250 },
+  { ops = ["all+0,4"], ms = 120 },
+  { ops = [], ms = 200 },
+]

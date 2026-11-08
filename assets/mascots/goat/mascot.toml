@@ -1,0 +1,218 @@
+# Goat on ungulate-head. A white goat with a long, narrow face, ridged horns
+# that sweep up and back, slim ears that stick straight out sideways, amber
+# eyes with the goat's horizontal slit pupils, and a chin beard (`beard`, a
+# new slot that follows the head). The signature chews, then gives a little
+# head-butt; the rare one is the famous goat yell.
+id = "goat"
+name = "Goat"
+category = "mammals"
+aliases = []
+accent = "moss"
+extends = "ungulate-head"
+
+[palette]
+"l" = "white"       # coat light
+"f" = "cream"       # coat
+"F" = "grey-1"      # coat shadow
+"w" = "grey-1"      # muzzle
+"M" = "grey-2"      # mouth line
+"z" = "brown-1"     # horn light
+"x" = "brown-2"     # horn
+"X" = "brown-3"     # horn ridges
+"e" = "amber"       # iris
+"n" = "grey-3"      # nose
+"p" = "pink-1"      # inner ear, mouth
+
+[layers.body]
+at = [4, 15]
+grid = """
+.......kllllllfFk.......
+......kllllllllfFk......
+....kllllllllllllfFk....
+..klllllllllllllllffFk..
+.kllllllllllllllllfffFk.
+kllllllllllllllllllffFFk
+kllllllllllllllllllffFFk
+kllllllllllllllllllffFFk
+kllllllllllllllllllffFFk
+kllllllllllllllllllffFFk
+kllllllllllllllllllffFFk
+kllllllllllllllllllffFFk
+kllllllllllllllllllffFFk
+kllllllllllllllllllffFFk
+kllllllllllllllllllffFFk
+kllllllllllllllllllffFFk
+kllllllllllllllllllffFFk
+"""
+
+# Slim ears straight out to the sides.
+[layers.ears]
+at = [1, 8]
+follows = "head"
+grid = """
+.kkkkk................kkkkk.
+kppplffk............kFFfpppk
+.kkFFFFk............kFFFFkk.
+....kkk..............kkk....
+"""
+
+[layers."ears.flick"]
+at = [1, 7]
+follows = "head"
+grid = """
+......................kkkkk.
+.kkkkk..............kFFfpppk
+kppplffk............kFFFFkk.
+.kkFFFFk.............kkk....
+....kkk.....................
+"""
+
+[layers.head]
+at = [8, 4]
+grid = """
+...kkkkkkkkkk...
+.kkllllllllffkk.
+kllllllllllllfFk
+kllllllllllllfFk
+kllllllllllllfFk
+kllllllllllllfFk
+.kllllllllllfFk.
+..kllllllllfFk..
+..klllllllllfk..
+...klwwwwwwfk...
+...kwwwwwwwwk...
+....kwwMMwwk....
+.....kkkkkk.....
+"""
+
+# Ridged horns sweeping up and back.
+[layers.antlers]
+at = [7, 0]
+follows = "head"
+grid = """
+kkk..............kkk
+kzxk............kxzk
+.kzXk..........kXzk.
+..kzxk........kxzk..
+...kXxk......kxXk...
+"""
+
+# Amber irises with horizontal slit pupils.
+[layers.eyes]
+at = [10, 8]
+follows = "head"
+grid = """
+.ee......ee.
+ekke....ekke
+.ee......ee.
+"""
+
+[layers."eyes.closed"]
+at = [10, 9]
+follows = "head"
+grid = """
+FkkF....FkkF
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+.ee......ee.
+kkee....kkee
+.ee......ee.
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+follows = "head"
+grid = """
+.ee......ee.
+eekk....eekk
+.ee......ee.
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+# Wide-open eyes for the yell.
+[layers."eyes.wide"]
+at = [10, 7]
+follows = "head"
+grid = """
+.ee......ee.
+eeee....eeee
+ekke....ekke
+eeee....eeee
+.ee......ee.
+"""
+
+# The yell: a wide-open mouth.
+[layers."mouth.yell"]
+at = [13, 14]
+follows = "head"
+grid = """
+kkkkkk
+kppppk
+kppppk
+.kkkk.
+"""
+
+[layers.beard]
+at = [14, 16]
+follows = "head"
+grid = """
+kllk
+kfFk
+.kfk
+.kk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: chews thoughtfully, then a little head-butt at the crate rim.
+[[actions]]
+name = "chew-butt"
+weight = 4
+frames = [
+  { ops = ["+mouth.open", "beard+0,1"], ms = 180 },
+  { ops = [], ms = 180 },
+  { ops = ["+mouth.open", "beard+0,1"], ms = 180 },
+  { ops = [], ms = 180 },
+  { ops = ["+mouth.open", "beard+0,1"], ms = 180 },
+  { ops = ["eyes=left"], ms = 500 },
+  { ops = ["head+0,1"], ms = 160 },
+  { ops = ["head+0,2", "all+0,1", "eyes=closed"], ms = 140 },
+  { ops = ["head+0,2", "all+0,1", "eyes=closed", "prop:bang@26,1"], ms = 400 },
+  { ops = ["head+0,1"], ms = 200 },
+]
+
+# Rare: the goat yell. Eyes pop, mouth wide, ears out.
+[[actions]]
+name = "yell"
+weight = 1
+frames = [
+  { ops = ["eyes=wide"], ms = 300 },
+  { ops = ["eyes=wide", "+mouth.yell", "beard+0,2", "ears=flick", "all+0,-1", "prop:bang@26,0"], ms = 900 },
+  { ops = ["eyes=wide", "+mouth.yell", "beard+0,2", "all+0,-1", "prop:bang@26,1"], ms = 300 },
+  { ops = ["eyes=wide"], ms = 300 },
+  { ops = ["eyes=closed"], ms = 200 },
+]

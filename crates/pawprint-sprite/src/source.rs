@@ -42,6 +42,10 @@ pub struct MascotFile {
     pub nocturnal: Option<bool>,
     pub extends: Option<String>,
     pub sprite: Option<String>,
+    /// Shifts every prop that a motion template draws (`doze`'s zzz,
+    /// `content`'s heart, ...) by `[dx, dy]`, for mascots whose top-right
+    /// corner is busy. Props in the mascot's own actions are not moved.
+    pub prop_offset: Option<[i32; 2]>,
     #[serde(default)]
     pub palette: BTreeMap<String, String>,
     /// Ordered: layer order is drawing order.

@@ -1,0 +1,265 @@
+# CRT, a bespoke oddball: a beige monitor sitting in the crate. The face is
+# glowing phosphor on the glass, two green eyes and a prompt cursor for a
+# mouth. The signature rolls a scanline down the screen and blinks the
+# cursor; the rare one clears the face and types `> hello_`. At night it
+# runs a screensaver instead of dozing.
+id = "crt"
+name = "CRT"
+category = "oddballs"
+aliases = []
+accent = "charcoal"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "cream"       # case light, lit lower edge of the screen recess
+"f" = "grey-1"      # case
+"F" = "grey-2"      # case shadow
+"d" = "grey-3"      # shaded upper edge of the screen recess, vents
+"s" = "grey-4"      # the glass
+"h" = "white"       # glare on the glass
+"g" = "green-2"     # dim phosphor: the rolling scanline
+"e" = "green-1"     # bright phosphor: eyes, cursor, text, power light
+
+# The whole monitor; the case continues behind the crate front.
+[layers.body]
+at = [1, 0]
+grid = """
+..kkkkkkkkkkkkkkkkkkkkkkkkkk..
+.kllllllllllllllllllllllllfFk.
+kllffffffffffffffffffffffffFFk
+klddddddddddddddddddddddddddFk
+klddssssssssssssssssssssssdlFk
+kldshhssssssssssssssssssssslFk
+kldshsssssssssssssssssssssslFk
+kldsssssssssssssssssssssssslFk
+kldsssssssssssssssssssssssslFk
+kldsssssssssssssssssssssssslFk
+kldsssssssssssssssssssssssslFk
+kldsssssssssssssssssssssssslFk
+kldsssssssssssssssssssssssslFk
+kldlssssssssssssssssssssssllFk
+kldlllllllllllllllllllllllllFk
+klffffffffffffffffffffffeeffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+klffffffffffffffffffffffffffFk
+"""
+
+# A keyboard resting on the rim, like paws.
+[layers.keyboard]
+at = [3, 16]
+grid = """
+.kkkkkkkkkkkkkkkkkkkkkkkk.
+klflflflflflflflflflflflFk
+kflflflllllllllllllflflfFk
+kFFFFFFFFFFFFFFFFFFFFFFFFk
+"""
+
+# A brighter scanline rolling down the glass (hidden at rest).
+[layers."scan.top"]
+at = [4, 5]
+grid = """
+gggggggggggggggggggggggg
+"""
+
+[layers."scan.mid"]
+at = [4, 9]
+grid = """
+gggggggggggggggggggggggg
+"""
+
+[layers."scan.low"]
+at = [4, 12]
+grid = """
+gggggggggggggggggggggggg
+"""
+
+[layers.eyes]
+at = [11, 8]
+grid = """
+ee......ee
+ee......ee
+ee......ee
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+grid = """
+ee......ee
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+grid = """
+ee......ee
+ee......ee
+ee......ee
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+grid = """
+ee......ee
+ee......ee
+ee......ee
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.ee......ee.
+e..e....e..e
+"""
+
+# The prompt cursor is the mouth.
+[layers.cursor]
+at = [15, 12]
+grid = """
+ee
+"""
+
+# `> hello_`, typed one letter at a time (hidden at rest).
+[layers."hello.prompt"]
+at = [5, 8]
+grid = """
+......................
+e.....................
+.e....................
+e.....................
+......................
+"""
+
+[layers."hello.h"]
+at = [5, 8]
+grid = """
+....e.................
+e...e.................
+.e..ee................
+e...e.e...............
+....e.e...............
+"""
+
+[layers."hello.he"]
+at = [5, 8]
+grid = """
+....e.................
+e...e....e............
+.e..ee..eee...........
+e...e.e.e.............
+....e.e..ee...........
+"""
+
+[layers."hello.hel"]
+at = [5, 8]
+grid = """
+....e.......e.........
+e...e....e..e.........
+.e..ee..eee.e.........
+e...e.e.e...e.........
+....e.e..ee.e.........
+"""
+
+[layers."hello.hell"]
+at = [5, 8]
+grid = """
+....e.......e.e.......
+e...e....e..e.e.......
+.e..ee..eee.e.e.......
+e...e.e.e...e.e.......
+....e.e..ee.e.e.......
+"""
+
+[layers."hello.hello"]
+at = [5, 8]
+grid = """
+....e.......e.e.......
+e...e....e..e.e..e....
+.e..ee..eee.e.e.e.e...
+e...e.e.e...e.e.e.e...
+....e.e..ee.e.e..e....
+"""
+
+# The screensaver's bouncing pixel (hidden at rest).
+[layers."saver.dot"]
+at = [5, 5]
+grid = """
+ee
+ee
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+# Signature: a scanline rolls down the glass (the eyes glitch as it passes),
+# then the cursor blinks.
+[[actions]]
+name = "flicker"
+weight = 4
+frames = [
+  { ops = ["+scan.top"], ms = 90 },
+  { ops = ["+scan.mid", "eyes+1,0"], ms = 90 },
+  { ops = ["+scan.low"], ms = 90 },
+  { ops = [], ms = 300 },
+  { ops = ["-cursor"], ms = 400 },
+  { ops = [], ms = 400 },
+  { ops = ["-cursor"], ms = 400 },
+  { ops = [], ms = 400 },
+]
+
+# Rare: the face clears and it types a greeting, then smiles.
+[[actions]]
+name = "hello"
+weight = 1
+frames = [
+  { ops = ["+scan.mid", "-eyes", "-cursor"], ms = 100 },
+  { ops = ["-eyes", "+hello.prompt", "cursor+-6,0"], ms = 400 },
+  { ops = ["-eyes", "+hello.h", "cursor+-2,0"], ms = 160 },
+  { ops = ["-eyes", "+hello.he", "cursor+2,0"], ms = 160 },
+  { ops = ["-eyes", "+hello.hel", "cursor+4,0"], ms = 160 },
+  { ops = ["-eyes", "+hello.hell", "cursor+6,0"], ms = 160 },
+  { ops = ["-eyes", "+hello.hello", "cursor+10,0"], ms = 400 },
+  { ops = ["-eyes", "+hello.hello", "-cursor"], ms = 350 },
+  { ops = ["-eyes", "+hello.hello", "cursor+10,0"], ms = 350 },
+  { ops = ["-eyes", "+hello.hello", "-cursor"], ms = 350 },
+  { ops = ["+scan.mid", "-eyes", "-cursor"], ms = 100 },
+  { ops = ["eyes=happy"], ms = 600 },
+]
+
+# Night: the face goes dark and a screensaver pixel bounces round the glass.
+[[actions]]
+name = "screensaver"
+weight = 3
+when = "night"
+frames = [
+  { ops = ["eyes=closed"], ms = 400 },
+  { ops = ["-eyes", "-cursor", "+saver.dot"], ms = 400 },
+  { ops = ["-eyes", "-cursor", "+saver.dot", "saver+4,3"], ms = 400 },
+  { ops = ["-eyes", "-cursor", "+saver.dot", "saver+8,6"], ms = 400 },
+  { ops = ["-eyes", "-cursor", "+saver.dot", "saver+12,7"], ms = 400 },
+  { ops = ["-eyes", "-cursor", "+saver.dot", "saver+16,4"], ms = 400 },
+  { ops = ["-eyes", "-cursor", "+saver.dot", "saver+20,1"], ms = 400 },
+  { ops = ["eyes=closed"], ms = 300 },
+]

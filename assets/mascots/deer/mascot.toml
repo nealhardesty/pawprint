@@ -1,0 +1,198 @@
+# Deer, a spotted fawn on ungulate-head. No antlers (they're left out of
+# `rest`): instead, huge cupped ears out to the sides, big dark doe eyes with
+# light rings under them, a slim cream muzzle with a glossy black nose, and
+# white fawn spots on the shoulders. The signature lifts the head with the
+# ears pricked forward; the rare one lands a leaf on its nose.
+id = "deer"
+name = "Deer"
+category = "mammals"
+aliases = ["doe", "fawn"]
+accent = "moss"
+extends = "ungulate-head"
+
+rest = ["body", "ears", "head", "eyes", "nose"]
+
+[palette]
+"l" = "orange-1"    # hide light
+"f" = "brown-2"     # hide
+"F" = "brown-3"     # hide shadow
+"w" = "cream"       # muzzle, throat, eye rings, inner ears
+"M" = "brown-1"     # mouth line
+"s" = "white"       # NEW: fawn spots
+"p" = "pink-1"      # inner ear
+"n" = "fur-black"   # nose
+
+# Fawn spots on the shoulders, either side of the cream throat.
+[layers.body]
+at = [4, 15]
+grid = """
+.......klfffffFFk.......
+......klfwwwwwwFFk......
+....klsffwwwwwwffsFk....
+..klfsffswwwwwwsffsfFk..
+.klffffsfwwwwwwfsffffFk.
+klfsffffswwwwwwsffffsFFk
+klfffsfffwwwwwwfffsffFFk
+klfffffffwwwwwwffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+"""
+
+# Big cupped ears, wide to both sides, pink inside.
+[layers.ears]
+at = [0, 3]
+follows = "head"
+grid = """
+.kkk........................kkk.
+kllfkk....................kkfFFk
+klppffkk................kkffppFk
+kfpppfffk..............kfffpppfk
+.kFpppFfk..............kfFpppFk.
+..kFFFFk................kFFFFk..
+...kkkk..................kkkk...
+"""
+
+[layers."ears.flick"]
+at = [0, 2]
+follows = "head"
+grid = """
+............................kkk.
+.kkk......................kkfFFk
+kllfkk..................kkffppFk
+klppffkk...............kfffpppfk
+kfpppfffk..............kfFpppFk.
+.kFpppFfk...............kFFFFk..
+..kFFFFk.................kkkk...
+...kkkk.........................
+"""
+
+[layers.head]
+at = [8, 4]
+grid = """
+...kkkkkkkkkk...
+.kkllllllllffkk.
+kllffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klwwwffffffwwwFk
+.klfffffffffffk.
+..klfwwwwwwfFk..
+...kfwwwwwwFk...
+...kfwwwwwwFk...
+....kwwMMwwk....
+.....kkkkkk.....
+"""
+
+[layers.eyes]
+at = [10, 8]
+follows = "head"
+grid = """
+hkk......hkk
+kkk......kkk
+"""
+
+[layers."eyes.closed"]
+at = [10, 9]
+follows = "head"
+grid = """
+kkk......kkk
+"""
+
+[layers."eyes.left"]
+at = [9, 8]
+follows = "head"
+grid = """
+hkk......hkk
+kkk......kkk
+"""
+
+[layers."eyes.right"]
+at = [11, 8]
+follows = "head"
+grid = """
+hkk......hkk
+kkk......kkk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.k........k.
+k.k......k.k
+"""
+
+# Cross-eyed, for the leaf on the nose.
+[layers."eyes.cross"]
+at = [11, 8]
+follows = "head"
+grid = """
+khk....hkk
+kkk....kkk
+"""
+
+[layers.nose]
+at = [14, 13]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 12]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 4
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the head lifts, the ears prick up and forward, an alert blink.
+[[actions]]
+name = "alert"
+weight = 4
+frames = [
+  { ops = ["head+0,-1", "ears+0,-1"], ms = 120 },
+  { ops = ["head+0,-2", "ears+0,-1"], ms = 700 },
+  { ops = ["head+0,-2", "ears+0,-1", "eyes=closed"], ms = 140 },
+  { ops = ["head+0,-2", "ears+0,-1"], ms = 800 },
+  { ops = ["head+0,-1"], ms = 200 },
+]
+
+# Rare: a leaf drifts down onto its nose; it goes cross-eyed and sneezes.
+[[actions]]
+name = "leaf-sneeze"
+weight = 1
+frames = [
+  { ops = ["prop:leaf@20,0"], ms = 300 },
+  { ops = ["prop:leaf@17,4"], ms = 300 },
+  { ops = ["eyes=cross", "prop:leaf@15,7"], ms = 250 },
+  { ops = ["eyes=cross", "prop:leaf@14,11"], ms = 500 },
+  { ops = ["eyes=cross", "nose=sniff", "prop:leaf@14,11"], ms = 300 },
+  { ops = ["eyes=closed", "head+0,-1", "prop:leaf@14,11"], ms = 300 },
+  { ops = ["eyes=closed", "head+0,1", "prop:puff@3,13", "prop:leaf@23,2"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 500 },
+]

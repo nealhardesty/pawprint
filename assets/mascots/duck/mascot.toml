@@ -1,0 +1,260 @@
+# Duck on bird-water: a mallard drake. Glossy green head, white neck ring,
+# chestnut breast, grey body, a wide yellow bill, and the black curl of a
+# tail feather sticking up at its side (a `tail` slot, so tail-flick works).
+# Signature: a quack and a tail waggle. Rare: bottoms up, dabbling in the
+# crate with its feet in the air.
+id = "duck"
+name = "Duck"
+category = "birds"
+aliases = ["mallard"]
+accent = "teal"
+extends = "bird-water"
+
+[palette]
+"l" = "green-1"     # head light
+"f" = "green-2"     # head
+"F" = "green-3"     # head shadow
+"W" = "white"       # neck ring, undertail
+"a" = "white"       # body light
+"g" = "grey-1"      # body
+"G" = "grey-2"      # body shadow
+"c" = "brown-2"     # chestnut breast
+"C" = "brown-3"     # breast shadow
+"K" = "fur-black"   # tail curl
+"b" = "yellow-1"    # bill
+"B" = "yellow-2"    # bill shadow, nostrils
+"o" = "orange-2"    # feet
+"O" = "orange-3"    # feet shadow
+"p" = "brown-3"     # inside of the bill
+
+[layers.body]
+at = [3, 14]
+grid = """
+........kkkkkkkkkk........
+.....kkkcccccccccckkk.....
+...kkaacccccccccccCCGkk...
+..kaaggcccccccccccCCGGGk..
+.kaggggcccccccccccCCgGGGk.
+.kaggggccccccccccCCgggGGk.
+kagggggCcccccccccCggggggGk
+kaggggggCCCCCCCCCgggggggGk
+kaggggggggggggggggggggggGk
+kaggggggggggggggggggggggGk
+kaggggggggggggggggggggggGk
+kaggggggggggggggggggggggGk
+kaggggggggggggggggggggggGk
+kagggggggggggggggggggggGGk
+kagggggggggggggggggggggGGk
+kagggggggggggggggggggggGGk
+kagggggggggggggggggggggGGk
+kagggggggggggggggggggggGGk
+"""
+
+[layers.wings]
+at = [2, 17]
+grid = """
+kk........................kk
+kgGk....................kGGk
+kggGk..................kGGGk
+kggGGk................kGGGGk
+kggGGk................kGGGGk
+.kggGk................kGGGk.
+.kkgGk................kGGkk.
+...kkk................kkk...
+"""
+
+[layers."wings.open"]
+at = [0, 12]
+grid = """
+kk............................kk
+kak..........................kgk
+kgGk........................kGGk
+kggGk......................kGGGk
+.kggGk....................kGGGk.
+.kggGGk..................kGGGGk.
+..kkgGk..................kGGkk..
+....kkk..................kkk....
+"""
+
+# The green head, a white ring where the neck meets the breast.
+[layers.head]
+at = [7, 3]
+grid = """
+....kkkkkkkkkk....
+..kkllllllllffkk..
+.klllffffffffffFk.
+kllffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+.kffffffffffffFFk.
+..kffffffffffFFk..
+...WWWWWWWWWWWW...
+...cffffffffffF...
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers.bill]
+at = [11, 10]
+follows = "head"
+grid = """
+.kkkkkkkk.
+kbBbbbbBbk
+kbbbbbbbBk
+.kkkkkkkk.
+"""
+
+[layers."mouth.open"]
+at = [11, 9]
+follows = "head"
+grid = """
+.kkkkkkkk.
+kbbbbbbbbk
+kbBbbbbBbk
+kkkkkkkkkk
+kppppppppk
+kBbbbbbbBk
+.kkkkkkkk.
+"""
+
+# The drake's curl, up at its side.
+[layers.tail]
+at = [24, 10]
+grid = """
+..kk..
+.kKKk.
+kKkkKk
+kKk.kk
+.kKk..
+.kKk..
+kWWk..
+kWWk..
+"""
+
+[layers."tail.flick"]
+at = [25, 10]
+grid = """
+..kk..
+.kKKk.
+kKkkKk
+kKk.kk
+kKk...
+kKk...
+kWWk..
+.kWk..
+"""
+
+# Bottoms up: the rump, a white undertail, and two orange feet paddling.
+[layers."rump.up"]
+at = [8, 7]
+grid = """
+.......kk.......
+......kKKk......
+.kk...kKkk...kk.
+kook...kK...kook
+koook.kkkk.koook
+.kOOkkWWWWkkOOk.
+..kkkWWWWWWkkk..
+...kWWWWWWWWk...
+..kggWWWWWWggk..
+.kgggggWWgggggk.
+.kggggggggggGGk.
+kgggggggggggGGGk
+kgggggggggggGGGk
+"""
+
+[layers."rump.kick"]
+at = [8, 7]
+grid = """
+.......kk.......
+......kKKk......
+......kKkk......
+kk.....kK....kk.
+kook..kkkk..kook
+kOOOkkWWWWkkoook
+.kkkkWWWWWWkOOk.
+...kWWWWWWWWkk..
+..kggWWWWWWggk..
+.kgggggWWgggggk.
+.kggggggggggGGk.
+kgggggggggggGGGk
+kgggggggggggGGGk
+"""
+
+[layers.feet]
+at = [9, 18]
+grid = """
+.koook..koook.
+koOoOokkoOoOok
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "tail-flick"
+weight = 4
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: two quacks and a waggle of the tail.
+[[actions]]
+name = "quack"
+weight = 5
+frames = [
+  { ops = ["-bill", "+mouth.open", "head+0,-1"], ms = 160 },
+  { ops = [], ms = 120 },
+  { ops = ["-bill", "+mouth.open", "head+0,-1"], ms = 200 },
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = ["tail=flick", "all+1,0"], ms = 120 },
+  { ops = [], ms = 120 },
+  { ops = ["tail=flick", "all+1,0"], ms = 120 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: tips bottoms up into the crate and paddles, then pops back up.
+[[actions]]
+name = "bottoms-up"
+weight = 1
+frames = [
+  { ops = ["all+0,6"], ms = 120 },
+  { ops = ["all+0,17", "+rump.up", "rump+0,-17"], ms = 500 },
+  { ops = ["all+0,17", "+rump.kick", "rump+0,-17"], ms = 160 },
+  { ops = ["all+0,17", "+rump.up", "rump+0,-17"], ms = 160 },
+  { ops = ["all+0,17", "+rump.kick", "rump+0,-17"], ms = 160 },
+  { ops = ["all+0,17", "+rump.up", "rump+0,-17"], ms = 600 },
+  { ops = ["all+0,5"], ms = 120 },
+  { ops = ["all+0,-1", "eyes=happy"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 500 },
+]

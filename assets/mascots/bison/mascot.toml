@@ -1,0 +1,212 @@
+# Bison on ungulate-head. Built around the hump: the body is a massive
+# shaggy dome of tawny wool that rises above the head from row 0 and fills the crate
+# wall to wall. The head is low, broad, and dark, with a woolly cap that
+# hangs over small eyes, short curved cream horns, a broad grey muzzle, and
+# a beard. The signature is a snort with two puffs of breath; the rare one
+# shakes the dust out of its coat.
+id = "bison"
+name = "Bison"
+category = "mammals"
+aliases = ["buffalo"]
+accent = "ochre"
+extends = "ungulate-head"
+
+[palette]
+"u" = "brown-1"     # NEW: wool light
+"l" = "brown-2"     # wool
+"f" = "brown-3"     # hide
+"F" = "brown-4"     # hide shadow, beard
+"w" = "grey-3"      # muzzle
+"M" = "grey-4"      # mouth line
+"z" = "cream"       # horn tip
+"x" = "grey-1"      # horn
+"X" = "grey-2"      # horn shadow
+"n" = "fur-black"   # nostrils
+
+# The hump: a shaggy dome from row 1 that the head sits low against.
+[layers.body]
+at = [0, 0]
+grid = """
+...........kkkkkkkkkk...........
+.........kklllllllllfkk.........
+.......kkllluulllluullfkk.......
+......kullllflllllfllllffk......
+.....kulllllllllllllllllffk.....
+....kullluulllluulllluullffk....
+...kullllflllllflllllfllllffk...
+...kulllllllllllllllllllllffk...
+..kulluulllluulllluulllluulffk..
+..kullflllllflllllflllllfllffk..
+..kulllllllllllllllllllllllffk..
+.kuuulllluulllluulllluulllluffk.
+.kuflllllflllllflllllflllllfffk.
+.kulflflflflflflflflflflflflffk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+.klfffffffffffffffffffffffffFFk.
+"""
+
+# Small ears tucked under the horns.
+[layers.ears]
+at = [5, 9]
+follows = "head"
+grid = """
+kkk..............kkk
+kfFk............kFfk
+.kk..............kk.
+"""
+
+[layers."ears.flick"]
+at = [5, 8]
+follows = "head"
+grid = """
+.................kkk
+kkk.............kFfk
+kfFk.............kk.
+.kk.................
+"""
+
+[layers.head]
+at = [8, 5]
+grid = """
+..kkkkkkkkkkkk..
+.kuuluullulllfk.
+kuulllullullllfk
+kulullulllullfFk
+kfFfflfllflfFfFk
+kfffffffffffffFk
+.kfffffffffffFk.
+.kfffwwwwwwfffk.
+.kffwwwwwwwwffk.
+.kffwwwwwwwwfFk.
+..kfwwMMMMwwFk..
+..kFfwwwwwwFFk..
+...kFlFlFlFFk...
+...kFFlFFlFFk...
+....kFFFFFFk....
+"""
+
+# Short horns curving up and out from under the woolly cap.
+[layers.antlers]
+at = [3, 4]
+follows = "head"
+grid = """
+kk....................kk
+kzk..................kzk
+kxzkk..............kkzXk
+.kxxxk............kxxXk.
+..kkk..............kkk..
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [13, 13]
+follows = "head"
+grid = """
+nn..nn
+"""
+
+# Flared nostrils.
+[layers."nose.sniff"]
+at = [12, 13]
+follows = "head"
+grid = """
+nnn..nnn
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: two short sniffs, the head drops, and a snort blows a puff of
+# breath out of each side.
+[[actions]]
+name = "snort"
+weight = 4
+frames = [
+  { ops = ["nose=sniff"], ms = 150 },
+  { ops = [], ms = 120 },
+  { ops = ["nose=sniff", "head+0,1"], ms = 180 },
+  { ops = ["head+0,1", "eyes=closed", "prop:puff@3,13", "prop:puff@20,13"], ms = 500 },
+  { ops = ["prop:puff@1,11", "prop:puff@22,11"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: shakes the dust out of its hump, then looks pleased with itself.
+[[actions]]
+name = "dust-shake"
+weight = 1
+frames = [
+  { ops = ["eyes=closed", "all+1,0"], ms = 100 },
+  { ops = ["eyes=closed", "all+-1,0", "prop:puff@0,3"], ms = 100 },
+  { ops = ["eyes=closed", "all+1,0", "prop:puff@23,2"], ms = 100 },
+  { ops = ["eyes=closed", "all+-1,0", "prop:puff@1,1"], ms = 100 },
+  { ops = ["eyes=closed", "all+1,0", "prop:puff@22,0"], ms = 100 },
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = ["eyes=happy", "prop:sparkle@23,1"], ms = 900 },
+  { ops = ["eyes=happy"], ms = 300 },
+]

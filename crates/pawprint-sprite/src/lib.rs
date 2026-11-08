@@ -6,6 +6,7 @@
 mod bundle;
 mod color;
 mod compile;
+mod export;
 mod grid;
 mod image;
 mod library;
@@ -18,6 +19,7 @@ pub use compile::{
     Action, Compiled, FrameRef, Mascot, SourceLayer, SourceLayers, compile, compile_base,
     compile_dir, source_layers,
 };
+pub use export::export_png;
 pub use image::RgbaImage;
 pub use library::{Library, LibrarySources, Prop};
 pub use parts::{CrateArt, CrateColor, Font, IndexedLayer, Shade};

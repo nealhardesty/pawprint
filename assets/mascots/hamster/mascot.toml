@@ -1,0 +1,237 @@
+# Golden hamster, on rodent-upright. Round and golden, with a white muzzle
+# and the defining feature: fat white cheek pouches that bulge past the head
+# (`head.stuffed` bulges them further, `head.mega` further still). No tail
+# to speak of. `paws.left` / `paws.right` are the running-in-place steps.
+id = "hamster"
+name = "Hamster"
+category = "mammals"
+aliases = []
+accent = "honey"
+extends = "rodent-upright"
+
+[palette]
+"h" = "grey-3"      # catchlight: white would vanish into the light fur at 1x
+"l" = "yellow-1"    # fur light
+"f" = "orange-1"    # golden fur
+"F" = "orange-2"    # fur shadow
+"w" = "white"       # cheeks, muzzle, belly
+"M" = "grey-1"      # shadow on the white
+"t" = "white"       # teeth
+"n" = "pink-2"      # nose
+"p" = "pink-1"      # inner ear
+"P" = "pink-2"      # NEW: mouth inside
+
+# A hamster's tail is hidden in its fur.
+[layers.tail]
+at = [24, 18]
+grid = """
+.
+"""
+
+[layers.body]
+at = [5, 12]
+grid = """
+.klffffffffffffffffFk.
+klfffffffffffffffffFFk
+klffffffffffffffffffFk
+klffffwwwwwwwwwwffffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwMMfffFk
+klfffwwwwwwwwwwMMfffFk
+klfffwwwwwwwwwwMMfffFk
+klfffwwwwwwwwwwMMfffFk
+klffffwwwwwwwwMMffffFk
+klffffwwwwwwwwMMffffFk
+klfffffwwwwwwMMfffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+klffffffffffffffffffFk
+"""
+
+# Golden crown and eye patches over a white muzzle, with cheek pouches that
+# bulge out past the head.
+[layers.head]
+at = [3, 3]
+grid = """
+........kkkkkkkkkk........
+......kkllllllllffkk......
+.....kllllfffffffffFk.....
+....kllffffffffffffFFk....
+...klfffffffffffffffFFk...
+...klfffffffffffffffFFk...
+..kwwffffffffffffffffwMk..
+.kwwwwfffffffffffffwwwwMk.
+kwwwwwwwffwwwwffwwwwwwwwMk
+kwwwwwwwwwwwwwwwwwwwwwwwMk
+kwwwwwwwwwwwwwwwwwwwwwwMMk
+.kwwwwwwwwwwwwwwwwwwwwMMk.
+..kMMwwwwwwwwwwwwwwwMMMk..
+....kkMMMwwwwwwwwMMMkk....
+"""
+
+[layers."head.stuffed"]
+at = [1, 3]
+grid = """
+..........kkkkkkkkkk..........
+........kkllllllllffkk........
+.......kllllfffffffffFk.......
+......kllffffffffffffFFk......
+.....klfffffffffffffffFFk.....
+.....klfffffffffffffffFFk.....
+..kkkwwffffffffffffffffwMkkk..
+.kwwwwwwfffffffffffffwwwwwwMk.
+kwwwwwwwwwffwwwwffwwwwwwwwwwMk
+kwwwwwwwwwwwwwwwwwwwwwwwwwwwMk
+kwwwwwwwwwwwwwwwwwwwwwwwwwwMMk
+kwwwwwwwwwwwwwwwwwwwwwwwwwMMMk
+.kMwwwwwwwwwwwwwwwwwwwwwwMMMk.
+..kkMMMwwwwwwwwwwwwwwMMMMMkk..
+....kkkkMMMwwwwwwwwMMMkkkk....
+"""
+
+[layers."head.mega"]
+at = [0, 3]
+grid = """
+...........kkkkkkkkkk...........
+.........kkllllllllffkk.........
+........kllllfffffffffFk........
+.......kllffffffffffffFFk.......
+...kkk.klfffffffffffffffFFk.kkk.
+.kkwwwkklfffffffffffffffFFkkwwMk
+kwwwwwwwwffffffffffffffffwwwwwMk
+kwwwwwwwwwfffffffffffffwwwwwwwMk
+kwwwwwwwwwwwffwwwwffwwwwwwwwwwMk
+kwwwwwwwwwwwwwwwwwwwwwwwwwwwwwMk
+kwwwwwwwwwwwwwwwwwwwwwwwwwwwwMMk
+kwwwwwwwwwwwwwwwwwwwwwwwwwwwMMMk
+kMwwwwwwwwwwwwwwwwwwwwwwwwwMMMMk
+.kMMwwwwwwwwwwwwwwwwwwwwwwMMMMk.
+..kkMMMMwwwwwwwwwwwwwwMMMMMMkk..
+....kkkkkMMMwwwwwwwwMMMkkkkk....
+"""
+
+[layers.ears]
+at = [7, 2]
+follows = "head"
+grid = """
+.kkk..........kkk.
+kpppk........kpppk
+kfpfk........kfpFk
+"""
+
+[layers."ears.flick"]
+at = [6, 2]
+follows = "head"
+grid = """
+...............kkk.
+.kkk..........kpppk
+kpppk.........kfpFk
+kfpfk..............
+.kkf...............
+"""
+
+[layers.nose]
+at = [15, 11]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers.mouth]
+at = [14, 12]
+follows = "head"
+grid = """
+.MM.
+MttM
+"""
+
+[layers."mouth.open"]
+at = [14, 12]
+follows = "head"
+grid = """
+MkkM
+kttk
+kPPk
+.kk.
+"""
+
+[layers.paws]
+at = [10, 15]
+grid = """
+.MMMM..MMMM.
+MwwwwMMwwwwM
+.MwMwMMwMwM.
+"""
+
+[layers."paws.left"]
+at = [10, 14]
+grid = """
+.MMMM.......
+MwwwwM.MMMM.
+.MwMwMMwwwwM
+......MwMwM.
+"""
+
+[layers."paws.right"]
+at = [10, 14]
+grid = """
+.......MMMM.
+.MMMM.MwwwwM
+MwwwwMMwMwM.
+.MwMwM......
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 4
+
+[[actions]]
+use = "yawn"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: tucks a seed into its cheeks, which puff, then runs in place.
+[[actions]]
+name = "stuff-and-run"
+weight = 5
+frames = [
+  { ops = ["prop:seed@13,13"], ms = 300 },
+  { ops = ["prop:seed@13,12", "head+0,1", "eyes=closed"], ms = 160 },
+  { ops = ["head=stuffed", "eyes=happy"], ms = 700 },
+  { ops = ["head=stuffed", "paws=left", "all+0,-1"], ms = 110 },
+  { ops = ["head=stuffed", "paws=right"], ms = 110 },
+  { ops = ["head=stuffed", "paws=left", "all+0,-1"], ms = 110 },
+  { ops = ["head=stuffed", "paws=right"], ms = 110 },
+  { ops = ["head=stuffed", "paws=left", "all+0,-1"], ms = 110 },
+  { ops = ["head=stuffed", "paws=right"], ms = 110 },
+  { ops = ["head=stuffed"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: one seed too many. The cheeks go enormous, a seed shoots back out,
+# and the hamster sweats.
+[[actions]]
+name = "overstuffed"
+weight = 1
+frames = [
+  { ops = ["head=stuffed", "prop:seed@13,13"], ms = 300 },
+  { ops = ["head=stuffed", "eyes=closed", "head+0,1"], ms = 160 },
+  { ops = ["head=mega", "eyes=closed"], ms = 500 },
+  { ops = ["head=mega", "eyes=happy"], ms = 600 },
+  { ops = ["head=stuffed", "+mouth.open", "prop:seed@20,9"], ms = 120 },
+  { ops = ["head=stuffed", "prop:seed@25,3"], ms = 120 },
+  { ops = ["head=stuffed", "eyes=left", "prop:sweat@24,4"], ms = 900 },
+  { ops = ["eyes=left", "prop:sweat@24,5"], ms = 300 },
+  { ops = [], ms = 200 },
+]

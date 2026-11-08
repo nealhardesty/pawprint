@@ -1,0 +1,231 @@
+# Orange tabby on cat-sit: the everyday cat, and the catalog's plain `cat`.
+# A bright ginger tom with bold stripes: an M on the brow, bars at the
+# temples and under the eyes, tufts sticking out at the cheeks, a white
+# muzzle and chest, a barred body, and a thick ringed tail. Green eyes, and
+# a notch in the left ear from some old adventure. `mouth.blep` is the
+# tongue tip of the signature; `paws.reach` stretches toward the pebble.
+id = "cat-orange-tabby"
+name = "Orange Tabby"
+category = "cats-dogs"
+aliases = ["cat", "kitty", "orangecat", "ginger"]
+accent = "marigold"
+extends = "cat-sit"
+
+[palette]
+"l" = "orange-1"    # fur light
+"f" = "orange-2"    # fur
+"F" = "orange-3"    # fur shadow
+"s" = "orange-3"    # NEW: stripes
+"w" = "white"       # muzzle and chest
+"M" = "grey-2"      # mouth lines and chin shadow
+"e" = "green-2"     # iris
+"n" = "pink-2"      # nose
+"p" = "pink-1"      # inner ear, mouth, tongue
+
+[layers.tail]
+at = [25, 9]
+grid = """
+.kkk.
+klffk
+ksssk
+klfFk
+klfFk
+ksssk
+klfFk
+klfFk
+ksssk
+klfFk
+klfFk
+"""
+
+[layers."tail.flick"]
+at = [24, 8]
+grid = """
+.kkk..
+klffk.
+kssssk
+.klfFk
+.klfFk
+.ksssk
+.klfFk
+.klfFk
+.ksssk
+.klfFk
+.klfFk
+.klfFk
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klfffffffffffffFFk..
+.kssffffffffffffffssk.
+klfffffwwwwwwwwfffffFk
+kssffffwwwwwwwwffffssk
+klfffffwwwwwwwwfffffFk
+kssfffffwwwwwwfffffssk
+klfffffffwwwwfffffffFk
+kssffffffffffffffffssk
+klfffffffffffffffffFFk
+kssffffffffffffffffssk
+klfffffffffffffffffFFk
+kssffffffffffffffffssk
+klfffffffffffffffffFFk
+kssffffffffffffffffssk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# A tomcat head: the M on the brow, bars at the temples, and cheek tufts.
+[layers.head]
+at = [5, 4]
+grid = """
+.....kkkkkkkkkkkk.....
+...kklllslssfsfffkk...
+..kllfffsfssfsfffFFk..
+.klffffffsffsfffffFFk.
+.kssffffffffffffffssk.
+.klfffffffffffffffFFk.
+.ksssffffffffffffsssk.
+.klffffffffffffffFFFk.
+.klffffwwwwwwwwfffFFk.
+.klfffwwwwMMwwwwffFFk.
+kfsfffwwwMwwMwwwffFsFk
+..kffffwwwwwwwwffFFk..
+....kkFFMMMMMMFFkk....
+"""
+
+# Upright ears; the left one has a nick in its outer edge.
+[layers.ears]
+at = [7, 1]
+grid = """
+.k..............k.
+klk............kFk
+.kfk..........kfFk
+klpfk........kfpFk
+klppff......ffppFk
+"""
+
+[layers."ears.flick"]
+at = [7, 1]
+grid = """
+.k.................
+klk...........k....
+.kfk.........kFk...
+klpfk.......kfFk...
+klppff.....kfpFk...
+............ffppFk.
+"""
+
+[layers.eyes]
+at = [11, 9]
+grid = """
+he......he
+ek......ek
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+grid = """
+eh......eh
+ke......ke
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+grid = """
+he......he
+ek......ek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+# A big yawn, and the tongue tip left out afterward.
+[layers."mouth.open"]
+at = [13, 13]
+grid = """
+.kkkk.
+kppppk
+kpnnpk
+.kkkk.
+"""
+
+[layers."mouth.blep"]
+at = [15, 14]
+grid = """
+pp
+nn
+"""
+
+[layers.paws]
+at = [9, 17]
+grid = """
+.FFFF....FFFF.
+FllllF..FllllF
+klFlFk..klFlFk
+"""
+
+[layers."paws.reach"]
+at = [4, 17]
+grid = """
+.FFFF.........FFFF.
+FllllF.......FllllF
+klFlFk.......klFlFk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a huge yawn, then it forgets its tongue: a blep.
+[[actions]]
+name = "yawn-blep"
+weight = 4
+frames = [
+  { ops = ["eyes=closed"], ms = 250 },
+  { ops = ["eyes=closed", "head+0,-1", "+mouth.open"], ms = 1000 },
+  { ops = ["eyes=closed"], ms = 250 },
+  { ops = ["+mouth.blep"], ms = 1300 },
+  { ops = ["+mouth.blep", "eyes=closed"], ms = 150 },
+  { ops = ["+mouth.blep"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: there is a pebble on the crate edge. It looks at the pebble. It
+# looks at you. It pushes the pebble off.
+[[actions]]
+name = "pebble-push"
+weight = 1
+frames = [
+  { ops = ["eyes=left", "prop:pebble@0,13"], ms = 700 },
+  { ops = ["prop:pebble@0,13"], ms = 500 },
+  { ops = ["eyes=left", "paws=reach", "prop:pebble@0,13"], ms = 300 },
+  { ops = ["eyes=left", "paws=reach", "prop:pebble@-2,13"], ms = 160 },
+  { ops = ["paws=reach", "prop:pebble@-3,17"], ms = 120 },
+  { ops = ["eyes=happy"], ms = 900 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,200 @@
+# Axolotl, on sea-creature. A pink axolotl face-on in freshwater blue: a
+# wide, flat head, tiny far-apart eyes, the famous wide smile, and three
+# frilly red gills fanning out on each side (`gills`, +flutter). The
+# signature flutters the gills and smiles; the rare one lifts a tiny
+# four-fingered hand out of the water and waves (`hand.up`).
+id = "axolotl"
+name = "Axolotl"
+category = "aquatic"
+aliases = ["axo"]
+accent = "rose"
+extends = "sea-creature"
+
+# The gills replace the base side fins.
+rest = ["body", "head", "eyes", "water", "gills"]
+
+[palette]
+"l" = "white"       # skin light
+"f" = "pink-1"      # skin
+"F" = "pink-2"      # skin shadow
+"m" = "red-2"       # NEW: the smile
+"w" = "cream"       # chin and belly
+"g" = "red-1"       # NEW: gill frills
+"G" = "red-2"       # NEW: gill stalks
+"u" = "blue-1"      # water foam
+"v" = "blue-2"      # water
+"V" = "blue-3"      # deep water
+
+[layers.body]
+at = [5, 16]
+grid = """
+kwwwwwwwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwwwwwwwk
+kffffffffffFFFFFFFFFFk
+kffffffffffFFFFFFFFFFk
+kffffffffffFFFFFFFFFFk
+kffffffffffFFFFFFFFFFk
+kffffffffffFFFFFFFFFFk
+kffffffffffFFFFFFFFFFk
+kffffffffffFFFFFFFFFFk
+kffffffffffFFFFFFFFFFk
+kffffffffffFFFFFFFFFFk
+kffffffffffFFFFFFFFFFk
+kffffffffffFFFFFFFFFFk
+kffffffffffFFFFFFFFFFk
+kffffffffffFFFFFFFFFFk
+kffffffffffFFFFFFFFFFk
+"""
+
+[layers.head]
+at = [5, 6]
+grid = """
+......kkkkkkkkkk......
+...kkkllllllffffkkk...
+.kkllllffffffffffFFkk.
+kllffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfmffffffffffffffmfFk
+klffmmmffffffffmmmffFk
+kffffffmmmmmmmmffffffk
+kwwwwwwwwwwwwwwwwwwwwk
+kwwwwwwwwwwwwwwwwwwwwk
+"""
+
+[layers.eyes]
+at = [9, 9]
+grid = """
+hk..........hk
+kk..........kk
+"""
+
+[layers."eyes.closed"]
+at = [9, 10]
+grid = """
+kk..........kk
+"""
+
+[layers."eyes.left"]
+at = [8, 9]
+grid = """
+hk..........hk
+kk..........kk
+"""
+
+[layers."eyes.right"]
+at = [10, 9]
+grid = """
+hk..........hk
+kk..........kk
+"""
+
+[layers."eyes.happy"]
+at = [8, 9]
+grid = """
+.kk........kk.
+k..k......k..k
+"""
+
+[layers."mouth.open"]
+at = [13, 12]
+grid = """
+kkkkkk
+kppppk
+.kkkk.
+"""
+
+[layers.gills]
+at = [0, 2]
+follows = "head"
+grid = """
+...kk......................kk...
+..kgGk....................kGgk..
+..kggGk..................kGggk..
+...kggGk................kGggk...
+kk..kggGk..............kGggk..kk
+kgGk.kggGk............kGggk.kGgk
+kggGkkkk................kkkkGggk
+.kggGk....................kGggk.
+..kkkk....................kkkk..
+kkk..........................kkk
+kgGkkk....................kkkGgk
+.kggGk....................kGggk.
+..kkkk....................kkkk..
+"""
+
+[layers."gills.flutter"]
+at = [0, 1]
+follows = "head"
+grid = """
+..kk........................kk..
+.kgGk......................kGgk.
+.kggGk....................kGggk.
+..kggGk..................kGggk..
+...kggGk................kGggk...
+kk..kggGk..............kGggk..kk
+kgGk.kkkk..............kkkk.kGgk
+kggGkk....................kkGggk
+.kggGk....................kGggk.
+..kkkk....................kkkk..
+................................
+kkkkkk....................kkkkkk
+kggGGk....................kGGggk
+.kkkkk....................kkkkk.
+"""
+
+# A tiny hand that comes up out of the water for the rare wave.
+[layers."hand.up"]
+at = [24, 9]
+grid = """
+.k.k.k.
+kfkfkfk
+kfffffk
+.kfffFk
+..kfFk.
+..kfFk.
+..kfFk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the gills flutter, then a big smile.
+[[actions]]
+name = "gill-flutter"
+weight = 4
+frames = [
+  { ops = ["gills=flutter"], ms = 140 },
+  { ops = [], ms = 140 },
+  { ops = ["gills=flutter"], ms = 140 },
+  { ops = [], ms = 140 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = ["eyes=happy", "gills=flutter"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 500 },
+]
+
+# Rare: a tiny hand comes up out of the water and waves.
+[[actions]]
+name = "wave"
+weight = 1
+frames = [
+  { ops = ["+hand.up", "hand+0,3"], ms = 150 },
+  { ops = ["+hand.up", "eyes=happy"], ms = 250 },
+  { ops = ["+hand.up", "hand+1,0", "eyes=happy"], ms = 200 },
+  { ops = ["+hand.up", "eyes=happy"], ms = 200 },
+  { ops = ["+hand.up", "hand+1,0", "eyes=happy", "gills=flutter"], ms = 200 },
+  { ops = ["+hand.up", "eyes=happy"], ms = 300 },
+  { ops = ["+hand.up", "hand+0,3"], ms = 150 },
+  { ops = [], ms = 200 },
+]

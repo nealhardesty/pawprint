@@ -1,0 +1,219 @@
+# Moth, on bug. A rosy maple moth: broad pink wings with a buttery yellow
+# band spread wide at rest (`wings`, +open), a fuzzy yellow head and
+# thorax, a pink-banded abdomen, big dark eyes, and feathery antennae
+# (`antennae`, +twitch). Nocturnal: it dozes by day, and at night it is
+# drawn to a glowing star and bumps into it. The signature is a wing
+# flutter; the rare one shakes off a puff of wing dust and sneezes.
+id = "moth"
+name = "Moth"
+category = "critters"
+aliases = []
+accent = "honey"
+nocturnal = true
+extends = "bug"
+
+[palette]
+"l" = "cream"       # fuzz light
+"f" = "yellow-1"    # fuzz
+"F" = "yellow-2"    # fuzz shadow, smile
+"w" = "pink-1"      # wings and abdomen bands
+"W" = "pink-2"      # NEW: wing edges and band shadow
+"y" = "yellow-1"    # NEW: wing band
+"a" = "brown-1"     # NEW: antennae and legs
+
+[layers.wings]
+at = [0, 4]
+grid = """
+.kkk........................kkk.
+kWwwkkk..................kkkwwWk
+kWwwwwwkk..............kkwwwwwWk
+kWwyyyywwkk..........kkwwyyyywWk
+.kWyyyyyywwk........kwwyyyyyyWk.
+.kWwyyyywwwwk......kwwwwyyyywWk.
+..kWwwwwwwwwk......kwwwwwwwwWk..
+..kkkkkkkkkkk......kkkkkkkkkkk..
+...kWwwwwwwwk......kwwwwwwwWk...
+..kWwwyywwwwk......kwwwwyywwWk..
+..kWwyyyywwk........kwwyyyywWk..
+...kWwwwwwk..........kwwwwwWk...
+....kkkkkk............kkkkkk....
+"""
+
+[layers."wings.open"]
+at = [0, 1]
+grid = """
+kkk..........................kkk
+kWwkk......................kkwWk
+kWwwwkk..................kkwwwWk
+kWwyywwkk..............kkwwyywWk
+kWwyyyywwkk..........kkwwyyyywWk
+.kWyyyyywwwk........kwwwyyyyyWk.
+.kWwyyywwwwk........kwwwwyyywWk.
+..kWwwwwwwwk........kwwwwwwwWk..
+..kkkkkkkkkkk......kkkkkkkkkkk..
+...kWwwwwwwwk......kwwwwwwwWk...
+...kWwyywwwk........kwwwyywWk...
+....kWwwwwk..........kwwwwWk....
+.....kkkkk............kkkkk.....
+"""
+
+[layers.body]
+at = [10, 12]
+grid = """
+..kkkkkkkk..
+.klllllllfk.
+klllfffffffk
+klffffffffFk
+kwwwwwwwwwWk
+klffffffffFk
+kwwwwwwwwwWk
+klffffffffFk
+kwwwwwwwwwWk
+klffffffffFk
+kwwwwwwwwwWk
+klffffffffFk
+kwwwwwwwwwWk
+klffffffffFk
+kwwwwwwwwwWk
+klffffffffFk
+kwwwwwwwwwWk
+klffffffffFk
+kwwwwwwwwwWk
+klffffffffFk
+"""
+
+[layers.head]
+at = [10, 4]
+grid = """
+..k.kkkk.k..
+.kkllllllkk.
+kllllffffffk
+kllffffffffk
+klffffffffFk
+klffffffffFk
+klffffffffFk
+.kffffffffk.
+..kkkkkkkk..
+"""
+
+[layers.antennae]
+at = [8, 0]
+grid = """
+k.k..........k.k
+kak.k......k.kak
+.kakk......kkak.
+..kak.k..k.kak..
+...kak....kak...
+"""
+
+[layers."antennae.twitch"]
+at = [8, 0]
+grid = """
+................
+k.k..........k.k
+kak.k......k.kak
+.kakk......kkak.
+..kakk....kkak..
+"""
+
+[layers.legs]
+at = [10, 17]
+grid = """
+..k......k..
+.kak....kak.
+kak......kak
+"""
+
+
+[layers.eyes]
+at = [11, 8]
+grid = """
+hkk....hkk
+kkk....kkk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+grid = """
+kkk....kkk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+grid = """
+hkk....hkk
+kkk....kkk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+grid = """
+hkk....hkk
+kkk....kkk
+"""
+
+[layers."eyes.happy"]
+at = [11, 8]
+grid = """
+.k......k.
+k.k....k.k
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+# Nocturnal: it naps through the day instead of the night.
+[[actions]]
+use = "doze"
+when = "day"
+
+# Signature: a quick wing flutter with the feathery antennae twitching.
+[[actions]]
+name = "flutter"
+weight = 4
+frames = [
+  { ops = ["wings=open", "antennae=twitch"], ms = 110 },
+  { ops = [], ms = 110 },
+  { ops = ["wings=open"], ms = 110 },
+  { ops = ["antennae=twitch"], ms = 110 },
+  { ops = ["wings=open", "all+0,-1"], ms = 130 },
+  { ops = ["antennae=twitch"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Night: a glowing star appears, the moth flutters up to it, bumps it, and
+# drifts back down, delighted anyway.
+[[actions]]
+name = "to-the-light"
+weight = 4
+when = "night"
+frames = [
+  { ops = ["eyes=right", "prop:star@22,0"], ms = 400 },
+  { ops = ["wings=open", "all+1,-1", "eyes=right", "prop:star@22,0"], ms = 150 },
+  { ops = ["all+2,-2", "eyes=right", "prop:star@22,0"], ms = 150 },
+  { ops = ["wings=open", "all+3,-2", "eyes=closed", "prop:star@22,0"], ms = 250 },
+  { ops = ["all+2,-1", "eyes=happy", "prop:star@22,0"], ms = 300 },
+  { ops = ["wings=open", "all+1,0", "eyes=happy", "prop:star@22,0"], ms = 300 },
+  { ops = ["eyes=happy", "prop:star@22,0"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a wing shake throws off a puff of dust, and it sneezes.
+[[actions]]
+name = "dust-sneeze"
+weight = 1
+frames = [
+  { ops = ["wings=open", "all+1,0"], ms = 90 },
+  { ops = ["all+-1,0"], ms = 90 },
+  { ops = ["wings=open", "all+1,0", "prop:puff@3,2"], ms = 90 },
+  { ops = ["all+-1,0", "prop:puff@2,1"], ms = 250 },
+  { ops = ["eyes=closed", "prop:puff@1,0"], ms = 300 },
+  { ops = ["eyes=closed", "all+0,1", "prop:bang@26,0"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

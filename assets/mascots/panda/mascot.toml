@@ -1,0 +1,195 @@
+# Giant panda on bear. White fur with the panda's black parts: round black
+# ears, drooping black eye patches (in the head, under the eyes), a black
+# saddle over the shoulders and arms, and black paws on the rim. The eyes
+# are glints on the patches; closed and happy eyes are drawn in grey so they
+# read on black. The signature munches bamboo, then rolls onto its back with
+# its feet in the air; the rare one is a sneeze that startles even itself.
+id = "panda"
+name = "Panda"
+category = "mammals"
+aliases = ["giantpanda"]
+accent = "charcoal"
+extends = "bear"
+
+[palette]
+"l" = "white"       # fur light
+"f" = "cream"       # fur
+"F" = "grey-1"      # fur shadow
+"w" = "white"       # muzzle
+"M" = "grey-2"      # mouth lines
+"d" = "fur-black"   # NEW: black fur
+"D" = "grey-4"      # NEW: black fur light
+"G" = "grey-3"      # NEW: closed and happy eyes on the patches
+"n" = "fur-black"   # nose
+"p" = "pink-2"      # mouth inside
+
+# A black saddle over the shoulders and arms, white down the middle.
+[layers.body]
+at = [4, 14]
+grid = """
+....kDdllllllllllddk....
+..kkDddllllllllllddDkk..
+.kDddddllllllllllddddDk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+kDddddddllllllllddddddk.
+"""
+
+[layers.ears]
+at = [4, 2]
+follows = "head"
+grid = """
+..kkkk............kkkk..
+.kDDddk..........kddddk.
+kDdddddk........kddddddk
+kdddddk..........kdddddk
+.kdddk............kdddk.
+"""
+
+[layers."ears.flick"]
+at = [3, 2]
+follows = "head"
+grid = """
+...................kkkk..
+..kkkk............kddddk.
+.kDDddk..........kddddddk
+kDdddddk..........kdddddk
+kdddddk............kdddk.
+.kdddk...................
+"""
+
+# The head, with the drooping eye patches drawn into it.
+[layers.head]
+at = [6, 4]
+grid = """
+....kkkkkkkkkkkk....
+..kkllllllllllffkk..
+.kllfffffffffffffFk.
+klfffffffffffffffFFk
+klffdddffffffdddfFFk
+klfdddddffffdddddFFk
+klfdddddffffdddddFFk
+klfdddwwwwwwwwdddFFk
+klfffwwwwwwwwwwffFFk
+klfffwwwwMMwwwwffFFk
+.kfffwwwMwwMwwwffFk.
+..kFFfwwwwwwwwfFFk..
+...kkFFFFFFFFFFkk...
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+hk......kh
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [10, 10]
+follows = "head"
+grid = """
+GGG......GGG
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+kh......kh
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.GG......GG.
+G..G....G..G
+"""
+
+[layers.paws]
+at = [7, 17]
+grid = """
+.kkkkk......kkkkk.
+kDDdddk....kDddddk
+kdDdDdk....kdDdDdk
+"""
+
+# Rolled back: the soles of its feet in the air.
+[layers."feet.up"]
+at = [9, 4]
+grid = """
+.kkk......kkk.
+kdGdk....kdGdk
+kGGGk....kGGGk
+kdddk....kdddk
+kDddk....kDddk
+kDddk....kDddk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: munches a stalk of bamboo, then rolls onto its back with its
+# feet in the air, and rolls up again.
+[[actions]]
+name = "bamboo-roll"
+weight = 4
+frames = [
+  { ops = ["prop:bamboo@19,8"], ms = 300 },
+  { ops = ["+mouth.open", "prop:bamboo@19,8"], ms = 200 },
+  { ops = ["eyes=happy", "prop:bamboo@19,9"], ms = 200 },
+  { ops = ["+mouth.open", "eyes=happy", "prop:bamboo@19,9"], ms = 200 },
+  { ops = ["eyes=happy", "prop:bamboo@19,8"], ms = 300 },
+  { ops = ["head+0,3", "body+0,3", "-paws"], ms = 160 },
+  { ops = ["head+0,6", "body+0,6", "-paws", "+feet.up", "eyes=happy"], ms = 1000 },
+  { ops = ["head+0,3", "body+0,3", "-paws"], ms = 160 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: two big breaths in, then a sneeze that makes it jump.
+[[actions]]
+name = "sneeze"
+weight = 1
+frames = [
+  { ops = ["eyes=closed", "head+0,-1"], ms = 300 },
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = ["eyes=closed", "head+0,-1", "+mouth.open"], ms = 400 },
+  { ops = ["eyes=closed", "all+0,-2", "prop:puff@3,12", "prop:bang@26,0"], ms = 300 },
+  { ops = ["all+0,-1", "prop:bang@26,1"], ms = 400 },
+  { ops = ["eyes=left"], ms = 500 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,189 @@
+# Snail, on critter, in profile facing right. A big orange shell with a
+# dark spiral groove (`shell`, drawn last), a soft grey foot gliding along
+# the rim, and a head with two eye stalks (`stalks`, +short, +long) carrying
+# glossy black eyes. The signature pulls the stalks in and stretches them
+# out again; the rare one makes its shell twinkle. No feet or nostrils, so
+# the base's are left out.
+id = "snail"
+name = "Snail"
+category = "critters"
+aliases = ["slug"]
+accent = "ochre"
+extends = "critter"
+
+rest = ["body", "head", "eyes", "stalks", "shell"]
+
+[palette]
+"l" = "grey-1"      # skin light
+"f" = "grey-2"      # skin
+"F" = "grey-3"      # skin shadow, smile
+"a" = "orange-1"    # NEW: shell light
+"b" = "orange-2"    # NEW: shell
+"c" = "orange-3"    # NEW: shell shadow
+"d" = "brown-3"     # NEW: spiral groove
+"p" = "pink-2"      # mouth
+
+[layers.body]
+at = [1, 14]
+grid = """
+...............kkkk.........
+.kk............klllk........
+klllfffffffffffffffffk......
+kfffffffffffffffffffffffk...
+.kFFFFFFFFFFFFFFFFFFFFFFFFk.
+..kkkkkkkkkkkkkkkkkkkkkkkkkk
+"""
+
+[layers.head]
+at = [16, 7]
+grid = """
+.....kkkkkk..
+....kllllffk.
+...kllffffffk
+...klfffffffk
+...kffffffffk
+..kffffffFFfk
+..kfffffffffk
+..kfffffffffk
+.kfffffffffkk
+kfffffFFFkk..
+"""
+
+[layers.stalks]
+at = [21, 4]
+follows = "head"
+grid = """
+kfk.kfk
+kfk.kfk
+kfk.kfk
+kfk.kfk
+"""
+
+[layers."stalks.short"]
+at = [21, 6]
+follows = "head"
+grid = """
+kfk.kfk
+kfk.kfk
+"""
+
+[layers."stalks.long"]
+at = [21, 3]
+follows = "head"
+grid = """
+kfk.kfk
+kfk.kfk
+kfk.kfk
+kfk.kfk
+kfk.kfk
+"""
+
+[layers.shell]
+at = [3, 2]
+grid = """
+.....kkkkk.....
+...kkaaabbkk...
+..kaaaabbbbbk..
+.kaadddddddbbk.
+.kaddbbbbbbbbk.
+kaadbbdddddbbbk
+kaadbddbbbddbck
+kabdbdbdddbdcck
+kbbdbdbbbdbdcck
+kbbdbdddddcdcck
+.kbddbbbbcddck.
+.kbbdddddddcck.
+..kbbbbccccck..
+...kkbcccckk...
+.....kkkkk.....
+"""
+
+
+# Glossy eyes on the stalk tips.
+[layers.eyes]
+at = [21, 1]
+grid = """
+kkk.kkk
+hkk.hkk
+kkk.kkk
+"""
+
+[layers."eyes.closed"]
+at = [21, 3]
+grid = """
+kkk.kkk
+"""
+
+[layers."eyes.left"]
+at = [20, 1]
+grid = """
+kkk.kkk
+hkk.hkk
+kkk.kkk
+"""
+
+[layers."eyes.right"]
+at = [22, 1]
+grid = """
+kkk.kkk
+hkk.hkk
+kkk.kkk
+"""
+
+[layers."eyes.happy"]
+at = [21, 2]
+grid = """
+.k...k.
+k.k.k.k
+"""
+
+[layers."mouth.open"]
+at = [24, 12]
+grid = """
+kkkk
+kppk
+.kk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the stalks pull in, then stretch out tall and settle back.
+[[actions]]
+name = "stalks"
+weight = 4
+frames = [
+  { ops = ["stalks=short", "eyes+0,2"], ms = 200 },
+  { ops = ["stalks=short", "eyes+0,2", "eyes=closed"], ms = 500 },
+  { ops = ["stalks=short", "eyes+0,2"], ms = 300 },
+  { ops = [], ms = 200 },
+  { ops = ["stalks=long", "eyes+0,-1"], ms = 600 },
+  { ops = ["stalks=long", "eyes+0,-1", "eyes=right"], ms = 500 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: the shell catches the light and twinkles.
+[[actions]]
+name = "shell-sparkle"
+weight = 1
+frames = [
+  { ops = ["eyes=left"], ms = 300 },
+  { ops = ["eyes=left", "prop:sparkle@3,0"], ms = 200 },
+  { ops = ["eyes=happy", "prop:sparkle@4,-1"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 150 },
+  { ops = ["eyes=happy", "prop:sparkle@11,4"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = [], ms = 200 },
+]

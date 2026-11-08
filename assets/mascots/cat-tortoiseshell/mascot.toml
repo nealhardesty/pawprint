@@ -1,0 +1,276 @@
+# Tortoiseshell cat on cat-sit. No white anywhere: a black coat mottled all
+# over with orange and rust, an orange blaze down the nose, a split nose
+# (half pink, half black), mismatched paws (one orange, one black), and a
+# tail with an orange tip. A heart-shaped face: a broad flat crown over
+# round cheeks, narrowing to a small chin. Small ears, one black and one
+# orange. Amber eyes. `paws.lick`, `paws.wipe`, and `mouth.lick` make the
+# grooming signature; `paws.up` is the rare pounce.
+id = "cat-tortoiseshell"
+name = "Tortoiseshell Cat"
+category = "cats-dogs"
+aliases = ["tortie", "tortoiseshell"]
+accent = "copper"
+extends = "cat-sit"
+
+[palette]
+"l" = "grey-4"      # fur sheen
+"f" = "fur-black"   # fur
+"F" = "fur-black"   # fur shadow
+"o" = "orange-1"    # NEW: mottle, light
+"O" = "orange-2"    # NEW: mottle
+"R" = "orange-3"    # NEW: rust mottle, and closed-eye lines
+"M" = "orange-3"    # mouth lines
+"e" = "amber"       # iris
+"h" = "white"       # eye glint
+"n" = "pink-2"      # nose (the left half)
+"p" = "pink-2"      # inner ear, toe beans, tongue
+
+[layers.tail]
+at = [26, 10]
+grid = """
+.kk.
+kOOk
+kORk
+klfk
+kffk
+kOfk
+kRRk
+kffk
+klfk
+kfOk
+kffk
+"""
+
+[layers."tail.flick"]
+at = [26, 9]
+grid = """
+..kk.
+.kOOk
+.kORk
+kffRk
+kffk.
+kOfk.
+kRRk.
+kffk.
+klfk.
+kfOk.
+kffk.
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffRRffFk...
+..klffffffffOOORfFFk..
+.klffffffffOOOOORfFFk.
+klRRfffffffOORffffRFFk
+klRORffffffffffffOORFk
+klOOOfffffffffffROOOFk
+klRRfffffffffffffORFFk
+klfffffffffffffffffFFk
+klOOffffffffffffffRRFk
+klfffffffffffOOOfffFFk
+klfOOOfffffffffffffFFk
+klffffffffOOOffffffFFk
+klffRRffffffffffOOOFFk
+klfffffffffffffffffFFk
+klffffffffOOORffffRRFk
+klfffRRffffffffffffFFk
+klOOfffffffffOOOfffFFk
+klfffffffffffffffffFFk
+"""
+
+# Heart-shaped: a broad flat crown, round cheeks, a small chin.
+[layers.head]
+at = [6, 4]
+grid = """
+...kkkkkkkkkkkkkk...
+..klllllllOOoOlffk..
+.klRfffffOOOOORffFk.
+klffffffoOOOOOORfFFk
+klfffffffOOffRORfFFk
+klfffffffOOffffffFFk
+klRffffffOOffffffRFk
+klRRfffffOOfffOOORFk
+klfRffffOffOfOOOORFk
+.klffffffMMfOOORfFk.
+..kfffffMOOMRRfFFk..
+...kffffffffffFFk...
+.....kkFFFFFFkk.....
+"""
+
+# Small ears on the corners of the crown: black left, orange right.
+[layers.ears]
+at = [7, 1]
+grid = """
+.kk............kk.
+klRk..........kORk
+klpfk........kOpRk
+klppfk......kOppRk
+klf............ORk
+"""
+
+[layers."ears.flick"]
+at = [6, 1]
+grid = """
+................kk.
+.kk............kORk
+klRk..........kOpRk
+klpfk........kOppRk
+klppff..........ORk
+klf................
+"""
+
+[layers.eyes]
+at = [11, 9]
+grid = """
+he......he
+ek......ek
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+grid = """
+RR......RR
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+grid = """
+eh......eh
+ke......ke
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+grid = """
+he......he
+ek......ek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.RR......RR.
+R..R....R..R
+"""
+
+# A split nose: pink on the left, black on the right.
+[layers.nose]
+at = [15, 12]
+grid = """
+nf
+"""
+
+[layers."nose.sniff"]
+at = [15, 11]
+grid = """
+nf
+"""
+
+# The tongue, out for grooming.
+[layers."mouth.lick"]
+at = [14, 14]
+grid = """
+p
+"""
+
+# Mismatched paws: orange on the left, black on the right.
+[layers.paws]
+at = [9, 17]
+grid = """
+.RRRR....FFFF.
+ROOOOR..FllllF
+kORORk..klFlFk
+"""
+
+# Grooming: the orange paw raised to the mouth, toe beans out...
+[layers."paws.lick"]
+at = [9, 12]
+grid = """
+.RRR..........
+RpOpR.........
+ROpOR.........
+.ROR..........
+.ROR..........
+.ROR.....FFFF.
+.ROR....FllllF
+.ROR....klFlFk
+"""
+
+# ...then washing over the eye.
+[layers."paws.wipe"]
+at = [9, 9]
+grid = """
+.RRR..........
+RpOpR.........
+ROpOR.........
+.ROR..........
+.ROR..........
+.ROR..........
+.ROR..........
+.ROR..........
+.ROR.....FFFF.
+.ROR....FllllF
+.ROR....klFlFk
+"""
+
+# The pounce: both paws up, beans out.
+[layers."paws.up"]
+at = [6, 12]
+grid = """
+.RRR............FFF.
+RpOpR..........FplpF
+ROpOR..........FlplF
+.ROR............FlF.
+.ROR............FlF.
+.ROR............FlF.
+.ROR............FlF.
+.ROR............FlF.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: grooms a paw. Two licks, a wipe over the eye, a last lick.
+[[actions]]
+name = "groom"
+weight = 4
+frames = [
+  { ops = ["paws=lick"], ms = 250 },
+  { ops = ["paws=lick", "+mouth.lick", "eyes=closed"], ms = 200 },
+  { ops = ["paws=lick", "eyes=closed"], ms = 160 },
+  { ops = ["paws=lick", "+mouth.lick", "eyes=closed"], ms = 200 },
+  { ops = ["paws=wipe", "eyes=closed", "head+1,0"], ms = 450 },
+  { ops = ["paws=lick", "+mouth.lick", "eyes=closed"], ms = 200 },
+  { ops = ["paws=lick"], ms = 200 },
+  { ops = [], ms = 250 },
+]
+
+# Rare: a leaf drifts down. It wiggles, pounces, and sits back with the
+# leaf in its mouth, very proud.
+[[actions]]
+name = "leaf-pounce"
+weight = 1
+frames = [
+  { ops = ["eyes=right", "prop:leaf@21,0"], ms = 400 },
+  { ops = ["eyes=right", "prop:leaf@18,3"], ms = 400 },
+  { ops = ["eyes=right", "all+1,0", "prop:leaf@20,5"], ms = 130 },
+  { ops = ["eyes=right", "all+-1,0", "prop:leaf@20,5"], ms = 130 },
+  { ops = ["eyes=right", "all+1,0", "prop:leaf@19,6"], ms = 130 },
+  { ops = ["all+0,-3", "paws=up", "eyes=closed", "prop:leaf@18,6"], ms = 200 },
+  { ops = ["eyes=happy", "prop:leaf@13,12"], ms = 1200 },
+  { ops = [], ms = 250 },
+]
