@@ -493,20 +493,20 @@ enforces them.
 
 ### Releasing
 
-Releases are built locally on each OS and uploaded to one GitHub release:
+A release is one tag push:
 
-1. Bump `version` in the root `Cargo.toml`, commit, then tag and push:
-   `git tag v<version> && git push origin v<version>`.
-2. On Linux, macOS, and Windows, check out the tag and run
-   `make package && make publish`. The first machine creates the release
-   as a draft (let it finish before the others start); each machine
-   uploads its own archives, their `.sha256` files, and the two installers
-   (re-uploads replace same-named assets). `make publish DRY_RUN=1` shows
-   what would run.
-3. `make release-finalize` checks that the draft has every OS's assets and
-   publishes it. Until then nobody sees the release, so `latest` never
-   lacks an OS.
+1. Bump `version` in the root `Cargo.toml` and commit to `master`.
+2. Tag and push: `git tag v<version> && git push origin v<version>`.
+3. The **Release** workflow does the rest with the same make targets: Linux
+   runs `make package && make publish` (creating a draft release), then
+   macOS and Windows do the same, then `make release-finalize` checks all
+   ten assets are there and makes the release public. Until then nobody
+   sees it, so `latest` never lacks an OS.
 4. Test the install one-liners on a clean machine of each OS.
+
+To release by hand instead, check out the tag on each OS and run
+`make package && make publish` (Linux first, so it creates the draft), then
+`make release-finalize`. `make publish DRY_RUN=1` shows what would run.
 
 `make publish` reads the version from `Cargo.toml`, so there is nothing to
 pass. It refuses to run with uncommitted changes, when the tag doesn't

@@ -2181,7 +2181,8 @@ pawprint/
 ├── spikes/
 │   └── f22-static-musl/      # standalone spike crate (not a workspace member); make spike-f22
 ├── README.md  SPEC.md  ROADMAP.md  AGENTS.md  LICENSE
-└── .github/workflows/ci.yml  # calls make targets only
+├── .github/workflows/ci.yml       # calls make targets only
+└── .github/workflows/release.yml  # on a v* tag: package, publish, finalize (make targets)
 ```
 
 Backends compile only on their platform (`#[cfg(target_os = ...)]`). Linux
@@ -2353,20 +2354,27 @@ itself (with the `tar`, `flate2`, and `zip` crates), so packaging needs no
 
 ### 15.3 Release procedure
 
-1. Bump the version in `Cargo.toml`, update the README if needed, and commit.
-2. Tag `v<ver>` and push the tag.
-3. On each of Linux, macOS, and Windows: check out the tag, then
-   `make package && make publish`. Let the first machine finish creating
-   the draft before the others publish: draft releases don't reserve their
-   tag, so two machines creating at once would make two drafts.
-4. `make publish` creates the release **as a draft** on first use, uploads
-   that machine's `dist/*` plus the installers, and replaces same-named
-   assets on re-runs. Nobody sees a draft, so `latest` never points at a
-   release that is missing an OS.
-5. `make release-finalize` (from any machine) lists the draft's assets,
-   refuses while any of the ten is missing (four archives, four sidecars,
-   two installers) and names them, then publishes the draft.
-6. Run the installer one-liners on a clean machine of each OS.
+1. Bump the version in `Cargo.toml`, update the README if needed, and commit
+   to `master`.
+2. Tag `v<ver>` on that commit and push the tag.
+3. The tag push runs `.github/workflows/release.yml`, which uses the same
+   make targets a person would:
+   - **Linux** checks out the tag and runs `make package && make publish`.
+     That creates the release **as a draft** and uploads both musl archives,
+     their sidecars, and the installers.
+   - **macOS** and **Windows** run the same two targets once Linux is done.
+     They wait because draft releases don't reserve their tag, so two jobs
+     creating the release at once would make two drafts.
+   - **`make release-finalize`** then lists the draft's assets, refuses
+     while any of the ten is missing (four archives, four sidecars, two
+     installers) and names them, and publishes the draft. Nobody sees a
+     draft, so `latest` never points at a release that is missing an OS.
+4. Run the installer one-liners on a clean machine of each OS.
+
+The workflow is a convenience, not a dependency. The same steps work by
+hand: check out the tag on each OS, run `make package && make publish`
+(Linux first), then `make release-finalize` from any machine. Re-running
+`make publish` replaces same-named assets.
 
 `make publish` (logic in `pawdev publish`) refuses to run, and says how to
 fix it, when:
