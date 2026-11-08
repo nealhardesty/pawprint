@@ -268,7 +268,7 @@ Can run in parallel with M2/M3 once M1 passes.
 - [x] `make package`: archives + `.sha256` sidecars into `dist/`
 - [x] `make publish`: create a draft GitHub release via `gh` and upload `dist/` + installers; refuses a dirty tree, a tag off `HEAD`, or a `dist/` packaged from another commit; `make release-finalize` publishes the draft once all ten assets are there; `DRY_RUN=1` of both tested in CI
 - [x] Release workflow: a `v*` tag push runs `make package` + `make publish` on each OS and `make release-finalize` (`.github/workflows/release.yml`)
-- [ ] First real release: `v1.0.0`
+- [x] First real release: [`v1.0.0`](https://github.com/nealhardesty/pawprint/releases/tag/v1.0.0), built and published by the release workflow; the Linux one-liner verified against it
 - [x] `install.sh` (POSIX sh) and `install.ps1` (PS 5.1 + 7) per [SPEC §15](SPEC.md#15-packaging-release-and-install), including `--archive`, `--uninstall`, `--purge`
 - [x] `make install` / `make uninstall` for local builds
 - [x] `make test-install`: the installers end to end under sh, dash, bash, PowerShell 5.1, and PowerShell 7, in CI on all three OSes ([SPEC §15.7](SPEC.md#157-installer-tests))

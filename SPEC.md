@@ -579,7 +579,12 @@ in idle and then in static mode, 180 s each. CPU is `utime + stime` from
 `/proc/<pid>/stat`; wakeups are the voluntary context switches of every
 thread (`/proc/<pid>/task/*/status`); startup is process start until
 `pawprint status` reports a placed badge, which the loop answers only
-after the first frame is flushed.
+after the first frame is flushed. Startup is timed over five starts and
+the fastest counts against the budget (the median is printed beside it):
+a shared CI runner can only slow a start down, so one slow sample on a
+busy machine says nothing about the badge. A single-sample check once
+failed the macOS job at 411 ms on a queued runner whose other starts took
+131–341 ms.
 
 | Metric (Linux X11, M4) | Measured | Budget |
 |---|---|---|

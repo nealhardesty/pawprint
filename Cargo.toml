@@ -4,7 +4,7 @@ members = ["crates/pawprint-core", "crates/pawprint-sprite", "crates/pawprint", 
 exclude = ["spikes"]
 
 [workspace.package]
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/nealhardesty/pawprint"
