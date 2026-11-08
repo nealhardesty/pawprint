@@ -99,11 +99,23 @@ badge should appear in the top-right corner of your primary display.
 | `install.sh` | `install.ps1` | Effect |
 |---|---|---|
 | `--version 1.2.0` | `-Version 1.2.0` | Install a specific version (default: latest) |
-| `--archive ./pawprint-….tar.gz` | `-Archive .\pawprint-….zip` | Install from a downloaded archive, with no network access |
+| `--archive ./pawprint-….tar.gz` | `-Archive .\pawprint-….zip` | Install from a downloaded archive, with no network access. Its `.sha256` file is checked if it sits next to it |
 | `--no-autostart` | `-NoAutostart` | Don't start at login |
 | `--no-start` | `-NoStart` | Don't start it now |
-| `--prefix DIR` | — | Install somewhere other than `~/.local/bin` |
+| `--prefix DIR` | `-Prefix DIR` | Install somewhere other than `~/.local/bin` (Windows: `%LOCALAPPDATA%\Programs\pawprint`) |
 | `--uninstall [--purge]` | `-Uninstall [-Purge]` | Remove PAWPRINT (`purge` also deletes your config) |
+
+The environment variables `PAWPRINT_VERSION` and `PAWPRINT_PREFIX` work
+like `--version` and `--prefix`. `PAWPRINT_DOWNLOAD_BASE` replaces
+`https://github.com/nealhardesty/pawprint/releases`, for a mirror laid out
+the same way (`download/v<version>/<asset>`, with `latest` redirecting to
+`tag/v<version>`); the tests use it to point at a local server.
+
+Re-running the installer upgrades in place: it checks the download first,
+then stops the running badge, replaces the binary, and starts it again. A
+failed download or checksum changes nothing. Your config is never touched.
+Without a desktop session (over SSH, say) the badge can't start yet; the
+installer says so and the badge starts at your next graphical login.
 
 Passing options through a pipe:
 
@@ -405,7 +417,8 @@ curl -fsSL https://github.com/nealhardesty/pawprint/releases/latest/download/ins
 ```
 
 Your config and custom mascots are kept. Add `--purge` / `-Purge` to delete
-them too.
+them too. If you installed with `--prefix`, pass the same `--prefix` to
+uninstall. From a checkout, `make uninstall` does the same.
 
 ---
 
@@ -427,6 +440,7 @@ work. Contributor rules for humans and coding agents are in
 | macOS | Xcode Command Line Tools: `xcode-select --install` (provides `make`, `lipo`, `codesign`) |
 | Windows | Visual Studio Build Tools (C++ workload) and GNU Make: `winget install ezwinports.make`. Run targets from PowerShell. |
 | Publishing | [GitHub CLI](https://cli.github.com), authenticated with `gh auth login` |
+| Installer checks (optional) | `make lint-installers` needs `shellcheck`; `make release` on Linux runs the aarch64 binary if `qemu-user-static` is installed. On Ubuntu: `sudo apt-get install shellcheck qemu-user-static` |
 | Linux display tests (optional) | `make test-x11` and `make test-wayland` drive real display servers (and `make power-check` uses Xvfb). On Ubuntu: `sudo apt-get install xvfb xcompmgr openbox sway swaybg grim foot wtype dbus` |
 | Windows display test (optional) | `make test-windows-display` runs the badge on your own desktop: nothing to install, but quit any running badge first and leave the mouse alone for a few seconds |
 
@@ -467,11 +481,13 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make art-export MASCOT=owl` | Export a mascot's layers (one PNG each) and frames into `out/art/<id>/` for editing in a pixel-art tool |
 | `make art-import MASCOT=owl PNG=out/art/owl/eyes.png` | Print an edited PNG layer as a ready-to-paste grid in the mascot's own glyphs |
 | `make ci` | Everything CI checks (`lint` + `test`) |
-| `make release` | Optimized build (universal binary on macOS, static musl on Linux) |
-| `make package` | Release build, archive, and checksum into `dist/`. Fails if the catalog has fewer than 100 valid mascots or is missing a required one. |
-| `make publish` | Upload `dist/` and the installers to the GitHub release for the current version |
-| `make install` | Install your local release build for this user and turn on autostart |
-| `make uninstall` | Remove the local install and autostart |
+| `make release` | Optimized build for this OS, checked and run: static musl x86_64 and aarch64 on Linux (the aarch64 one runs under `qemu-user-static` if installed), a universal binary re-signed ad hoc on macOS, `pawprint.exe` and `pawprintw.exe` on Windows |
+| `make package` | Release build, then the archives and their `.sha256` files into `dist/`. Fails if the catalog has fewer than 100 valid mascots or is missing a required one. |
+| `make publish` | Upload `dist/` and the installers to the GitHub release `v<version>`, creating it if needed. Refuses unless the tree is clean and the tag is on `HEAD`. `make publish DRY_RUN=1` prints the `gh` commands without running them |
+| `make install` | Package, then install that build for this user through the real installer (`--archive dist/...`): autostart on, badge started |
+| `make uninstall` | Remove the install and autostart through the installer (config is kept) |
+| `make test-install` | Package, then run the installers end to end in a throwaway home under every shell found (`sh`, `dash`, `bash`; `powershell`, `pwsh`): fresh install, upgrade from a local HTTP server, a checksum mismatch that must change nothing, uninstall, purge. On Windows and macOS it uses your real autostart entry and badge, so run it where PAWPRINT isn't installed (CI does) |
+| `make lint-installers` | `shellcheck` the POSIX installer (needs `shellcheck`) |
 | `make doctor` | Run `pawprint doctor` from the local build |
 | `make clean` | Remove build outputs |
 | `make check-all-targets` | Type-check the workspace for every release target (Windows, macOS, Linux musl) from any OS; needs no linkers |
@@ -487,9 +503,17 @@ enforces them.
 
 Releases are built locally on each OS and uploaded to one GitHub release:
 
-1. Bump `version` in the root `Cargo.toml`, commit, and tag `v<version>`.
-2. On Linux, macOS, and Windows, run `make package && make publish`.
+1. Bump `version` in the root `Cargo.toml`, commit, then tag and push:
+   `git tag v<version> && git push origin v<version>`.
+2. On Linux, macOS, and Windows, check out the tag and run
+   `make package && make publish`. Each machine uploads its own archives,
+   their `.sha256` files, and the two installers (re-uploads replace
+   same-named assets). `make publish DRY_RUN=1` shows what would run.
 3. Test the install one-liners on a clean machine of each OS.
+
+`make publish` reads the version from `Cargo.toml`, so there is nothing to
+pass. It refuses to run with uncommitted changes or when the tag doesn't
+point at `HEAD`, so every asset matches the tagged commit.
 
 Details are in [SPEC.md §15](SPEC.md#15-packaging-release-and-install).
 

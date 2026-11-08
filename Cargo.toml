@@ -23,6 +23,7 @@ toml = { version = "1.2", features = ["preserve_order"] }
 toml_edit = "0.25"
 windows-sys = "0.61"
 
+# Sizes and the reasoning: SPEC §14.5.
 [profile.release]
 strip = true
 lto = true
