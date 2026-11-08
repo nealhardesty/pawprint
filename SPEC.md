@@ -2181,8 +2181,8 @@ pawprint/
 ├── spikes/
 │   └── f22-static-musl/      # standalone spike crate (not a workspace member); make spike-f22
 ├── README.md  SPEC.md  ROADMAP.md  AGENTS.md  LICENSE
-└── .github/workflows/ci.yml  # calls make targets only
-├── .github/workflows/release.yml  # on a v* tag: package, publish, finalize (make targets)
+├── .github/workflows/ci.yml       # calls make targets only
+└── .github/workflows/release.yml  # on a v* tag: package, publish, finalize (make targets)
 ```
 
 Backends compile only on their platform (`#[cfg(target_os = ...)]`). Linux
