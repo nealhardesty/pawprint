@@ -155,6 +155,11 @@ pub fn explain(host: Option<String>, recompute: bool) -> CmdResult {
         &s.tray.source.to_string(),
     );
     row(
+        "fullscreen",
+        &s.fullscreen.value.to_string(),
+        &s.fullscreen.source.to_string(),
+    );
+    row(
         "backend",
         &s.backend.value.to_string(),
         &s.backend.source.to_string(),
@@ -315,7 +320,7 @@ pub fn edit_config(paths: &Paths, edit: impl FnOnce(&str) -> Result<String, Stri
 /// Replace the file atomically (temporary file, then rename), keeping its
 /// permissions. A symlinked config (dotfile managers) is written at its
 /// target, so the link stays; a link to nothing is an error, not replaced.
-fn write_config(path: &Path, text: &str) -> CmdResult {
+pub fn write_config(path: &Path, text: &str) -> CmdResult {
     let fail =
         |p: &Path, e: std::io::Error| (exit::ERROR, format!("cannot write {}: {e}", p.display()));
     let link = std::fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink());
@@ -347,7 +352,7 @@ fn write_config(path: &Path, text: &str) -> CmdResult {
 
 /// Tell this session's badge to re-read its config, if one is running.
 /// Returns what to tell the user.
-fn reload_running() -> &'static str {
+pub fn reload_running() -> &'static str {
     let Ok(endpoint) = crate::instance::endpoint() else {
         return "It applies when PAWPRINT starts.";
     };
@@ -434,6 +439,22 @@ pub fn unset(key: &str) -> CmdResult {
         );
     }
     Ok(())
+}
+
+/// Forget the dragged position: through this session's badge if one runs
+/// (it saves the state), else in the state file. For the settings window.
+pub fn reset_position(paths: &Paths) {
+    let running = crate::instance::endpoint()
+        .ok()
+        .and_then(|e| ipc::call(&e, ipc::Request::ResetPosition).ok())
+        .is_some_and(|r| r.ok);
+    if !running {
+        let (mut state, _) = State::load(&paths.state_file);
+        state.position = None;
+        if let Err(e) = state.save_atomic(&paths.state_file) {
+            log::error!("cannot write {}: {e}", paths.state_file.display());
+        }
+    }
 }
 
 /// `pawprint forget`: drop the cached fallback mascot, in the running

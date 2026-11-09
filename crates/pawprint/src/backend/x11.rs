@@ -7,9 +7,9 @@
 //! from the frame's 1-bit mask, which gives the same pixels because all art
 //! is binary-alpha. With no window manager it is override-redirect.
 //!
-//! `pawprint preview` uses the same window with the `preview` flag: a
-//! normal, managed, focusable window with a title, closed by the window
-//! manager or Esc.
+//! `pawprint preview` and `pawprint settings` use the same window with the
+//! `preview` flag: a normal, managed, focusable window with a title, whose
+//! pointer and keys go to `Shell::input`.
 
 use std::collections::HashMap;
 use std::os::fd::AsFd;
@@ -17,10 +17,12 @@ use std::os::fd::AsFd;
 use calloop::generic::Generic;
 use calloop::{EventLoop, Interest, Mode, PostAction};
 use pawprint_core::badge::{Command, Event};
+use pawprint_core::config::Fullscreen;
 use pawprint_core::geom::{PhysicalRect, Point};
 use pawprint_core::movemode::{Key, KeyCode};
 use pawprint_core::render::Frame;
-use pawprint_core::surface::{DisplayInfo, Surface};
+use pawprint_core::surface::{DisplayInfo, Surface, fullscreen_covers};
+use pawprint_core::ui::Input;
 use x11rb::connection::{Connection, RequestConnection};
 use x11rb::errors::ReplyOrIdError;
 use x11rb::properties::{WmHints, WmSizeHints, WmSizeHintsSpecification};
@@ -46,6 +48,8 @@ x11rb::atom_manager! {
         _NET_WM_STATE_STICKY,
         _NET_WM_STATE_SKIP_TASKBAR,
         _NET_WM_STATE_SKIP_PAGER,
+        _NET_WM_STATE_FULLSCREEN,
+        _NET_ACTIVE_WINDOW,
         _NET_WM_DESKTOP,
         _NET_WM_NAME,
         _NET_WM_PID,
@@ -222,8 +226,8 @@ impl Server {
         Ok(out)
     }
 
-    /// Arrow keys, Enter, and Escape by keycode, for move mode.
-    fn key_map(&self) -> XResult<HashMap<Keycode, KeyCode>> {
+    /// Each keycode's keysyms without and with Shift.
+    fn key_map(&self) -> XResult<HashMap<Keycode, (u32, u32)>> {
         let setup = self.conn.setup();
         let (min, max) = (setup.min_keycode, setup.max_keycode);
         let map = self
@@ -231,13 +235,12 @@ impl Server {
             .get_keyboard_mapping(min, max - min + 1)?
             .reply()?;
         let per = usize::from(map.keysyms_per_keycode.max(1));
-        let mut keys = HashMap::new();
-        for (i, syms) in map.keysyms.chunks(per).enumerate() {
-            if let Some(&(_, _, code)) = linux::MOVE_KEYS.iter().find(|k| k.0 == syms[0]) {
-                keys.insert(min + i as u8, code);
-            }
-        }
-        Ok(keys)
+        Ok(map
+            .keysyms
+            .chunks(per)
+            .enumerate()
+            .map(|(i, syms)| (min + i as u8, (syms[0], syms.get(1).copied().unwrap_or(0))))
+            .collect())
     }
 }
 
@@ -247,11 +250,20 @@ fn intersect(a: PhysicalRect, b: PhysicalRect) -> Option<PhysicalRect> {
     (r > x && btm > y).then(|| PhysicalRect::new(x, y, (r - x) as u32, (btm - y) as u32))
 }
 
+/// What an X event becomes.
+enum Out {
+    Event(Event),
+    /// Input to the normal window.
+    Input(Input),
+}
+
 /// The badge window: the X11 [`Surface`].
 pub struct X11 {
     server: Server,
     gnome: bool,
+    /// A normal window (preview or settings) rather than the badge.
     preview: bool,
+    title: &'static str,
     window: Window,
     /// The window manager's frame around ours, or the root.
     parent: Window,
@@ -265,14 +277,22 @@ pub struct X11 {
     mapped: bool,
     interactive: bool,
     dragging: bool,
-    keys: HashMap<Keycode, KeyCode>,
+    fullscreen: Fullscreen,
+    /// A fullscreen window covers the badge's display, so it is unmapped.
+    covered: bool,
+    /// The active window, whose state and size we follow (SPEC §6.5).
+    watched: Window,
+    /// Keysyms by keycode, from the server's keyboard mapping.
+    keys: HashMap<Keycode, (u32, u32)>,
     displays: Vec<DisplayInfo>,
     /// The first error from a `Surface` call, reported by the next flush.
     error: Option<String>,
 }
 
 impl X11 {
-    fn new(gnome: bool, preview: bool) -> XResult<X11> {
+    /// The badge, or with a title a normal window.
+    fn new(gnome: bool, title: Option<&'static str>) -> XResult<X11> {
+        let preview = title.is_some();
         let server = Server::open()?;
         let (conn, root) = (&server.conn, server.root);
         conn.change_window_attributes(
@@ -298,6 +318,7 @@ impl X11 {
             server,
             gnome,
             preview,
+            title: title.unwrap_or("PAWPRINT"),
             window: x11rb::NONE,
             parent: x11rb::NONE,
             gc: x11rb::NONE,
@@ -309,6 +330,9 @@ impl X11 {
             mapped: false,
             interactive: false,
             dragging: false,
+            fullscreen: Fullscreen::Hide,
+            covered: false,
+            watched: x11rb::NONE,
             error: None,
         };
         x.create_window()?;
@@ -355,13 +379,19 @@ impl X11 {
             Some(v) => (32, v),
             None => (s.root_depth, s.root_visual),
         };
+        // A normal window follows the pointer everywhere over it.
+        let pointer = if self.preview {
+            EventMask::POINTER_MOTION | EventMask::LEAVE_WINDOW
+        } else {
+            EventMask::BUTTON_MOTION
+        };
         let mut aux = CreateWindowAux::new()
             .override_redirect(u32::from(self.override_redirect))
             .event_mask(
                 EventMask::EXPOSURE
                     | EventMask::BUTTON_PRESS
                     | EventMask::BUTTON_RELEASE
-                    | EventMask::BUTTON_MOTION
+                    | pointer
                     | EventMask::KEY_PRESS
                     | EventMask::STRUCTURE_NOTIFY,
             );
@@ -394,11 +424,7 @@ impl X11 {
             AtomEnum::STRING,
             b"pawprint\0Pawprint\0",
         )?;
-        let title: &[u8] = if self.preview {
-            b"PAWPRINT preview"
-        } else {
-            b"PAWPRINT"
-        };
+        let title = self.title.as_bytes();
         conn.change_property8(replace, window, AtomEnum::WM_NAME, AtomEnum::STRING, title)?;
         conn.change_property8(replace, window, a._NET_WM_NAME, a.UTF8_STRING, title)?;
         conn.change_property32(
@@ -564,7 +590,7 @@ impl X11 {
                 &rects,
             )?;
         }
-        if !self.mapped {
+        if !self.mapped && !self.covered {
             let spec = WmSizeHintsSpecification::UserSpecified;
             let fixed = self
                 .preview
@@ -611,11 +637,48 @@ impl X11 {
         }
     }
 
+    /// The move-mode key for a keycode, if it is one.
+    fn move_key(&self, code: Keycode) -> Option<KeyCode> {
+        let (sym, _) = *self.keys.get(&code)?;
+        linux::MOVE_KEYS.iter().find(|k| k.0 == sym).map(|k| k.2)
+    }
+
+    /// The normal window's input, or `None` for an event that isn't.
+    fn window_input(&self, event: &XEvent) -> Option<Input> {
+        let at = |x: i16, y: i16| Point::new(x.into(), y.into());
+        let has = |state: KeyButMask, m: KeyButMask| u16::from(state) & u16::from(m) != 0;
+        match event {
+            XEvent::MotionNotify(e) => Some(Input::Move(at(e.event_x, e.event_y))),
+            XEvent::LeaveNotify(_) => Some(Input::Leave),
+            XEvent::ButtonPress(e) => match e.detail {
+                1 => Some(Input::Press(at(e.event_x, e.event_y))),
+                4 => Some(Input::Scroll(-3.0)),
+                5 => Some(Input::Scroll(3.0)),
+                _ => None,
+            },
+            XEvent::ButtonRelease(e) if e.detail == 1 => {
+                Some(Input::Release(at(e.event_x, e.event_y)))
+            }
+            XEvent::KeyPress(e) => linux::window_input(
+                *self.keys.get(&e.detail)?,
+                has(e.state, KeyButMask::SHIFT),
+                has(e.state, KeyButMask::LOCK),
+                has(e.state, KeyButMask::CONTROL),
+            ),
+            _ => None,
+        }
+    }
+
     /// Translate one X event; internal ones (expose, compositor changes)
     /// are handled here and give `None`.
-    fn translate(&mut self, event: XEvent) -> XResult<Option<Event>> {
+    fn translate(&mut self, event: XEvent) -> XResult<Option<Out>> {
+        if self.preview
+            && let Some(input) = self.window_input(&event)
+        {
+            return Ok(Some(Out::Input(input)));
+        }
         let at = |x: i16, y: i16| Point::new(x.into(), y.into());
-        Ok(match event {
+        let event = match event {
             XEvent::Expose(e) if e.count == 0 => {
                 self.draw()?;
                 None
@@ -643,9 +706,6 @@ impl X11 {
                 self.server.conn.ungrab_pointer(e.time)?;
                 Some(Event::DragEnd(at(e.root_x, e.root_y)))
             }
-            XEvent::KeyPress(e) if self.preview => (self.keys.get(&e.detail)
-                == Some(&KeyCode::Escape))
-            .then_some(Event::Command(Command::Quit)),
             XEvent::ClientMessage(e)
                 if self.preview
                     && e.type_ == self.server.atoms.WM_PROTOCOLS
@@ -653,7 +713,7 @@ impl X11 {
             {
                 Some(Event::Command(Command::Quit))
             }
-            XEvent::KeyPress(e) if self.interactive => self.keys.get(&e.detail).map(|&code| {
+            XEvent::KeyPress(e) if self.interactive => self.move_key(e.detail).map(|code| {
                 Event::Key(Key {
                     code,
                     shift: u16::from(e.state) & u16::from(KeyButMask::SHIFT) != 0,
@@ -682,11 +742,20 @@ impl X11 {
             }
             XEvent::PropertyNotify(e) => {
                 let a = &self.server.atoms;
+                if e.atom == a._NET_ACTIVE_WINDOW
+                    || (e.window == self.watched && e.atom == a._NET_WM_STATE)
+                {
+                    self.update_cover()?;
+                }
+                let a = &self.server.atoms;
                 let watched = [a._NET_WORKAREA, a._NET_CURRENT_DESKTOP, a.RESOURCE_MANAGER];
-                watched
-                    .contains(&e.atom)
+                (e.window == self.server.root && watched.contains(&e.atom))
                     .then(|| self.displays_changed())
                     .transpose()?
+            }
+            XEvent::ConfigureNotify(e) if e.window == self.watched => {
+                self.update_cover()?;
+                None
             }
             XEvent::RandrScreenChangeNotify(_) | XEvent::RandrNotify(_) => {
                 Some(self.displays_changed()?)
@@ -696,13 +765,86 @@ impl X11 {
                 None
             }
             _ => None,
-        })
+        };
+        Ok(event.map(Out::Event))
     }
 
     fn displays_changed(&mut self) -> XResult<Event> {
         self.displays = self.server.displays()?;
         self.raise()?;
+        self.update_cover()?;
         Ok(Event::DisplaysChanged(self.displays.clone()))
+    }
+
+    /// Follow the active window (`_NET_ACTIVE_WINDOW`), and unmap the badge
+    /// while it is fullscreen over the badge's display (SPEC §6.5). Its
+    /// state and size changes arrive as events, so nothing polls.
+    fn update_cover(&mut self) -> XResult<()> {
+        if self.preview {
+            return Ok(());
+        }
+        let s = &self.server;
+        let (conn, a) = (&s.conn, &s.atoms);
+        let active = s
+            .cardinals(s.root, a._NET_ACTIVE_WINDOW, AtomEnum::WINDOW)?
+            .first()
+            .copied()
+            .filter(|&w| w != self.window)
+            .unwrap_or(x11rb::NONE);
+        if active != self.watched {
+            // The old window may be gone already; that error is harmless.
+            if self.watched != x11rb::NONE {
+                let none = ChangeWindowAttributesAux::new().event_mask(EventMask::NO_EVENT);
+                conn.change_window_attributes(self.watched, &none)?;
+            }
+            if active != x11rb::NONE {
+                let mask = EventMask::PROPERTY_CHANGE | EventMask::STRUCTURE_NOTIFY;
+                let aux = ChangeWindowAttributesAux::new().event_mask(mask);
+                conn.change_window_attributes(active, &aux)?;
+            }
+            self.watched = active;
+        }
+        let fullscreen = || -> Option<PhysicalRect> {
+            let state = s.cardinals(active, a._NET_WM_STATE, AtomEnum::ATOM).ok()?;
+            if !state.contains(&a._NET_WM_STATE_FULLSCREEN) {
+                return None;
+            }
+            let g = conn.get_geometry(active).ok()?.reply().ok()?;
+            let at = conn
+                .translate_coordinates(active, s.root, 0, 0)
+                .ok()?
+                .reply()
+                .ok()?;
+            Some(PhysicalRect::new(
+                at.dst_x.into(),
+                at.dst_y.into(),
+                g.width.into(),
+                g.height.into(),
+            ))
+        };
+        let covered = self.fullscreen == Fullscreen::Hide
+            && active != x11rb::NONE
+            && self.rect.is_some_and(|badge| {
+                fullscreen().is_some_and(|w| fullscreen_covers(w, badge, &self.displays))
+            });
+        if covered != self.covered {
+            log::info!(
+                "x11: {}",
+                if covered {
+                    "a fullscreen window covers the badge's display: hiding"
+                } else {
+                    "no fullscreen window over the badge: showing"
+                }
+            );
+            self.covered = covered;
+            if covered && self.mapped {
+                conn.unmap_window(self.window)?;
+                self.mapped = false;
+            } else if !covered {
+                self.draw()?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -735,6 +877,9 @@ impl Surface for X11 {
             .map_err(Into::into);
         if r.is_ok() && resized {
             r = self.set_input_shape();
+        }
+        if r.is_ok() {
+            r = self.update_cover();
         }
         self.record(r);
     }
@@ -770,6 +915,12 @@ impl Surface for X11 {
         })();
         self.record(r);
     }
+
+    fn set_fullscreen(&mut self, policy: Fullscreen) {
+        self.fullscreen = policy;
+        let r = self.update_cover();
+        self.record(r);
+    }
 }
 
 struct X11App {
@@ -796,7 +947,8 @@ impl App for X11App {
                 break;
             };
             match self.x.translate(event) {
-                Ok(Some(e)) => self.shell.handle(&mut self.x, e),
+                Ok(Some(Out::Event(e))) => self.shell.handle(&mut self.x, e),
+                Ok(Some(Out::Input(i))) => self.shell.input(&mut self.x, i),
                 Ok(None) => {}
                 Err(e) => self.x.record(Err(e)),
             }
@@ -807,7 +959,8 @@ impl App for X11App {
 
 pub fn run(shell: Shell, listener: Option<ipc::Listener>, gnome: bool) -> CmdResult {
     let no_x = |e: String| (exit::NO_SESSION, format!("cannot use the X11 display: {e}"));
-    let x = X11::new(gnome, shell.is_preview()).map_err(|e| no_x(e.to_string()))?;
+    let title = shell.is_window().then(|| shell.title());
+    let x = X11::new(gnome, title).map_err(|e| no_x(e.to_string()))?;
     let fd = x
         .server
         .conn

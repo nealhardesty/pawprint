@@ -75,7 +75,8 @@ integration.
    labeled `OWL` in the top-right corner of the primary display. No settings
    are needed to get there.
 2. **Never in the way.** The badge is click-through, never takes keyboard
-   focus, never appears in the taskbar, Dock, or Alt-Tab, and is moved only
+   focus, never appears in the taskbar, Dock, or Alt-Tab, steps aside for
+   fullscreen windows ([6.5](#65-fullscreen-windows)), and is moved only
    when the user explicitly asks to move it.
 3. **Calm and cheap.** One brief idle animation every 8–20 seconds at about
    5 FPS. Between animations the process sleeps with no timers running.
@@ -563,6 +564,38 @@ rewrites a hand-edited config. Effective position = state file position, if
 present, else config `position`/`offset`, else default. `pawprint explain`
 shows which one is in effect.
 
+### 6.5 Fullscreen windows
+
+A fullscreen window on the badge's display (a remote-desktop client such
+as `mstsc` or Jump Desktop in full screen, a video, a game) hides the
+badge, and the badge comes back when that window leaves fullscreen or the
+front. A local badge over a full-screen remote session would name the
+wrong machine; the remote machine's own badge, inside the session, is the
+right one. `fullscreen = "show"` keeps the badge on top instead (for a
+kiosk that runs fullscreen all day).
+
+The core sends the policy to the surface (`Surface::set_fullscreen`, from
+the `fullscreen` setting, before the first `place` and on every change),
+and each backend implements it the native way:
+
+| Backend | `hide` (default) | `show` |
+|---|---|---|
+| Windows | An appbar registration (`ABM_NEW`, with no `ABM_SETPOS`, so no space is reserved) gets the shell's `ABN_FULLSCREENAPP`, and a `WINEVENT_OUTOFCONTEXT` hook gets `EVENT_SYSTEM_FOREGROUND`. Either one re-checks the foreground window; the badge is hidden (`SW_HIDE`) while it covers the badge's display, and shown again (`SW_SHOWNOACTIVATE`) after | Neither is registered |
+| macOS | The panel leaves out `fullScreenAuxiliary`: a fullscreen app gets a Space of its own, and only auxiliary windows join it | `fullScreenAuxiliary` is set |
+| X11 | The backend follows `_NET_ACTIVE_WINDOW` (on the root) and that window's `_NET_WM_STATE` and size (`PropertyNotify`, `ConfigureNotify` on it), and unmaps the badge while the active window is `_NET_WM_STATE_FULLSCREEN` over the badge's display | Nothing is watched |
+| Wayland | The layer surface is on `top`, which compositors draw below fullscreen windows (sway, KWin) | `overlay`, above them |
+| GNOME (X11 profile) | As X11 for XWayland windows. Native Wayland windows are invisible to X11 (`_NET_ACTIVE_WINDOW` is `None` then); Mutter itself puts DOCK windows in the bottom layer while their monitor is fullscreen (F40) | As X11, but Mutter may still lower the badge (F40) |
+
+"Covers the badge's display" is decided once, in the core
+(`surface::fullscreen_covers`): the window's rectangle contains the whole
+display that the badge's center is on, so a fullscreen window on another
+monitor leaves the badge alone, and one spanning every monitor (a
+multi-monitor RDP session) hides it. On Windows a captioned window never
+counts, so a maximized window under an auto-hidden taskbar doesn't, and
+neither do the desktop (`Progman`, `WorkerW`) or PAWPRINT's own windows.
+Nothing polls: every check is a reaction to a notification the system
+already sends.
+
 ---
 
 ## 7. Animation and power
@@ -730,6 +763,10 @@ accent = "auto"            # "auto" | a palette name (see `pawprint list --accen
 # Tray icon (Windows), menu-bar item (macOS), or StatusNotifierItem (Linux).
 tray = true
 
+# When a fullscreen window covers the badge's display (a remote-desktop client,
+# a video, a game): "hide" steps aside so the badge never shows over it (6.5).
+fullscreen = "hide"        # "hide" | "show"
+
 # Window backend. Leave on auto unless `pawprint doctor` says otherwise.
 backend = "auto"           # "auto" | "windows" | "macos" | "x11" | "wayland"
 
@@ -841,6 +878,72 @@ and **Animation** choices all edit the config the same way
 empty `[hosts]` at the end, so host tables land after the examples) and
 never overwrites a file.
 
+### 8.7 The settings window
+
+`pawprint settings`, or the tray's **Settings…**, opens a window that sets
+**every key in 8.2**, in **any table**: this host (the default, the same
+table `pawprint set` uses), all hosts (the top level), or any
+`[hosts."<pattern>"]` table, which it can also add, rename, and delete. It
+is not a text editor for the file: each key has its own control, and
+every change goes through `config_edit` (`set_in`, `unset_in`,
+`add_host`, `rename_host`, `remove_host` with a `Scope`), so the file keeps
+its comments, order, and formatting, and values are checked by the loader's
+own parser (`config::check_value`) before anything is written.
+
+- **Look.** Pixel art, drawn by the core (`pawprint_core::settings`, on
+  the `pawprint_core::ui` canvas) in the bundled fonts: 360 × 252 units,
+  scaled by a whole number (2 per unit at scale 1, 4 at scale 2, smaller
+  if the display's usable area is too small) and centered on the primary
+  display. A title strip with the config path; a scope row ("changes
+  apply to"); pages on the left (Mascot, Label, Size+color, Position,
+  Animation, System, Host tables); the badge as this host will show it
+  below the pages; a status line with Undo and Close.
+- **Controls.** Mascot: Auto and a scrollable grid of every mascot (user
+  mascots included) by category; typing searches by id, name, and alias,
+  Enter picks the first match, Esc clears the search. Label: Auto, Full,
+  None, or typed text; letter case; text size. Size: 32, 64, 128, or any
+  multiple of 32 with − and +. Crate color: Auto, the 16 palette swatches,
+  or a typed `#rrggbb`. Position: a 3 × 3 grid, the offset's X and Y, the
+  display (Primary, each connected display, or a typed name). A dragged
+  position (8.4) is shown, since it wins over these, with **Forget the
+  drag** (the running badge's `reset-position`, else the state file).
+  Animation: Idle or Static, and the interval's two ends, kept min ≤ max.
+  System: tray, fullscreen (6.5), and backend.
+- **Inheritance.** Each setting shows where its value comes from: set in
+  this table (a filled chip, with **Clear**) or inherited (an outlined
+  chip, "from all hosts", "from [hosts.prod-*]", "default"). What a table
+  inherits is what applies below it for this host: an exact host table
+  inherits from matching globs and the top level, a glob table from the
+  top level, the top level from the defaults. A value set in a table but
+  overridden for this host by a stronger one says so in red ("owl uses
+  128 from [hosts.o*]"). Clearing a key in this host's table removes the
+  emptied table, as `pawprint unset` does; other tables stay until
+  deleted on the Host tables page.
+- **Saving.** There is no Save button: every change is written at once
+  (atomically, through the same `commands::write_config` as `set`), then
+  the running badge is told to reload, so the badge on the desktop is the
+  live preview. Hovering a choice previews it in the window's own badge
+  without writing. Undo (and Ctrl+Z, Command+Z on macOS) writes the
+  previous text back, through every change made in the window. A failed
+  write puts the last good text back and says why.
+- **Text fields** commit on Enter, Tab, or a click elsewhere; Esc cancels.
+  Invalid input (a size that isn't a multiple of 32, an unknown color) is
+  refused with the loader's reason and nothing is written.
+- **A file that isn't valid TOML** is shown, not edited: the window says
+  so and shows the parser's message. When the file changes on disk
+  (another editor, `pawprint set`), the window shows the new version at
+  its next wakeup (the same one-`stat` check as 8.5) and its undo history
+  starts over.
+- **Closing:** Esc (when nothing is being typed or searched), Ctrl+W,
+  Ctrl+Q (Command on macOS), the Close button, or the window's close box.
+
+It is a separate process (the tray starts `pawprint settings` detached,
+like the badge, and a thread reaps it), a normal window in the badge's own
+backend in a third mode next to the badge and the preview: the shell runs
+`settings::App` instead of `Badge`, and backends report the window's
+pointer, wheel, keys, and typed text as `ui::Input` (`Shell::input`). It
+serves no IPC and has no tray.
+
 ---
 
 ## 9. Command-line interface
@@ -859,6 +962,7 @@ badge reaches the instance **in the current graphical session**.
 | `pawprint status` | Is it running? Backend, display, mascot, label, position. |
 | `pawprint explain [--host NAME] [--recompute]` | Show the hostname pipeline, each mascot rule's result, which one won and why, and the effective settings with their source. Works without a running badge. |
 | `pawprint list [--category C] [--accents]` | List mascots (id, name, category, aliases, source: bundled/user/override), or the accent palette. |
+| `pawprint settings` | Open the settings window ([8.7](#87-the-settings-window)): every config key, for this host, all hosts, or any `[hosts]` table, saved as you click. It returns when the window closes. |
 | `pawprint preview <id> [--size N]` | Open a temporary, normal (focusable, closable) window showing that mascot cycling through all its actions (every action in file order, `when` ignored, 1 s apart), on a slate backdrop with a 16 px margin, centered, at size 128 by default. Esc or closing the window ends it. It uses this host's label and accent and the badge's own backend surface in preview mode; it writes nothing. |
 | `pawprint render <id> --out FILE.png [--size N] [--label TEXT] [--frame N]` | Write a badge image. Used for docs and golden tests. |
 | `pawprint set <key> <value>` | Write `<key>` into this host's `[hosts."<short>"]` table using `toml_edit` (keeps comments and formatting), then reload ([8.6](#86-editing-the-config-set-unset-and-the-tray)). Example: `pawprint set mascot otter`. Exit code 2 for an unknown key or invalid value, 1 if the file can't be read or written. |
@@ -906,14 +1010,15 @@ any OS. Each backend is a thin adapter that:
    `DisplaysChanged(Vec<DisplayInfo>)`, `DragStart/DragMove/DragEnd(Point)`,
    `Key(Key)`, `Command(Command)` (from IPC or the tray menu: `Move`,
    `ResetPosition`, `Reload`, `Quit`, `SetSize(n)`, `SetAnimation(mode)`,
-   `Forget`),
+   `Forget`, `Settings`),
    and `ConfigTouched(Config)` (the shell noticed a change and re-read the
    file);
 3. executes `core::badge::Effect`s: `Present(Frame)` (already scaled),
-   `Place(PhysicalRect)`, `SetInteractive(bool)`, `SetTray(TrayState)`,
-   `SaveState(State)` (write it atomically), `ReloadConfig` (re-read the user
-   mascots into a new catalog for `Badge::set_catalog`, re-read the file,
-   then send `ConfigTouched`), and `Exit`;
+   `Place(PhysicalRect)`, `SetInteractive(bool)`, `SetFullscreen(policy)`
+   (6.5), `SetTray(TrayState)`, `SaveState(State)` (write it atomically),
+   `ReloadConfig` (re-read the user mascots into a new catalog for
+   `Badge::set_catalog`, re-read the file, then send `ConfigTouched`),
+   `OpenSettings` (start `pawprint settings` detached, 8.7), and `Exit`;
 4. blocks until the next native event or `core.next_deadline()`.
 
 Driving the core, in full (every backend's loop has this shape):
@@ -954,7 +1059,8 @@ in `pawprint::shell::Shell`:
 | `Shell::done()` | After every wakeup; true after `Quit` |
 | `Shell::set_tray(Box<dyn Tray>)` | Once, to attach the platform's tray; the shell calls `Tray::show(&TrayState)` with every `SetTray` (also at once, if the core already described it) |
 | `Shell::menu(&mut surface, command)` | For each tray menu choice. Size and Animation are saved first (8.6), then everything is the same `Command` IPC sends |
-| `Shell::is_preview()` | When creating the surface: true for `pawprint preview` (a normal window) |
+| `Shell::is_window()`, `Shell::title()` | When creating the surface: true for `pawprint preview` and `pawprint settings` (a normal window, with that title) |
+| `Shell::input(&mut surface, input)` | For each pointer, wheel, key, or typed-text event of that normal window (`ui::Input`, positions in physical pixels from the content's top-left). The preview closes on Esc, Ctrl+W, or Ctrl+Q; the settings window takes it all |
 | `Shell::target()` | Wayland, before committing: the core's target display, which fixes the output its layer surfaces go on |
 
 The shell runs the surface effects through `surface::apply`, writes
@@ -1132,6 +1238,7 @@ pub trait Surface {
     fn present(&mut self, frame: &Frame);          // premultiplied BGRA, already scaled
     fn place(&mut self, rect: PhysicalRect);
     fn set_interactive(&mut self, on: bool);       // move mode on/off
+    fn set_fullscreen(&mut self, policy: Fullscreen); // hide under fullscreen windows, or not (6.5)
 }
 ```
 
@@ -1151,6 +1258,9 @@ What is shared, and by whom:
 | Animation scheduler, `next_deadline()` | `pawprint-core::anim` | All backends |
 | Compositor, integer scaler, font | `pawprint-core::render` | All backends, `render`, `preview`, golden tests |
 | **One pixel format**: premultiplied little-endian ARGB8888 (bytes B, G, R, A) plus a 1-bit mask | `pawprint-core::render` | Windows `UpdateLayeredWindow`, X11 32-bit visual, `wl_shm` `ARGB8888`, macOS `CGImage`, presenter extension (F30); the mask feeds the X11 shape fallback |
+| Settings window: pages, controls, scopes, undo, hit-testing, drawing (8.7) | `pawprint-core::settings` on `pawprint-core::ui` (window input, a clipped canvas in units, theme, integer upscale) | All backends, through `Shell` in its settings mode; `make settings-shots` |
+| Fullscreen coverage rule (6.5) | `pawprint-core::surface::fullscreen_covers` | Windows, X11 |
+| Keysyms to window input (text, editing keys, Ctrl shortcuts), XKB keysym names | `pawprint::backend::linux` (`window_input`, `keysym_from_name`) | X11, Wayland |
 | Tray menu model (items, checks, actions) | `pawprint-core::menu` | Windows tray (`backend::windows_tray`), macOS menu bar (`backend::menubar`), `ksni` |
 | Tray icon scaling (`render::tray_icon`: nearest neighbor, binary alpha, optional margin) | `pawprint-core::render` | Windows tray, macOS menu bar |
 | Sprite compiler | `pawprint-sprite` crate | `build.rs`, runtime user mascots, `pawdev`, `pawprint mascot check` |
@@ -1179,6 +1289,8 @@ Each backend must deliver the same **contract**, using the shared pieces in
 6. Re-layout on display, scale, and work-area changes.
 7. Move mode as specified in [6.3](#63-move-mode).
 8. Captured by screen-capture-based remote tools (never opt out of capture).
+9. Out of the way of fullscreen windows on its display, unless
+   `fullscreen = "show"` ([6.5](#65-fullscreen-windows)).
 
 ### 11.1 Windows
 
@@ -1210,8 +1322,10 @@ Each backend must deliver the same **contract**, using the shared pieces in
   choices in thread-local queues: Win32 calls such as `SetWindowPos` send
   messages synchronously, and this keeps the shell from being re-entered.
   `WM_CLOSE` and `WM_QUIT` quit cleanly.
-- **Preview** (`pawprint preview`, `Shell::is_preview`): the same window
-  and loop, made normal. Class `PawprintPreview`, title `PAWPRINT preview`,
+- **Normal window** (`pawprint preview` and `pawprint settings`,
+  `Shell::is_window`): the same window and loop, made normal. Class
+  `PawprintPreview`, title `Shell::title()` (`PAWPRINT preview` or
+  `PAWPRINT settings`),
   style `WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX` with no
   extended style, so it has a taskbar button, takes the focus, and is not
   topmost or click-through. It isn't layered: `Present` copies the frame
@@ -1220,7 +1334,17 @@ Each backend must deliver the same **contract**, using the shared pieces in
   window activated. Windows keeps a captioned window at least `SM_CXMIN`
   wide (120 px of client at 96 DPI on the runner), so a narrower preview is
   widened about its center and the frame is centered on the class's
-  backdrop brush. Esc and `WM_CLOSE` quit.
+  backdrop brush. Its input goes to `Shell::input`: `WM_MOUSEMOVE`,
+  `WM_LBUTTONDOWN`/`UP` (with capture), and `WM_MOUSEWHEEL` (3 lines a
+  notch) in client coordinates less the centering offset; `WM_KEYDOWN`
+  for editing keys and Ctrl+letter shortcuts; `WM_CHAR` (the loop calls
+  `TranslateMessage`) for typed text. `WM_CLOSE` quits (the settings window
+  first finishes a field being typed in).
+- Fullscreen windows (6.5): with `fullscreen = "hide"` the badge window is
+  an appbar for `ABN_FULLSCREENAPP` (callback `WM_APP + 1`) and a
+  foreground WinEvent hook is set; either sets a flag that the loop turns
+  into one check of the foreground window. The tray keeps working while the
+  window is hidden.
 - Never call `SetWindowDisplayAffinity`. `WDA_EXCLUDEFROMCAPTURE` would hide
   the badge from Parsec, Apollo, and Jump.
 
@@ -1284,7 +1408,8 @@ move the window outside the core's constraint, snap, and save):
   `tray = false` removes it (`NIM_DELETE`); quitting removes it before the
   window goes.
 - Menu: **Move**, **Size ▸ 32/64/128**, **Animation ▸ Idle/Static**,
-  **Reset position**, **Reload config**, **Quit**, built on each opening
+  **Settings…**, **Reset position**, **Reload config**, **Quit**, built on
+  each opening
   from the core's menu model: an item with children is a submenu, a
   `checked` item gets a check mark, and each command gets an id.
   `NIN_SELECT` (left click), `NIN_KEYSELECT` (keyboard), and
@@ -1343,7 +1468,8 @@ file.
 #### 11.1.7 Known limits
 
 - Exclusive-fullscreen games and the secure desktop (UAC, lock screen) cover
-  the badge. This is expected.
+  the badge. This is expected, and with `fullscreen = "hide"` (6.5) the
+  badge hides under any fullscreen foreground window anyway.
 - Windows virtual desktops: whether an unowned topmost tool window appears
   on all virtual desktops needs checking **(verify)**. If it doesn't,
   re-show on `IVirtualDesktopManager` desktop switch, or accept it as a
@@ -1361,8 +1487,10 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   `borderless | nonactivatingPanel`, `isOpaque = false`,
   `backgroundColor = clear`, `hasShadow = false`,
   `ignoresMouseEvents = true`, `level = .statusBar` (window layer 25),
-  `collectionBehavior = canJoinAllSpaces | stationary | fullScreenAuxiliary
-  | ignoresCycle`, `hidesOnDeactivate = false`. It is ordered in with
+  `collectionBehavior = canJoinAllSpaces | stationary | ignoresCycle`, plus
+  `fullScreenAuxiliary` only with `fullscreen = "show"` (6.5; without it
+  the panel stays out of fullscreen apps' Spaces, F39),
+  `hidesOnDeactivate = false`. It is ordered in with
   `orderFrontRegardless` at the first `Place`, never made key or main
   outside move mode.
 - Content: a layer-**hosting** `NSView` (our own `CALayer`, set before
@@ -1424,15 +1552,22 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   action only queues `Inbox::Menu(command)` on the channel IPC uses and
   wakes the loop, which calls `Shell::menu`. `tray = false` removes the
   item; turning it back on creates a new one.
-- Preview (`pawprint preview`): the same loop without IPC or menu-bar item.
-  The app is **Regular** (a Dock icon and a place in the app switcher, so
-  the window can be found again) and the window an ordinary `NSWindow`,
-  titled "PAWPRINT preview", closable and miniaturizable, at the normal
-  level, taking mouse and keyboard. It is made key and the app activated
-  at the first `Place` (`activateIgnoringOtherApps`, since `activate` needs
-  macOS 14). The core's rect is the content rect; the frame adds the title
-  bar. Escape (`kVK_Escape`) or `NSWindowWillCloseNotification` sends
-  `Command::Quit`.
+- Normal window (`pawprint preview` and `pawprint settings`): the same
+  loop without IPC or menu-bar item. The app is **Regular** (a Dock icon
+  and a place in the app switcher, so the window can be found again) and
+  the window an ordinary `NSWindow`, titled `Shell::title()`, closable and
+  miniaturizable, at the normal level, taking mouse (moves included,
+  `acceptsMouseMovedEvents`) and keyboard. It is made key and the app
+  activated at the first `Place` (`activateIgnoringOtherApps`, since
+  `activate` needs macOS 14). The core's rect is the content rect; the
+  frame adds the title bar. Its events go to `Shell::input`: mouse moves,
+  drags, and clicks below the title bar at `locationInWindow` in pixels
+  from the content's top-left (and still to AppKit, which activates the
+  window; the title bar stays AppKit's), the wheel
+  (`scrollingDeltaY`), editing keys by `kVK_*` code, Command+letter as a
+  shortcut, and other keys' `characters` as text (function keys' private
+  use characters dropped), all swallowed so nothing beeps.
+  `NSWindowWillCloseNotification` sends `Command::Quit`.
 - Autostart: `~/Library/LaunchAgents/io.github.nealhardesty.pawprint.plist`
   with `ProgramArguments = [<path>/pawprint, run]`, `RunAtLoad = true`,
   `LimitLoadToSessionType = Aqua` (GUI sessions only),
@@ -1481,6 +1616,18 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
 - `WM_NORMAL_HINTS` carries a user-specified position and size, so window
   managers place the window where the core put it. `WM_CLASS` is
   `pawprint`, `Pawprint`; the title is `PAWPRINT`.
+- Fullscreen windows (6.5): with `fullscreen = "hide"` the backend selects
+  `PropertyChange` and `StructureNotify` on the active window and unmaps
+  the badge while that window is fullscreen over the badge's display; it
+  maps it again (with the same hints) when it isn't. No WM, no
+  `_NET_ACTIVE_WINDOW`, nothing to do.
+- Normal window (`pawprint preview`, `pawprint settings`): managed, with
+  `WM_DELETE_WINDOW`, and `PointerMotion | LeaveWindow` selected. Motion,
+  button 1, buttons 4 and 5 (the wheel, 3 lines), and leave go to
+  `Shell::input` in window coordinates; keys through the shared
+  `linux::window_input` from the keycode's two keysyms
+  (`GetKeyboardMapping`), with Shift, Lock, and Control from the event's
+  state.
 
 #### 11.3.2 Transparency with or without a compositor
 
@@ -1524,7 +1671,8 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
 
 - Required globals: `wl_compositor`, `wl_shm`, `zwlr_layer_shell_v1`.
   Optional: `wp_viewporter`, `kde_output_order_v1`.
-- Surface: layer `overlay`, namespace `pawprint`, `exclusive_zone = 0`,
+- Surface: layer `top` (`overlay` with `fullscreen = "show"`, changed in
+  place with `set_layer`, 6.5), namespace `pawprint`, `exclusive_zone = 0`,
   `keyboard_interactivity = none`, and an **empty** input region at all
   times (click-through, F4).
   - `exclusive_zone = 0` makes the compositor place the surface clear of
@@ -1582,7 +1730,15 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   compositor's keymap just far enough to find the keycodes of Left, Right,
   Up, Down, Return, KP_Enter, and Escape, so virtual keyboards with their
   own keymaps (remote desktop servers, `wtype`) work. Without a usable
-  keymap it falls back to the evdev codes. Shift is XKB modifier 0.
+  keymap it falls back to the evdev codes. Shift is XKB modifier 0, Lock
+  1, Control 2. The same reader records each key's first two keysyms
+  (`linux::keysym_from_name`) for the normal window's typing.
+- Normal window (`pawprint preview`, `pawprint settings`): an xdg
+  toplevel titled `Shell::title()`, fixed size (so tiling compositors
+  float it). Its pointer events (enter and motion, button `BTN_LEFT`,
+  leave, the vertical axis) go to `Shell::input` at surface coordinates
+  times the window's scale, and keys through `linux::window_input`. There
+  is no key repeat: a held key types once.
 - Tray: StatusNotifierItem via `ksni` (`backend::sni`), shared with X11 and
   GNOME. Plasma supports it natively. The item (`Id` `pawprint`, title
   `PAWPRINT`, the tooltip from `TrayState`) shows the core's menu model
@@ -2207,7 +2363,8 @@ pawprint/
 ├── docs/
 │   ├── ART.md                # mascot style guide with worked examples
 │   ├── gallery.png           # generated contact sheet (make contact-sheet; gallery.gif with ANIMATED=1)
-│   └── building-blocks.png   # every base x every template, props, accents (make building-blocks)
+│   ├── building-blocks.png   # every base x every template, props, accents (make building-blocks)
+│   └── settings.png          # the settings window's mascot page (make settings-shots)
 ├── spikes/
 │   └── f22-static-musl/      # standalone spike crate (not a workspace member); make spike-f22
 ├── README.md  SPEC.md  ROADMAP.md  AGENTS.md  LICENSE
@@ -2249,6 +2406,7 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
 | `build` | Debug build of `pawprint` (and `pawprintw` on Windows) |
 | `run` | Build and run the badge in the foreground; `ARGS="..."` passes arguments |
 | `preview` | Open a preview window: `make preview MASCOT=owl SIZE=128` (`pawprint preview`) |
+| `settings` | Open the settings window from the local build (`pawprint settings`, [8.7](#87-the-settings-window)) |
 | `power-check` | Measure the release badge against [7.2](#72-power-budget): Linux under Xvfb, macOS on the current desktop with a private HOME (from a universal binary), Windows on the current desktop (the user's config and state files are backed up on disk as `<file>.pawdev-backup` and put back afterwards, or at the next run after an interruption); `POWER_SECONDS=120` per mode |
 | `test` | Unit tests, golden render tests, and asset validation |
 | `check-assets` | Validate the mascot catalog only |
@@ -2258,6 +2416,7 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
 | `golden-hosts` | Recompute the catalog stability fixture (`tests/golden/hostnames.tsv`) after an intentional catalog change |
 | `contact-sheet` | Render every mascot, labels hidden, grouped by base, into `docs/gallery.png` (`ANIMATED=1` adds `docs/gallery.gif`) |
 | `building-blocks` | Render the crate accents, props, and every base with every motion template into `docs/building-blocks.png` |
+| `settings-shots` | Render every page of the settings window into `out/settings/<page>.png`, and the mascot page into `docs/settings.png` for the README |
 | `palette` | Regenerate `assets/palette.gpl` from `assets/palette.toml` |
 | `art-export` | Export a mascot's layers and frames as PNGs: `make art-export MASCOT=owl` |
 | `art-import` | Convert a PNG layer into a grid: `make art-import MASCOT=owl PNG=eyes.png` |
@@ -2646,6 +2805,12 @@ are clean machines).
 - **Sprite compiler:** layer ops, bases and recolors, templates, props, and
   PNG import/export round-trips.
 - **Shared move mode and layout** driven through `FakeSurface`.
+- **The settings window** (8.7) driven by clicks, keys, and typing on its
+  own hit targets: every key has a control, scopes write the right table,
+  inheritance and shadowing are shown, number fields refuse bad values and
+  keep intervals ordered, host tables are added, renamed, and deleted,
+  undo and failed writes, a broken file is never written, search, hover
+  previews, and window sizing per display.
 - **Shell pieces:** backend selection (§3.2), scale helpers, the IPC
   protocol and a real socket round trip, session keys, log rotation, and the
   Wayland keymap reader.
@@ -2677,6 +2842,10 @@ Xvfb removes its lock file.
 | X11 | Xvfb + private `dbus-daemon` + a stand-in StatusNotifierWatcher (the test's own zbus object) | the item registers with `Id`, `Title`, `ToolTip`, and a 32 and 64 px `IconPixmap`; the dbusmenu layout has the shared menu with the right checks; **Size ▸ 128** (a dbusmenu `Event`) resizes the badge and appends `[hosts.owl] size = 128` after the untouched `config init` template; **Animation ▸ Static** is saved; `set`/`unset` reload the running badge; an unknown mascot is refused (exit 2) without writing; a user mascot added while the badge runs shows after `set mascot`; a hand edit is picked up at the next IPC request (mtime); `tray = false` removes the item and `unset tray` brings a new one; **Quit** exits; the saved choice survives the restart |
 | X11 | Xvfb | `pawprint preview owl`: a normal window (not override-redirect, no DOCK type, `WM_DELETE_WINDOW`), centered, the badge pixel-exact on the backdrop, the frame changes as actions play; Esc closes it, and so does a `WM_DELETE_WINDOW` message |
 | Wayland | headless sway | `pawprint preview owl`: an xdg toplevel (`app_id` `pawprint`) that sway floats (fixed size), focused, the badge pixel-exact on the backdrop; Esc closes it |
+| X11 | Xvfb + `openbox` | 6.5: a managed window made fullscreen and active through EWMH client messages unmaps the badge, leaving fullscreen maps it again, `fullscreen = "show"` keeps it mapped |
+| X11 | Xvfb | `pawprint settings`: a normal window, centered, 720 × 504; an XTest click on the grid writes this host's mascot, typed `moose` and Return pick it, Esc closes |
+| Wayland | headless sway + `foot` | 6.5: `fullscreen enable` covers the badge (top layer), `disable` uncovers it, `fullscreen = "show"` keeps it above |
+| Wayland | headless sway | `pawprint settings`: a floating window 720 px wide; a virtual-pointer click on the grid and `wtype` typing write config.toml; Esc closes |
 
 What these can't show stays in the manual checks below and the facts ledger:
 real Plasma and GNOME, real input devices, and remote clients.
@@ -2710,7 +2879,12 @@ started), and `off` must boot it out, stop that badge, and remove the file
 owl` must open a Regular app's window titled "PAWPRINT preview" at layer 0,
 160 points wide (128 + 2 × 16), without a menu-bar item, in front of other
 normal windows (by window-server order), that Escape and then its close
-button (pressed through Accessibility, FM9) each end with exit 0. In
+button (pressed through Accessibility, FM9) each end with exit 0.
+`pawprint settings` must open a Regular app's window at layer 0, the
+content 360 × 252 units at 2 / scale points each, that writes nothing until
+used; with Accessibility permission a posted click on the mascot grid
+writes this host's mascot, posted typing and Return pick a searched one,
+and Escape (twice: the search first) ends it with exit 0. In
 static mode the badge's loop must not wake for 15 s (one debug line per
 wakeup; FM7). Without a permission, that check prints `SKIP` and why. Click-through, Spaces, full-screen apps, and Retina scales stay owner
 checks ([16.2](#162-backend-smoke-checks-manual-per-backend-every-release)).
@@ -2738,6 +2912,8 @@ Win32 known folders can't be redirected, so it uses the real profile.
 | Tray | `Shell_NotifyIconGetRect` finds the badge's icon (else a no-op `NIM_MODIFY` must succeed); a posted `WM_CONTEXTMENU` callback opens the menu, which is read from the test process (`MN_GETHMENU`: the six labels, Size ▸ 64 checked); `SendInput` clicks on **Size** and **128** resize the badge in place and write `size = 128` into `[hosts.owl]`; `pawprint unset size` brings it back; after a click on the backdrop window, **Move** from the menu enters move mode, and when Esc ends it the foreground goes back to the backdrop window, not the badge |
 | Autostart | `autostart on` writes the `Run` value `"<dir>\pawprintw.exe" run` (read back with `RegGetValueW`), `status` shows it, `off` deletes it, a second `off` says "already off"; a `StartupApproved\Run` value starting with `0x03` makes `status` say "disabled in Startup apps" and `on` deletes it; the user's values are restored |
 | Preview | `pawprintw.exe preview owl --size 64` opens `PawprintPreview`: caption and system menu, no `WS_POPUP`, none of the overlay's extended styles, title `PAWPRINT preview`, a client area 96 px tall and at least 96 wide on the slate backdrop; `WM_CLOSE` and Esc each end it with exit code 0 |
+| Fullscreen (6.5) | A borderless window over the whole primary monitor, brought to the front, hides the badge window (not destroyed); closing it shows the badge again; with `fullscreen = "show"` it stays visible |
+| Settings (8.7) | `pawprintw.exe settings` opens a `PawprintPreview` window titled `PAWPRINT settings` with a client area of 360 × 252 times the scale; a posted click on the mascot grid writes this host's mascot, posted `WM_CHAR`s and Return pick a searched one, and Esc ends it with exit code 0 |
 
 Pixel, click, drag, and key checks are skipped, with a message, when the
 session has no visible desktop (the capture shows one flat color).
@@ -2753,6 +2929,11 @@ session has no visible desktop (the capture shows one flat color).
 6. Resolution, scale, and monitor changes keep the anchor and clamp.
 7. Static mode: no CPU use over 5 minutes (Task Manager, Activity Monitor, or
    `top`).
+8. A fullscreen window on the badge's display (a full-screen remote client
+   among them) hides it, and leaving fullscreen brings it back (6.5).
+9. Tray → **Settings…** opens the settings window; a change there shows on
+   the badge at once, typing works in its fields, and Undo takes it back
+   (8.7).
 
 ### 16.3 Spike exit criteria (M1 one-owl prototype)
 
@@ -2841,6 +3022,10 @@ true instead.
 | F36 | zbus 5 (async-io) runs its socket setup (peer credentials, the SASL zero byte) on the `blocking` crate's thread pool. From `blocking` 1.7 an idle pool thread never exits (it exits only above the thread limit) and wakes every 500 ms; 1.6 lets it exit after 500 ms idle. | `blocking` is pinned to `=1.6.2`, so the badge has zero wakeups at rest with the tray running (7.2) | **Confirmed** (`make power-check`: 39 wakeups in 20 s in static mode with 1.7.0, 0 with 1.6.2) |
 | F37 | `toml_edit` keeps a document's trailing comments after its last table, so a table added to a file that ends in comments lands above them. | The `config init` template ends with an empty `[hosts]`, so host tables go after the commented examples (8.6) | **Confirmed** (`config_edit` tests) |
 | F38 | A `ksni` item with `MENU_ON_ACTIVATE` and the dbusmenu layout can be driven entirely over D-Bus: a stand-in StatusNotifierWatcher on a private `dbus-daemon` receives the registration, and a dbusmenu `Event(id, "clicked")` runs the item's callback. | The tray is tested end to end in `make test-x11` without a desktop (16.1.1) | **Confirmed**; real hosts (Plasma, Ubuntu's AppIndicator) are owner checks |
+| F39 | A `canJoinAllSpaces` panel at `NSStatusWindowLevel` without `fullScreenAuxiliary` is not shown in another app's fullscreen Space (Jump Desktop, Screens, a fullscreen browser), and is with it. | macOS hides the badge under fullscreen apps with no detection (6.5) | **Verify** (owner, real Mac with a fullscreen remote client) |
+| F40 | Mutter puts DOCK-type windows in its bottom layer while their monitor shows a fullscreen window, native Wayland or XWayland. | GNOME steps aside for native Wayland fullscreen windows, which the X11 backend can't see; with `fullscreen = "show"` Mutter may still lower the badge (6.5) | **Verify** (owner, Ubuntu) |
+| F41 | The shell sends `ABN_FULLSCREENAPP` to an appbar registered with `ABM_NEW` alone (no `ABM_SETPOS`, so no space reserved) when `mstsc` (and other borderless windows covering a monitor) goes full screen or leaves it, including from windowed mode without a foreground change. | Windows needs no polling to catch a window going fullscreen in place (6.5) | **Verify** (CI covers the foreground case; mstsc in place is an owner check) |
+| F42 | KWin draws an active fullscreen window above the layer-shell `top` layer and below `overlay`, like sway. | Plasma hides the badge under fullscreen windows by layer alone (6.5) | **Confirmed on sway** (`make test-wayland`); **verify** on Plasma |
 
 **macOS facts (M1 macOS backend).** Learned on GitHub's `macos-latest`
 runner (macOS 26.7.2, Apple Silicon, one 1024 × 768 "Apple Virtual"
@@ -2858,6 +3043,7 @@ display at scale 1, auto-logged-in GUI session) by `make test-macos-display`.
 | FM8 | `NSEvent.subtype` raises an Objective-C exception for event types without a subtype (mouse and key events), which aborts a Rust process. | Never read `subtype` on arbitrary events | **Confirmed** (a diagnostic log line did it) |
 | FM9 | A posted click in a titled window's title bar that misses the traffic lights drags the window. The close button's inset differs between releases (macOS 26 has a 32-point title bar). | The test presses the preview's close button through Accessibility (`AXCloseButton` via System Events), not by coordinates | **Confirmed** on the runner |
 | FM10 | An `NSApplication` run without `NSApplicationMain` has no autorelease pool on its main thread: with `OBJC_DEBUG_MISSING_POOLS=YES` every turn of the loop logged leaked events, dates, images, and menu objects (thousands per minute of the GUI-session test). AppKit's own secondary threads also leak a few hundred small objects (sets, arrays, strings, `NSXPCInterface`) at launch and when a status item is created, outside any code the badge runs. | Pools around setup and each loop turn (11.2); the test checks the main thread only | **Confirmed** on the runner (macOS 26) |
+| FM11 | On a Retina Mac running macOS 26, `CGWindowListCopyWindowInfo` reports a titled window's bounds a few points inside its AppKit frame (a 720 × 536 frame as 706 × 526; a 144-point-wide preview as 142). | GUI tests locate a normal window's content from its middle and aim at the middle of controls, never at exact edges (16.1.2); the preview test's exact-width check holds only on the runner's scale-1 display | **Confirmed** (a developer's Mac) |
 
 **Windows facts (M1 Windows backend).** Learned on GitHub's `windows-latest` runner
 (Windows Server, an interactive desktop at 1024 × 768, scale 1, the taskbar

@@ -509,3 +509,88 @@ fn preview_is_a_floating_window_that_closes() {
     let status = wait_for("Esc to close the preview", || preview.exited());
     assert!(status.success());
 }
+
+/// SPEC §6.5: the badge's layer surface is on `top`, which sway draws
+/// below fullscreen windows; `fullscreen = "show"` puts it on `overlay`.
+#[test]
+#[ignore = "needs sway, swaybg, grim, foot; run `make test-wayland`"]
+fn fullscreen_windows_cover_the_badge_unless_shown() {
+    let (env, sway, _pointer, _badge) = badge_session("wl-fullscreen", "");
+    wait_for("the badge on screen", || {
+        (sway.grab(&env).px(1232, 60) != [0x33, 0x66, 0x99, 255]).then_some(())
+    });
+    let badge_px = sway.grab(&env).px(1232, 60);
+    let _player = env.spawn("foot", &["--app-id", "player"]);
+    wait_for("the player window", || {
+        (sway.windows(&env) == 1).then_some(())
+    });
+    sway.msg(&env, &["[app_id=player]", "fullscreen", "enable"]);
+    wait_for("the fullscreen window over the badge", || {
+        (sway.grab(&env).px(1232, 60) != badge_px).then_some(())
+    });
+    sway.msg(&env, &["[app_id=player]", "fullscreen", "disable"]);
+    // Tiled again: the badge is back above the window.
+    wait_for("the badge back on top", || {
+        let shot = sway.grab(&env);
+        (shot.px(1232, 60) == badge_px).then_some(())
+    });
+
+    env.write_config("fullscreen = \"show\"");
+    env.ok(&["reload"]);
+    sway.msg(&env, &["[app_id=player]", "fullscreen", "enable"]);
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    assert_eq!(
+        sway.grab(&env).px(1232, 60),
+        badge_px,
+        "fullscreen = \"show\": the badge stays above"
+    );
+}
+
+/// `pawprint settings` (SPEC §8.7) on sway: a floating window of 720 × 504
+/// (360 × 252 units at 2 px); a click on the grid picks a mascot, typing
+/// searches, Enter picks the match, and Esc closes it.
+#[test]
+#[ignore = "needs sway, swaybg, grim, wtype; run `make test-wayland`"]
+fn settings_window_edits_the_config() {
+    const BG: [u8; 3] = [0x23, 0x26, 0x2b];
+    let mut env = Env::new("wl-settings");
+    let sway = Sway::start(&mut env, "");
+    let mut pointer = Pointer::new(&sway);
+    let mut settings = env.spawn(env!("CARGO_BIN_EXE_pawprint"), &["settings"]);
+    wait_for("the settings window", || {
+        (sway.focused(&env).as_deref() == Some("pawprint")).then_some(())
+    });
+    // The background color starts under the 15-unit title strip.
+    let set = std::collections::BTreeSet::from([BG]);
+    let found = wait_for("the settings window on screen", || {
+        sway.grab(&env)
+            .bbox_of([0, 0, 1280, 720], &set)
+            .filter(|b| b[2] == 720)
+            .map(|b| [b[0], b[1] - 2 * 15])
+    });
+    assert!(!env.config_file().exists(), "opening writes nothing");
+    let tenth = &pawprint_core::catalog::Catalog::bundled().mascots()[9].id;
+    pointer.click((found[0] + 2 * 171) as u32, (found[1] + 2 * 126) as u32);
+    wait_for("the click to write config.toml", || {
+        env.config()
+            .contains(&format!("mascot = \"{tenth}\""))
+            .then_some(())
+    });
+    let out = env
+        .command("wtype")
+        .args(["-s", "100", "moose", "-k", "Return"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    wait_for("Enter to pick the search's match", || {
+        env.config().contains("mascot = \"moose\"").then_some(())
+    });
+    let out = env
+        .command("wtype")
+        .args(["-s", "300", "-k", "Escape"])
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    let status = wait_for("Esc to close the settings window", || settings.exited());
+    assert!(status.success());
+}

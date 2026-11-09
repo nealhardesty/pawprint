@@ -80,6 +80,8 @@ enum Cmd {
         #[arg(long)]
         accents: bool,
     },
+    /// Open the settings window: every config.toml option, for this host, all hosts, or any [hosts] table
+    Settings,
     /// Open a window showing a mascot cycling through all its actions (Esc closes it)
     Preview {
         /// Mascot id (see `pawprint list`)
@@ -107,7 +109,7 @@ enum Cmd {
     },
     /// Set a key in this host's [hosts] table, then reload (e.g. `set mascot otter`)
     Set {
-        /// mascot, label, label_case, label_size, size, position, offset, display, animation, interval, accent, tray, backend
+        /// mascot, label, label_case, label_size, size, position, offset, display, animation, interval, accent, tray, fullscreen, backend
         key: String,
         /// The value, as in config.toml; quotes are optional
         value: String,
@@ -194,7 +196,10 @@ pub fn main() -> ExitCode {
     // preview keep ignoring it: a client hanging up mid-answer must not
     // kill them.
     #[cfg(unix)]
-    if !matches!(cli.command, Some(Cmd::Run { .. } | Cmd::Preview { .. })) {
+    if !matches!(
+        cli.command,
+        Some(Cmd::Run { .. } | Cmd::Preview { .. } | Cmd::Settings)
+    ) {
         // SAFETY: restoring a default disposition, before any other thread.
         unsafe { libc::signal(libc::SIGPIPE, libc::SIG_DFL) };
     }
@@ -218,6 +223,7 @@ pub fn main() -> ExitCode {
         Some(Cmd::Status) => status(),
         Some(Cmd::Doctor) => doctor::run(),
         Some(Cmd::Preview { id, size }) => preview(&id, size),
+        Some(Cmd::Settings) => settings(),
         Some(Cmd::Set { key, value }) => commands::set(&key, &value),
         Some(Cmd::Unset { key }) => commands::unset(&key),
         Some(Cmd::Forget) => commands::forget(),
@@ -300,7 +306,15 @@ fn preview(id: &str, size: u32) -> CmdResult {
     println!(
         "Previewing {id} at {size} px: every action in turn. Esc or closing the window ends it."
     );
-    backend::preview(shell::Shell::preview(paths, id, size)?)
+    backend::window(shell::Shell::preview(paths, id, size)?)
+}
+
+/// `pawprint settings`: the settings window (SPEC §8.7) until it is
+/// closed. Each change is saved at once and the running badge reloads.
+fn settings() -> CmdResult {
+    let paths = paths::Paths::detect()
+        .ok_or((exit::ERROR, "cannot find the home directory".to_string()))?;
+    backend::window(shell::Shell::settings(paths)?)
 }
 
 /// Send one command to this session's badge.

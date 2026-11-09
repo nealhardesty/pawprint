@@ -8,6 +8,7 @@ mod install;
 mod power;
 mod release;
 mod sheet;
+mod shots;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -22,6 +23,7 @@ commands:
   palette                  write assets/palette.gpl from assets/palette.toml
   contact-sheet [--animated] docs/gallery.png (and docs/gallery.gif)
   building-blocks          docs/building-blocks.png: accents, props, bases x templates
+  settings-shots           out/settings/<page>.png for every settings page, and docs/settings.png
   art-export <id>          out/art/<id>/: a PNG per layer and variant, plus frames.png
   art-import <id> <png>    print a PNG layer as a [layers] table in <id>'s glyphs
   power-check [seconds]    measure the release badge against SPEC §7.2 (Linux: Xvfb; macOS, Windows: this desktop)
@@ -47,6 +49,7 @@ fn main() -> ExitCode {
         ["contact-sheet"] => sheet::contact_sheet(&root(), false),
         ["contact-sheet", "--animated"] => sheet::contact_sheet(&root(), true),
         ["building-blocks"] => sheet::building_blocks(&root()),
+        ["settings-shots"] => shots::settings_shots(&root()),
         ["art-export", id] => art::export(&root(), id),
         ["art-import", id, png] => art::import(&root(), id, Path::new(png)),
         ["art-import", _] => Err("usage: make art-import MASCOT=<id> PNG=<file>".into()),

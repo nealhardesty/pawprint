@@ -17,7 +17,8 @@ turns its head to look at you.
 This is the idea in ASCII.)*
 
 - **Always on top, never in the way.** Clicks go straight through it, it never
-  steals focus, and it stays out of the taskbar, Dock, and Alt-Tab.
+  steals focus, and it stays out of the taskbar, Dock, and Alt-Tab. When a
+  window goes fullscreen (a remote desktop, a video), the badge steps aside.
 - **Works through any remote desktop.** RDP, VNC, Jump Desktop, Parsec,
   Apollo/Moonlight. It runs on the machine you're looking at, so whatever you
   connect with shows it.
@@ -153,6 +154,7 @@ Install locations: `~/.local/bin/pawprint` on Linux and macOS, and
 | You want to... | Do this |
 |---|---|
 | Start it | `pawprint` (it starts automatically at login after install) |
+| Change any setting | Tray/menu-bar icon → **Settings…**, or `pawprint settings` ([below](#the-settings-window)) |
 | Move it | Tray/menu-bar icon → **Move**, or `pawprint move`. A dashed outline shows it's ready: drag the badge, then let go. **Esc** cancels. |
 | Put it back in the corner | `pawprint reset-position` |
 | See why it chose that animal | `pawprint explain` |
@@ -203,6 +205,36 @@ backend     wayland (layer-shell, KDE Plasma)
 
 ---
 
+## The settings window
+
+![The settings window's mascot page](docs/settings.png)
+
+**Tray → Settings…** (or `pawprint settings`) opens a window with a control
+for every option in the config file: the mascot (all 100, by category, or
+type to search and press Enter), the label, its letter case and text size,
+the size, the crate color, the corner, the distance from the edge, the
+display, the animation and its timing, the tray icon, what to do when a
+window goes fullscreen, and the backend.
+
+- **Changes are saved as you click,** and the running badge updates at
+  once, so the badge in the corner of your screen is the preview. Hover a
+  choice to see it on the window's own badge first. **Undo** (Ctrl+Z,
+  ⌘Z on macOS) steps back through everything you changed.
+- **Changes apply to** this machine by default (the same place
+  `pawprint set` writes). Switch to **All hosts** to change the default for
+  every machine that shares the file, or open any `[hosts]` section from
+  **Host tables**, where you can also add, rename, and delete them.
+- **Each setting says where its value comes from:** set here (with
+  **Clear** to take it back out), or inherited from all hosts, a matching
+  host section, or the default. If a stronger section overrides it on this
+  machine, it says so.
+- Your comments and formatting are kept, exactly as with `pawprint set`. A
+  config file with a syntax error is shown, never rewritten.
+
+Esc, ⌘W/Ctrl+W, or **Close** closes it.
+
+---
+
 ## Configuration
 
 Everything works without a config file. When you want one,
@@ -230,8 +262,16 @@ animation = "idle"       # "idle" | "static"
 interval = [8, 20]       # seconds between idle animations
 accent = "auto"          # crate color: "auto", a name, or "#rrggbb"
 tray = true              # show the tray / menu-bar icon
+fullscreen = "hide"      # "hide": step aside for fullscreen windows | "show": stay on top
 backend = "auto"         # leave this alone unless `pawprint doctor` says otherwise
 ```
+
+**Fullscreen windows.** When a window covers the whole display the badge
+is on (a remote desktop client such as Remote Desktop Connection in full
+screen, a video, a game), the badge hides and comes back when that window
+leaves fullscreen or the front. That way your local machine's badge never
+sits on top of a remote machine's desktop (the remote machine shows its
+own). Set `fullscreen = "show"` to keep it on top anyway.
 
 **The label always fits on the crate.** The badge is exactly `size` ×
 `size` pixels, label included. PAWPRINT sets the label in the tallest text
@@ -273,8 +313,9 @@ this host's own section, they win over patterns and top-level settings, and
 copying the file to another machine doesn't carry them over.
 
 The tray menu (the menu bar on macOS): **Move**,
-**Size ▸ 32/64/128**, **Animation ▸ Idle/Static**, **Reset position**,
-**Reload config**, **Quit**. Set `tray = false` to hide it.
+**Size ▸ 32/64/128**, **Animation ▸ Idle/Static**, **Settings…**,
+**Reset position**, **Reload config**, **Quit**. Set `tray = false` to
+hide it.
 
 A dragged position is saved separately (in PAWPRINT's state file) so your
 config file is never rewritten behind your back. `pawprint reset-position`
@@ -344,6 +385,10 @@ through drawing one on a shared body base, step by step.
 ## Remote desktop notes
 
 - **Install on the remote machine**, the one whose name you want to see.
+- **Full-screen remote sessions:** if PAWPRINT also runs on the machine
+  you connect *from*, its badge hides while the remote session is full
+  screen, so you only see the remote machine's badge. In a window, both
+  show.
 - **Windows RDP:** each RDP session gets its own badge, started when you log
   in. A console session and an RDP session on the same machine each have
   their own.
@@ -467,13 +512,14 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make build` | Debug build |
 | `make run` | Build and run the badge in the foreground (`ARGS="--verbose"` passes flags) |
 | `make preview MASCOT=owl` | Open a window with one mascot cycling through all its animations (`SIZE=64` for another size) |
+| `make settings` | Open the settings window from the local build (it edits your real config file) |
 | `make power-check` | Build the release badge and measure startup time, CPU and wakeups in idle and static mode, memory, and binary size against the power budget (`POWER_SECONDS=120` per mode). Linux: under Xvfb. Windows: on your desktop, with your config and state files backed up next to them (`*.pawdev-backup`) and put back afterwards, or at the next run if one was interrupted. macOS: on your desktop with a private HOME, from a universal binary. CI jobs run it on `windows-latest` and `macos-latest` |
 | `make test` | Unit tests, golden image tests, and mascot catalog validation |
-| `make test-x11` | Linux: run the badge under Xvfb (bare, with the `xcompmgr` compositor, with the `openbox` window manager) and check its pixels, click-through, move mode and its outline, single instance, the tray menu over a private D-Bus, `set`/`unset` and reloads, and the preview window |
-| `make test-wayland` | Linux: run the badge under headless Sway and check placement, click-through, move mode, panels, output changes, and the preview window from screenshots |
+| `make test-x11` | Linux: run the badge under Xvfb (bare, with the `xcompmgr` compositor, with the `openbox` window manager) and check its pixels, click-through, move mode and its outline, single instance, the tray menu over a private D-Bus, `set`/`unset` and reloads, hiding under a fullscreen window, the preview window, and the settings window |
+| `make test-wayland` | Linux: run the badge under headless Sway and check placement, click-through, move mode, panels, output changes, fullscreen windows covering it, and the preview and settings windows from screenshots |
 | `make test-linux-display` | Both display-server suites (a separate CI job runs this) |
-| `make test-macos-display` | macOS: run the badge in your logged-in desktop and check its window level, placement, IPC, menu-bar item, `autostart` against launchd, and the preview window, and (with Screen Recording and Accessibility granted to the terminal) pixels, drag, keys, and a menu choice; a CI job runs it on `macos-latest` |
-| `make test-windows-display` | Windows: run `pawprintw.exe` on this desktop and check its window styles, top-right placement, topmost, click-through, a real move-mode drag, work-area changes, the named pipe, its pixels on screen, the tray icon and a real click through its menu, `autostart` writing the `Run` value, and the preview window (a separate CI job runs this on `windows-latest`). It restores your state file, config file, and autostart value afterwards |
+| `make test-macos-display` | macOS: run the badge in your logged-in desktop and check its window level, placement, IPC, menu-bar item, `autostart` against launchd, and the preview and settings windows, and (with Screen Recording and Accessibility granted to the terminal) pixels, drag, keys, and a menu choice; a CI job runs it on `macos-latest` |
+| `make test-windows-display` | Windows: run `pawprintw.exe` on this desktop and check its window styles, top-right placement, topmost, click-through, a real move-mode drag, work-area changes, the named pipe, its pixels on screen, the tray icon and a real click through its menu, `autostart` writing the `Run` value, hiding under a fullscreen window, and the preview and settings windows (a separate CI job runs this on `windows-latest`). It restores your state file, config file, and autostart value afterwards |
 | `make check-assets` | Validate the mascot catalog only |
 | `make lint` | Format check and clippy (warnings are errors) |
 | `make fmt` | Format the code |
@@ -481,6 +527,7 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make golden-hosts` | Recompute `tests/golden/hostnames.tsv`, the catalog stability fixture (200 hostnames and the mascot each gets), after an intentional catalog change; review the diff, since it moves real machines |
 | `make contact-sheet` | Render every mascot (labels hidden, grouped by body base) into `docs/gallery.png`; `ANIMATED=1` also writes `docs/gallery.gif` with every action playing (sampled every 100 ms) |
 | `make building-blocks` | Render the crate in every accent, every prop, and every body base with every motion template into `docs/building-blocks.png` |
+| `make settings-shots` | Render every page of the settings window into `out/settings/` for review, and the mascot page into `docs/settings.png` (the screenshot above) |
 | `make palette` | Regenerate `assets/palette.gpl`, the master palette for GIMP, Aseprite, and LibreSprite |
 | `make art-export MASCOT=owl` | Export a mascot's layers (one PNG each) and frames into `out/art/<id>/` for editing in a pixel-art tool |
 | `make art-import MASCOT=owl PNG=out/art/owl/eyes.png` | Print an edited PNG layer as a ready-to-paste grid in the mascot's own glyphs |

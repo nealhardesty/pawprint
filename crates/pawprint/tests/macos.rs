@@ -750,3 +750,91 @@ fn preview_window() {
     assert!(code.success(), "exit {code}");
     eprintln!("preview: Esc and the close button each end it");
 }
+
+/// `pawprint settings` (SPEC §8.7): a normal window of a regular app that
+/// writes config.toml at once. A click picks a mascot from the grid;
+/// typing searches and Enter picks the match; Esc (twice: the search
+/// first) closes it.
+#[test]
+#[ignore = "needs a logged-in macOS desktop; run with `make test-macos-display`"]
+fn settings_window() {
+    use objc2::MainThreadMarker;
+    use objc2_app_kit::NSScreen;
+    use pawprint_core::settings::{H, W};
+
+    let env = Env::new("macos-settings");
+    let mut p = env.spawn(env!("CARGO_BIN_EXE_pawprint"), &["settings"]);
+    let pid = p.0.id();
+    let w = wait_for("the settings window", || {
+        if let Some(code) = p.exited() {
+            panic!("settings exited ({code}):\n{}", env.log());
+        }
+        window_of(pid)
+    });
+    eprintln!("settings window: {w:?}");
+    assert_eq!(w.layer, 0, "a normal window");
+    if let Some(name) = &w.name {
+        assert_eq!(name, "PAWPRINT settings");
+    }
+    // Units are 2 pixels at scale 1 (4 at 2), so a unit is 2 points. The
+    // window server's bounds may sit a few points inside the frame (macOS
+    // 26), so the content is found from the middle, and every click aims at
+    // the middle of a 34-unit cell.
+    // SAFETY: tests run off the main thread, but only read the main
+    // screen's scale.
+    let mtm = unsafe { MainThreadMarker::new_unchecked() };
+    let s = NSScreen::mainScreen(mtm).map_or(1.0, |s| s.backingScaleFactor());
+    let ppu = (2.0 * s).round() / s;
+    let (cw, ch) = (f64::from(W) * ppu, f64::from(H) * ppu);
+    assert!(
+        (w.bounds[2] - cw).abs() < 20.0 && w.bounds[3] > ch,
+        "{:?} for content {cw} x {ch}",
+        w.bounds
+    );
+    let left = w.bounds[0] + (w.bounds[2] - cw) / 2.0;
+    let top = w.bounds[1] + w.bounds[3] - ch;
+    let point = |x: f64, y: f64| (left + x * ppu, top + y * ppu);
+    let app = NSRunningApplication::runningApplicationWithProcessIdentifier(pid as i32)
+        .expect("the settings window is a running application");
+    assert_eq!(
+        app.activationPolicy(),
+        NSApplicationActivationPolicy::Regular
+    );
+    assert!(!env.config_file().exists(), "opening writes nothing");
+
+    if !CGPreflightPostEventAccess() {
+        eprintln!("SKIP settings input: this process may not post events");
+        return;
+    }
+    wait_for("the settings window to be in front", || {
+        in_front(pid).then_some(())
+    });
+    let wrote = |what: &str| {
+        wait_for(&format!("config.toml to have {what}"), || {
+            std::fs::read_to_string(env.config_file())
+                .ok()
+                .filter(|t| t.contains(&format!("mascot = \"{what}\"")))
+        })
+    };
+    // The grid's third cell on its second row: the tenth mascot.
+    let tenth = &pawprint_core::catalog::Catalog::bundled().mascots()[9].id;
+    let at = point(86.0 + 2.0 * 34.0 + 17.0, 75.0 + 34.0 + 17.0);
+    post_mouse(CGEventType::MouseMoved, at);
+    post_mouse(CGEventType::LeftMouseDown, at);
+    post_mouse(CGEventType::LeftMouseUp, at);
+    wrote(tenth);
+    // m o o s e (kVK codes), then Enter.
+    for code in [46, 31, 31, 1, 14, 36] {
+        post_key(code);
+    }
+    let text = wrote("moose");
+    assert!(text.contains("[hosts."), "this host's table: {text}");
+    post_key(14); // e: a new search
+    post_key(53); // escape: clears it
+    std::thread::sleep(Duration::from_millis(300));
+    assert!(p.exited().is_none(), "the first Esc only clears the search");
+    post_key(53);
+    let code = wait_for("Esc to close the settings window", || p.exited());
+    assert!(code.success(), "exit {code}");
+    eprintln!("settings: a click, a search, and Esc work; config.toml:\n{text}");
+}

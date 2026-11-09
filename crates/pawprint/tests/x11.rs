@@ -1069,3 +1069,105 @@ fn preview_is_a_normal_window_that_cycles_and_closes() {
     let status = wait_for("WM_DELETE_WINDOW to close the preview", || second.exited());
     assert!(status.success());
 }
+
+/// A managed window, made fullscreen and active the EWMH way (client
+/// messages to the root, as a pager would), or back to normal.
+fn ewmh_fullscreen(x: &X, win: Window, on: bool) {
+    let root_message = |kind: &str, data: [u32; 5]| {
+        let event = ClientMessageEvent::new(32, win, x.atom(kind), data);
+        let mask = EventMask::SUBSTRUCTURE_REDIRECT | EventMask::SUBSTRUCTURE_NOTIFY;
+        x.conn.send_event(false, x.root, mask, event).unwrap();
+    };
+    let fullscreen = x.atom("_NET_WM_STATE_FULLSCREEN");
+    root_message("_NET_WM_STATE", [u32::from(on), fullscreen, 0, 1, 0]);
+    root_message("_NET_ACTIVE_WINDOW", [1, 0, 0, 0, 0]);
+    x.conn.flush().unwrap();
+}
+
+fn badge_viewable(x: &X) -> bool {
+    x.badge()
+        .and_then(|w| x.conn.get_window_attributes(w).ok()?.reply().ok())
+        .is_some_and(|a| a.map_state == MapState::VIEWABLE)
+}
+
+/// SPEC §6.5: an active fullscreen window over the badge's display unmaps
+/// it, leaving fullscreen maps it again, and `fullscreen = "show"` keeps it.
+#[test]
+#[ignore = "needs Xvfb and openbox; run `make test-x11`"]
+fn fullscreen_windows_hide_the_badge() {
+    let mut env = Env::new("x11-fullscreen");
+    let x = X::start(&mut env);
+    let _wm = env.spawn("openbox", &["--sm-disable"]);
+    wait_for("openbox", || {
+        let r = x
+            .conn
+            .get_property(false, x.root, x.atom("_NET_WORKAREA"), AtomEnum::ANY, 0, 1)
+            .ok()?
+            .reply()
+            .ok()?;
+        (r.value_len > 0).then_some(())
+    });
+    let _badge = env.run_badge();
+    x.mapped_badge();
+
+    let player = x.background(true, (100, 100, 400, 300), 0x993333);
+    ewmh_fullscreen(&x, player, true);
+    wait_for("the badge to step aside", || {
+        (!badge_viewable(&x)).then_some(())
+    });
+    assert!(
+        env.log().contains("fullscreen window covers"),
+        "{}",
+        env.log()
+    );
+    ewmh_fullscreen(&x, player, false);
+    wait_for("the badge to come back", || {
+        badge_viewable(&x).then_some(())
+    });
+
+    env.write_config("fullscreen = \"show\"");
+    env.ok(&["reload"]);
+    ewmh_fullscreen(&x, player, true);
+    std::thread::sleep(Duration::from_secs(1));
+    assert!(badge_viewable(&x), "fullscreen = \"show\" stays mapped");
+}
+
+/// `pawprint settings` (SPEC §8.7) under a bare server: a normal window,
+/// centered, 360 × 252 units at 2 px each; a click on the grid picks a
+/// mascot, typing searches, Enter picks the match, and Esc closes it.
+#[test]
+#[ignore = "needs Xvfb; run `make test-x11`"]
+fn settings_window_edits_the_config() {
+    let mut env = Env::new("x11-settings");
+    let x = X::start(&mut env);
+    x.background(false, (0, 0, W, H), BG_PIXEL);
+    let mut settings = env.spawn(env!("CARGO_BIN_EXE_pawprint"), &["settings"]);
+    let win = x.mapped_badge();
+    let attrs = x.conn.get_window_attributes(win).unwrap().reply().unwrap();
+    assert!(!attrs.override_redirect, "a normal window");
+    let geo = x.conn.get_geometry(win).unwrap().reply().unwrap();
+    let (wx, wy) = ((1280 - 720) / 2, (720 - 504) / 2);
+    assert_eq!((geo.x, geo.y, geo.width, geo.height), (wx, wy, 720, 504));
+    assert!(!env.config_file().exists(), "opening writes nothing");
+
+    // The grid's third cell on its second row (units 171, 126): the tenth
+    // mascot.
+    let tenth = &pawprint_core::catalog::Catalog::bundled().mascots()[9].id;
+    x.click(wx + 2 * 171, wy + 2 * 126);
+    wait_for("the click to write config.toml", || {
+        env.config()
+            .contains(&format!("mascot = \"{tenth}\""))
+            .then_some(())
+    });
+    for sym in "moose".chars() {
+        x.key(sym as u32, false);
+    }
+    x.key(0xff0d, false);
+    wait_for("Enter to pick the search's match", || {
+        env.config().contains("mascot = \"moose\"").then_some(())
+    });
+    assert!(env.config().contains("[hosts."), "{}", env.config());
+    x.key(0xff1b, false);
+    let status = wait_for("Esc to close the settings window", || settings.exited());
+    assert!(status.success());
+}

@@ -9,7 +9,7 @@ use pawprint_sprite::{Bundle, Mascot, Rgb, RgbaImage};
 
 use crate::anim::Scheduler;
 use crate::catalog::Catalog;
-use crate::config::{Animation, Config, Layer};
+use crate::config::{Animation, Config, Fullscreen, Layer};
 use crate::geom::{PhysicalRect, Point};
 use crate::identity::{self, Resolved};
 use crate::layout::{self, LabelSize};
@@ -38,6 +38,8 @@ pub enum Command {
     SetAnimation(Animation),
     /// Drop this host's cached fallback mascot (`pawprint forget`).
     Forget,
+    /// Open the settings window (the tray's Settings…).
+    Settings,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -63,11 +65,15 @@ pub enum Effect {
     Present(Frame),
     Place(PhysicalRect),
     SetInteractive(bool),
+    /// Step aside for fullscreen windows, or stay on top of them (SPEC §6.5).
+    SetFullscreen(Fullscreen),
     SetTray(TrayState),
     /// Write this to the state file atomically.
     SaveState(State),
     /// Re-read the config file and send `Event::ConfigTouched`.
     ReloadConfig,
+    /// Start the settings window in a process of its own (SPEC §8.7).
+    OpenSettings,
     Exit,
 }
 
@@ -115,6 +121,8 @@ pub struct Badge<'c> {
     placed: Option<PhysicalRect>,
     presented: Option<(RenderKey, RgbaImage)>,
     tray: Option<TrayState>,
+    /// The fullscreen policy last sent to the surface.
+    fullscreen: Option<Fullscreen>,
     /// The tray icon's mascot and accent, so it is composed only on change.
     tray_icon: Option<(String, Rgb)>,
     /// How many times the badge image was composed (for tests).
@@ -163,6 +171,7 @@ impl<'c> Badge<'c> {
             placed: None,
             presented: None,
             tray: None,
+            fullscreen: None,
             tray_icon: None,
             compositions: 0,
         }
@@ -280,6 +289,7 @@ impl<'c> Badge<'c> {
                 self.reresolve(now, out);
             }
             Command::Reload => out.push(Effect::ReloadConfig),
+            Command::Settings => out.push(Effect::OpenSettings),
             Command::Quit => out.push(Effect::Exit),
             Command::SetSize(size) => {
                 self.flags.size = Some(size);
@@ -377,6 +387,12 @@ impl<'c> Badge<'c> {
         if self.tray.as_ref() != Some(&tray) {
             self.tray = Some(tray.clone());
             out.push(Effect::SetTray(tray));
+        }
+
+        let policy = self.resolved.settings.fullscreen.value;
+        if self.fullscreen != Some(policy) {
+            self.fullscreen = Some(policy);
+            out.push(Effect::SetFullscreen(policy));
         }
 
         let Some((work_area, scale)) = self.target().map(|d| (d.work_area, d.scale)) else {
@@ -803,6 +819,28 @@ mod tests {
             rig.surface.rect(),
             Some(PhysicalRect::new(16, 1040 - 64 - 16, 64, 64))
         );
+    }
+
+    #[test]
+    fn the_fullscreen_policy_reaches_the_surface_once_per_change() {
+        let mut rig = Rig::new("owl", "");
+        assert_eq!(rig.surface.fullscreen, Some(Fullscreen::Hide), "default");
+        let count =
+            |rig: &Rig| rig.shell.len() + rig.surface.places.len() + rig.surface.frames.len();
+        let before = count(&rig);
+        let fx = rig.badge.handle(
+            Event::ConfigTouched(Config::parse("fullscreen = \"show\"")),
+            rig.now,
+        );
+        assert_eq!(fx, vec![Effect::SetFullscreen(Fullscreen::Show)]);
+        apply(&mut rig.surface, fx);
+        assert_eq!(rig.surface.fullscreen, Some(Fullscreen::Show));
+        let fx = rig.badge.handle(
+            Event::ConfigTouched(Config::parse("fullscreen = \"show\"")),
+            rig.now,
+        );
+        assert!(fx.is_empty(), "no change, no effect: {fx:?}");
+        assert_eq!(count(&rig), before);
     }
 
     #[test]

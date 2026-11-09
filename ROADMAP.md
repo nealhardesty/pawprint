@@ -295,6 +295,26 @@ Windows, macOS, and Linux machines.
   - **Then:** update SPEC §4.4 and regenerate the affected goldens
     (`make golden`). Release as v1.1.1.
 
+## Settings window and fullscreen hiding
+
+Both are implemented and tested (SPEC §6.5 and §8.7): `fullscreen =
+"hide" | "show"` on every backend, and `pawprint settings` (tray:
+**Settings…**) with a control for every config key in any table. What
+remains needs the owner's machines:
+
+- [ ] **(owner)** F39: a fullscreen Space on a real Mac (Jump Desktop or
+      Screens in full screen) hides the badge, and `fullscreen = "show"`
+      keeps it
+- [ ] **(owner)** F41: `mstsc` going full screen in place (Ctrl+Alt+Break)
+      and back hides and shows the local badge; a multi-monitor RDP session
+      hides it on every display
+- [ ] **(owner)** F42: a fullscreen window on Plasma covers the badge
+- [ ] **(owner)** F40: a fullscreen native Wayland app on Ubuntu GNOME
+      lowers the badge
+- [ ] **(owner)** The settings window on each desktop: opened from the
+      tray, typing, scrolling the mascot grid, a 200% display, and a
+      config edited by hand while it is open
+
 ## After 1.0
 
 Ideas worth doing, roughly by value. None are commitments.
@@ -312,6 +332,8 @@ Ideas worth doing, roughly by value. None are commitments.
 | **Seasonal crate skins** | Delight | Opt-in only; must never change identity cues (mascot, accent) |
 | **Environment cue** | Know prod from dev at a glance | E.g. a striped "hazard" crate for hosts matching a pattern; already partly possible with `accent` per glob |
 | **Session-type hint** | Know you're in RDP vs. console | A tiny glyph on the crate (`R`, `V`, `C`); detection is platform-specific |
+| **Key repeat in the settings window on Wayland** | Holding Backspace deletes one character | Needs a timer from the core (`repeat_info`), like the move-mode timeout |
+| **Paste into the settings window's fields** | Long labels and colors are faster to paste | The clipboard is a different API on each OS; the fields are short |
 | **Other Wayland compositors in the matrix** | Sway, Hyprland, COSMIC users | Layer-shell path should already work; needs testers |
 
 ### Explicitly not planned
@@ -320,7 +342,6 @@ Ideas worth doing, roughly by value. None are commitments.
   permissions, and PAWPRINT's privacy promise rules it out.
 - Network features (fleet sync, phoning home). Copy the config file
   instead.
-- A settings GUI. The CLI, the tray, and one TOML file cover it.
 
 ---
 

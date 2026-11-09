@@ -72,6 +72,34 @@ impl fmt::Display for Backend {
     }
 }
 
+/// What the badge does when a fullscreen window covers its display
+/// (a remote-desktop client, a video, a game): step aside, or stay on top.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Fullscreen {
+    #[default]
+    Hide,
+    Show,
+}
+
+impl Fullscreen {
+    pub fn parse(s: &str) -> Option<Fullscreen> {
+        match s {
+            "hide" => Some(Fullscreen::Hide),
+            "show" => Some(Fullscreen::Show),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for Fullscreen {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Fullscreen::Hide => "hide",
+            Fullscreen::Show => "show",
+        })
+    }
+}
+
 /// The largest `offset` component, either sign, in logical pixels.
 pub const MAX_OFFSET: i64 = 100_000;
 
@@ -91,6 +119,7 @@ pub struct Layer {
     pub interval: Option<[u32; 2]>,
     pub accent: Option<String>,
     pub tray: Option<bool>,
+    pub fullscreen: Option<Fullscreen>,
     pub backend: Option<Backend>,
 }
 
@@ -98,8 +127,11 @@ pub struct Layer {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Config {
     pub top: Layer,
-    /// `[hosts."<pattern>"]` tables in file order.
+    /// `[hosts."<pattern>"]` tables in file order, patterns lowercased.
     pub hosts: Vec<(String, Layer)>,
+    /// The same tables' keys as written in the file (same order and
+    /// length as `hosts`), for editing them.
+    pub host_keys: Vec<String>,
     pub warnings: Vec<String>,
 }
 
@@ -139,6 +171,7 @@ impl Config {
                         );
                     }
                     cfg.hosts.push((pattern.to_lowercase(), layer));
+                    cfg.host_keys.push(pattern.clone());
                 }
             } else {
                 set_key(&mut cfg.top, key, value, "", &mut cfg.warnings);
@@ -256,9 +289,80 @@ impl Config {
                 "auto".to_string(),
             ),
             tray: pick(&layers, |l| l.tray, true),
+            fullscreen: pick(&layers, |l| l.fullscreen, Fullscreen::Hide),
             backend: pick(&layers, |l| l.backend, Backend::Auto),
         };
         (settings, warnings)
+    }
+}
+
+impl Layer {
+    /// The value of `key` set in this layer, as TOML (`"top-right"`, `64`,
+    /// `[8, 20]`), or `None` if it isn't set here or isn't a key.
+    pub fn get(&self, key: &str) -> Option<toml::Value> {
+        let s = |v: &dyn fmt::Display| toml::Value::from(v.to_string());
+        let pair = |[a, b]: [i64; 2]| toml::Value::Array(vec![a.into(), b.into()]);
+        Some(match key {
+            "mascot" => s(self.mascot.as_ref()?),
+            "label" => s(self.label.as_ref()?),
+            "label_case" => s(&self.label_case?),
+            "label_size" => s(&self.label_size?),
+            "size" => i64::from(self.size?).into(),
+            "position" => s(&self.position?),
+            "offset" => pair(self.offset?.map(i64::from)),
+            "display" => s(self.display.as_ref()?),
+            "animation" => s(&self.animation?),
+            "interval" => pair(self.interval?.map(i64::from)),
+            "accent" => s(self.accent.as_ref()?),
+            "tray" => self.tray?.into(),
+            "fullscreen" => s(&self.fullscreen?),
+            "backend" => s(&self.backend?),
+            _ => return None,
+        })
+    }
+}
+
+impl Settings {
+    /// The effective value of `key`, as TOML, and where it came from.
+    /// `None` for an unknown key.
+    pub fn get(&self, key: &str) -> Option<Sourced<toml::Value>> {
+        let layer = Layer {
+            mascot: Some(self.mascot.value.clone()),
+            label: Some(self.label.value.clone()),
+            label_case: Some(self.label_case.value),
+            label_size: Some(self.label_size.value),
+            size: Some(self.size.value),
+            position: Some(self.position.value),
+            offset: Some(self.offset.value),
+            display: Some(self.display.value.clone()),
+            animation: Some(self.animation.value),
+            interval: Some(self.interval.value),
+            accent: Some(self.accent.value.clone()),
+            tray: Some(self.tray.value),
+            fullscreen: Some(self.fullscreen.value),
+            backend: Some(self.backend.value),
+        };
+        let source = match key {
+            "mascot" => &self.mascot.source,
+            "label" => &self.label.source,
+            "label_case" => &self.label_case.source,
+            "label_size" => &self.label_size.source,
+            "size" => &self.size.source,
+            "position" => &self.position.source,
+            "offset" => &self.offset.source,
+            "display" => &self.display.source,
+            "animation" => &self.animation.source,
+            "interval" => &self.interval.source,
+            "accent" => &self.accent.source,
+            "tray" => &self.tray.source,
+            "fullscreen" => &self.fullscreen.source,
+            "backend" => &self.backend.source,
+            _ => return None,
+        };
+        Some(Sourced {
+            value: layer.get(key)?,
+            source: source.clone(),
+        })
     }
 }
 
@@ -307,11 +411,12 @@ pub struct Settings {
     pub interval: Sourced<[u32; 2]>,
     pub accent: Sourced<String>,
     pub tray: Sourced<bool>,
+    pub fullscreen: Sourced<Fullscreen>,
     pub backend: Sourced<Backend>,
 }
 
 /// Every key a config file (or a `[hosts]` table) may set, in SPEC §8.2 order.
-pub const KEYS: [&str; 13] = [
+pub const KEYS: [&str; 14] = [
     "mascot",
     "label",
     "label_case",
@@ -324,6 +429,7 @@ pub const KEYS: [&str; 13] = [
     "interval",
     "accent",
     "tray",
+    "fullscreen",
     "backend",
 ];
 
@@ -408,6 +514,10 @@ fn set_key(layer: &mut Layer, key: &str, v: &toml::Value, ctx: &str, warnings: &
         "tray" => match v.as_bool() {
             Some(b) => layer.tray = Some(b),
             None => bad("true or false"),
+        },
+        "fullscreen" => match s.and_then(Fullscreen::parse) {
+            Some(f) => layer.fullscreen = Some(f),
+            None => bad("\"hide\" or \"show\""),
         },
         "backend" => match s.and_then(Backend::parse) {
             Some(b) => layer.backend = Some(b),
@@ -501,6 +611,7 @@ mod tests {
         assert_eq!(s.offset.value, [16, 16]);
         assert_eq!(s.interval.value, [8, 20]);
         assert!(s.tray.value);
+        assert_eq!(s.fullscreen.value, Fullscreen::Hide);
     }
 
     const FLEET: &str = r#"
@@ -626,7 +737,7 @@ mascot = "capybara"
     #[test]
     fn every_key_parses() {
         let cfg = Config::parse(
-            "mascot = \"owl\"\nlabel = \"none\"\nlabel_case = \"as-is\"\nlabel_size = \"large\"\nsize = 128\nposition = \"bottom-left\"\noffset = [0, -4]\ndisplay = \"DP-1\"\nanimation = \"static\"\ninterval = [5, 5]\naccent = \"#112233\"\ntray = false\nbackend = \"x11\"",
+            "mascot = \"owl\"\nlabel = \"none\"\nlabel_case = \"as-is\"\nlabel_size = \"large\"\nsize = 128\nposition = \"bottom-left\"\noffset = [0, -4]\ndisplay = \"DP-1\"\nanimation = \"static\"\ninterval = [5, 5]\naccent = \"#112233\"\ntray = false\nfullscreen = \"show\"\nbackend = \"x11\"",
         );
         assert!(cfg.warnings.is_empty(), "{:?}", cfg.warnings);
         let t = &cfg.top;
@@ -636,6 +747,8 @@ mascot = "capybara"
         assert_eq!(t.animation, Some(Animation::Static));
         assert_eq!(t.backend, Some(Backend::X11));
         assert_eq!(t.tray, Some(false));
+        assert_eq!(t.fullscreen, Some(Fullscreen::Show));
+        assert!(check_value("fullscreen", &toml::Value::from("cover")).is_err());
     }
 
     #[test]
@@ -722,6 +835,36 @@ mascot = "capybara"
             ("auto", "auto"),
             "nothing valid: the default"
         );
+    }
+
+    #[test]
+    fn every_key_reads_back_as_toml() {
+        let text = "mascot = \"owl\"\nlabel = \"none\"\nlabel_case = \"as-is\"\nlabel_size = \"large\"\nsize = 128\nposition = \"bottom-left\"\noffset = [0, -4]\ndisplay = \"DP-1\"\nanimation = \"static\"\ninterval = [5, 9]\naccent = \"#112233\"\ntray = false\nfullscreen = \"show\"\nbackend = \"x11\"";
+        let cfg = Config::parse(text);
+        let table: toml::Table = text.parse().unwrap();
+        let s = cfg.effective("x", &Layer::default());
+        for key in KEYS {
+            assert_eq!(cfg.top.get(key).as_ref(), table.get(key), "{key}");
+            let got = s.get(key).unwrap();
+            assert_eq!(Some(&got.value), table.get(key), "{key}");
+            assert_eq!(got.source, Source::TopLevel, "{key}");
+            assert!(check_value(key, &got.value).is_ok(), "{key}");
+        }
+        assert_eq!(cfg.top.get("shiny"), None);
+        assert_eq!(Layer::default().get("size"), None);
+        let defaults = Config::default().effective("x", &Layer::default());
+        assert_eq!(
+            defaults.get("offset").unwrap().value.to_string(),
+            "[16, 16]"
+        );
+        assert_eq!(defaults.get("fullscreen").unwrap().source, Source::Default);
+    }
+
+    #[test]
+    fn host_keys_keep_their_spelling() {
+        let cfg = Config::parse("[hosts.BuildBox]\nsize = 32\n[hosts.\"Prod-*\"]\nsize = 64");
+        assert_eq!(cfg.host_keys, ["BuildBox", "Prod-*"]);
+        assert_eq!(cfg.hosts[0].0, "buildbox");
     }
 
     #[test]
