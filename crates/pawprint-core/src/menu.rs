@@ -57,8 +57,8 @@ pub struct TrayState {
 /// Sizes offered in the menu.
 pub const SIZE_PRESETS: [u32; 3] = [32, 64, 128];
 
-/// Move, Size ▸ 32/64/128, Animation ▸ Idle/Static, Reset position,
-/// Reload config, Quit.
+/// Move, Size ▸ 32/64/128, Animation ▸ Idle/Static, Settings…, Reset
+/// position, Reload config, Quit.
 pub fn menu(size: u32, animation: Animation, moving: bool) -> Vec<MenuItem> {
     let sizes = SIZE_PRESETS
         .iter()
@@ -82,6 +82,7 @@ pub fn menu(size: u32, animation: Animation, moving: bool) -> Vec<MenuItem> {
                 ),
             ],
         ),
+        MenuItem::action("Settings…", Command::Settings),
         MenuItem::action("Reset position", Command::ResetPosition),
         MenuItem::action("Reload config", Command::Reload),
         MenuItem::action("Quit", Command::Quit),
@@ -102,6 +103,7 @@ mod tests {
                 "Move",
                 "Size",
                 "Animation",
+                "Settings…",
                 "Reset position",
                 "Reload config",
                 "Quit"
@@ -111,7 +113,8 @@ mod tests {
         assert_eq!(size_checks, [Some(false), Some(true), Some(false)]);
         assert_eq!(m[1].children[2].command, Some(Command::SetSize(128)));
         assert_eq!(m[2].children[1].checked, Some(true));
-        assert_eq!(m[5].command, Some(Command::Quit));
+        assert_eq!(m[3].command, Some(Command::Settings));
+        assert_eq!(m[6].command, Some(Command::Quit));
         assert_eq!(
             menu(96, Animation::Idle, true)[1]
                 .children

@@ -18,7 +18,9 @@ pub mod matching;
 pub mod menu;
 pub mod movemode;
 pub mod render;
+pub mod settings;
 pub mod state;
 pub mod surface;
+pub mod ui;
 
 pub use pawprint_sprite as sprite;

@@ -1,7 +1,8 @@
 //! macOS backend (SPEC §11.2): an accessory app with one borderless,
 //! non-activating `NSPanel` at status level, on every Space, showing the
 //! frame as a `CGImage` on a nearest-neighbor layer, and a menu-bar item
-//! (`menubar`). `pawprint preview` runs the same loop in a normal window.
+//! (`menubar`). `pawprint preview` and `pawprint settings` run the same
+//! loop in a normal window.
 //!
 //! The loop pulls events with `nextEventMatchingMask` until the core's next
 //! deadline. IPC requests, menu choices, and screen changes wake it by
@@ -33,15 +34,16 @@ use objc2_core_graphics::{
 };
 use objc2_foundation::{
     NSDate, NSDefaultRunLoopMode, NSNotification, NSNotificationCenter, NSObject, NSPoint,
-    NSProcessInfo, NSRect, NSSize, NSString, ns_string,
+    NSProcessInfo, NSRect, NSSize, NSString,
 };
 use objc2_quartz_core::{CALayer, CATransaction, kCAFilterNearest};
 use pawprint_core::badge::{Command, Event};
-use pawprint_core::config::Backend;
+use pawprint_core::config::{Backend, Fullscreen};
 use pawprint_core::geom::{PhysicalRect, Point};
 use pawprint_core::movemode::{Key, KeyCode};
 use pawprint_core::render::Frame;
 use pawprint_core::surface::{DisplayInfo, Surface};
+use pawprint_core::ui::{Input, UiKey};
 
 use super::menubar::MenuBar;
 use crate::shell::Shell;
@@ -51,11 +53,10 @@ pub fn run(shell: Shell, listener: ipc::Listener) -> CmdResult {
     drive(shell, Some(listener))
 }
 
-/// `pawprint preview` (SPEC §9): the same loop without IPC or a menu-bar
-/// item, in a normal titled window (`Mac::new` with `shell.is_preview()`).
-/// The shell centers the badge, cycles every action, and draws it on a
-/// backdrop with a margin; Esc or closing the window quits.
-pub fn preview(shell: Shell) -> CmdResult {
+/// `pawprint preview` and `pawprint settings` (SPEC §9): the same loop
+/// without IPC or a menu-bar item, in a normal titled window (`Mac::new`
+/// with `shell.is_window()`), whose pointer and keys go to `Shell::input`.
+pub fn window(shell: Shell) -> CmdResult {
     drive(shell, None)
 }
 
@@ -91,7 +92,7 @@ fn drive_in_pool(mut shell: Shell, listener: Option<ipc::Listener>) -> CmdResult
         log::warn!("backend = \"{configured}\" does not exist on macOS; using macos");
     }
     shell.set_backend("macos");
-    let preview = shell.is_preview();
+    let preview = shell.is_window();
 
     let app = NSApplication::sharedApplication(mtm);
     // The badge: no Dock icon, no app menu, never the active app (SPEC
@@ -103,7 +104,7 @@ fn drive_in_pool(mut shell: Shell, listener: Option<ipc::Listener>) -> CmdResult
         NSApplicationActivationPolicy::Accessory
     });
     app.finishLaunching();
-    let mut mac = Mac::new(mtm, preview);
+    let mut mac = Mac::new(mtm, preview.then(|| shell.title()));
     shell.start(&mut mac);
 
     let (tx, rx) = mpsc::channel();
@@ -204,6 +205,15 @@ fn turn(
     if let Some(event) = event {
         match mac.translate(&event) {
             Translated::Event(e) => shell.handle(mac, e),
+            Translated::Input(inputs, pass) => {
+                // AppKit still sees the clicks: they activate the window.
+                if pass {
+                    app.sendEvent(&event);
+                }
+                for input in inputs {
+                    shell.input(mac, input);
+                }
+            }
             Translated::Swallow => {}
             Translated::Pass => app.sendEvent(&event),
         }
@@ -356,6 +366,8 @@ fn screens(mtm: MainThreadMarker) -> (Desktop, Vec<DisplayInfo>) {
 /// What the loop does with an event.
 enum Translated {
     Event(Event),
+    /// Input to the normal window; `true` also hands the event to AppKit.
+    Input(Vec<Input>, bool),
     /// Move-mode input the core doesn't use: keep it from AppKit (no beep).
     Swallow,
     Pass,
@@ -389,21 +401,30 @@ fn badge_panel(mtm: MainThreadMarker, rect: NSRect) -> Retained<NSWindow> {
     panel.setHasShadow(false);
     panel.setIgnoresMouseEvents(true);
     panel.setLevel(NSStatusWindowLevel);
-    panel.setCollectionBehavior(
-        NSWindowCollectionBehavior::CanJoinAllSpaces
-            | NSWindowCollectionBehavior::Stationary
-            | NSWindowCollectionBehavior::FullScreenAuxiliary
-            | NSWindowCollectionBehavior::IgnoresCycle,
-    );
+    panel.setCollectionBehavior(collection(Fullscreen::Hide));
     panel.setHidesOnDeactivate(false);
     // sharingType stays at its default, readOnly, so screen sharing and
     // remote tools see the badge (F12).
     panel
 }
 
-/// `pawprint preview`: an ordinary titled, closable window at the normal
-/// level, which takes the mouse and the keyboard.
-fn preview_window(mtm: MainThreadMarker, rect: NSRect) -> Retained<NSWindow> {
+/// Every Space, never in the window cycle. A fullscreen app gets a Space of
+/// its own, and only `fullScreenAuxiliary` windows join it, so leaving that
+/// flag out is how the badge steps aside for fullscreen apps (SPEC §6.5).
+fn collection(policy: Fullscreen) -> NSWindowCollectionBehavior {
+    let all = NSWindowCollectionBehavior::CanJoinAllSpaces
+        | NSWindowCollectionBehavior::Stationary
+        | NSWindowCollectionBehavior::IgnoresCycle;
+    match policy {
+        Fullscreen::Hide => all,
+        Fullscreen::Show => all | NSWindowCollectionBehavior::FullScreenAuxiliary,
+    }
+}
+
+/// `pawprint preview` and `pawprint settings`: an ordinary titled,
+/// closable window at the normal level, which takes the mouse (moves
+/// included) and the keyboard.
+fn normal_window(mtm: MainThreadMarker, rect: NSRect, title: &str) -> Retained<NSWindow> {
     let style =
         NSWindowStyleMask::Titled | NSWindowStyleMask::Closable | NSWindowStyleMask::Miniaturizable;
     // SAFETY: NSWindow's designated initializer, with matching types.
@@ -416,17 +437,19 @@ fn preview_window(mtm: MainThreadMarker, rect: NSRect) -> Retained<NSWindow> {
             false,
         )
     };
-    window.setTitle(ns_string!("PAWPRINT preview"));
+    window.setTitle(&NSString::from_str(title));
+    window.setAcceptsMouseMovedEvents(true);
     window
 }
 
 impl Mac {
-    fn new(mtm: MainThreadMarker, preview: bool) -> Mac {
+    /// The badge panel, or with a title the normal window.
+    fn new(mtm: MainThreadMarker, title: Option<&str>) -> Mac {
         let rect = NSRect::new(NSPoint::ZERO, NSSize::new(1.0, 1.0));
-        let window = if preview {
-            preview_window(mtm, rect)
-        } else {
-            badge_panel(mtm, rect)
+        let preview = title.is_some();
+        let window = match title {
+            Some(title) => normal_window(mtm, rect, title),
+            None => badge_panel(mtm, rect),
         };
         // SAFETY: we keep our own reference, so closing must not release it.
         unsafe { window.setReleasedWhenClosed(false) };
@@ -464,11 +487,8 @@ impl Mac {
         if kind == NSEventType::ApplicationDefined {
             return Translated::Swallow;
         }
-        if self.preview
-            && kind == NSEventType::KeyDown
-            && key_code(event.keyCode()) == Some(KeyCode::Escape)
-        {
-            return Translated::Event(Event::Command(Command::Quit));
+        if self.preview {
+            return self.window_input(event);
         }
         if !self.interactive {
             return Translated::Pass;
@@ -503,6 +523,69 @@ impl Mac {
         }
     }
 
+    /// The normal window's input: positions in physical pixels from the
+    /// content's top-left (window coordinates are points from the bottom).
+    fn window_input(&self, event: &NSEvent) -> Translated {
+        if event.windowNumber() != self.window.windowNumber() {
+            return Translated::Pass;
+        }
+        let at = || {
+            let p = event.locationInWindow();
+            let h = self
+                .window
+                .contentView()
+                .map_or(0.0, |v| v.frame().size.height);
+            let s = self.window.backingScaleFactor();
+            (p.y <= h).then(|| Point::new((p.x * s).round() as i32, ((h - p.y) * s).round() as i32))
+        };
+        let one = |i: Input| Translated::Input(vec![i], true);
+        match event.r#type() {
+            NSEventType::MouseMoved | NSEventType::LeftMouseDragged => at()
+                .map_or(Translated::Input(vec![Input::Leave], true), |p| {
+                    one(Input::Move(p))
+                }),
+            // Below the title bar only: the title bar stays AppKit's.
+            NSEventType::LeftMouseDown => at().map_or(Translated::Pass, |p| one(Input::Press(p))),
+            NSEventType::LeftMouseUp => at().map_or(Translated::Pass, |p| one(Input::Release(p))),
+            NSEventType::ScrollWheel => {
+                let dy = event.scrollingDeltaY();
+                let lines = if event.hasPreciseScrollingDeltas() {
+                    -dy / 8.0
+                } else {
+                    -dy * 3.0
+                };
+                Translated::Input(vec![Input::Scroll(lines)], false)
+            }
+            NSEventType::KeyDown => {
+                let flags = event.modifierFlags();
+                if flags.contains(NSEventModifierFlags::Command) {
+                    let c = event
+                        .charactersIgnoringModifiers()
+                        .and_then(|c| c.to_string().chars().next());
+                    let inputs = c
+                        .map(|c| Input::Shortcut(c.to_ascii_lowercase()))
+                        .into_iter()
+                        .collect();
+                    return Translated::Input(inputs, false);
+                }
+                if let Some(key) = ui_key(event.keyCode()) {
+                    return Translated::Input(vec![Input::Key(key)], false);
+                }
+                // Function keys arrive as private-use characters.
+                let text = event
+                    .characters()
+                    .map(|c| c.to_string())
+                    .unwrap_or_default()
+                    .chars()
+                    .filter(|c| !c.is_control() && !('\u{f700}'..='\u{f8ff}').contains(c))
+                    .map(Input::Text)
+                    .collect();
+                Translated::Input(text, false)
+            }
+            _ => Translated::Pass,
+        }
+    }
+
     /// The color space of the panel's screen, so pixels reach the screen
     /// unconverted, as on Windows and Linux.
     fn color_space(&self) -> Option<CFRetained<CGColorSpace>> {
@@ -521,6 +604,26 @@ fn key_code(code: u16) -> Option<KeyCode> {
         126 => KeyCode::Up,
         36 | 76 => KeyCode::Enter,
         53 => KeyCode::Escape,
+        _ => return None,
+    })
+}
+
+/// Editing and navigation keys for the normal window (Carbon `kVK_*`).
+fn ui_key(code: u16) -> Option<UiKey> {
+    Some(match code {
+        123 => UiKey::Left,
+        124 => UiKey::Right,
+        125 => UiKey::Down,
+        126 => UiKey::Up,
+        115 => UiKey::Home,
+        119 => UiKey::End,
+        116 => UiKey::PageUp,
+        121 => UiKey::PageDown,
+        51 => UiKey::Backspace,
+        117 => UiKey::Delete,
+        36 | 76 => UiKey::Enter,
+        53 => UiKey::Escape,
+        48 => UiKey::Tab,
         _ => return None,
     })
 }
@@ -621,6 +724,12 @@ impl Surface for Mac {
             // active app's window take it again.
             self.window.orderOut(None);
             self.window.orderFrontRegardless();
+        }
+    }
+
+    fn set_fullscreen(&mut self, policy: Fullscreen) {
+        if !self.preview {
+            self.window.setCollectionBehavior(collection(policy));
         }
     }
 }

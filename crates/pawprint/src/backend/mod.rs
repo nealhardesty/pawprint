@@ -35,11 +35,11 @@ pub fn run(shell: Shell, listener: ipc::Listener) -> CmdResult {
     platform::run(shell, listener)
 }
 
-/// `pawprint preview`: a normal window showing `shell`'s mascot until it is
-/// closed. Backends reuse their badge surface with a preview flag
-/// (`Shell::is_preview`).
-pub fn preview(shell: Shell) -> CmdResult {
-    platform::preview(shell)
+/// `pawprint preview` and `pawprint settings`: a normal window until it is
+/// closed. Backends reuse their badge surface with a flag
+/// (`Shell::is_window`) and report its input (`Shell::input`).
+pub fn window(shell: Shell) -> CmdResult {
+    platform::window(shell)
 }
 
 /// Add the platform's checks to `pawprint doctor`.

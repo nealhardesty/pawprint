@@ -8,6 +8,7 @@ use pawprint_core::badge::Command;
 use pawprint_core::config::Backend;
 use pawprint_core::movemode::KeyCode;
 use pawprint_core::surface::{DisplayInfo, Surface};
+use pawprint_core::ui::{Input, UiKey};
 
 use super::{sni, wayland, x11};
 use crate::doctor::Report;
@@ -143,8 +144,9 @@ pub fn run(shell: Shell, listener: ipc::Listener) -> CmdResult {
     start(shell, Some(listener))
 }
 
-/// `pawprint preview`: the same backends, in preview mode, without IPC.
-pub fn preview(shell: Shell) -> CmdResult {
+/// `pawprint preview` and `pawprint settings`: the same backends with a
+/// normal window, without IPC.
+pub fn window(shell: Shell) -> CmdResult {
     start(shell, None)
 }
 
@@ -252,6 +254,123 @@ pub const MOVE_KEYS: [(u32, &str, KeyCode); 7] = [
     (0xff8d, "KP_Enter", KeyCode::Enter),
     (0xff1b, "Escape", KeyCode::Escape),
 ];
+
+/// The normal window's input for a key (SPEC §8.7), for both backends.
+/// `syms` is the key's keysyms without and with Shift; Caps Lock shifts
+/// letters only, and Ctrl+letter is a shortcut.
+pub fn window_input(syms: (u32, u32), shift: bool, caps: bool, ctrl: bool) -> Option<Input> {
+    let (lower, upper) = syms;
+    let key = match lower {
+        0xff51 => Some(UiKey::Left),
+        0xff52 => Some(UiKey::Up),
+        0xff53 => Some(UiKey::Right),
+        0xff54 => Some(UiKey::Down),
+        0xff50 => Some(UiKey::Home),
+        0xff57 => Some(UiKey::End),
+        0xff55 => Some(UiKey::PageUp),
+        0xff56 => Some(UiKey::PageDown),
+        0xff08 => Some(UiKey::Backspace),
+        0xffff => Some(UiKey::Delete),
+        0xff0d | 0xff8d => Some(UiKey::Enter),
+        0xff1b => Some(UiKey::Escape),
+        0xff09 | 0xfe20 => Some(UiKey::Tab),
+        _ => None,
+    };
+    if let Some(k) = key {
+        return Some(Input::Key(k));
+    }
+    let letter = keysym_char(lower).filter(char::is_ascii_alphabetic);
+    if ctrl {
+        return letter.map(|c| Input::Shortcut(c.to_ascii_lowercase()));
+    }
+    let upper = if upper == 0 { lower } else { upper };
+    let sym = if shift != (caps && letter.is_some()) {
+        upper
+    } else {
+        lower
+    };
+    keysym_char(sym)
+        .filter(|c| !c.is_control())
+        .map(Input::Text)
+}
+
+/// The character a keysym types: Latin-1 keysyms are their code point,
+/// and `0x1000000 + U` is Unicode `U`.
+fn keysym_char(sym: u32) -> Option<char> {
+    match sym {
+        0x20..=0x7e | 0xa0..=0xff => char::from_u32(sym),
+        0x100_0000.. => char::from_u32(sym - 0x100_0000),
+        _ => None,
+    }
+}
+
+/// A keysym from its name in an XKB keymap (`a`, `A`, `comma`, `U00E9`,
+/// `Left`), for the Wayland keymap reader; `None` for names text never
+/// needs.
+pub fn keysym_from_name(name: &str) -> Option<u32> {
+    let mut chars = name.chars();
+    if let (Some(c), None) = (chars.next(), chars.next()) {
+        return c.is_ascii_graphic().then_some(c as u32);
+    }
+    if let Some(hex) = name.strip_prefix('U').filter(|h| h.len() >= 4) {
+        return u32::from_str_radix(hex, 16).ok().map(|u| u + 0x100_0000);
+    }
+    if let Some(hex) = name.strip_prefix("0x") {
+        return u32::from_str_radix(hex, 16).ok();
+    }
+    // Move mode's keys (arrows, Return, Escape) are in MOVE_KEYS.
+    const NAMES: &[(&str, u32)] = &[
+        ("space", 0x20),
+        ("exclam", 0x21),
+        ("quotedbl", 0x22),
+        ("numbersign", 0x23),
+        ("dollar", 0x24),
+        ("percent", 0x25),
+        ("ampersand", 0x26),
+        ("apostrophe", 0x27),
+        ("parenleft", 0x28),
+        ("parenright", 0x29),
+        ("asterisk", 0x2a),
+        ("plus", 0x2b),
+        ("comma", 0x2c),
+        ("minus", 0x2d),
+        ("period", 0x2e),
+        ("slash", 0x2f),
+        ("colon", 0x3a),
+        ("semicolon", 0x3b),
+        ("less", 0x3c),
+        ("equal", 0x3d),
+        ("greater", 0x3e),
+        ("question", 0x3f),
+        ("at", 0x40),
+        ("bracketleft", 0x5b),
+        ("backslash", 0x5c),
+        ("bracketright", 0x5d),
+        ("asciicircum", 0x5e),
+        ("underscore", 0x5f),
+        ("grave", 0x60),
+        ("braceleft", 0x7b),
+        ("bar", 0x7c),
+        ("braceright", 0x7d),
+        ("asciitilde", 0x7e),
+        ("Home", 0xff50),
+        ("Prior", 0xff55),
+        ("Page_Up", 0xff55),
+        ("Next", 0xff56),
+        ("Page_Down", 0xff56),
+        ("End", 0xff57),
+        ("BackSpace", 0xff08),
+        ("Tab", 0xff09),
+        ("ISO_Left_Tab", 0xfe20),
+        ("Delete", 0xffff),
+    ];
+    NAMES
+        .iter()
+        .copied()
+        .chain(MOVE_KEYS.iter().map(|&(sym, name, _)| (name, sym)))
+        .find(|&(n, _)| n == name)
+        .map(|(_, sym)| sym)
+}
 
 /// `Xft.dpi` from the X resource database string, if set.
 pub fn xft_dpi(resources: &str) -> Option<f64> {
@@ -474,6 +593,62 @@ mod tests {
             Some(Choice::X11 { gnome: false }),
             "another OS's backend falls back to auto"
         );
+    }
+
+    #[test]
+    fn keys_type_text_and_edit() {
+        let a = (0x61, 0x41);
+        assert_eq!(window_input(a, false, false, false), Some(Input::Text('a')));
+        assert_eq!(window_input(a, true, false, false), Some(Input::Text('A')));
+        assert_eq!(window_input(a, false, true, false), Some(Input::Text('A')));
+        assert_eq!(window_input(a, true, true, false), Some(Input::Text('a')));
+        assert_eq!(
+            window_input(a, false, false, true),
+            Some(Input::Shortcut('a'))
+        );
+        let one = (0x31, 0x21);
+        assert_eq!(
+            window_input(one, false, true, false),
+            Some(Input::Text('1')),
+            "caps lock leaves digits"
+        );
+        assert_eq!(
+            window_input(one, true, false, false),
+            Some(Input::Text('!'))
+        );
+        assert_eq!(
+            window_input((0xff08, 0), false, false, false),
+            Some(Input::Key(UiKey::Backspace))
+        );
+        assert_eq!(
+            window_input((0xff0d, 0), true, false, true),
+            Some(Input::Key(UiKey::Enter))
+        );
+        assert_eq!(
+            window_input((0x20, 0), false, false, false),
+            Some(Input::Text(' '))
+        );
+        assert_eq!(
+            window_input((0x0100_00e9, 0x0100_00c9), true, false, false),
+            Some(Input::Text('É'))
+        );
+        assert_eq!(
+            window_input((0xffe1, 0), false, false, false),
+            None,
+            "Shift itself"
+        );
+        for (name, sym) in [
+            ("a", 0x61),
+            ("Z", 0x5a),
+            ("comma", 0x2c),
+            ("U00E9", 0x0100_00e9),
+            ("Escape", 0xff1b),
+            ("KP_Enter", 0xff8d),
+            ("BackSpace", 0xff08),
+        ] {
+            assert_eq!(keysym_from_name(name), Some(sym), "{name}");
+        }
+        assert_eq!(keysym_from_name("XF86AudioMute"), None);
     }
 
     #[test]

@@ -8,19 +8,21 @@
 //! Win32 calls such as `SetWindowPos` send messages synchronously, so this
 //! keeps the shell from being re-entered while it applies an effect.
 //!
-//! `pawprint preview` uses the same window and loop with the `preview` flag:
-//! a normal titled, closable window painted with `BitBlt`, no IPC, no tray.
+//! `pawprint preview` and `pawprint settings` use the same window and loop
+//! with the `preview` flag: a normal titled, closable window painted with
+//! `BitBlt`, whose input goes to `Shell::input`; no IPC, no tray.
 
 use std::cell::{Cell, RefCell};
 use std::ptr::{null, null_mut};
 use std::sync::mpsc;
 
 use pawprint_core::badge::{Command, Event};
-use pawprint_core::config::Backend;
+use pawprint_core::config::{Backend, Fullscreen};
 use pawprint_core::geom::{PhysicalRect, Point};
 use pawprint_core::movemode::{Key, KeyCode};
 use pawprint_core::render::Frame;
-use pawprint_core::surface::{DisplayInfo, Surface};
+use pawprint_core::surface::{DisplayInfo, Surface, fullscreen_covers};
+use pawprint_core::ui::{Input, UiKey};
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, SIZE, WPARAM};
 use windows_sys::Win32::Graphics::Gdi::{
     AC_SRC_ALPHA, AC_SRC_OVER, BI_RGB, BITMAPINFO, BITMAPINFOHEADER, BLENDFUNCTION, BeginPaint,
@@ -29,14 +31,18 @@ use windows_sys::Win32::Graphics::Gdi::{
     InvalidateRect, MONITORINFO, MONITORINFOEXW, PAINTSTRUCT, SRCCOPY, SelectObject,
 };
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
-use windows_sys::Win32::System::Threading::INFINITE;
+use windows_sys::Win32::System::Threading::{GetCurrentProcessId, INFINITE};
+use windows_sys::Win32::UI::Accessibility::{HWINEVENTHOOK, SetWinEventHook, UnhookWinEvent};
 use windows_sys::Win32::UI::HiDpi::{
     AdjustWindowRectExForDpi, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, GetDpiForMonitor,
     GetDpiForWindow, GetSystemMetricsForDpi, MDT_EFFECTIVE_DPI, SetProcessDpiAwarenessContext,
 };
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
-    GetKeyState, ReleaseCapture, SetCapture, VK_DOWN, VK_ESCAPE, VK_LEFT, VK_RETURN, VK_RIGHT,
-    VK_SHIFT, VK_UP,
+    GetKeyState, ReleaseCapture, SetCapture, VK_BACK, VK_CONTROL, VK_DELETE, VK_DOWN, VK_END,
+    VK_ESCAPE, VK_HOME, VK_LEFT, VK_NEXT, VK_PRIOR, VK_RETURN, VK_RIGHT, VK_SHIFT, VK_TAB, VK_UP,
+};
+use windows_sys::Win32::UI::Shell::{
+    ABM_NEW, ABM_REMOVE, ABN_FULLSCREENAPP, APPBARDATA, SHAppBarMessage,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 use windows_sys::core::BOOL;
@@ -51,6 +57,8 @@ const PREVIEW_CLASS: &str = "PawprintPreview";
 
 /// Posted by the IPC thread to wake the loop.
 const WM_WAKE: u32 = WM_APP;
+/// The shell's appbar notifications (`ABN_FULLSCREENAPP`), SPEC §6.5.
+const WM_APPBAR: u32 = WM_APP + 1;
 
 /// The preview: a normal window with a title, a close box, and a taskbar
 /// button (SPEC §9).
@@ -66,9 +74,14 @@ thread_local! {
     static EVENTS: RefCell<Vec<Event>> = const { RefCell::new(Vec::new()) };
     /// Tray menu choices `wndproc` recorded for the loop.
     static CHOICES: RefCell<Vec<Command>> = const { RefCell::new(Vec::new()) };
+    /// The normal window's input, for `Shell::input`.
+    static INPUTS: RefCell<Vec<Input>> = const { RefCell::new(Vec::new()) };
     static INTERACTIVE: Cell<bool> = const { Cell::new(false) };
     static DRAGGING: Cell<bool> = const { Cell::new(false) };
     static PREVIEW: Cell<bool> = const { Cell::new(false) };
+    /// The foreground window changed or a fullscreen app opened or closed:
+    /// look again (SPEC §6.5).
+    static RECHECK: Cell<bool> = const { Cell::new(false) };
     /// The preview's memory DC and its frame's size, which `WM_PAINT`
     /// copies to the window.
     static PAINT: Cell<(HDC, i32, i32)> = const { Cell::new((null_mut(), 0, 0)) };
@@ -76,6 +89,10 @@ thread_local! {
 
 fn push(event: Event) {
     EVENTS.with_borrow_mut(|events| events.push(event));
+}
+
+fn push_input(input: Input) {
+    INPUTS.with_borrow_mut(|inputs| inputs.push(input));
 }
 
 pub(super) fn wide(s: &str) -> Vec<u16> {
@@ -93,11 +110,10 @@ pub fn run(shell: Shell, listener: ipc::Listener) -> CmdResult {
     drive(shell, Some(listener))
 }
 
-/// `pawprint preview` (SPEC §9): the same window and loop with the window
-/// made normal (`Shell::is_preview`), without IPC or a tray. Esc and closing
-/// the window quit; the shell centers the badge, cycles every action, and
-/// draws it on a backdrop with a margin.
-pub fn preview(shell: Shell) -> CmdResult {
+/// `pawprint preview` and `pawprint settings` (SPEC §9): the same window
+/// and loop with the window made normal (`Shell::is_window`), without IPC
+/// or a tray; its input goes to `Shell::input`.
+pub fn window(shell: Shell) -> CmdResult {
     drive(shell, None)
 }
 
@@ -112,7 +128,8 @@ fn drive(mut shell: Shell, listener: Option<ipc::Listener>) -> CmdResult {
         log::warn!("backend = \"{configured}\" does not exist on Windows; using windows");
     }
     shell.set_backend("windows");
-    let mut window = Window::create(shell.is_preview()).map_err(|e| {
+    let title = shell.is_window().then(|| shell.title());
+    let mut window = Window::create(title).map_err(|e| {
         (
             exit::NO_SESSION,
             format!("cannot create the badge window: {e}. Run `pawprint doctor`."),
@@ -139,8 +156,14 @@ fn drive(mut shell: Shell, listener: Option<ipc::Listener>) -> CmdResult {
         for event in EVENTS.take() {
             shell.handle(&mut window, event);
         }
+        for input in INPUTS.take() {
+            shell.input(&mut window, input);
+        }
         for command in CHOICES.take() {
             shell.menu(&mut window, command);
+        }
+        if RECHECK.take() {
+            window.update_cover();
         }
         while let Ok(incoming) = rx.try_recv() {
             shell.request(&mut window, incoming);
@@ -152,8 +175,9 @@ fn drive(mut shell: Shell, listener: Option<ipc::Listener>) -> CmdResult {
             return Ok(());
         }
         // Applying effects can send messages that record new events.
-        let pending =
-            EVENTS.with_borrow(|e| !e.is_empty()) || CHOICES.with_borrow(|c| !c.is_empty());
+        let pending = EVENTS.with_borrow(|e| !e.is_empty())
+            || CHOICES.with_borrow(|c| !c.is_empty())
+            || INPUTS.with_borrow(|i| !i.is_empty());
         let wait = if pending {
             0
         } else {
@@ -175,6 +199,8 @@ fn pump() {
         if msg.message == WM_QUIT {
             push(Event::Command(Command::Quit));
         }
+        // WM_CHAR for the normal window's text fields.
+        unsafe { TranslateMessage(&msg) };
         unsafe { DispatchMessageW(&msg) };
     }
 }
@@ -200,6 +226,46 @@ fn key_code(vk: WPARAM) -> Option<KeyCode> {
     })
 }
 
+/// The normal window's editing keys, and Ctrl+letter shortcuts.
+fn window_key(vk: WPARAM) -> Option<Input> {
+    let vk = u16::try_from(vk).ok()?;
+    // SAFETY: no preconditions.
+    let ctrl = unsafe { GetKeyState(i32::from(VK_CONTROL)) } < 0;
+    if ctrl && (0x41..=0x5a).contains(&vk) {
+        return Some(Input::Shortcut(char::from(vk as u8).to_ascii_lowercase()));
+    }
+    Some(Input::Key(match vk {
+        VK_LEFT => UiKey::Left,
+        VK_RIGHT => UiKey::Right,
+        VK_UP => UiKey::Up,
+        VK_DOWN => UiKey::Down,
+        VK_HOME => UiKey::Home,
+        VK_END => UiKey::End,
+        VK_PRIOR => UiKey::PageUp,
+        VK_NEXT => UiKey::PageDown,
+        VK_BACK => UiKey::Backspace,
+        VK_DELETE => UiKey::Delete,
+        VK_RETURN => UiKey::Enter,
+        VK_ESCAPE => UiKey::Escape,
+        VK_TAB => UiKey::Tab,
+        _ => return None,
+    }))
+}
+
+/// A client-area point of the normal window in the frame's coordinates:
+/// `WM_PAINT` centers a frame narrower than the window.
+fn frame_point(hwnd: HWND, lparam: LPARAM) -> Point {
+    let (x, y) = (
+        lparam as u32 as u16 as i16,
+        (lparam as u32 >> 16) as u16 as i16,
+    );
+    let mut client = RECT::default();
+    // SAFETY: our window.
+    unsafe { GetClientRect(hwnd, &mut client) };
+    let (_, w, _) = PAINT.get();
+    Point::new(i32::from(x) - (client.right - w) / 2, i32::from(y))
+}
+
 /// A display, resolution, scale, or work area changed: stay on top (SPEC
 /// §11.1.3) and report the new set; the shell drops repeats.
 fn displays_changed(hwnd: HWND, why: &str) {
@@ -219,7 +285,54 @@ fn displays_changed(hwnd: HWND, why: &str) {
         };
     }
     windows_tray::rescale();
+    RECHECK.set(true);
     push(Event::DisplaysChanged(monitors()));
+}
+
+/// `EVENT_SYSTEM_FOREGROUND`, delivered through our message queue
+/// (`WINEVENT_OUTOFCONTEXT`): another window came to the front.
+unsafe extern "system" fn foreground_changed(
+    _: HWINEVENTHOOK,
+    _: u32,
+    _: HWND,
+    _: i32,
+    _: i32,
+    _: u32,
+    _: u32,
+) {
+    RECHECK.set(true);
+}
+
+/// The foreground window's rectangle if it may be fullscreen: not the
+/// desktop, not ours, not minimized, and without a caption, so a window
+/// maximized under an auto-hidden taskbar doesn't count. Whether it covers
+/// the badge's display is the core's call (`fullscreen_covers`).
+fn foreground_fullscreen() -> Option<PhysicalRect> {
+    // SAFETY: read-only queries on a window that may vanish, which only
+    // makes them fail.
+    unsafe {
+        let fg = GetForegroundWindow();
+        if fg.is_null() || fg == GetShellWindow() || fg == GetDesktopWindow() || IsIconic(fg) != 0 {
+            return None;
+        }
+        let mut pid = 0;
+        GetWindowThreadProcessId(fg, &mut pid);
+        if pid == GetCurrentProcessId() {
+            return None;
+        }
+        let mut class = [0u16; 16];
+        let n = GetClassNameW(fg, class.as_mut_ptr(), class.len() as i32);
+        let class = String::from_utf16_lossy(&class[..n.max(0) as usize]);
+        if class == "Progman" || class == "WorkerW" {
+            return None;
+        }
+        let style = GetWindowLongW(fg, GWL_STYLE) as u32;
+        if style & WS_CAPTION == WS_CAPTION {
+            return None;
+        }
+        let mut r = RECT::default();
+        (GetWindowRect(fg, &mut r) != 0).then(|| rect(r))
+    }
 }
 
 unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
@@ -229,9 +342,27 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
     match msg {
         WM_MOUSEACTIVATE if !preview => return MA_NOACTIVATE as LRESULT,
         WM_KEYDOWN if preview => {
-            if key_code(wparam) == Some(KeyCode::Escape) {
-                push(Event::Command(Command::Quit));
+            if let Some(input) = window_key(wparam) {
+                push_input(input);
             }
+        }
+        WM_CHAR if preview => {
+            if let Some(c) = char::from_u32(wparam as u32).filter(|c| !c.is_control()) {
+                push_input(Input::Text(c));
+            }
+        }
+        WM_MOUSEMOVE if preview => push_input(Input::Move(frame_point(hwnd, lparam))),
+        WM_LBUTTONDOWN if preview => {
+            unsafe { SetCapture(hwnd) };
+            push_input(Input::Press(frame_point(hwnd, lparam)));
+        }
+        WM_LBUTTONUP if preview => {
+            unsafe { ReleaseCapture() };
+            push_input(Input::Release(frame_point(hwnd, lparam)));
+        }
+        WM_MOUSEWHEEL if preview => {
+            let notches = f64::from((wparam >> 16) as u16 as i16) / 120.0;
+            push_input(Input::Scroll(-3.0 * notches));
         }
         // Windows keeps a captioned window at least `SM_CXMIN` wide, so a
         // small preview is centered on the class's backdrop brush.
@@ -244,6 +375,7 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             BitBlt(dc, (client.right - w) / 2, 0, w, h, src, 0, 0, SRCCOPY);
             EndPaint(hwnd, &ps);
         },
+        WM_APPBAR if wparam == ABN_FULLSCREENAPP as WPARAM => RECHECK.set(true),
         m if windows_tray::is_tray_message(m) => {
             if let Some(command) = windows_tray::message(hwnd, m, wparam, lparam) {
                 CHOICES.with_borrow_mut(|c| c.push(command));
@@ -341,19 +473,22 @@ struct Window {
     /// The foreground window when move mode began.
     previous_focus: HWND,
     preview: bool,
+    /// Where the badge was last placed.
+    rect: Option<PhysicalRect>,
+    /// Watching for fullscreen windows: an appbar (for `ABN_FULLSCREENAPP`)
+    /// and a foreground hook. `None` with `fullscreen = "show"`.
+    watch: Option<HWINEVENTHOOK>,
+    /// A fullscreen window covers the badge's display, so it is hidden.
+    covered: bool,
 }
 
 impl Window {
-    fn create(preview: bool) -> std::io::Result<Window> {
+    /// The badge, or with a title a normal window.
+    fn create(title: Option<&str>) -> std::io::Result<Window> {
+        let preview = title.is_some();
         PREVIEW.set(preview);
-        let (class, title, cursor, ex, style) = if preview {
-            (
-                PREVIEW_CLASS,
-                "PAWPRINT preview",
-                IDC_ARROW,
-                0,
-                PREVIEW_STYLE,
-            )
+        let (class, title, cursor, ex, style) = if let Some(title) = title {
+            (PREVIEW_CLASS, title, IDC_ARROW, 0, PREVIEW_STYLE)
         } else {
             // The move cursor shows only in move mode: otherwise the
             // pointer passes through.
@@ -409,6 +544,9 @@ impl Window {
                 shown: false,
                 previous_focus: null_mut(),
                 preview,
+                rect: None,
+                watch: None,
+                covered: false,
             })
         }
     }
@@ -449,9 +587,43 @@ impl Window {
         self.size = (width, height);
     }
 
+    fn appbar(&self) -> APPBARDATA {
+        APPBARDATA {
+            cbSize: size_of::<APPBARDATA>() as u32,
+            hWnd: self.hwnd,
+            uCallbackMessage: WM_APPBAR,
+            ..Default::default()
+        }
+    }
+
+    /// Hide the badge while a fullscreen window covers its display, show it
+    /// again after (SPEC §6.5).
+    fn update_cover(&mut self) {
+        let covered = self.watch.is_some()
+            && self.rect.is_some_and(|badge| {
+                foreground_fullscreen().is_some_and(|w| fullscreen_covers(w, badge, &monitors()))
+            });
+        if covered == self.covered {
+            return;
+        }
+        log::info!(
+            "windows: {}",
+            if covered {
+                "a fullscreen window covers the badge's display: hiding"
+            } else {
+                "no fullscreen window over the badge: showing"
+            }
+        );
+        self.covered = covered;
+        if self.shown {
+            // SAFETY: our window.
+            unsafe { ShowWindow(self.hwnd, if covered { SW_HIDE } else { SW_SHOWNOACTIVATE }) };
+        }
+    }
+
     /// Show the window once it has both a place and pixels.
     fn show(&mut self) {
-        if self.placed && self.presented && !self.shown {
+        if self.placed && self.presented && !self.shown && !self.covered {
             let how = if self.preview {
                 SW_SHOW
             } else {
@@ -468,6 +640,12 @@ impl Drop for Window {
     fn drop(&mut self) {
         // SAFETY: handles we created and nothing else owns.
         unsafe {
+            if let Some(hook) = self.watch.take() {
+                SHAppBarMessage(ABM_REMOVE, &mut self.appbar());
+                if !hook.is_null() {
+                    UnhookWinEvent(hook);
+                }
+            }
             DestroyWindow(self.hwnd);
             DeleteDC(self.dc);
             if !self.bitmap.is_null() {
@@ -582,7 +760,9 @@ impl Surface for Window {
                 SWP_NOACTIVATE,
             )
         };
+        self.rect = Some(r);
         self.placed = true;
+        self.update_cover();
         self.show();
     }
 
@@ -626,6 +806,49 @@ impl Surface for Window {
                 self.previous_focus = null_mut();
             }
         }
+    }
+
+    /// `Hide`: register as an appbar, so the shell sends
+    /// `ABN_FULLSCREENAPP` when a fullscreen app opens or closes (it
+    /// reserves no screen space without `ABM_SETPOS`), and hook foreground
+    /// changes, which catch switching between a fullscreen window and
+    /// others. Both arrive as messages: nothing polls.
+    fn set_fullscreen(&mut self, policy: Fullscreen) {
+        if self.preview {
+            return;
+        }
+        let mut data = self.appbar();
+        match (policy, self.watch) {
+            (Fullscreen::Hide, None) => {
+                // SAFETY: `data` names our window; the hook calls back on
+                // this thread from our message loop.
+                unsafe {
+                    SHAppBarMessage(ABM_NEW, &mut data);
+                    let hook = SetWinEventHook(
+                        EVENT_SYSTEM_FOREGROUND,
+                        EVENT_SYSTEM_FOREGROUND,
+                        null_mut(),
+                        Some(foreground_changed),
+                        0,
+                        0,
+                        WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS,
+                    );
+                    self.watch = Some(hook);
+                }
+            }
+            (Fullscreen::Show, Some(hook)) => {
+                // SAFETY: the appbar and hook we registered above.
+                unsafe {
+                    SHAppBarMessage(ABM_REMOVE, &mut data);
+                    if !hook.is_null() {
+                        UnhookWinEvent(hook);
+                    }
+                }
+                self.watch = None;
+            }
+            _ => return,
+        }
+        self.update_cover();
     }
 }
 

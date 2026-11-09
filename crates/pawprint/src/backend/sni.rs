@@ -218,6 +218,7 @@ mod tests {
                 "[ ] Move",
                 "Size >",
                 "Animation >",
+                "Settings…",
                 "Reset position",
                 "Reload config",
                 "Quit"
@@ -248,7 +249,7 @@ mod tests {
             unreachable!()
         };
         (big.activate)(&mut item);
-        let ksni::MenuItem::Standard(quit) = &items[5] else {
+        let ksni::MenuItem::Standard(quit) = &items[6] else {
             unreachable!()
         };
         (quit.activate)(&mut item);

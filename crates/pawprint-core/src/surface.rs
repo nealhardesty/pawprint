@@ -2,6 +2,7 @@
 //! effect executor, and a `FakeSurface` for testing without a window.
 
 use crate::badge::Effect;
+use crate::config::Fullscreen;
 use crate::geom::PhysicalRect;
 use crate::render::Frame;
 
@@ -25,6 +26,9 @@ pub trait Surface {
     fn place(&mut self, rect: PhysicalRect);
     /// Move mode on (accept the pointer) or off (click-through).
     fn set_interactive(&mut self, on: bool);
+    /// `Hide`: never show over a fullscreen window on the badge's display
+    /// (SPEC §6.5). Sent before the first `place` and on every change.
+    fn set_fullscreen(&mut self, policy: Fullscreen);
 }
 
 /// Execute the surface effects and hand back the rest (tray, state,
@@ -36,6 +40,7 @@ pub fn apply(surface: &mut impl Surface, effects: Vec<Effect>) -> Vec<Effect> {
             Effect::Present(frame) => surface.present(&frame),
             Effect::Place(rect) => surface.place(rect),
             Effect::SetInteractive(on) => surface.set_interactive(on),
+            Effect::SetFullscreen(policy) => surface.set_fullscreen(policy),
             other => rest.push(other),
         }
     }
@@ -53,6 +58,26 @@ pub fn select_display<'a>(displays: &'a [DisplayInfo], wanted: &str) -> Option<&
         .or_else(|| displays.first())
 }
 
+/// Whether a fullscreen window at `window` covers the badge at `badge`:
+/// the window spans the whole display the badge's center is on (SPEC §6.5).
+/// Backends that watch for fullscreen windows themselves (Windows, X11)
+/// ask this, so the rule is written once.
+pub fn fullscreen_covers(
+    window: PhysicalRect,
+    badge: PhysicalRect,
+    displays: &[DisplayInfo],
+) -> bool {
+    let covers = |d: PhysicalRect| {
+        window.x <= d.x
+            && window.y <= d.y
+            && window.right() >= d.right()
+            && window.bottom() >= d.bottom()
+    };
+    displays
+        .iter()
+        .any(|d| d.bounds.contains(badge.center()) && covers(d.bounds))
+}
+
 /// A surface that records what it was asked to do.
 #[derive(Debug, Default)]
 pub struct FakeSurface {
@@ -60,6 +85,7 @@ pub struct FakeSurface {
     pub frames: Vec<Frame>,
     pub places: Vec<PhysicalRect>,
     pub interactive: bool,
+    pub fullscreen: Option<Fullscreen>,
 }
 
 impl FakeSurface {
@@ -91,6 +117,10 @@ impl Surface for FakeSurface {
     fn set_interactive(&mut self, on: bool) {
         self.interactive = on;
     }
+
+    fn set_fullscreen(&mut self, policy: Fullscreen) {
+        self.fullscreen = Some(policy);
+    }
 }
 
 #[cfg(test)]
@@ -121,5 +151,37 @@ mod tests {
         let none_primary = [d("A", false), d("B", false)];
         assert_eq!(select_display(&none_primary, "primary").unwrap().name, "A");
         assert!(select_display(&[], "primary").is_none());
+    }
+
+    #[test]
+    fn fullscreen_windows_cover_the_badges_display_only() {
+        let left = DisplayInfo {
+            bounds: PhysicalRect::new(0, 0, 1920, 1080),
+            ..d("A", true)
+        };
+        let right = DisplayInfo {
+            bounds: PhysicalRect::new(1920, 0, 2560, 1440),
+            ..d("B", false)
+        };
+        let ds = [left, right];
+        let badge = PhysicalRect::new(1840, 16, 64, 64);
+        let on_left = PhysicalRect::new(0, 0, 1920, 1080);
+        assert!(fullscreen_covers(on_left, badge, &ds));
+        assert!(
+            fullscreen_covers(PhysicalRect::new(-8, -8, 1936, 1096), badge, &ds),
+            "a window larger than the display still covers it"
+        );
+        assert!(
+            !fullscreen_covers(PhysicalRect::new(1920, 0, 2560, 1440), badge, &ds),
+            "fullscreen on the other display"
+        );
+        assert!(
+            !fullscreen_covers(PhysicalRect::new(0, 0, 1920, 1040), badge, &ds),
+            "a maximized window leaves the taskbar"
+        );
+        assert!(
+            fullscreen_covers(PhysicalRect::new(0, 0, 4480, 1440), badge, &ds),
+            "spanning every display (multi-monitor RDP)"
+        );
     }
 }

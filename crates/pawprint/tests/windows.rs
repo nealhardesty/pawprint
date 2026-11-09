@@ -664,6 +664,7 @@ fn choose_size_128(hwnd: HWND, work: RECT) {
             "Move",
             "Size",
             "Animation",
+            "Settings…",
             "Reset position",
             "Reload config",
             "Quit"
@@ -933,5 +934,118 @@ fn preview_is_a_normal_window() {
     let hwnd = wait_for("the preview window", preview_window);
     unsafe { PostMessageW(hwnd, WM_KEYDOWN, VK_ESCAPE as WPARAM, 0) };
     let status = wait_for("the preview to exit on Esc", || preview.exited());
+    assert!(status.success(), "{status:?}");
+}
+
+/// The primary monitor's whole rectangle (not its work area).
+fn primary_bounds() -> RECT {
+    unsafe {
+        let m = MonitorFromPoint(POINT { x: 0, y: 0 }, MONITOR_DEFAULTTOPRIMARY);
+        let mut info = MONITORINFO {
+            cbSize: size_of::<MONITORINFO>() as u32,
+            ..Default::default()
+        };
+        GetMonitorInfoW(m, &mut info);
+        info.rcMonitor
+    }
+}
+
+/// A borderless window over the whole primary monitor, in front: what a
+/// fullscreen app (mstsc, a video, a game) looks like to the shell.
+fn fullscreen_window() -> HWND {
+    let r = primary_bounds();
+    ui_window(move || unsafe {
+        let brush = CreateSolidBrush(BG_COLORREF);
+        let hwnd = popup("PawprintTestFullscreen", 0, r, Some(background_proc), brush);
+        ShowWindow(hwnd, SW_SHOW);
+        SetForegroundWindow(hwnd);
+        UpdateWindow(hwnd);
+        hwnd
+    })
+}
+
+/// The badge window, shown or hidden.
+fn badge_hwnd() -> Option<HWND> {
+    let class = wide("PawprintBadge");
+    let hwnd = unsafe { FindWindowW(class.as_ptr(), null()) };
+    (!hwnd.is_null()).then_some(hwnd)
+}
+
+/// SPEC §6.5: a fullscreen window in front on the badge's display hides it
+/// (the shell's ABN_FULLSCREENAPP and the foreground hook), closing it
+/// shows the badge again, and `fullscreen = "show"` keeps it.
+#[test]
+#[ignore = "needs a Windows desktop session; run `make test-windows-display`"]
+fn fullscreen_windows_hide_the_badge() {
+    unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
+    let env = Env::new("windows-fullscreen");
+    let _badge = env.run_badge();
+    let hwnd = wait_for("the badge window", badge_window);
+    let visible = || unsafe { IsWindowVisible(hwnd) } != 0;
+
+    let cover = fullscreen_window();
+    wait_for("the badge to step aside", || (!visible()).then_some(()));
+    assert_eq!(badge_hwnd(), Some(hwnd), "hidden, not destroyed");
+    close(cover);
+    wait_for("the badge to come back", || visible().then_some(()));
+
+    env.write_config("fullscreen = \"show\"");
+    env.ok(&["reload"]);
+    let cover = fullscreen_window();
+    std::thread::sleep(Duration::from_secs(1));
+    assert!(visible(), "fullscreen = \"show\" keeps the badge");
+    close(cover);
+}
+
+/// `pawprint settings` (SPEC §8.7): a normal window titled "PAWPRINT
+/// settings", 360 × 252 units at a whole-number scale, that writes
+/// config.toml at once. Driven with posted messages, the way a click and
+/// typing arrive.
+#[test]
+#[ignore = "needs a Windows desktop session; run `make test-windows-display`"]
+fn settings_window_edits_the_config() {
+    unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
+    let env = Env::new("windows-settings");
+    let (work, scale) = primary();
+    let mut k = ((2.0 * scale).round() as i32).max(1);
+    while k > 1 && (360 * k > work.right - work.left || 252 * k > work.bottom - work.top) {
+        k -= 1;
+    }
+    let mut settings = env.spawn(env!("CARGO_BIN_EXE_pawprintw"), &["settings"]);
+    let hwnd = wait_for("the settings window", preview_window);
+    let mut title = [0u16; 64];
+    let n = unsafe { GetWindowTextW(hwnd, title.as_mut_ptr(), 64) };
+    assert_eq!(
+        String::from_utf16_lossy(&title[..n as usize]),
+        "PAWPRINT settings"
+    );
+    let mut client = RECT::default();
+    unsafe { GetClientRect(hwnd, &mut client) };
+    assert_eq!((client.right, client.bottom), (360 * k, 252 * k));
+    assert!(!env.config_file().exists(), "opening writes nothing");
+
+    // The grid's third cell on its second row (units 171, 126): the tenth
+    // mascot.
+    let tenth = &pawprint_core::catalog::Catalog::bundled().mascots()[9].id;
+    let at = ((126 * k) << 16 | (171 * k)) as LPARAM;
+    unsafe {
+        PostMessageW(hwnd, WM_MOUSEMOVE, 0, at);
+        PostMessageW(hwnd, WM_LBUTTONDOWN, 1, at); // MK_LBUTTON
+        PostMessageW(hwnd, WM_LBUTTONUP, 0, at);
+    }
+    wait_for("the click to write config.toml", || {
+        env.config()
+            .contains(&format!("mascot = \"{tenth}\""))
+            .then_some(())
+    });
+    for c in "moose".chars() {
+        unsafe { PostMessageW(hwnd, WM_CHAR, c as WPARAM, 0) };
+    }
+    unsafe { PostMessageW(hwnd, WM_KEYDOWN, VK_RETURN as WPARAM, 0) };
+    wait_for("Enter to pick the search's match", || {
+        env.config().contains("mascot = \"moose\"").then_some(())
+    });
+    unsafe { PostMessageW(hwnd, WM_KEYDOWN, VK_ESCAPE as WPARAM, 0) };
+    let status = wait_for("Esc to close the settings window", || settings.exited());
     assert!(status.success(), "{status:?}");
 }

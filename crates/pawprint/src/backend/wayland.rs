@@ -1,5 +1,6 @@
-//! Wayland backend (SPEC §11.4): a `zwlr_layer_shell_v1` overlay surface for
-//! Plasma and wlroots compositors.
+//! Wayland backend (SPEC §11.4): a `zwlr_layer_shell_v1` surface (on the
+//! `top` layer, or `overlay` with `fullscreen = "show"`) for Plasma and
+//! wlroots compositors.
 //!
 //! Coordinates: the core works in physical pixels, but Wayland never tells
 //! a client where anything is. Each output's bounds are its logical
@@ -10,19 +11,21 @@
 //! the badge is positioned by margins measured from the anchored edges,
 //! which the compositor applies relative to the real usable area (F3).
 //!
-//! `pawprint preview` uses the same surface code with the `preview` flag:
-//! an xdg-shell toplevel (a normal window) instead of the layer surface,
-//! closed by the compositor or Esc.
+//! `pawprint preview` and `pawprint settings` use the same surface code
+//! with the `preview` flag: an xdg-shell toplevel (a normal window) instead
+//! of the layer surface, whose pointer and keys go to `Shell::input`.
 
 use std::collections::HashMap;
 
 use calloop::EventLoop;
 use pawprint_core::badge::{Command, Event};
+use pawprint_core::config::Fullscreen;
 use pawprint_core::geom::{PhysicalRect, Point};
 use pawprint_core::layout::{self, Axis};
 use pawprint_core::movemode::{Key, KeyCode};
 use pawprint_core::render::Frame;
 use pawprint_core::surface::{DisplayInfo, Surface};
+use pawprint_core::ui::Input;
 use smithay_client_toolkit::compositor::{CompositorHandler, CompositorState, Region};
 use smithay_client_toolkit::output::{OutputHandler, OutputInfo, OutputState};
 use smithay_client_toolkit::reexports::calloop_wayland_source::WaylandSource;
@@ -124,7 +127,11 @@ pub struct Wl {
     compositor: CompositorState,
     layer_shell: Option<LayerShell>,
     xdg_shell: Option<XdgShell>,
+    /// A normal window (preview or settings) rather than the badge.
     preview: bool,
+    title: &'static str,
+    /// The normal window's scale: surface coordinates to frame pixels.
+    window_scale: f64,
     shm: Shm,
     pool: SlotPool,
     viewporter: Option<wp_viewporter::WpViewporter>,
@@ -141,8 +148,15 @@ pub struct Wl {
     interactive: bool,
     dragging: bool,
     shift: bool,
+    caps: bool,
+    ctrl: bool,
+    /// The badge's layer: `top` steps aside for fullscreen windows,
+    /// `overlay` stays above them (SPEC §6.5).
+    layer: Layer,
     /// Move-mode keys by wl_keyboard keycode, from the current keymap.
     keys: HashMap<u32, KeyCode>,
+    /// Each keycode's keysyms without and with Shift, for typing.
+    syms: HashMap<u32, (u32, u32)>,
     displays: Vec<DisplayInfo>,
     pointer: Option<wl_pointer::WlPointer>,
     keyboard: Option<wl_keyboard::WlKeyboard>,
@@ -280,7 +294,7 @@ impl Wl {
                 .as_ref()
                 .map(|v| v.get_viewport(&surface, &self.qh, ()));
             let window = xdg.create_window(surface, WindowDecorations::RequestServer, &self.qh);
-            window.set_title("PAWPRINT preview");
+            window.set_title(self.title);
             window.set_app_id("pawprint");
             window.commit();
             self.badge = Some(Badge {
@@ -305,7 +319,7 @@ impl Wl {
         let layer = shell.create_layer_surface(
             &self.qh,
             surface,
-            Layer::Overlay,
+            self.layer,
             Some(NAMESPACE),
             Some(&output),
         );
@@ -359,6 +373,7 @@ impl Wl {
                 layer.wl_surface().clone()
             }
             (None, Some(window)) => {
+                self.window_scale = s;
                 // Fixed size, which also makes tiling compositors float it.
                 window.set_min_size(Some((w as u32, hgt as u32)));
                 window.set_max_size(Some((w as u32, hgt as u32)));
@@ -557,12 +572,31 @@ impl Surface for Wl {
         self.dragging = false;
         self.dirty = true;
     }
+
+    /// Compositors draw fullscreen windows above the `top` layer and below
+    /// `overlay` (sway, KWin), so the layer is the whole policy.
+    fn set_fullscreen(&mut self, policy: Fullscreen) {
+        self.layer = match policy {
+            Fullscreen::Hide => Layer::Top,
+            Fullscreen::Show => Layer::Overlay,
+        };
+        if let Some(layer) = self.badge.as_ref().and_then(|b| b.layer.as_ref()) {
+            layer.set_layer(self.layer);
+            self.dirty = true;
+        }
+    }
 }
 
 impl WlApp {
     fn send(&mut self, event: Event) {
         if let Some(shell) = &mut self.shell {
             shell.handle(&mut self.wl, event);
+        }
+    }
+
+    fn input(&mut self, input: Input) {
+        if let Some(shell) = &mut self.shell {
+            shell.input(&mut self.wl, input);
         }
     }
 
@@ -582,7 +616,8 @@ impl WlApp {
         let shm = Shm::bind(&globals, &qh).map_err(|e| format!("wl_shm: {e}"))?;
         let pool = SlotPool::new(64 * 64 * 4, &shm).map_err(|e| format!("shm pool: {e}"))?;
         let layer_shell = LayerShell::bind(&globals, &qh).ok();
-        let preview = shell.as_ref().is_some_and(Shell::is_preview);
+        let preview = shell.as_ref().is_some_and(Shell::is_window);
+        let title = shell.as_ref().map_or("PAWPRINT", Shell::title);
         let xdg_shell = preview
             .then(|| XdgShell::bind(&globals, &qh).ok())
             .flatten();
@@ -604,6 +639,8 @@ impl WlApp {
                 layer_shell,
                 xdg_shell,
                 preview,
+                title,
+                window_scale: 1.0,
                 shm,
                 pool,
                 viewporter,
@@ -619,7 +656,11 @@ impl WlApp {
                 interactive: false,
                 dragging: false,
                 shift: false,
+                caps: false,
+                ctrl: false,
+                layer: Layer::Top,
                 keys: move_keys(None),
+                syms: HashMap::new(),
                 displays: Vec::new(),
                 pointer: None,
                 keyboard: None,
@@ -856,6 +897,41 @@ impl PointerHandler for WlApp {
         events: &[PointerEvent],
     ) {
         for e in events {
+            let window = self
+                .wl
+                .badge
+                .as_ref()
+                .and_then(|b| b.window.as_ref())
+                .is_some_and(|w| w.wl_surface() == &e.surface);
+            if window {
+                let s = self.wl.window_scale;
+                let at = Point::new(
+                    (e.position.0 * s).round() as i32,
+                    (e.position.1 * s).round() as i32,
+                );
+                let input = match e.kind {
+                    PointerEventKind::Enter { .. } | PointerEventKind::Motion { .. } => {
+                        Input::Move(at)
+                    }
+                    PointerEventKind::Leave { .. } => Input::Leave,
+                    PointerEventKind::Press {
+                        button: BTN_LEFT, ..
+                    } => Input::Press(at),
+                    PointerEventKind::Release {
+                        button: BTN_LEFT, ..
+                    } => Input::Release(at),
+                    PointerEventKind::Axis { vertical, .. } if !vertical.is_none() => {
+                        Input::Scroll(if vertical.discrete != 0 {
+                            3.0 * f64::from(vertical.discrete)
+                        } else {
+                            vertical.absolute / 10.0
+                        })
+                    }
+                    _ => continue,
+                };
+                self.input(input);
+                continue;
+            }
             let Some(c) = self
                 .wl
                 .catcher
@@ -891,43 +967,55 @@ impl PointerHandler for WlApp {
     }
 }
 
-/// Move-mode keys by wl_keyboard keycode. Keycodes come from the keymap
-/// the compositor sends, read just far enough to find seven keysyms, so
+/// Each wl_keyboard keycode's first two keysyms (without and with Shift),
+/// from the keymap the compositor sends, read just far enough for that, so
 /// virtual keyboards with their own keymaps (remote desktop servers, wtype)
-/// work without libxkbcommon. Without a usable keymap, the evdev codes.
-fn move_keys(keymap: Option<&str>) -> HashMap<u32, KeyCode> {
-    let wanted = |sym: &str| linux::MOVE_KEYS.iter().find(|k| k.1 == sym).map(|k| k.2);
-    let parsed = keymap.map(|text| {
-        // xkb_keycodes: `<LEFT> = 113;`
-        let codes: HashMap<&str, u32> = text
-            .lines()
-            .filter_map(|l| {
-                let (name, num) = l.trim().split_once('=')?;
-                let name = name.trim();
-                let n = num.trim().trim_end_matches(';').trim().parse().ok()?;
-                name.starts_with('<').then_some((name, n))
-            })
-            .collect();
-        // xkb_symbols: `key <LEFT> { [ Left ] };`, possibly over several
-        // lines, possibly as `symbols[Group1]= [ Left ]`.
-        let mut keys = HashMap::new();
-        for chunk in text.split("key <").skip(1) {
-            let Some((name, body)) = chunk.split_once('>') else {
-                continue;
-            };
-            let body = body.split("};").next().unwrap_or(body);
-            let body = body
-                .split_once("symbols[")
-                .map_or(body, |(_, b)| b.split_once("]=").map_or(b, |(_, b)| b));
-            let first = body
-                .split_once('[')
-                .and_then(|(_, b)| b.split([',', ']']).next());
-            if let Some(code) = first.map(str::trim).and_then(wanted) {
-                keys.insert(format!("<{name}>"), code);
-            }
+/// work without libxkbcommon.
+fn keysyms(text: &str) -> HashMap<u32, (u32, u32)> {
+    // xkb_keycodes: `<AC01> = 38;`
+    let codes: HashMap<&str, u32> = text
+        .lines()
+        .filter_map(|l| {
+            let (name, num) = l.trim().split_once('=')?;
+            let name = name.trim();
+            let n = num.trim().trim_end_matches(';').trim().parse().ok()?;
+            name.starts_with('<').then_some((name, n))
+        })
+        .collect();
+    let mut keys = HashMap::new();
+    for chunk in text.split("key <").skip(1) {
+        let Some((name, body)) = chunk.split_once('>') else {
+            continue;
+        };
+        let body = body.split("};").next().unwrap_or(body);
+        let body = body
+            .split_once("symbols[")
+            .map_or(body, |(_, b)| b.split_once("]=").map_or(b, |(_, b)| b));
+        let Some(list) = body.split_once('[').and_then(|(_, b)| b.split(']').next()) else {
+            continue;
+        };
+        let mut syms = list.split(',').map(|n| linux::keysym_from_name(n.trim()));
+        let lower = syms.next().flatten();
+        let upper = syms.next().flatten().unwrap_or(0);
+        if let (Some(lower), Some(code)) = (lower, codes.get(format!("<{name}>").as_str()))
+            && let Some(code) = code.checked_sub(8)
+        {
+            keys.insert(code, (lower, upper));
         }
-        keys.into_iter()
-            .filter_map(|(name, code)| Some((codes.get(name.as_str())?.checked_sub(8)?, code)))
+    }
+    keys
+}
+
+/// Move-mode keys by wl_keyboard keycode, from the keymap's keysyms.
+/// Without a usable keymap, the evdev codes.
+fn move_keys(keymap: Option<&str>) -> HashMap<u32, KeyCode> {
+    let parsed = keymap.map(|text| {
+        keysyms(text)
+            .into_iter()
+            .filter_map(|(code, (sym, _))| {
+                let key = linux::MOVE_KEYS.iter().find(|k| k.0 == sym)?;
+                Some((code, key.2))
+            })
             .collect::<HashMap<_, _>>()
     });
     parsed.filter(|m| !m.is_empty()).unwrap_or_else(|| {
@@ -960,19 +1048,34 @@ impl Dispatch<wl_keyboard::WlKeyboard, ()> for WlApp {
                 let _ = std::fs::File::from(fd)
                     .take(u64::from(size))
                     .read_to_string(&mut text);
-                app.wl.keys = move_keys(Some(text.trim_end_matches('\0')));
+                let text = text.trim_end_matches('\0');
+                app.wl.keys = move_keys(Some(text));
+                app.wl.syms = keysyms(text);
             }
-            // Shift is modifier 0 in every XKB keymap.
-            wl_keyboard::Event::Modifiers { mods_depressed, .. } => {
-                app.wl.shift = mods_depressed & 1 != 0
+            // Shift, Lock, and Control are modifiers 0, 1, and 2 in every
+            // XKB keymap.
+            wl_keyboard::Event::Modifiers {
+                mods_depressed,
+                mods_locked,
+                ..
+            } => {
+                app.wl.shift = mods_depressed & 1 != 0;
+                app.wl.caps = mods_locked & 2 != 0;
+                app.wl.ctrl = mods_depressed & 4 != 0;
             }
+            // No key repeat: a held key types once.
             wl_keyboard::Event::Key {
                 key,
                 state: WEnum::Value(wl_keyboard::KeyState::Pressed),
                 ..
             } if app.wl.preview => {
-                if app.wl.keys.get(&key) == Some(&KeyCode::Escape) {
-                    app.send(Event::Command(Command::Quit));
+                let (wl, shift) = (&app.wl, app.wl.shift);
+                if let Some(input) = wl
+                    .syms
+                    .get(&key)
+                    .and_then(|&syms| linux::window_input(syms, shift, wl.caps, wl.ctrl))
+                {
+                    app.input(input);
                 }
             }
             wl_keyboard::Event::Key {
@@ -1074,6 +1177,7 @@ xkb_symbols "(unnamed)" {
 };
 };"#;
         let keys = move_keys(Some(keymap));
+        assert_eq!(keysyms(keymap).get(&2), Some(&(0x61, 0)), "<I10> types a");
         assert_eq!(keys.get(&1), Some(&KeyCode::Escape));
         assert_eq!(keys.get(&28), Some(&KeyCode::Enter));
         assert_eq!(keys.get(&105), Some(&KeyCode::Left));

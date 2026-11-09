@@ -8,20 +8,26 @@
 //! [`Shell::tick`] after every wakeup, and stops when [`Shell::done`] is
 //! true. Everything else (state saving, config reloads and edits, the tray
 //! state, status, logging) happens here.
+//!
+//! The same shell runs `pawprint preview` and `pawprint settings` in a
+//! normal window ([`Shell::is_window`]); backends report that window's
+//! pointer and keys through [`Shell::input`].
 
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 
 use pawprint_core::badge::{Badge, Command, Effect, Event, Inputs};
 use pawprint_core::catalog::{Catalog, bundle};
-use pawprint_core::config::{Animation, Layer};
+use pawprint_core::config::{Animation, Backend, Layer};
 use pawprint_core::config_edit;
 use pawprint_core::geom::PhysicalRect;
 use pawprint_core::layout::Anchor;
 use pawprint_core::menu::TrayState;
 use pawprint_core::render::Frame;
+use pawprint_core::settings;
 use pawprint_core::state::State;
 use pawprint_core::surface::{self, DisplayInfo, Surface};
+use pawprint_core::ui::{Input, UiKey};
 
 use crate::ipc::{Incoming, Request, Response, Status};
 use crate::paths::Paths;
@@ -40,8 +46,22 @@ pub trait Tray {
 pub const PREVIEW_BACKDROP: [u8; 3] = [0x5a, 0x60, 0x6b];
 pub const PREVIEW_MARGIN: u32 = 16;
 
+/// What the shell runs. There is one per process, so its size is moot.
+#[allow(clippy::large_enum_variant)]
+enum Kind {
+    /// The badge, or with `preview` its preview window.
+    Badge {
+        badge: Badge<'static>,
+        preview: bool,
+    },
+    /// The settings window (SPEC §8.7).
+    Settings(settings::App),
+}
+
 pub struct Shell {
-    badge: Badge<'static>,
+    kind: Kind,
+    /// The `backend` setting when the shell started, for backend selection.
+    configured: Backend,
     paths: Paths,
     session: String,
     backend: String,
@@ -53,7 +73,6 @@ pub struct Shell {
     tray_state: Option<TrayState>,
     /// The config file's modification time when it was last read (SPEC §8.5).
     config_mtime: Option<SystemTime>,
-    preview: bool,
 }
 
 impl Shell {
@@ -110,7 +129,8 @@ impl Shell {
         );
         r.warnings.iter().for_each(|w| log::warn!("config: {w}"));
         Ok(Shell {
-            badge,
+            configured: r.settings.backend.value,
+            kind: Kind::Badge { badge, preview },
             paths,
             session,
             backend: String::new(),
@@ -120,14 +140,63 @@ impl Shell {
             tray: None,
             tray_state: None,
             config_mtime,
-            preview,
         })
     }
 
-    /// True for `pawprint preview`: backends open a normal, focusable,
-    /// closable window instead of the overlay.
-    pub fn is_preview(&self) -> bool {
-        self.preview
+    /// `pawprint settings` (SPEC §8.7): the settings window for this host.
+    /// It writes config.toml itself and asks the running badge to reload;
+    /// it serves no IPC and shows no tray.
+    pub fn settings(paths: Paths) -> Result<Shell, (u8, String)> {
+        let hostname = hostname::detect().map_err(|e| (exit::ERROR, e))?;
+        let config_mtime = modified(&paths);
+        let text = read_config(&paths).map_err(|e| (exit::ERROR, e))?;
+        let (state, _) = State::load(&paths.state_file);
+        let configured = pawprint_core::config::Config::parse(&text)
+            .effective(
+                &pawprint_core::host::short_name(&hostname),
+                &Layer::default(),
+            )
+            .backend
+            .value;
+        let inputs = settings::Inputs {
+            hostname,
+            text,
+            state,
+            path: paths.config_file.display().to_string(),
+        };
+        let app = settings::App::new(load_catalog(&paths), bundle(), inputs);
+        Ok(Shell {
+            kind: Kind::Settings(app),
+            configured,
+            paths,
+            session: "settings".into(),
+            backend: String::new(),
+            displays: Vec::new(),
+            started: false,
+            done: false,
+            tray: None,
+            tray_state: None,
+            config_mtime,
+        })
+    }
+
+    /// True for `pawprint preview` and `pawprint settings`: backends open
+    /// a normal, focusable, closable window instead of the overlay, and
+    /// report its input through [`Shell::input`].
+    pub fn is_window(&self) -> bool {
+        !matches!(self.kind, Kind::Badge { preview: false, .. })
+    }
+
+    /// The normal window's title.
+    pub fn title(&self) -> &'static str {
+        match self.kind {
+            Kind::Settings(_) => "PAWPRINT settings",
+            _ => "PAWPRINT preview",
+        }
+    }
+
+    fn previewing(&self) -> bool {
+        matches!(self.kind, Kind::Badge { preview: true, .. })
     }
 
     /// Attach the platform's tray. It is shown at once if the core already
@@ -140,8 +209,8 @@ impl Shell {
     }
 
     /// The configured backend setting, for backend selection.
-    pub fn configured_backend(&self) -> pawprint_core::config::Backend {
-        self.badge.resolved().settings.backend.value
+    pub fn configured_backend(&self) -> Backend {
+        self.configured
     }
 
     /// Name the backend for `status` and the log, e.g. `x11 (gnome profile)`.
@@ -154,9 +223,40 @@ impl Shell {
     pub fn start(&mut self, surface: &mut impl Surface) {
         self.displays = surface.displays();
         log_displays(&self.displays);
-        let effects = self.badge.start(self.displays.clone(), clock::now());
         self.started = true;
-        self.run(surface, effects);
+        match &mut self.kind {
+            Kind::Badge { badge, .. } => {
+                let effects = badge.start(self.displays.clone(), clock::now());
+                self.run(surface, effects);
+            }
+            Kind::Settings(app) => {
+                let effects = app.start(self.displays.clone());
+                self.run_settings(surface, effects);
+            }
+        }
+    }
+
+    /// Input to the normal window ([`Shell::is_window`]). The preview
+    /// closes on Esc (or Ctrl+W, Ctrl+Q); the settings window takes it all.
+    pub fn input(&mut self, surface: &mut impl Surface, input: Input) {
+        if !self.started || self.done {
+            return;
+        }
+        match &mut self.kind {
+            Kind::Settings(app) => {
+                let effects = app.input(input);
+                self.run_settings(surface, effects);
+            }
+            Kind::Badge { preview: true, .. } => {
+                if matches!(
+                    input,
+                    Input::Key(UiKey::Escape) | Input::Close | Input::Shortcut('w' | 'q')
+                ) {
+                    self.handle(surface, Event::Command(Command::Quit));
+                }
+            }
+            Kind::Badge { .. } => {}
+        }
     }
 
     /// A tray menu choice. Size and Animation are saved the way `pawprint
@@ -171,8 +271,11 @@ impl Shell {
             Command::SetAnimation(a) => Some(("animation", a.to_string())),
             _ => None,
         };
-        if let Some((key, value)) = edit.filter(|_| !self.preview) {
-            let short = self.badge.resolved().short.clone();
+        let Kind::Badge { badge, preview } = &self.kind else {
+            return;
+        };
+        let short = badge.resolved().short.clone();
+        if let Some((key, value)) = edit.filter(|_| !*preview) {
             match commands::edit_config(&self.paths, |text| {
                 config_edit::set(text, &short, key, &value)
             }) {
@@ -202,13 +305,29 @@ impl Shell {
             self.displays.clone_from(displays);
             log_displays(displays);
         }
-        let effects = self.badge.handle(event, clock::now());
-        self.run(surface, effects);
+        match &mut self.kind {
+            Kind::Badge { badge, .. } => {
+                let effects = badge.handle(event, clock::now());
+                self.run(surface, effects);
+            }
+            Kind::Settings(app) => match event {
+                Event::DisplaysChanged(displays) => {
+                    let effects = app.displays_changed(displays);
+                    self.run_settings(surface, effects);
+                }
+                // The window's close button: finish typing, then close.
+                Event::Command(Command::Quit) => self.input(surface, Input::Close),
+                _ => {}
+            },
+        }
     }
 
     /// Answer one IPC request.
     pub fn request(&mut self, surface: &mut impl Surface, incoming: Incoming) {
         log::debug!("ipc: {}", incoming.request.name());
+        if !matches!(self.kind, Kind::Badge { .. }) {
+            return incoming.reply(Response::error("this is the settings window"));
+        }
         let command = match incoming.request {
             Request::Status => return incoming.reply(Response::status(self.status())),
             Request::Move => Command::Move,
@@ -222,7 +341,8 @@ impl Shell {
             }
         };
         self.handle(surface, Event::Command(command));
-        let response = if command == Command::Move && !self.badge.is_moving() {
+        let moving = matches!(&self.kind, Kind::Badge { badge, .. } if badge.is_moving());
+        let response = if command == Command::Move && !moving {
             Response::error("no target display")
         } else {
             Response::ok()
@@ -235,12 +355,18 @@ impl Shell {
     /// one itself.
     #[cfg(target_os = "linux")]
     pub fn target(&self) -> Option<&DisplayInfo> {
-        self.badge.target()
+        match &self.kind {
+            Kind::Badge { badge, .. } => badge.target(),
+            Kind::Settings(app) => app.target(),
+        }
     }
 
     /// The core's next deadline, if any.
     pub fn deadline(&self) -> Option<Instant> {
-        self.badge.next_deadline()
+        match &self.kind {
+            Kind::Badge { badge, .. } => badge.next_deadline(),
+            Kind::Settings(_) => None,
+        }
     }
 
     /// How long the native loop may sleep. `None` means until an event.
@@ -256,9 +382,18 @@ impl Shell {
         if self.deadline().is_some_and(|d| d <= Instant::now()) {
             self.handle(surface, Event::Deadline);
         }
-        if self.started && !self.preview && modified(&self.paths) != self.config_mtime {
+        if self.started && !self.previewing() && modified(&self.paths) != self.config_mtime {
             log::info!("config.toml changed");
-            self.handle(surface, Event::Command(Command::Reload));
+            self.config_mtime = modified(&self.paths);
+            match &mut self.kind {
+                Kind::Settings(app) => {
+                    if let Ok(text) = read_config(&self.paths) {
+                        let effects = app.reload(text);
+                        self.run_settings(surface, effects);
+                    }
+                }
+                Kind::Badge { .. } => self.handle(surface, Event::Command(Command::Reload)),
+            }
         }
     }
 
@@ -267,15 +402,63 @@ impl Shell {
         self.done
     }
 
+    /// Execute the settings window's effects (SPEC §8.7).
+    fn run_settings(&mut self, surface: &mut impl Surface, effects: Vec<settings::Effect>) {
+        for effect in effects {
+            let more = match effect {
+                settings::Effect::Present(frame) => {
+                    surface.present(&frame);
+                    continue;
+                }
+                settings::Effect::Place(rect) => {
+                    surface.place(rect);
+                    continue;
+                }
+                settings::Effect::Close => {
+                    self.done = true;
+                    continue;
+                }
+                settings::Effect::Write(text) => {
+                    let result = commands::write_config(&self.paths.config_file, &text);
+                    self.config_mtime = modified(&self.paths);
+                    match result {
+                        Ok(()) => {
+                            log::info!("settings: saved {}", self.paths.config_file.display());
+                            commands::reload_running();
+                            continue;
+                        }
+                        Err((_, e)) => self.settings_app().map(|app| app.failed(&e)),
+                    }
+                }
+                settings::Effect::ResetPosition => {
+                    commands::reset_position(&self.paths);
+                    let (state, _) = State::load(&self.paths.state_file);
+                    self.settings_app().map(|app| app.set_state(state))
+                }
+            };
+            if let Some(more) = more {
+                self.run_settings(surface, more);
+            }
+        }
+    }
+
+    fn settings_app(&mut self) -> Option<&mut settings::App> {
+        match &mut self.kind {
+            Kind::Settings(app) => Some(app),
+            Kind::Badge { .. } => None,
+        }
+    }
+
     fn run(&mut self, surface: &mut impl Surface, effects: Vec<Effect>) {
-        let rest = if self.preview {
+        let preview = self.previewing();
+        let rest = if preview {
             surface::apply(&mut Backdrop(surface), effects)
         } else {
             surface::apply(surface, effects)
         };
         for effect in rest {
             match effect {
-                Effect::SaveState(_) if self.preview => {}
+                Effect::SaveState(_) if preview => {}
                 Effect::SaveState(state) => {
                     if let Err(e) = state.save_atomic(&self.paths.state_file) {
                         log::error!("cannot save {}: {e}", self.paths.state_file.display());
@@ -283,9 +466,11 @@ impl Shell {
                 }
                 Effect::ReloadConfig => {
                     // User mascots too, so `set mascot <new folder>` works.
-                    let effects = self
-                        .badge
-                        .set_catalog(load_catalog(&self.paths), clock::now());
+                    let catalog = load_catalog(&self.paths);
+                    let Kind::Badge { badge, .. } = &mut self.kind else {
+                        unreachable!("only the badge reloads")
+                    };
+                    let effects = badge.set_catalog(catalog, clock::now());
                     self.run(surface, effects);
                     self.config_mtime = modified(&self.paths);
                     let (config, note) = commands::load_config(&self.paths);
@@ -295,6 +480,12 @@ impl Shell {
                         .iter()
                         .for_each(|w| log::warn!("config: {w}"));
                     self.handle(surface, Event::ConfigTouched(config));
+                }
+                Effect::OpenSettings if preview => {}
+                Effect::OpenSettings => {
+                    if let Err(e) = crate::instance::spawn_detached("settings") {
+                        log::error!("cannot open the settings window: {e}");
+                    }
                 }
                 Effect::SetTray(state) => {
                     if let Some(tray) = &mut self.tray {
@@ -306,7 +497,10 @@ impl Shell {
                     log::info!("quitting");
                     self.done = true;
                 }
-                Effect::Present(_) | Effect::Place(_) | Effect::SetInteractive(_) => {
+                Effect::Present(_)
+                | Effect::Place(_)
+                | Effect::SetInteractive(_)
+                | Effect::SetFullscreen(_) => {
                     unreachable!("surface::apply runs surface effects")
                 }
             }
@@ -314,14 +508,17 @@ impl Shell {
     }
 
     pub fn status(&self) -> Status {
-        let r = self.badge.resolved();
-        let target = self.badge.target();
+        let Kind::Badge { badge, .. } = &self.kind else {
+            unreachable!("only the badge serves IPC")
+        };
+        let r = badge.resolved();
+        let target = badge.target();
         Status {
             pid: std::process::id(),
             backend: self.backend.clone(),
             session: self.session.clone(),
             display: target.map(|d| d.name.clone()),
-            rect: self.badge.placed().map(|p| {
+            rect: badge.placed().map(|p| {
                 [
                     i64::from(p.x),
                     i64::from(p.y),
@@ -335,7 +532,7 @@ impl Shell {
             position: r.position.value.to_string(),
             position_source: r.position.source.to_string(),
             size: r.settings.size.value,
-            moving: self.badge.is_moving(),
+            moving: badge.is_moving(),
         }
     }
 }
@@ -346,6 +543,15 @@ fn load_catalog(paths: &Paths) -> Arc<Catalog> {
     let catalog = Catalog::load(&paths.user_mascots);
     catalog.warnings().iter().for_each(|w| log::warn!("{w}"));
     Arc::new(catalog)
+}
+
+/// config.toml's text, empty if there is none.
+fn read_config(paths: &Paths) -> Result<String, String> {
+    match std::fs::read_to_string(&paths.config_file) {
+        Ok(t) => Ok(t),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+        Err(e) => Err(format!("cannot read {}: {e}", paths.config_file.display())),
+    }
 }
 
 fn modified(paths: &Paths) -> Option<SystemTime> {
@@ -396,6 +602,9 @@ impl<S: Surface> Surface for Backdrop<'_, S> {
     fn set_interactive(&mut self, on: bool) {
         self.0.set_interactive(on);
     }
+
+    /// A preview is a normal window: fullscreen windows treat it like any.
+    fn set_fullscreen(&mut self, _: pawprint_core::config::Fullscreen) {}
 }
 
 fn log_displays(displays: &[DisplayInfo]) {

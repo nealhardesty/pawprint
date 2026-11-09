@@ -270,9 +270,29 @@ struct Started(std::process::Child);
 /// controlling terminal, null stdio, and none of our other descriptors.
 #[cfg(unix)]
 fn start_detached() -> io::Result<Started> {
-    detached(Command::new(badge_exe()?).arg("run"))
+    spawn("run")
+}
+
+#[cfg(unix)]
+fn spawn(command: &str) -> io::Result<Started> {
+    detached(Command::new(badge_exe()?).arg(command))
         .spawn()
         .map(Started)
+}
+
+/// `pawprint <command>` detached, as `pawprint` starts the badge: the
+/// tray's Settings… opens `pawprint settings` this way. A thread reaps it
+/// when it exits, so no zombie is left behind; it sleeps until then.
+pub fn spawn_detached(command: &str) -> io::Result<()> {
+    let child = spawn(command)?;
+    #[cfg(unix)]
+    {
+        let mut child = child;
+        std::thread::spawn(move || child.0.wait());
+    }
+    #[cfg(windows)]
+    drop(child);
+    Ok(())
 }
 
 #[cfg(unix)]
@@ -334,6 +354,11 @@ struct Started(std::os::windows::io::OwnedHandle);
 /// allows it, so closing a job-bound terminal doesn't take the badge along.
 #[cfg(windows)]
 fn start_detached() -> io::Result<Started> {
+    spawn("run")
+}
+
+#[cfg(windows)]
+fn spawn(command: &str) -> io::Result<Started> {
     use std::os::windows::ffi::OsStrExt;
     use std::os::windows::io::FromRawHandle;
     use windows_sys::Win32::Foundation::CloseHandle;
@@ -345,7 +370,7 @@ fn start_detached() -> io::Result<Started> {
     let line: Vec<u16> = std::ffi::OsStr::new("\"")
         .encode_wide()
         .chain(exe.as_os_str().encode_wide())
-        .chain("\" run".encode_utf16())
+        .chain(format!("\" {command}").encode_utf16())
         .chain([0])
         .collect();
     let base = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP;

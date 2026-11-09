@@ -18,7 +18,7 @@ DRY_RUN ?=
 TARGETS = x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows-msvc
 
 .DEFAULT_GOAL := help
-.PHONY: help build run preview power-check test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden golden-hosts contact-sheet building-blocks palette art-export art-import ci release package publish release-finalize install uninstall test-install lint-installers doctor clean check-all-targets spike-f22
+.PHONY: help build run preview settings settings-shots power-check test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden golden-hosts contact-sheet building-blocks palette art-export art-import ci release package publish release-finalize install uninstall test-install lint-installers doctor clean check-all-targets spike-f22
 
 help: ## List targets
 	@$(PAWDEV) help $(firstword $(MAKEFILE_LIST))
@@ -31,6 +31,9 @@ run: ## Build and run the badge in the foreground; ARGS="..." passes arguments
 
 preview: ## Open a window cycling through a mascot's actions: make preview MASCOT=owl SIZE=128
 	$(CARGO) run --package pawprint -- preview $(MASCOT) --size $(SIZE)
+
+settings: ## Open the settings window from the local build
+	$(CARGO) run --package pawprint -- settings
 
 power-check: ## Measure the release badge against the power budget (SPEC 7.2): Linux under Xvfb, macOS and Windows on this desktop (macOS from a universal binary); POWER_SECONDS=120 per mode
 	$(PAWDEV) power-check $(POWER_SECONDS)
@@ -74,6 +77,9 @@ contact-sheet: ## Render every mascot, labels hidden, grouped by base, into docs
 
 building-blocks: ## Render the crate accents, props, and every base with every motion template into docs/building-blocks.png
 	$(PAWDEV) building-blocks
+
+settings-shots: ## Render every page of the settings window into out/settings/, and docs/settings.png for the README
+	$(PAWDEV) settings-shots
 
 palette: ## Regenerate assets/palette.gpl (for GIMP, Aseprite, LibreSprite) from assets/palette.toml
 	$(PAWDEV) palette
