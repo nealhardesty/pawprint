@@ -282,10 +282,10 @@ Windows, macOS, and Linux machines.
 
 ---
 
-## Next: v1.1.1
+## Next: label side margins
 
 - [ ] **Label: drop the side margins.** The owner chose this; it wasn't
-  finished in time for v1.1.0. Keep the 1 art-px top and bottom margin,
+  finished in time for v1.1.0 or v1.2.0. Keep the 1 art-px top and bottom margin,
   but let the label use the strip's full width (28P instead of 26P).
   - **Effect:** 7 micro glyphs fit at size 32 (`PRODOWL` instead of
     `PRODOW`), and 9-character names such as `ARMADILLO` at size 64 use
@@ -293,7 +293,7 @@ Windows, macOS, and Linux machines.
   - **Code:** the fit rule in `crates/pawprint-core/src/layout.rs`, plus its
     tests and the expected-results table.
   - **Then:** update SPEC §4.4 and regenerate the affected goldens
-    (`make golden`). Release as v1.1.1.
+    (`make golden`).
 
 ## Settings window and fullscreen hiding
 
