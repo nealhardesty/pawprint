@@ -19,18 +19,18 @@ use crate::state::State;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rule {
     Explicit = 1,
-    Cached = 2,
-    WholeName = 3,
-    Token = 4,
+    WholeName = 2,
+    Token = 3,
+    Cached = 4,
     Fallback = 5,
 }
 
 impl Rule {
     pub const ALL: [Rule; 5] = [
         Rule::Explicit,
-        Rule::Cached,
         Rule::WholeName,
         Rule::Token,
+        Rule::Cached,
         Rule::Fallback,
     ];
 
@@ -80,7 +80,7 @@ pub struct Resolved {
     pub warnings: Vec<String>,
 }
 
-/// Resolve the host's identity. With `recompute`, the cache (rule 2) is
+/// Resolve the host's identity. With `recompute`, the cache (rule 4) is
 /// skipped to show what the hash would choose today.
 pub fn resolve(
     hostname: &str,
@@ -186,20 +186,6 @@ fn choose(
     }
 
     // Rule 2
-    match state.assignments.get(short) {
-        _ if recompute => step(Rule::Cached, "skipped (--recompute)".into()),
-        Some(id) if catalog.get(id).is_some() => {
-            step(Rule::Cached, format!("{id} (state file)"));
-            return (id.clone(), Rule::Cached);
-        }
-        Some(id) => step(
-            Rule::Cached,
-            format!("{id} is no longer in the catalog, ignored"),
-        ),
-        None => step(Rule::Cached, "none".into()),
-    }
-
-    // Rule 3
     match matching::whole_name(short, catalog.aliases()) {
         Some((name, id)) => {
             step(Rule::WholeName, format!("{name:?} → {id}"));
@@ -211,7 +197,7 @@ fn choose(
         ),
     }
 
-    // Rule 4
+    // Rule 3
     match matching::token_match(short, catalog.aliases()) {
         TokenMatch::One { ngram, id } => {
             step(Rule::Token, format!("token {ngram:?} → {id}"));
@@ -228,6 +214,21 @@ fn choose(
             Rule::Token,
             format!("no token of {:?} names a mascot", matching::tokens(short)),
         ),
+    }
+
+    // Rule 4. After the name rules: a cached fallback never hides a
+    // mascot the name now matches (one added since, SPEC §5.3).
+    match state.assignments.get(short) {
+        _ if recompute => step(Rule::Cached, "skipped (--recompute)".into()),
+        Some(id) if catalog.get(id).is_some() => {
+            step(Rule::Cached, format!("{id} (state file)"));
+            return (id.clone(), Rule::Cached);
+        }
+        Some(id) => step(
+            Rule::Cached,
+            format!("{id} is no longer in the catalog, ignored"),
+        ),
+        None => step(Rule::Cached, "none".into()),
     }
 
     // Rule 5
@@ -369,6 +370,28 @@ mod tests {
             Rule::Fallback,
             "stale cache entries are ignored"
         );
+    }
+
+    /// A host cached a fallback before a mascot named like it existed
+    /// (`mars` before the planet joined the catalog): the name wins now.
+    #[test]
+    fn a_name_match_beats_a_cached_fallback() {
+        let mut state = State::default();
+        state.assignments.insert("owl".into(), "capybara".into());
+        state
+            .assignments
+            .insert("prod-moose-1".into(), "capybara".into());
+        let r = run("owl", "", &state);
+        assert_eq!((r.mascot.as_str(), r.rule), ("owl", Rule::WholeName));
+        assert_eq!(r.new_assignment, None, "nothing new to cache");
+        let r = run("prod-moose-1", "", &state);
+        assert_eq!((r.mascot.as_str(), r.rule), ("moose", Rule::Token));
+        // An ambiguous name still keeps its cached pick.
+        state
+            .assignments
+            .insert("bear-moose".into(), "capybara".into());
+        let r = run("bear-moose", "", &state);
+        assert_eq!((r.mascot.as_str(), r.rule), ("capybara", Rule::Cached));
     }
 
     #[test]

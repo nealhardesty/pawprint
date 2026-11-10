@@ -1,0 +1,233 @@
+# Hippo (hippopotamus), bespoke (no base). Wallowing in a crate full of
+# water: a huge grey head that is mostly muzzle, wider at the bottom than
+# the top, two eye bumps on top with the eyes peering out under them,
+# tiny round ears on the corners, and wide nostrils on the front of the
+# snout. The signature is the enormous yawn: the whole upper head swings
+# up to show a pink mouth and four white tusks. The rare one wiggles its
+# little ears, then blows a string of bubbles through its nostrils.
+id = "hippo"
+name = "Hippo"
+category = "mammals"
+aliases = ["hippopotamus"]
+accent = "plum"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "grey-1"      # hide light
+"f" = "grey-2"      # grey hide
+"F" = "grey-3"      # hide shadow, lip line
+"p" = "pink-1"      # inner ears, mouth
+"P" = "pink-2"      # throat
+"w" = "white"       # tusks, eye glint
+"u" = "blue-1"      # foam
+"v" = "blue-2"      # water
+"V" = "blue-3"      # deep water
+
+# The lower jaw, sitting in the water.
+[layers.jaw]
+grid = """
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+..kfffffffffffffffffffffffffFk..
+..kfffffffffffffffffffffffffFk..
+...kfffffffffffffffffffffffFk...
+...kfffffffffffffffffffffffFk...
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+"""
+
+# The pink mouth and tusks, seen only when the head swings up.
+[layers."mouth.open"]
+at = [3, 10]
+grid = """
+kPPPPPPPPPPPPPPPPPPPPPPPPk
+kPPPPPPPPPPPPPPPPPPPPPPPPk
+kPPPPkkPPPPPPPPPPPPkkPPPPk
+kPPPkwwkPPPPPPPPPPkwwkPPPk
+kpPPkwwkppppppppppkwwkPPpk
+kppPkwlkppppppppppkwlkPppk
+"""
+
+# The upper head: eye bumps, skull, and the broad top of the muzzle.
+[layers.head]
+grid = """
+................................
+................................
+................................
+................................
+........kkkkk......kkkkk........
+.......kllffk......kffllk.......
+......klfffffkkkkkkffffflk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+.....klffffffffffffffffffFk.....
+...kkkffffffffffffffffffffkkk...
+..klllfffffffffffffffffffflllk..
+..klfffffffffffffffffffffffflk..
+..kfffffffffffffffffffffffffFk..
+..kFFFFFFFFFFFFFFFFFFFFFFFFFFk..
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+[layers.ears]
+at = [5, 3]
+follows = "head"
+grid = """
+.kk..................kk.
+kppk................kppk
+.kkk................kkk.
+"""
+
+[layers."ears.flick"]
+at = [5, 2]
+follows = "head"
+grid = """
+.kk.....................
+kppk.................kk.
+.kkk................kppk
+.....................kkk
+"""
+
+[layers.eyes]
+at = [9, 8]
+follows = "head"
+grid = """
+wk..........wk
+kk..........kk
+"""
+
+[layers."eyes.closed"]
+at = [9, 9]
+follows = "head"
+grid = """
+kk..........kk
+"""
+
+[layers."eyes.left"]
+at = [8, 8]
+follows = "head"
+grid = """
+wk..........wk
+kk..........kk
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+follows = "head"
+grid = """
+wk..........wk
+kk..........kk
+"""
+
+[layers."eyes.happy"]
+at = [8, 8]
+follows = "head"
+grid = """
+.kk..........kk.
+k..k........k..k
+"""
+
+[layers.nostrils]
+at = [10, 12]
+follows = "head"
+grid = """
+FFF......FFF
+kkF......kkF
+"""
+
+[layers.water]
+at = [0, 17]
+grid = """
+..kkk......kkk......kkk......kkk
+kkuuukkkkkkuuukkkkkkuuukkkkkkuuu
+uuvvvuuuuuuvvvuuuuuuvvvuuuuuuvvv
+vvvvvvvvVVvvvvvvvVVvvvvvvvVVvvvv
+VVvvvvVVVVVVvvvvVVVVVVvvvvVVVVVV
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "look-left"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the enormous yawn. Eyes squeeze shut and the whole upper head
+# swings up off the jaw: pink mouth, four white tusks. Then it snaps shut.
+[[actions]]
+name = "big-yawn"
+weight = 5
+frames = [
+  { ops = ["eyes=closed", "head+0,-1", "+mouth.open"], ms = 160 },
+  { ops = ["eyes=closed", "head+0,-3", "+mouth.open"], ms = 200 },
+  { ops = ["eyes=closed", "head+0,-5", "+mouth.open"], ms = 1200 },
+  { ops = ["eyes=closed", "head+0,-2", "+mouth.open"], ms = 120 },
+  { ops = ["eyes=closed"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it wiggles its little ears, sinks to the nostrils, and blows a
+# string of bubbles.
+[[actions]]
+name = "ear-wiggle-bubbles"
+weight = 1
+frames = [
+  { ops = ["ears=flick"], ms = 120 },
+  { ops = ["ears+0,-1"], ms = 120 },
+  { ops = ["ears=flick"], ms = 120 },
+  { ops = ["head+0,2", "jaw+0,2", "eyes=happy", "prop:bubble@6,8"], ms = 400 },
+  { ops = ["head+0,2", "jaw+0,2", "eyes=happy", "prop:bubble@5,4", "prop:bubble@20,9"], ms = 400 },
+  { ops = ["head+0,2", "jaw+0,2", "eyes=happy", "prop:bubble@4,0", "prop:bubble@21,5"], ms = 400 },
+  { ops = ["eyes=happy", "prop:bubble@22,1"], ms = 400 },
+  { ops = [], ms = 200 },
+]

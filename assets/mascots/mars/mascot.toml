@@ -1,0 +1,127 @@
+# Mars, an object on `orb`: a rusty red planet, a little smaller than the
+# plain orb, pocked with dark craters, and wearing its white polar cap like
+# a woolly hat pulled down to its eyebrows, icicles dripping at the brim.
+# The signature sends a dust devil whirling across its face while it
+# watches; the rare one plants a tiny flag on its cap, proudly.
+id = "mars"
+name = "Mars"
+category = "space"
+aliases = []
+accent = "brick"
+extends = "orb"
+
+[palette]
+"l" = "red-1"       # rust light, crater rims
+"f" = "red-2"       # rust red
+"F" = "brown-3"     # shadow, crater floors
+"M" = "brown-4"     # crater shadow
+"c" = "white"       # polar cap
+"C" = "grey-1"      # polar cap shadow, icicles
+"b" = "blue-2"      # flag
+"w" = "white"       # flag star
+
+# The planet with its polar cap pulled down like a hat.
+[layers.head]
+grid = """
+................................
+................................
+............kkkkkkkk............
+..........kkcccccccCkk..........
+.........kcccccccccCCCk.........
+........kccccccccccccCCk........
+.......kcccccccccccccCCCk.......
+.......kCcCCCCCcCCCCCCCCk.......
+........klCfffffCCffffCk........
+.......kllfffffffCffffFFk.......
+.......klffffffffffffffFk.......
+......kllffffffffffffffFFk......
+......klffffffffffffffffFk......
+......klfffffffffffffffFFk......
+......klfffffffffffffffFFk......
+......klffffffffffffffFFFk......
+......kllfffffffffffffFFFk......
+.......klffffffffffffFFFk.......
+.......kfffffffffffffFFFk.......
+........kffffffffffFFFFk........
+........kfFFffFffFFFFFFk........
+.........kkFFFFFFFFFFkk.........
+...........kkFFFFFFkk...........
+.............kkkkkk.............
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# Craters, kept clear of the face.
+[layers.craters]
+at = [7, 13]
+follows = "head"
+grid = """
+.MM.............
+MFFl..........MM
+.ll...........Fl
+...........MM...
+....MF....MFFl..
+...........ll...
+"""
+
+# A tiny flag for the rare action (hidden at rest).
+[layers."flag.up"]
+at = [22, 0]
+follows = "head"
+grid = """
+kkkkk
+kbbwk
+kbbbk
+kkkkk
+k....
+k....
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a dust devil whirls across in front of Mars, low over the
+# craters, and Mars follows it from one side to the other.
+[[actions]]
+name = "dust-devil"
+weight = 4
+frames = [
+  { ops = ["eyes=left", "prop:puff@-3,14"], ms = 220 },
+  { ops = ["eyes=left", "prop:puff@3,13"], ms = 220 },
+  { ops = ["prop:puff@9,14"], ms = 220 },
+  { ops = ["prop:puff@15,13"], ms = 220 },
+  { ops = ["eyes=right", "prop:puff@21,14"], ms = 220 },
+  { ops = ["eyes=right", "prop:puff@27,13"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a tiny flag pops up on the polar cap; Mars puffs up with pride.
+[[actions]]
+name = "flag"
+weight = 1
+frames = [
+  { ops = ["+flag.up", "flag+0,3", "eyes=closed"], ms = 200 },
+  { ops = ["+flag.up", "eyes=closed"], ms = 120 },
+  { ops = ["+flag.up", "eyes=happy", "all+0,-1"], ms = 300 },
+  { ops = ["+flag.up", "eyes=happy"], ms = 1200 },
+  { ops = ["+flag.up"], ms = 600 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,229 @@
+# Camel on ungulate-head. A honey-tan dromedary with a big round hump
+# rising behind its right shoulder (a shape no sibling has), small round
+# ears, a shaggy crown, heavy-lidded sleepy eyes, and huge soft lips with a
+# split upper lip that hangs over the lower one. It is not impressed by
+# anything. The signature chews slowly, the lower lip grinding side to side,
+# with a long lazy blink; the rare one heaves a big unimpressed sigh that
+# puffs out of its lips.
+id = "camel"
+name = "Camel"
+category = "mammals"
+aliases = ["dromedary"]
+accent = "honey"
+extends = "ungulate-head"
+
+rest = ["body", "ears", "head", "eyes", "nose", "crown", "jaw"]
+
+[palette]
+"l" = "orange-1"    # coat light
+"f" = "brown-1"     # coat
+"F" = "brown-2"     # coat shadow
+"w" = "cream"       # lips
+"M" = "brown-2"     # mouth line, lip split
+"L" = "brown-3"     # NEW: heavy eyelids
+"T" = "brown-2"     # NEW: shaggy crown
+"n" = "brown-3"     # nostrils
+"p" = "brown-3"     # inner ear, mouth
+
+# The neck, with the hump rising behind the right shoulder.
+[layers.body]
+grid = """
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    .....................kkkkkk.....
+    ....................klllllFk....
+    ...................klffffffFk...
+    ..................klffffffffFk..
+    ..................klffffffffFk..
+    ..................klffffffffFk..
+    ..................klffffffffFk..
+    ..........kkkkkkkkffffffffffFk..
+    ..........klllllllfffffffffFk...
+    ..........klffffffffffffffFk....
+    .........klfffffffffffffkkk.....
+    ........klffffffffffffFk........
+    .......klffffffffffffffFk.......
+    ......klffffffffffffffffFk......
+    .....klffffffffffffffffffFk.....
+    .....klffffffffffffffffffFk.....
+    .....klffffffffffffffffffFk.....
+    .....klffffffffffffffffffFk.....
+    .....klffffffffffffffffffFk.....
+    .....klffffffffffffffffffFk.....
+    .....klffffffffffffffffffFk.....
+    .....klffffffffffffffffffFk.....
+    .....klffffffffffffffffffFk.....
+    .....klffffffffffffffffffFk.....
+    .....klffffffffffffffffffFk.....
+"""
+
+# Small round ears.
+[layers.ears]
+at = [7, 4]
+follows = "head"
+grid = """
+.kkk..............kkk.
+kfpfk............kfpFk
+.kkk..............kkk.
+"""
+
+[layers."ears.flick"]
+at = [7, 3]
+follows = "head"
+grid = """
+..................kkk.
+.kkk.............kfpFk
+kfpfk.............kkk.
+.kkk..................
+"""
+
+# A long face that widens into big soft lips.
+[layers.head]
+at = [10, 3]
+grid = """
+..kkkkkkkk..
+.kllllllFFk.
+kllfffffffFk
+klffffffffFk
+klffffffffFk
+klffffffffFk
+klffffffffFk
+.klffffffFk.
+.klffffffFk.
+.kffwwwwffk.
+kwwwwwwwwwwk
+kwwwwwwwwwFk
+kwwwwMMwwwFk
+.kMMMMMMMMk.
+"""
+
+# The lower lip, which grinds side to side when it chews.
+[layers.jaw]
+at = [11, 17]
+follows = "head"
+grid = """
+.kwwwwwwk.
+..kkkkkk..
+"""
+
+# A shaggy crown between the ears.
+[layers.crown]
+at = [12, 1]
+follows = "head"
+grid = """
+..k..k..
+.kTkkTk.
+kTTTTTTk
+"""
+
+# Heavy-lidded, half-asleep eyes.
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+LLL....LLL
+hkk....hkk
+"""
+
+[layers."eyes.closed"]
+at = [11, 8]
+follows = "head"
+grid = """
+LLL....LLL
+kkk....kkk
+"""
+
+[layers."eyes.left"]
+at = [11, 8]
+follows = "head"
+grid = """
+LLL....LLL
+kkf....kkf
+"""
+
+[layers."eyes.right"]
+at = [11, 8]
+follows = "head"
+grid = """
+LLL....LLL
+fkk....fkk
+"""
+
+[layers."eyes.happy"]
+at = [11, 8]
+follows = "head"
+grid = """
+LLL....LLL
+k.k....k.k
+"""
+
+[layers.nose]
+at = [13, 13]
+follows = "head"
+grid = """
+n....n
+"""
+
+[layers."nose.sniff"]
+at = [12, 13]
+follows = "head"
+grid = """
+nn....nn
+"""
+
+[layers."mouth.open"]
+at = [13, 16]
+follows = "head"
+grid = """
+kppppk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: chews slowly, the lower lip grinding side to side, with one
+# long lazy blink in the middle.
+[[actions]]
+name = "slow-chew"
+weight = 4
+frames = [
+  { ops = ["jaw+-1,0"], ms = 300 },
+  { ops = [], ms = 200 },
+  { ops = ["jaw+1,0"], ms = 300 },
+  { ops = ["eyes=closed"], ms = 700 },
+  { ops = ["jaw+-1,0", "eyes=closed"], ms = 300 },
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = ["jaw+1,0"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a big, unimpressed sigh: the head sinks, the nostrils flare, and
+# the lips flap out a puff.
+[[actions]]
+name = "sigh"
+weight = 1
+frames = [
+  { ops = ["eyes=closed", "nose=sniff", "head+0,-1"], ms = 500 },
+  { ops = ["eyes=closed", "+mouth.open", "jaw+0,1", "head+0,1"], ms = 160 },
+  { ops = ["eyes=closed", "+mouth.open", "jaw+0,1", "head+0,1", "prop:puff@20,14"], ms = 400 },
+  { ops = ["eyes=closed", "jaw+-1,0", "head+0,1", "prop:puff@22,12"], ms = 300 },
+  { ops = ["eyes=closed", "head+0,1"], ms = 600 },
+  { ops = [], ms = 300 },
+]

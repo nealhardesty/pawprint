@@ -1,0 +1,165 @@
+# Joystick: a chunky game controller in the crate, a light box with a dark
+# top plate, a red ball on a metal stick, and a red fire button. The face is
+# on the box front over a red stripe. The signature is a quick game: the
+# stick wiggles, the eyes follow it, and the button lights as it fires. The
+# rare one is a victory wiggle with sparkles and a hop.
+id = "joystick"
+name = "Joystick"
+category = "things"
+aliases = []
+accent = "cranberry"
+extends = "object"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "white"
+"f" = "grey-1"
+"F" = "grey-2"
+"d" = "grey-3"
+"D" = "grey-4"
+"r" = "red-1"
+"R" = "red-2"
+"w" = "white"
+"m" = "grey-2"
+"b" = "red-2"
+"B" = "red-1"
+"y" = "yellow-1"
+"h" = "white"
+"P" = "pink-1"
+"p" = "pink-2"
+
+[layers."head"]
+grid = """
+................................
+................................
+................................
+................................
+................................
+......kkkkkkkkkkkkkkkkkkkk......
+.....kdddddddDDDDDDdddddDdk.....
+....kdddddddDDDDDDDDdddddDDk....
+....klllllllllllllllllllllFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....krRRRRRRRRRRRRRRRRRRRRRk....
+....krrrrrrrrrrrrrrrrrrrrrrk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+"""
+
+[layers."stick"]
+at = [9, 0]
+follows = "head"
+grid = """
+....kkkkkk....
+...krwrrrRk...
+...krrrrRRk...
+....kkRRkk....
+.....kmmk.....
+.....kmmk.....
+"""
+
+[layers."stick.left"]
+at = [9, 0]
+follows = "head"
+grid = """
+..kkkkkk......
+.krwrrrRk.....
+.krrrrRRk.....
+..kkRRkk......
+....kmmk......
+.....kmmk.....
+"""
+
+[layers."stick.right"]
+at = [9, 0]
+follows = "head"
+grid = """
+......kkkkkk..
+.....krwrrrRk.
+.....krrrrRRk.
+......kkRRkk..
+......kmmk....
+.....kmmk.....
+"""
+
+[layers."button"]
+at = [20, 4]
+follows = "head"
+grid = """
+.kkk.
+kBbbk
+kbbbk
+"""
+
+[layers."button.on"]
+at = [19, 3]
+follows = "head"
+grid = """
+y..y..y
+..kkk..
+ykwBBky
+.kBBBk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a quick game. The stick wiggles left and right, the eyes follow
+# it, and the button lights up as it fires.
+[[actions]]
+name = "play"
+weight = 4
+frames = [
+  { ops = ["stick=left", "eyes=left"], ms = 160 },
+  { ops = ["stick=right", "eyes=right"], ms = 160 },
+  { ops = ["stick=left", "eyes=left"], ms = 160 },
+  { ops = ["stick=right", "eyes=right"], ms = 160 },
+  { ops = ["button=on", "eyes=happy"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a win. A victory wiggle with the button blazing, a hop, sparkles.
+[[actions]]
+name = "victory"
+weight = 1
+frames = [
+  { ops = ["button=on", "eyes=happy", "mouth=open"], ms = 200 },
+  { ops = ["stick=left", "button=on", "eyes=happy", "mouth=open", "all+0,-2", "prop:sparkle@24,0"], ms = 120 },
+  { ops = ["stick=right", "button=on", "eyes=happy", "mouth=open", "all+0,-2", "prop:sparkle@24,0"], ms = 120 },
+  { ops = ["stick=left", "button=on", "eyes=happy", "mouth=open", "all+0,-1", "prop:sparkle@1,2"], ms = 120 },
+  { ops = ["stick=right", "button=on", "eyes=happy", "mouth=open", "prop:sparkle@1,2"], ms = 120 },
+  { ops = ["eyes=happy", "prop:sparkle@25,1"], ms = 800 },
+  { ops = [], ms = 200 },
+]

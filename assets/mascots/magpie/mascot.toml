@@ -1,0 +1,274 @@
+# Magpie on bird-perched. A glossy black-and-white thief in three-quarter
+# view facing left: black head and bib, a big white belly, a white
+# shoulder patch on the folded wing, blue-green sheen on the flight
+# feathers, and a long iridescent tail laid out behind it over the rim.
+# Signature: spots something shiny on the rim, grabs it, and stashes it in
+# the crate. Rare: pops up with a gold coin, shows it off in a glitter,
+# glances both ways, and hides it again.
+id = "magpie"
+name = "Magpie"
+category = "birds"
+aliases = []
+accent = "charcoal"
+extends = "bird-perched"
+
+[palette]
+"l" = "grey-3"      # black feathers, light
+"f" = "grey-4"      # black feathers
+"F" = "fur-black"   # black feathers, shadow
+"W" = "white"       # belly and shoulder
+"G" = "grey-1"      # white shadow
+"u" = "blue-2"      # sheen light
+"t" = "teal"        # blue-green sheen
+"T" = "blue-3"      # sheen shadow
+"e" = "grey-2"      # pale eye ring
+"h" = "white"       # eye highlight
+"b" = "grey-3"      # beak and feet
+"B" = "fur-black"   # beak shadow
+"p" = "red-2"       # inside of the beak
+"y" = "yellow-1"    # coin
+"Y" = "yellow-2"    # coin shadow
+
+# Black bib on top, a big white belly in front.
+[layers.body]
+at = [5, 12]
+grid = """
+..kkllllllllllllffkk..
+.klllfffffffffffffFFk.
+kllfGWWWWWWWfffffffFFk
+klfGWWWWWWWWWffffffFFk
+kfGWWWWWWWWWWWfffffFFk
+kGWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+kWWWWWWWWWWWWWWffffFFk
+"""
+
+# The folded wing: a white shoulder over blue-green flight feathers.
+[layers.wings]
+at = [16, 13]
+grid = """
+..kkkkkkk..
+.kWWWWWWWk.
+kWWWWWWWGGk
+kfGGGGGGGfk
+kutttttttTk
+kuttTttTtTk
+kutTttTtTTk
+kttTtTtTTTk
+.kTTTTTTTk.
+..kkkkkkk..
+"""
+
+[layers."wings.open"]
+at = [16, 9]
+grid = """
+.......kkk.
+.....kkuttk
+....kutttTk
+..kkWWttTTk
+.kWWWWWtTTk
+kWWWWWWWGGk
+kfGGGGGGGfk
+kutttttttTk
+kuttTttTtTk
+kutTttTtTTk
+kttTtTtTTTk
+.kTTTTTTTk.
+..kkkkkkk..
+"""
+
+# The long tail, laid out behind over the rim.
+[layers.tail]
+at = [24, 8]
+grid = """
+......kk
+.....kuk
+....kutk
+...kuttk
+..kuttTk
+.kuttTk.
+kuttTTk.
+kttTTk..
+kTTTk...
+kkkk....
+"""
+
+[layers."tail.flick"]
+at = [23, 6]
+grid = """
+.....kk.
+....kuk.
+....kutk
+...kuttk
+...kutTk
+..kuttk.
+..kutTk.
+.kuttk..
+.kutTk..
+kttTk...
+kTTk....
+kkk.....
+"""
+
+# Three-quarter view, facing left: glossy black all over.
+[layers.head]
+at = [6, 3]
+grid = """
+.....kkkkkkkkkk.....
+....kklllllfffkk....
+...klllfffffffffk...
+..klffffffffffffFk..
+.klfffffffffffffFFk.
+.klfffffffffffffFFFk
+.kffffffffffffffFFFk
+.kffffffffffffffFFFk
+..kfffffffffffffFFk.
+...ffffffffffffFFk..
+...fffffffffffFFF...
+"""
+
+[layers.eyes]
+at = [11, 7]
+follows = "head"
+grid = """
+.ee.
+ehke
+ekke
+.ee.
+"""
+
+[layers."eyes.closed"]
+at = [11, 7]
+follows = "head"
+grid = """
+.ee.
+eeee
+kkkk
+.ee.
+"""
+
+[layers."eyes.left"]
+at = [11, 7]
+follows = "head"
+grid = """
+.ee.
+hkee
+kkee
+.ee.
+"""
+
+[layers."eyes.right"]
+at = [11, 7]
+follows = "head"
+grid = """
+.ee.
+eehk
+eekk
+.ee.
+"""
+
+[layers."eyes.happy"]
+at = [11, 7]
+follows = "head"
+grid = """
+.ee.
+ekke
+keek
+.ee.
+"""
+
+# A stout black beak, pointing left.
+[layers.beak]
+at = [2, 8]
+follows = "head"
+grid = """
+..kkkkk
+.kbbbbb
+kbbbbBB
+.kkBBBB
+...kkkk
+"""
+
+[layers."mouth.open"]
+at = [2, 7]
+follows = "head"
+grid = """
+..kkkkk
+.kbbbbb
+kbbkkkk
+kpppppp
+.kkBBBB
+...kkkk
+"""
+
+# The loot: a gold coin held in the beak.
+[layers."loot.coin"]
+at = [1, 10]
+follows = "head"
+grid = """
+.kkkk.
+kyyyYk
+kyYYYk
+kyyYYk
+.kkkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "tail-flick"
+weight = 4
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a glint on the rim; it snatches it up and stashes it away.
+[[actions]]
+name = "stash"
+weight = 5
+frames = [
+  { ops = ["eyes=left", "prop:sparkle@0,13"], ms = 500 },
+  { ops = ["all+0,1", "head+-1,2", "eyes=left"], ms = 140 },
+  { ops = ["eyes=happy", "tail=flick", "prop:sparkle@0,5"], ms = 500 },
+  { ops = ["all+0,4", "tail=flick"], ms = 140 },
+  { ops = ["all+0,8"], ms = 300 },
+  { ops = ["all+0,3"], ms = 120 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: pops up with a gold coin, shows it off, checks nobody's looking,
+# and hides it again.
+[[actions]]
+name = "treasure"
+weight = 1
+frames = [
+  { ops = ["all+0,8"], ms = 300 },
+  { ops = ["all+0,3", "+loot.coin"], ms = 120 },
+  { ops = ["+loot.coin", "wings=open", "tail=flick", "eyes=happy", "prop:sparkle@0,4"], ms = 600 },
+  { ops = ["+loot.coin", "wings=open", "tail=flick", "eyes=happy", "prop:sparkle@5,13"], ms = 400 },
+  { ops = ["+loot.coin", "eyes=right"], ms = 500 },
+  { ops = ["+loot.coin", "eyes=left"], ms = 500 },
+  { ops = ["all+0,4", "+loot.coin"], ms = 120 },
+  { ops = ["all+0,9"], ms = 400 },
+  { ops = ["all+0,3"], ms = 120 },
+  { ops = ["eyes=happy"], ms = 400 },
+]

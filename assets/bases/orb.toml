@@ -1,0 +1,135 @@
+# Base: orb (SPEC §12.8). A round object with a face, 22 px across, sitting
+# in the crate: planets, the moon, a pumpkin, anything ball-shaped. With the
+# default colors it reads as a little blue world.
+#
+# Role glyphs (map them in the mascot's [palette]):
+#   k ink (outline, pupils)    l f F  main material light / base / shadow
+#   w m M  second material (bands, spots, a lid, a label): light / base /
+#          shadow; unused by the default shape, there for the mascot
+#   h eye highlight            P blush            p inside of the mouth
+#
+# Slots, in drawing order: head (the object itself), blush, eyes (+closed,
+# left, right, happy), mouth (+open). Every face slot follows head.
+#
+# Objects are drawn as friendly characters: a face on the object, in the
+# same place on every object (eyes on rows 9-10 at columns 11-12 and 19-20,
+# the mouth at rows 12-13, blush on row 11), so the face templates (blink,
+# double-blink, look-left, look-right, content, yawn, doze, curious) work on
+# all of them and they read as one family. A mascot replaces `head` with
+# its own shape and adds its own slots (a ring, a lid, a flame, a handle);
+# it moves the face only when its shape leaves no room there, by replacing
+# every face layer (keep `follows = "head"`).
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"w" = "white"
+"m" = "grey-1"
+"M" = "grey-2"
+"h" = "white"
+"P" = "pink-1"
+"p" = "pink-2"
+"l" = "blue-1"
+"f" = "blue-2"
+"F" = "blue-3"
+
+[layers.head]
+grid = """
+................................
+................................
+................................
+............kkkkkkkk............
+..........kkllllllllkk..........
+.........kllllllffffffk.........
+........klfffffffffffffk........
+.......klfllffffffffffffk.......
+......klfflfffffffffffffFk......
+......klffffffffffffffffFk......
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klfffffffffffffffffFFk.....
+.....kffffffffffffffffffFFk.....
+.....kffffffffffffffffffFFk.....
+.....kffffffffffffffffffFFk.....
+.....kffffffffffffffffffFFk.....
+.....kffffffffffffffffffFFk.....
+......kffffffffffffffffFFk......
+......kffffffffffffffffFFk......
+.......kffffffffffffffFFk.......
+........kffffFFFFFFFFFFk........
+.........kFFFFFFFFFFFFk.........
+..........kkFFFFFFFFkk..........
+............kkkkkkkk............
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# The face, shared by every object base and every object mascot: eyes on
+# row 9 (so `peek` shows them), a small smile, and blush. It all follows
+# `head`, the object's main shape, so `curious` tilts the face along.
+[layers.blush]
+at = [9, 11]
+follows = "head"
+grid = """
+PP..........PP
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.mouth]
+at = [14, 12]
+follows = "head"
+grid = """
+k..k
+.kk.
+"""
+
+[layers."mouth.open"]
+at = [15, 12]
+follows = "head"
+grid = """
+kk
+kp
+"""

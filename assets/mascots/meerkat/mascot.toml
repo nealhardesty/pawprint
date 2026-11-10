@@ -1,0 +1,284 @@
+# Meerkat, on rodent-upright. The tallest, thinnest thing in a crate: a
+# small sandy head that tapers to a pointed snout, dark crescent patches
+# round the eyes, little dark ears low on the sides of the head, a slim
+# neck with a cream front, two front paws dangling at the chest, and a thin
+# dark-tipped tail standing up behind it. The signature is sentry duty: it
+# stretches up tall and scans left, then right. The rare one is a second
+# meerkat popping up beside it to look too; then both duck.
+id = "meerkat"
+name = "Meerkat"
+category = "mammals"
+aliases = []
+accent = "ochre"
+extends = "rodent-upright"
+
+[palette]
+"l" = "cream"       # fur light
+"f" = "brown-1"     # sandy fur
+"F" = "brown-2"     # fur shadow
+"w" = "cream"       # muzzle and front
+"M" = "brown-1"     # shadow on the cream
+"d" = "brown-4"     # NEW: eye patches, ears, tail tip
+"n" = "fur-black"   # nose
+"h" = "white"       # eye glint
+
+# A thin tail, held up behind, with a dark tip.
+[layers.tail]
+at = [24, 8]
+grid = """
+.kk.
+kddk
+kddk
+kfFk
+kfFk
+kfFk
+kfFk
+kfFk
+kfFk
+kfFk
+kfFk
+kfFk
+kfFk
+"""
+
+[layers."tail.flick"]
+at = [24, 7]
+grid = """
+..kk.
+.kddk
+.kddk
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+kfFk.
+"""
+
+# A slim, upright neck and body with a cream front.
+[layers.body]
+at = [11, 12]
+grid = """
+..kwwwwk..
+.kfwwwwFk.
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+klfwwwwfFk
+"""
+
+# A small round head that tapers to a pointed snout, with dark patches
+# round the eyes.
+[layers.head]
+at = [10, 3]
+grid = """
+...kkkkkk...
+.kklllfffkk.
+klffffffffFk
+kfffffffffFk
+kfffffffffFk
+kfddffffddFk
+kddddffddddk
+kddddffddddk
+.kddwffwddk.
+..kfwwwwFk..
+...kwwwwk...
+...kFnnFk...
+....kkkk....
+"""
+
+[layers.ears]
+at = [8, 8]
+follows = "head"
+grid = """
+kk............kk
+kdk..........kdk
+.k............k.
+"""
+
+[layers."ears.flick"]
+at = [8, 7]
+follows = "head"
+grid = """
+..............kk
+kk............kk
+kdk..........kdk
+.k..............
+"""
+
+[layers.eyes]
+at = [12, 9]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.closed"]
+at = [12, 10]
+follows = "head"
+grid = """
+kk....kk
+"""
+
+[layers."eyes.left"]
+at = [11, 9]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.right"]
+at = [13, 9]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.happy"]
+at = [11, 9]
+follows = "head"
+grid = """
+.kk..kk.
+k..kk..k
+"""
+
+[layers.nose]
+at = [15, 14]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [15, 13]
+follows = "head"
+grid = """
+nn
+"""
+
+# No buck teeth: the mouth is just the chin under the pointed nose.
+[layers.mouth]
+at = [15, 15]
+follows = "head"
+grid = """
+kk
+"""
+
+[layers."mouth.open"]
+at = [14, 14]
+follows = "head"
+grid = """
+knnk
+kppk
+.kk.
+"""
+
+# Front paws dangling at the chest, sentry style.
+[layers.paws]
+at = [11, 15]
+grid = """
+.FF....FF.
+FffF..FffF
+.dd....dd.
+"""
+
+# The lookout's friend, hidden until the rare action.
+[layers."buddy.up"]
+at = [0, 6]
+grid = """
+..kkkkk..
+.kllfffk.
+klffffFFk
+kdhdfdhdk
+kdkdfdkdk
+.kdwwwdk.
+..kwnwk..
+.klkkkFk.
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+klfwwwfFk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "tail-flick"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: on sentry. It stretches up tall, scans left, then right,
+# then settles.
+[[actions]]
+name = "sentry"
+weight = 5
+frames = [
+  { ops = ["all+0,-1"], ms = 120 },
+  { ops = ["all+0,-2", "paws+0,-1"], ms = 300 },
+  { ops = ["all+0,-2", "paws+0,-1", "head+-1,0", "eyes=left"], ms = 800 },
+  { ops = ["all+0,-2", "paws+0,-1"], ms = 160 },
+  { ops = ["all+0,-2", "paws+0,-1", "head+1,0", "eyes=right"], ms = 800 },
+  { ops = ["all+0,-2", "paws+0,-1"], ms = 300 },
+  { ops = ["all+0,-1"], ms = 120 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a second meerkat pops up beside it. They swap a look, then both
+# duck into the crate, and only one comes back up.
+[[actions]]
+name = "two-on-watch"
+weight = 1
+frames = [
+  { ops = ["+buddy.up", "buddy+0,10"], ms = 120 },
+  { ops = ["+buddy.up", "buddy+0,3"], ms = 120 },
+  { ops = ["+buddy.up", "eyes=left", "head+-1,0"], ms = 900 },
+  { ops = ["+buddy.up", "eyes=happy"], ms = 500 },
+  { ops = ["+buddy.up", "all+0,6"], ms = 100 },
+  { ops = ["+buddy.up", "all+0,15"], ms = 700 },
+  { ops = ["all+0,4"], ms = 140 },
+  { ops = [], ms = 300 },
+]

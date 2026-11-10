@@ -1,0 +1,150 @@
+# Avocado, an object: half an avocado, cut side out, dark rind around pale
+# green flesh that turns buttery toward the middle, and the big round pit
+# sitting low like a belly. The signature gives the pit a fond little pat
+# with a stubby arm; the rare one has the pit pop right out, roll along
+# the rim, and roll back home.
+id = "avocado"
+name = "Avocado"
+category = "food"
+aliases = []
+accent = "moss"
+extends = "object"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"g" = "green-2"     # rind, lit side
+"G" = "green-3"     # rind
+"f" = "green-1"     # flesh
+"F" = "green-2"     # flesh by the rind
+"l" = "yellow-1"    # buttery middle
+"y" = "yellow-2"    # the pit's hollow
+"Y" = "orange-1"    # deep in the hollow
+"s" = "brown-1"     # pit light
+"S" = "brown-2"     # pit
+"D" = "brown-3"     # pit shadow
+"h" = "white"       # eye highlight
+"P" = "pink-1"      # blush
+"p" = "pink-2"      # inside of the mouth
+
+# The avocado half, with the hollow the pit sits in.
+[layers."head"]
+grid = """
+................................
+................................
+............kkkkkkkk............
+...........kggggGGGGk...........
+..........kgFFFFFFFFGk..........
+.........kgFffffffffFGk.........
+........kgFffffffffffFGk........
+.......kgFffffffffffffFGk.......
+......kggFffffffffffffFGGk......
+......kgFffffffffffffffFGk......
+.....kgFffffffffffffffffFGk.....
+.....kgFfffffllllllfffffFGk.....
+....kGFfffffllllllllfffffFGk....
+....kGFfffllllllllllllfffFGk....
+...kGGFfffllllkkkkllllfffFGGk...
+...kGGFfflllkkyyyykklllffFGGk...
+...kGFfffllkyyYYYYyykllfffFGk...
+...kGFfffllkyYYYYYYykllfffFGk...
+...kGFfffllkyYYYYYYykllfffFGk...
+...kGFfffllkyyYYYYyykllfffFGk...
+...kGFffffllkkyyyykkllffffFGk...
+...kGFffffllllkkkkllllffffFGk...
+...kGFffffffllllllllffffffFGk...
+...kGFfffffffllllllfffffffFGk...
+...kGFffffffffffffffffffffFGk...
+...kGFffffffffffffffffffffFGk...
+...kGFffffffffffffffffffffFGk...
+....kGFffffffffffffffffffFGk....
+....kkGFffffffffffffffffFGkk....
+......kkFffffffffffffffFkk......
+........kkkffffffffffkkk........
+...........kGFffffFGk...........
+"""
+
+# The pit, a round belly. It can leave.
+[layers."pit"]
+at = [11, 14]
+follows = "head"
+grid = """
+...kkkk...
+.kkssSSkk.
+ksssSSSSSk
+kssSSSSSSk
+ksSSSSSSDk
+kSSSSSSDDk
+.kkSDDDkk.
+...kkkk...
+"""
+
+# A stubby arm, raised, and patting the pit.
+[layers."arm.up"]
+at = [21, 11]
+follows = "head"
+grid = """
+....kk.
+...kGGk
+..kGGk.
+.kGGk..
+kGGk...
+kkk....
+"""
+
+[layers."arm.pat"]
+at = [19, 11]
+follows = "head"
+grid = """
+.......
+.......
+kkkk...
+kGGGkk.
+.kkGGGk
+...kkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: a fond pat on the pit, twice.
+[[actions]]
+name = "belly-pat"
+weight = 4
+frames = [
+  { ops = ["+arm.up"], ms = 200 },
+  { ops = ["eyes=happy", "+arm.pat", "pit+0,1"], ms = 160 },
+  { ops = ["eyes=happy", "+arm.up"], ms = 200 },
+  { ops = ["eyes=happy", "+arm.pat", "pit+0,1"], ms = 160 },
+  { ops = ["eyes=happy", "+arm.up"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: POP. The pit jumps out, lands on the rim, and rolls back home.
+[[actions]]
+name = "pit-pop"
+weight = 1
+frames = [
+  { ops = ["eyes=closed", "pit+0,1"], ms = 160 },
+  { ops = ["+mouth.open", "pit+4,-6"], ms = 140 },
+  { ops = ["+mouth.open", "eyes=right", "pit+9,-4"], ms = 160 },
+  { ops = ["+mouth.open", "eyes=right", "pit+11,1"], ms = 400 },
+  { ops = ["eyes=right", "pit+8,1"], ms = 200 },
+  { ops = ["eyes=right", "pit+5,1"], ms = 200 },
+  { ops = ["eyes=right", "pit+2,0"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]

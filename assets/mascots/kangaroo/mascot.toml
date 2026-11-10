@@ -1,0 +1,235 @@
+# Kangaroo (roo), bespoke (no base). A red kangaroo standing tall: a long
+# deer-like face with a wide dark nose, two tall pointed ears, a lean
+# rust-red body with a cream front, short forearms held up at the chest
+# like a boxer's, and the pouch: a curved rim across the belly just above
+# the crate. The signature is a boxing shuffle: fists up, a jab with each
+# hand while it bounces side to side. The rare one: a joey pokes its head
+# out of the pouch, blinks around, and ducks back in.
+id = "kangaroo"
+name = "Kangaroo"
+category = "mammals"
+aliases = ["roo", "joey"]
+accent = "copper"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "orange-2"    # fur light
+"f" = "orange-3"    # rust-red fur
+"F" = "brown-3"     # fur shadow
+"w" = "cream"       # front, muzzle, inner ears
+"M" = "brown-1"     # shadow on the cream, the pouch rim
+"n" = "fur-black"   # nose
+"h" = "white"       # eye glint
+"p" = "pink-2"      # mouth inside
+
+# A lean body, wider at the hips, with a cream front.
+[layers.body]
+at = [8, 12]
+grid = """
+...kkffffffkk...
+..klffwwwwffFk..
+.klfwwwwwwwwfFk.
+.klfwwwwwwwwfFk.
+.klfwwwwwwwwfFk.
+.klfwwwwwwwwfFk.
+klffwwwwwwwwfFFk
+klffwwwwwwwwfFFk
+klffwwwwwwwwfFFk
+klffwwwwwwwwfFFk
+klffwwwwwwwwfFFk
+klffwwwwwwwwfFFk
+klffwwwwwwwwfFFk
+klffwwwwwwwwfFFk
+klffwwwwwwwwfFFk
+klffwwwwwwwwfFFk
+klffwwwwwwwwfFFk
+klffwwwwwwwwfFFk
+klffwwwwwwwwfFFk
+klffwwwwwwwwfFFk
+"""
+
+# A long face tapering to a wide dark nose.
+[layers.head]
+at = [10, 3]
+grid = """
+...kkkkkk...
+.kkllllffkk.
+klllfffffFFk
+klffffffffFk
+klffffffffFk
+kfffffffffFk
+.kffwwwwfFk.
+..kfwwwwFk..
+..knnnnnnk..
+...kkkkkk...
+"""
+
+# Tall pointed ears.
+[layers.ears]
+at = [7, 0]
+follows = "head"
+grid = """
+.kk............kk.
+kffk..........kffk
+klwfk........kfwFk
+klwwfk......kfwwFk
+klwwfk......kfwwFk
+.klwfk......kfwFk.
+..klfk......kfFk..
+"""
+
+[layers."ears.flick"]
+at = [7, 0]
+follows = "head"
+grid = """
+.kk...............
+kffk..............
+klwfk.............
+klwwfk........kkk.
+klwwfk.......kwffk
+.klwfk......kwwFFk
+..klfk......kfFFk.
+"""
+
+[layers.eyes]
+at = [12, 8]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.closed"]
+at = [12, 9]
+follows = "head"
+grid = """
+kk....kk
+"""
+
+[layers."eyes.left"]
+at = [11, 8]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.right"]
+at = [13, 8]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.happy"]
+at = [11, 8]
+follows = "head"
+grid = """
+.kk..kk.
+k..kk..k
+"""
+
+[layers."eyes.fierce"]
+at = [12, 7]
+follows = "head"
+grid = """
+k......k
+.kk..kk.
+kk....kk
+"""
+
+[layers."mouth.open"]
+at = [14, 12]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+# The joey, hidden in the pouch until the rare action.
+[layers."joey.peek"]
+at = [12, 11]
+grid = """
+.k....k.
+klk..klk
+kllkkllk
+klkllklk
+.kllllk.
+"""
+
+# The pouch rim, drawn over the joey.
+[layers.pouch]
+at = [11, 15]
+grid = """
+F........F
+.FFFFFFFF.
+.MMMMMMMM.
+"""
+
+# Short forearms held up at the chest, fists ready.
+[layers.fistl]
+at = [11, 12]
+grid = """
+.FF.
+FllF
+FfFF
+.FF.
+"""
+
+[layers.fistr]
+at = [17, 12]
+grid = """
+.FF.
+FllF
+FfFF
+.FF.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "look-left"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: a boxing shuffle. Fists up, a bounce to the left with a left
+# jab, a bounce to the right with a right jab, and back to guard.
+[[actions]]
+name = "boxing"
+weight = 5
+frames = [
+  { ops = ["fistl+0,-2", "fistr+0,-2", "eyes=fierce"], ms = 200 },
+  { ops = ["all+-1,-1", "fistl+-2,-4", "fistr+0,-2", "eyes=fierce"], ms = 140 },
+  { ops = ["all+-1,0", "fistl+0,-2", "fistr+0,-2", "eyes=fierce"], ms = 160 },
+  { ops = ["all+1,-1", "fistl+0,-2", "fistr+2,-4", "eyes=fierce"], ms = 140 },
+  { ops = ["all+1,0", "fistl+0,-2", "fistr+0,-2", "eyes=fierce"], ms = 160 },
+  { ops = ["all+-1,-1", "fistl+-2,-4", "fistr+0,-2", "eyes=fierce"], ms = 140 },
+  { ops = ["fistl+0,-2", "fistr+0,-2", "eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a joey pokes its head out of the pouch, looks about, and ducks
+# back in.
+[[actions]]
+name = "joey"
+weight = 1
+frames = [
+  { ops = ["fistl+-2,0", "fistr+2,0", "+joey.peek", "joey+0,3"], ms = 300 },
+  { ops = ["fistl+-2,0", "fistr+2,0", "+joey.peek", "joey+0,1"], ms = 140 },
+  { ops = ["fistl+-2,0", "fistr+2,0", "+joey.peek", "eyes=happy"], ms = 900 },
+  { ops = ["fistl+-2,0", "fistr+2,0", "+joey.peek", "joey+-1,0", "eyes=happy"], ms = 400 },
+  { ops = ["fistl+-2,0", "fistr+2,0", "+joey.peek", "joey+1,0", "eyes=happy"], ms = 400 },
+  { ops = ["fistl+-2,0", "fistr+2,0", "+joey.peek", "joey+0,3"], ms = 140 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,184 @@
+# Iguana, on critter. A green iguana side-on on the crate rim, facing right:
+# a row of tall yellow spikes running down its neck and back, a long flat
+# head with a blunt snout, a big round pale cheek scale under the eye, a
+# pale dewlap hanging from its throat, dark bands across its body, and
+# clawed feet over the rim. The signature is a territorial head bob with
+# the dewlap flaring out into a big fan; the rare one basks in the sun,
+# eyes shut and sparkling with contentment.
+id = "iguana"
+name = "Iguana"
+category = "critters"
+aliases = []
+accent = "pine"
+extends = "critter"
+# Template props go top-left, over its tail end, clear of the head.
+prop_offset = [-18, 0]
+
+# One drawing for head, crest, and body; the base head is unused.
+rest = ["body", "eyes", "nose", "feet"]
+
+[palette]
+"l" = "green-1"     # skin light
+"f" = "green-2"     # skin
+"F" = "green-3"     # skin shadow, bands, mouth line, nostril
+"s" = "yellow-2"    # NEW: crest spikes
+"d" = "green-1"     # NEW: dewlap
+"D" = "green-2"     # NEW: dewlap shadow
+"w" = "yellow-1"    # dewlap edge
+"c" = "grey-1"      # NEW: cheek scale
+"C" = "grey-2"      # NEW: cheek scale shadow
+"W" = "white"       # NEW: cheek scale shine
+"p" = "pink-2"      # mouth inside
+
+# Crest, head, cheek scale, dewlap, and banded body.
+[layers.body]
+at = [0, 0]
+grid = """
+................................
+................................
+................................
+................k...............
+.............k.ksk..............
+............kskkskkkkkkkkk......
+..........k.kskkslllllllllkk....
+.......k.kskksklfffffffffffkk...
+......kskkskklfffffffffffffFFk..
+......kskkslffffffffffffffffFk..
+......ksklffffffffccffffffffFk..
+......klfffffffffcWWcFFFFFFFFk..
+.....klffffffffffCccCdddddddk...
+....klfFfffFffffffCCfddddDk.....
+...klffFfffFffffffffDdddDk......
+...klffFfffFfffffffffddDk.......
+...klffFfffFfffffffffdDk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+...klffFfffFffffffffffFk........
+"""
+
+[layers.eyes]
+at = [22, 8]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.closed"]
+at = [22, 9]
+grid = """
+kk
+"""
+
+[layers."eyes.left"]
+at = [21, 8]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.right"]
+at = [23, 8]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.happy"]
+at = [21, 8]
+grid = """
+.kk.
+k..k
+"""
+
+[layers.nose]
+at = [27, 9]
+grid = """
+F
+"""
+
+[layers."nose.sniff"]
+at = [27, 8]
+grid = """
+F
+"""
+
+[layers."mouth.open"]
+at = [21, 11]
+grid = """
+pppppppp
+"""
+
+[layers.feet]
+at = [2, 17]
+grid = """
+.kffk............kffk.
+kfffFk..........kfffFk
+kfkfkk..........kfkfkk
+"""
+
+# The dewlap fanned out wide.
+[layers."dewlap.flare"]
+at = [20, 12]
+grid = """
+kwddddddk
+kwdddddDk
+kwdddddDk
+.kwddddDk
+.kwdddDk.
+.kwdddDk.
+..kDDDk..
+...kkk...
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a territorial head bob, three dips, with the dewlap flared.
+[[actions]]
+name = "bob-and-flare"
+weight = 4
+frames = [
+  { ops = ["all+0,-1", "+dewlap.flare"], ms = 200 },
+  { ops = ["all+0,1", "+dewlap.flare"], ms = 140 },
+  { ops = ["all+0,-1", "+dewlap.flare"], ms = 140 },
+  { ops = ["all+0,1", "+dewlap.flare"], ms = 140 },
+  { ops = ["+dewlap.flare"], ms = 600 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it basks in the sun, eyes shut, flattening happily onto the rim.
+[[actions]]
+name = "bask"
+weight = 1
+frames = [
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = ["eyes=happy", "all+0,1", "prop:sparkle@1,1"], ms = 600 },
+  { ops = ["eyes=happy", "all+0,1", "prop:sparkle@5,0"], ms = 600 },
+  { ops = ["eyes=happy", "all+0,1", "prop:sparkle@1,1"], ms = 600 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

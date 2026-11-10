@@ -1,0 +1,202 @@
+# Bengal cat on cat-sit: the little leopard. A sleek golden coat covered in
+# bold dark rosettes (dark rings with warm rust centers) on the cheeks,
+# shoulders, and flanks, dark lines running down the brow, "mascara" streaks
+# from the outer corners of big green eyes ringed in pale spectacles, small
+# rounded ears set wide, and a ringed tail with a black tip. `eyes.wide` is
+# the dilated hunter's stare. The signature crouches low, wiggles, and
+# pounces; the rare one pounces at a sparkle, which pops up on the other
+# side.
+id = "cat-bengal"
+name = "Bengal Cat"
+category = "cats-dogs"
+aliases = ["bengal"]
+accent = "ochre"
+extends = "cat-sit"
+
+[palette]
+"l" = "yellow-1"    # coat light
+"f" = "yellow-2"    # golden coat
+"F" = "orange-2"    # coat shadow
+"O" = "orange-3"    # NEW: rosette centers
+"d" = "brown-4"     # NEW: rosettes and brow lines
+"w" = "cream"       # muzzle and chest
+"M" = "brown-2"     # mouth lines
+"e" = "green-1"     # iris
+"h" = "white"       # eye glint
+"n" = "pink-2"      # nose
+"p" = "pink-1"      # inner ear
+
+# Ringed, with a black tip.
+[layers.tail]
+at = [26, 11]
+grid = """
+.kk.
+kddk
+kddk
+kfFk
+kdFk
+kffk
+kfFk
+kddk
+kfFk
+kfFk
+"""
+
+[layers."tail.flick"]
+at = [26, 10]
+grid = """
+..kk.
+.kddk
+.kddk
+kffFk
+kdFk.
+kffk.
+kfFk.
+kddk.
+kfFk.
+kfFk.
+"""
+
+# Rosettes on the shoulders and flanks.
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klfffffffffffffFFk..
+.kldfffffffffffffdFFk.
+kldOdfffwwwwwwffdOdFFk
+klfddfffwwwwwwfffddFFk
+klffffffwwwwwwffffffFk
+kldfffffffwwwwfffffdFk
+kdOdfffffffffffffdOdFk
+klddffffffffffffffddFk
+klfffffffffffffffffFFk
+klffffdfffffffdffffFFk
+klfffdOdffffffdOdffFFk
+klffffddfffffffddffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# Sleek head: brow lines, mascara streaks, and a rosette on each cheek.
+[layers.head]
+at = [6, 4]
+grid = """
+....kkkkkkkkkkkk....
+..kkdllldlldllfdkk..
+.kldOdffdffdffdOdFk.
+klffdffffddffffdfFFk
+klffwwwffffffwwwfFFk
+klfwfffwffffwfffwFFk
+klfdfffwffffwfffdFFk
+kldfwwwffffffwwwfdFk
+kldffffwwwwwwffffdFk
+kdOdffwwMwwMwwffdOdk
+.kdffwwwwwwwwwwffdk.
+..kFFffwwwwwwffFFk..
+...kkFFFFFFFFFFkk...
+"""
+
+# Small, rounded ears, set wide.
+[layers.ears]
+at = [6, 2]
+grid = """
+.kk..............kk.
+klfk............kfFk
+klpfk..........kfpFk
+klppf..........fppFk
+"""
+
+# Big green eyes with slit pupils, ringed in pale "spectacles".
+[layers.eyes]
+at = [10, 9]
+grid = """
+hke......hke
+eke......eke
+"""
+
+[layers."eyes.closed"]
+at = [10, 10]
+grid = """
+kkk......kkk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+grid = """
+khe......khe
+kee......kee
+"""
+
+[layers."eyes.right"]
+at = [10, 9]
+grid = """
+hek......hek
+eek......eek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.k........k.
+k.k......k.k
+"""
+
+# The hunter's stare: pupils blown wide.
+[layers."eyes.wide"]
+at = [10, 9]
+grid = """
+hkk......hkk
+kkk......kkk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: drops low into a crouch, wiggles its hindquarters, and pounces.
+[[actions]]
+name = "pounce"
+weight = 4
+frames = [
+  { ops = ["eyes=wide", "all+0,2"], ms = 400 },
+  { ops = ["eyes=wide", "all+-1,2", "tail=flick"], ms = 140 },
+  { ops = ["eyes=wide", "all+1,2"], ms = 140 },
+  { ops = ["eyes=wide", "all+-1,2", "tail=flick"], ms = 140 },
+  { ops = ["eyes=wide", "all+1,2"], ms = 140 },
+  { ops = ["eyes=wide", "all+0,-3", "paws+0,-2"], ms = 220 },
+  { ops = ["eyes=happy", "all+0,-1"], ms = 120 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: stalks a sparkle at the top right, pounces, and the sparkle pops up
+# on the far side. A puzzled look, an embarrassed blink.
+[[actions]]
+name = "missed"
+weight = 1
+frames = [
+  { ops = ["eyes=right", "prop:sparkle@24,1"], ms = 500 },
+  { ops = ["eyes=wide", "all+0,2", "prop:sparkle@24,1"], ms = 500 },
+  { ops = ["eyes=wide", "all+-1,2", "tail=flick", "prop:sparkle@24,1"], ms = 140 },
+  { ops = ["eyes=wide", "all+1,2", "prop:sparkle@24,1"], ms = 140 },
+  { ops = ["eyes=wide", "all+2,-3", "paws+0,-2", "prop:sparkle@1,2"], ms = 260 },
+  { ops = ["eyes=left", "prop:sparkle@1,2"], ms = 700 },
+  { ops = ["eyes=left", "prop:sparkle@1,0"], ms = 300 },
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = [], ms = 200 },
+]

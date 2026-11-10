@@ -1,0 +1,224 @@
+# Dalmatian on dog-sit. Snow white and covered in irregular black spots of
+# every size: on the crown, cheeks, and muzzle, over the shoulders and down
+# the body, on one paw, and along the tail. One ear is solid black, the
+# other white with a spot. `ears.out` flings both ears out sideways for the
+# shake; `head.back` is the spotted back of the head for the rare tail
+# chase, and `eyes.dizzy` is how that ends.
+id = "dog-dalmatian"
+name = "Dalmatian"
+category = "cats-dogs"
+aliases = ["dalmatian"]
+accent = "cranberry"
+extends = "dog-sit"
+
+[palette]
+"l" = "white"       # coat light
+"f" = "white"       # white coat
+"F" = "grey-1"      # coat shadow
+"w" = "white"       # muzzle and chest
+"M" = "grey-2"      # mouth lines, chin
+"d" = "fur-black"   # NEW: spots, the black ear
+"D" = "grey-4"      # NEW: sheen on the black ear
+"s" = "white"       # white ear
+"S" = "grey-1"      # white ear shadow
+"h" = "grey-3"      # catchlight: white would vanish into the coat at 1x
+"n" = "fur-black"   # nose
+"p" = "pink-2"      # tongue
+
+[layers.tail]
+at = [25, 12]
+grid = """
+..kk.
+.klk.
+.kdFk
+klfFk
+kdfFk
+kfdFk
+kffFk
+kfdFk
+"""
+
+[layers."tail.flick"]
+at = [25, 12]
+grid = """
+...kk.
+..klk.
+..kdFk
+.klfFk
+kfdfFk
+kdfFk.
+kffFk.
+kfdFk.
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klffffwwwwwwfffFFk..
+.klfffffwwwwwwffffdFk.
+kddffffwwwwwwwwffffFFk
+kldffffwwwwwwwwffffddk
+klfffffwwwwwwwwffffdFk
+klffffffwwdwwwfffffFFk
+klfddffffwwwwffffffFFk
+klffdffffffffffddffFFk
+klffffffddffffffdffFFk
+klfffffffffffffffffFFk
+kddffffffffffffffffFFk
+klfffffffffddffffffFFk
+klffffffffffffffffddFk
+klfffffffffffffffffFFk
+klfffddffffffffffffFFk
+klffffffffffffdffffFFk
+klfffffffffffffffffFFk
+"""
+
+[layers.head]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kklllldlllffkk...
+..kllllffddffffFFk..
+.kllffffffdffffddFk.
+klfffffffffffffdfFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffwwwwwwwwwwfddFk
+klffwdwwwwwwwwwwfdFk
+klffwwdwwMMwwwwwfFFk
+.kffwwwMwwwwMdwwFFk.
+..kFwwwdwwwwwwwwFk..
+...kkMMMMMMMMMMkk...
+"""
+
+# The back of the head, for the spin.
+[layers."head.back"]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kkddllllllffkk...
+..kllddffffffffFFk..
+.kllffffffffffddFFk.
+klffffffffffffdffFFk
+klfffffffddffffffFFk
+klfddfffffdffffffFFk
+klffdffffffffffffFFk
+klffffffffffffffddFk
+klfffffddFFffffffFFk
+.kfffffFffffFdffFFk.
+..kFffffffffffffFk..
+...kkFFFFFFFFFFkk...
+"""
+
+[layers.paws]
+at = [8, 17]
+grid = """
+.FFFF......FFFF.
+FllllF....FllddF
+kldlFk....klFlFk
+"""
+
+
+# One solid black ear, one white ear with a spot.
+[layers.ears]
+at = [4, 5]
+grid = """
+..kkkk............kkkk..
+.kdDddk..........kSsssk.
+kdDdddk..........kSssssk
+kdDdddk..........kSddssk
+kdDdddk..........kSddssk
+kdDdddk..........kSssssk
+kddddDk..........kSssssk
+.kdddk............kSsdk.
+.kdddk............kSSSk.
+..kkk..............kkk..
+"""
+
+[layers."ears.flick"]
+at = [3, 4]
+grid = """
+..kkkk...................
+.kdDddk............kkkk..
+kdDdddk...........kSsssk.
+kdDdddk...........kSssssk
+kdDdddk...........kSddssk
+.kdddDk...........kSddssk
+.kdddk............kSssssk
+..kkk.............kSssssk
+...................kSsdk.
+...................kSSSk.
+....................kkk..
+"""
+
+# Mid-shake: both ears flung straight out.
+[layers."ears.out"]
+at = [1, 4]
+grid = """
+..kkkk..................kkkk..
+.kdDddkk..............kkssssk.
+kdDdddddk............kssddsssk
+.kkddddDk............kSsssskk.
+...kkkkk..............kkkkk...
+"""
+
+[layers."eyes.dizzy"]
+at = [11, 8]
+grid = """
+k.k....k.k
+.k......k.
+k.k....k.k
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a full shake, nose to tail. The head whips side to side with
+# the ears flying, the body follows, and loose fur puffs off.
+[[actions]]
+name = "shake"
+weight = 4
+frames = [
+  { ops = ["eyes=closed"], ms = 160 },
+  { ops = ["eyes=closed", "ears=out", "head+-2,0"], ms = 90 },
+  { ops = ["eyes=closed", "ears=out", "head+2,0"], ms = 90 },
+  { ops = ["eyes=closed", "ears=out", "head+-2,0"], ms = 90 },
+  { ops = ["eyes=closed", "ears=out", "head+2,0"], ms = 90 },
+  { ops = ["eyes=closed", "all+-1,0", "tail=flick"], ms = 90 },
+  { ops = ["eyes=closed", "all+1,0"], ms = 90 },
+  { ops = ["eyes=happy", "prop:puff@22,4"], ms = 450 },
+  { ops = ["eyes=happy"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it spots its own tail and spins after it: side, back, mirrored
+# side, front, twice round, then sits there dizzy.
+[[actions]]
+name = "tail-chase"
+weight = 1
+frames = [
+  { ops = ["eyes=right", "tail=flick"], ms = 500 },
+  { ops = ["eyes=right", "head+2,0"], ms = 150 },
+  { ops = ["head=back", "-eyes", "-nose"], ms = 150 },
+  { ops = ["flipx", "eyes=right", "head+2,0"], ms = 150 },
+  { ops = ["eyes=right", "head+1,0", "tail=flick"], ms = 150 },
+  { ops = ["head=back", "-eyes", "-nose"], ms = 150 },
+  { ops = ["flipx", "eyes=right", "head+2,0"], ms = 150 },
+  { ops = ["eyes=dizzy", "+mouth.open"], ms = 900 },
+  { ops = ["eyes=dizzy", "+mouth.open", "all+1,0"], ms = 300 },
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = [], ms = 200 },
+]

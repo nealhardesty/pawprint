@@ -54,14 +54,14 @@ impl AliasTable {
     }
 }
 
-/// Rule 3: the whole name, digits dropped (`red-panda-01` → `redpanda`),
+/// Rule 2: the whole name, digits dropped (`red-panda-01` → `redpanda`),
 /// equals an alias. Returns `(squashed name, id)`.
 pub fn whole_name(short: &str, table: &AliasTable) -> Option<(String, String)> {
     let name: String = tokens(short).concat();
     table.lookup(&name).map(|id| (name.clone(), id.to_string()))
 }
 
-/// The outcome of rule 4.
+/// The outcome of rule 3.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenMatch {
     /// Exactly one mascot at the longest matching n-gram length.
@@ -69,12 +69,12 @@ pub enum TokenMatch {
         ngram: String,
         id: String,
     },
-    /// Several distinct mascots tie; the hash decides (rule 5).
+    /// Several distinct mascots tie; the cache, then the hash, decide (rules 4 and 5).
     Ambiguous(Vec<(String, String)>),
     None,
 }
 
-/// Rule 4: for n from the token count down to 1, look up every run of n
+/// Rule 3: for n from the token count down to 1, look up every run of n
 /// adjacent tokens. The first n with any match decides.
 pub fn token_match(short: &str, table: &AliasTable) -> TokenMatch {
     let toks = tokens(short);

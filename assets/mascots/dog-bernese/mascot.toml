@@ -1,0 +1,225 @@
+# Bernese Mountain Dog on dog-sit: a big, gentle, tricolor softie. A glossy
+# black coat; a white blaze running from the crown down into a white muzzle
+# and the white cross on the chest; rust eyebrow dots, rust cheeks framing
+# the muzzle, and rust socks above white toes; broad black floppy ears;
+# warm brown eyes with a glint so they read on black fur; and a bushy
+# white-tipped tail. `paws.reach` puts a paw up on the rim; `head.hope`
+# lifts the brows for the rare chin-on-the-rim sigh.
+id = "dog-bernese"
+name = "Bernese Mountain Dog"
+category = "cats-dogs"
+aliases = ["bernese"]
+accent = "copper"
+extends = "dog-sit"
+
+[palette]
+"l" = "grey-3"      # sheen on the black coat
+"f" = "grey-4"      # black coat
+"F" = "fur-black"   # coat shadow
+"w" = "white"       # blaze, muzzle, chest, toes
+"M" = "grey-1"      # shadow on the white
+"r" = "orange-3"    # NEW: rust brows, cheeks, socks
+"R" = "brown-3"     # NEW: rust shadow
+"s" = "grey-4"      # ears
+"S" = "fur-black"   # ear shadow
+"e" = "brown-2"     # warm brown iris
+"h" = "white"       # glint
+"n" = "ink"         # nose
+"p" = "pink-2"      # tongue
+
+# A bushy tail with a white tip.
+[layers.tail]
+at = [25, 11]
+grid = """
+..kk.
+.kwwk
+.kwMk
+klfFk
+klfFk
+kffFk
+kffFk
+kffFk
+kffFk
+"""
+
+[layers."tail.flick"]
+at = [25, 10]
+grid = """
+...kk.
+..kwwk
+..kwMk
+.klfFk
+kffFk.
+kffFk.
+kffFk.
+kffFk.
+kffFk.
+kffFk.
+"""
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klffffwwwwwwfffFFk..
+.klfffffwwwwwwffffFFk.
+klfrrffwwwwwwwwffrrFFk
+klfrrffwwwwwwwwffrrFFk
+klfrfffwwwwwwwwfffrFFk
+klffrfffwwwwwwfffrfFFk
+klfffffffwwwwffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+[layers.head]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllwwllffkk...
+..kllllffwwffffFFk..
+.kllfffffwwfffffFFk.
+klffffrrfwwfrrfffFFk
+klffffffwwwwfffffFFk
+klffffffwwwwfffffFFk
+klfffrwwwwwwwwrffFFk
+klffrrwwwwwwwwrrfFFk
+klffrrwwwMMwwwrrfFFk
+.kffrrwMwwwwMwrrFFk.
+..kFwrwwwwwwwwrwFk..
+...kkMMMMMMMMMMkk...
+"""
+
+# Chin on the rim: the brows lift into a worried, hopeful look.
+[layers."head.hope"]
+at = [6, 4]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllwwllffkk...
+..kllllffwwffffFFk..
+.kllffrffwwffrffFFk.
+klfffffrfwwfrffffFFk
+klffffffwwwwfffffFFk
+klffffffwwwwfffffFFk
+klfffrwwwwwwwwrffFFk
+klffrrwwwwwwwwrrfFFk
+klffrrwwwMMwwwrrfFFk
+.kffrrwMwwwwMwrrFFk.
+..kFwrwwwwwwwwrwFk..
+...kkMMMMMMMMMMkk...
+"""
+
+# Warm brown eyes with a glint.
+[layers.eyes]
+at = [12, 9]
+grid = """
+he....he
+ek....ek
+"""
+
+[layers."eyes.closed"]
+at = [12, 10]
+grid = """
+ee....ee
+"""
+
+[layers."eyes.left"]
+at = [11, 9]
+grid = """
+he....he
+ke....ke
+"""
+
+[layers."eyes.right"]
+at = [13, 9]
+grid = """
+he....he
+ek....ek
+"""
+
+# Looking up from the rim: big hopeful eyes.
+[layers."eyes.up"]
+at = [12, 9]
+grid = """
+kh....kh
+ee....ee
+"""
+
+[layers."eyes.happy"]
+at = [11, 9]
+grid = """
+.ee....ee.
+e..e..e..e
+"""
+
+# Rust socks over white toes.
+[layers.paws]
+at = [8, 17]
+grid = """
+.RrrR......RrrR.
+RwwwwR....RwwwwR
+kwMwMk....kwMwMk
+"""
+
+# One paw up on the rim, reaching forward.
+[layers."paws.reach"]
+at = [8, 15]
+grid = """
+.RrrR...........
+RrrrrR..........
+RwwwwR.....RrrR.
+kwMwMk....RwwwwR
+..........kwMwMk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: plonks a big paw up on the rim, then tilts its head with one
+# ear up, as if to ask what you're doing.
+[[actions]]
+name = "paw-tilt"
+weight = 4
+frames = [
+  { ops = ["paws=reach"], ms = 300 },
+  { ops = ["paws=reach", "eyes=right"], ms = 400 },
+  { ops = ["paws=reach", "eyes=right", "head+1,0", "ears=flick"], ms = 1000 },
+  { ops = ["paws=reach", "head+1,0", "ears=flick"], ms = 300 },
+  { ops = ["paws=reach"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it sinks down until its chin rests on the rim, gazes up at you,
+# and lets out a long, contented sigh.
+[[actions]]
+name = "chin-sigh"
+weight = 1
+frames = [
+  { ops = ["all+0,1"], ms = 200 },
+  { ops = ["all+0,3", "head=hope", "eyes=up"], ms = 900 },
+  { ops = ["all+0,3", "head=hope", "eyes=closed"], ms = 300 },
+  { ops = ["all+0,3", "head=hope", "eyes=closed", "prop:puff@21,13"], ms = 600 },
+  { ops = ["all+0,3", "head=hope", "eyes=up"], ms = 900 },
+  { ops = ["all+0,1"], ms = 200 },
+  { ops = [], ms = 200 },
+]

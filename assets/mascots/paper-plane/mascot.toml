@@ -1,0 +1,104 @@
+# Paper Plane, an object: a crisp white paper plane seen from the side,
+# resting across the crate with its nose to the right, the big wing on top
+# and the folded keel underneath, a crease running from tail to nose. The
+# face rides on the wing. The signature bobs gently up and down as if it
+# were already gliding; the rare one takes off, loops up and out of the
+# top of the frame, and swoops back in from the left to land.
+id = "paper-plane"
+name = "Paper Plane"
+category = "things"
+aliases = []
+accent = "ice"
+extends = "object"
+
+[palette]
+"l" = "white"       # the wing's top edge
+"f" = "white"       # paper
+"F" = "blue-1"      # the keel, in shadow
+"m" = "grey-1"      # the crease
+"M" = "blue-1"      # the far wing, peeking over
+"h" = "grey-3"      # eye glint (white paper eats white)
+"p" = "pink-2"      # inside of the mouth
+
+[layers.head]
+grid = """
+....kkk.........................
+...kMMMkkk......................
+..kkMMMMMMkkk...................
+.kllMMMMMMMMMkkk................
+.kffllllMMMMMMMMkkk.............
+.kffffffllllMMMMMMMkkk..........
+.kffffffffffllllMMMMMMkkk.......
+.kffffffffffffffllllMMMMMkk.....
+.kffffffffffffffffffllllMMMk....
+.kffffffffffffffffffffffllllkk..
+.kffffffffffffffffffffffffffllk.
+.kfffffffffffffffffffffffffmmmk.
+.kffffffffffffffffffffmmmmmFkk..
+.kfffffffffffffffmmmmmFFkkkk....
+.kffffffffffmmmmmFFFFkkk........
+.kfffffmmmmmFFFFFFkkk...........
+.kmmmmmkFFFFFFkkkk..............
+..kkkkkFFFFkkk..................
+.....kFFkkk.....................
+......kk........................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: it bobs gently on an air current, as if already gliding.
+[[actions]]
+name = "glide"
+weight = 5
+frames = [
+  { ops = ["all+0,-1"], ms = 220 },
+  { ops = ["all+0,-2", "eyes=happy"], ms = 500 },
+  { ops = ["all+0,-1", "eyes=happy"], ms = 220 },
+  { ops = ["eyes=happy"], ms = 220 },
+  { ops = ["all+0,1", "eyes=happy"], ms = 500 },
+  { ops = [], ms = 220 },
+]
+
+# Rare: away it goes. Up and out of the top of the frame, a moment of
+# empty crate, then it swoops back in from the left and settles, delighted.
+[[actions]]
+name = "loop"
+weight = 1
+frames = [
+  { ops = ["all+0,1", "eyes=closed"], ms = 200 },
+  { ops = ["all+3,-4", "eyes=happy"], ms = 100 },
+  { ops = ["all+8,-11", "eyes=happy"], ms = 100 },
+  { ops = ["all+14,-22", "eyes=happy"], ms = 100 },
+  { ops = ["all+0,-40"], ms = 500 },
+  { ops = ["all+-26,-6", "eyes=happy"], ms = 100 },
+  { ops = ["all+-16,-3", "eyes=happy"], ms = 100 },
+  { ops = ["all+-7,-1", "eyes=happy"], ms = 120 },
+  { ops = ["all+-2,0", "eyes=happy"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 700 },
+  { ops = [], ms = 200 },
+]

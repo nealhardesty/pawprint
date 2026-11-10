@@ -1,0 +1,152 @@
+# Pizza, an object: a slice pointing down, a puffy crust along the top,
+# melted cheese, and three slices of pepperoni, with the face in the cheese.
+# What makes it itself is the wedge and the crust. The signature lets a
+# string of cheese stretch and drip off its edge; the rare one loses its
+# olive, which rolls right off the side, and lunges to catch it.
+id = "pizza"
+name = "Pizza"
+category = "food"
+aliases = []
+accent = "marigold"
+extends = "object"
+# Template props sit over the top right of the crust.
+prop_offset = [3, -2]
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "yellow-1"    # cheese light
+"f" = "yellow-2"    # cheese
+"F" = "orange-2"    # cheese shadow
+"u" = "orange-1"    # crust light
+"U" = "orange-2"    # crust
+"V" = "orange-3"    # crust shadow
+"q" = "red-1"       # pepperoni light
+"R" = "red-2"       # pepperoni
+"o" = "fur-black"   # olive
+"O" = "grey-3"      # olive shine
+"h" = "white"       # eye highlight
+"P" = "red-1"       # blush
+"p" = "red-2"       # inside of the mouth
+
+# The slice, its tip hidden behind the crate front.
+[layers."head"]
+grid = """
+.....kkkkkkkkkkkkkkkkkkkkkk.....
+...kkuuuuuuuuuuuUUUUUUUUUUUkk...
+..kuuuUUUUUUUUUUUUUUUUUUUUUUUk..
+.kuUUUUUUUUUUUUUUUUUUUUUUUUUUUk.
+.kUUUUUUUUUUUUUUUUUUUUUUUUUUUUk.
+..kVVVVffVVVVVVVVVVfffVVVVVVVk..
+..klffRRFfffffffffffFfffRRffFk..
+...klRqqRffffffffffffffRqqRFk...
+...klRqRRffffffffffffffRqRRFk...
+....klRRffffffffffffffffRRFk....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+......klffffffffffffffffFk......
+.......klffffffffffffffFk.......
+.......klffRRffffffffffFk.......
+........klRqqRffffffffFk........
+.........kRqRRfffffffFk.........
+.........klRRffffffffFk.........
+..........klffffffffFk..........
+...........klffffffFk...........
+...........klffffffFk...........
+............klffffFk............
+.............klffFk.............
+.............klffFk.............
+..............klFk..............
+...............kk...............
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# A black olive, which does not stay put in the rare action.
+[layers."olive"]
+at = [17, 16]
+grid = """
+.oO.
+o..o
+.oo.
+"""
+
+# A string of cheese stretching off the right edge, then dripping.
+[layers."drip.a"]
+at = [24, 12]
+grid = """
+kk.
+kfk
+.k.
+"""
+
+[layers."drip.b"]
+at = [24, 12]
+grid = """
+kk.
+kfk
+kfk
+kFk
+.k.
+"""
+
+[layers."drip.c"]
+at = [24, 12]
+grid = """
+kk.
+kfk
+kfk
+.k.
+...
+kk.
+kFk
+.k.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: a string of cheese stretches off the edge, longer, longer, and
+# a drop lets go.
+[[actions]]
+name = "cheese-drip"
+weight = 4
+frames = [
+  { ops = ["eyes=right", "+drip.a"], ms = 300 },
+  { ops = ["eyes=right", "+drip.b"], ms = 400 },
+  { ops = ["eyes=right", "+drip.c"], ms = 300 },
+  { ops = ["eyes=happy", "+drip.a"], ms = 600 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the olive slides off the side and drops; the slice lunges after it
+# and bounces it back into place.
+[[actions]]
+name = "olive-catch"
+weight = 1
+frames = [
+  { ops = ["olive+1,1", "eyes=right"], ms = 300 },
+  { ops = ["olive+4,3", "eyes=right", "+mouth.open"], ms = 160 },
+  { ops = ["olive+6,7", "eyes=right", "+mouth.open"], ms = 120 },
+  { ops = ["olive+6,9", "head+2,1", "eyes=closed"], ms = 140 },
+  { ops = ["olive+5,4", "head+2,0", "eyes=happy"], ms = 160 },
+  { ops = ["olive+2,0", "head+1,0", "eyes=happy"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 700 },
+  { ops = [], ms = 200 },
+]

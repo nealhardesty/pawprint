@@ -1,0 +1,168 @@
+# Trumpet, an object: a brass trumpet lying on its side across the crate,
+# the mouthpiece at the left, three valve pistons with pearl buttons
+# standing up from the valve casing (the face lives on the casing), the
+# main slide looping underneath, and a big bell flaring out to the right.
+# The signature puffs up and toots: the bell flares and a note floats out;
+# the rare one plays a whole fanfare, pistons pumping, notes everywhere.
+id = "trumpet"
+name = "Trumpet"
+category = "things"
+aliases = []
+accent = "honey"
+extends = "object"
+
+[palette]
+"l" = "yellow-1"    # brass light
+"f" = "yellow-2"    # brass
+"F" = "orange-3"    # brass shadow
+"w" = "cream"       # pearl buttons, the bell's rim
+"M" = "brown-3"     # the throat of the bell
+"p" = "red-2"       # inside of the mouth
+
+[layers.head]
+grid = """
+................................
+................................
+..............................k.
+.............................kwk
+.............................kMk
+............................kwMk
+.........kkkkkkkkkkkkkk.....kMMk
+........klllllllllllllFk...kwMMk
+.kk.....klffffffffffffFk..klwMMk
+klFkkkkkklffffffffffffFkkklfwMMk
+klfFFllFFfffffffffffffflllffwMMk
+kFFkklFkklfffffffffffffFFFffwMMk
+.kk.klFkklffffffffffffFkkkFfwMMk
+....klFkklffffffffffffFk..kFwMMk
+....klFkklffffffffffffFk...kwMMk
+....klFkklffffffffffffFkkk..kMMk
+....klfllffffffffffffffllFk.kwMk
+....kFFFFFFFFFFFFFFFFFFFFFk..kMk
+.....kkkkkkkkkkkkkkkkkkkkk...kwk
+..............................k.
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# Mid-toot: the bell flares wider.
+[layers."head.flare"]
+grid = """
+.............................kwk
+.............................kwk
+............................klwk
+............................klwk
+............................kwMk
+............................kwMk
+.........kkkkkkkkkkkkkk.....kMMk
+........klllllllllllllFk...kwMMk
+.kk.....klffffffffffffFk..klwMMk
+klFkkkkkklffffffffffffFkkklfwMMk
+klfFFllFFfffffffffffffflllffwMMk
+kFFkklFkklfffffffffffffFFFffwMMk
+.kk.klFkklffffffffffffFkkkFfwMMk
+....klFkklffffffffffffFk..kFwMMk
+....klFkklffffffffffffFk...kwMMk
+....klFkklffffffffffffFkkk..kMMk
+....klfllffffffffffffffllFk.kwMk
+....kFFFFFFFFFFFFFFFFFFFFFk.kwMk
+.....kkkkkkkkkkkkkkkkkkkkk..klwk
+............................kFwk
+.............................kwk
+.............................kwk
+..............................k.
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# The three valve pistons and their pearl buttons; they pump in the fanfare.
+[layers.pistons]
+at = [10, 1]
+follows = "head"
+grid = """
+kkkkkkkkkkkk
+kwwkkwwkkwwk
+klFkklFkklFk
+klFkklFkklFk
+klFkklFkklFk
+klFkklFkklFk
+"""
+
+# Cheeks puffed, eyes squeezed, blowing.
+[layers."eyes.squeeze"]
+at = [11, 9]
+follows = "head"
+grid = """
+k........k
+.kk....kk.
+"""
+
+[layers."blush.puff"]
+at = [8, 10]
+follows = "head"
+grid = """
+PPP..........PPP
+.PP..........PP.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "double-blink"
+weight = 3
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a deep breath, cheeks puffed, and TOOT: the bell flares and a
+# note floats up out of it.
+[[actions]]
+name = "toot"
+weight = 5
+frames = [
+  { ops = ["eyes=closed", "all+0,1"], ms = 300 },
+  { ops = ["eyes=squeeze", "blush=puff"], ms = 250 },
+  { ops = ["eyes=squeeze", "blush=puff", "head=flare", "prop:note@23,3"], ms = 500 },
+  { ops = ["eyes=squeeze", "blush=puff", "prop:note@24,0"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a full fanfare. The pistons pump, the bell blares, notes fly out
+# one after another, and it takes a happy bow at the end.
+[[actions]]
+name = "fanfare"
+weight = 1
+frames = [
+  { ops = ["eyes=squeeze", "blush=puff", "head=flare", "pistons+0,1", "prop:note@23,4"], ms = 220 },
+  { ops = ["eyes=squeeze", "blush=puff", "head=flare", "all+0,-1", "prop:note@24,1", "prop:note@1,2"], ms = 220 },
+  { ops = ["eyes=squeeze", "blush=puff", "head=flare", "pistons+0,1", "prop:note@25,-1", "prop:note@1,0", "prop:note@23,5"], ms = 220 },
+  { ops = ["eyes=squeeze", "blush=puff", "head=flare", "all+0,-1", "prop:note@0,-2", "prop:note@24,2"], ms = 220 },
+  { ops = ["eyes=squeeze", "blush=puff", "head=flare", "pistons+0,1", "prop:note@24,-1", "prop:note@14,-3"], ms = 300 },
+  { ops = ["eyes=happy", "all+0,2"], ms = 500 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

@@ -73,7 +73,7 @@ enum Cmd {
     },
     /// List mascots, or the accent palette
     List {
-        /// Only this category (mammals, cats-dogs, birds, aquatic, critters, oddballs)
+        /// Only this category (mammals, cats-dogs, birds, aquatic, critters, mythical, oddballs, space, nature, food, things)
         #[arg(long, value_name = "C")]
         category: Option<String>,
         /// List the accent palette instead

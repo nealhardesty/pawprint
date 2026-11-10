@@ -1,0 +1,217 @@
+# Persian cat on cat-sit: a cream cloud with opinions. An enormous round
+# head wrapped in a ruff of long fur that zigzags out past the jaw, a flat
+# face with the tiny nose pushed up between the eyes, tiny ears nearly lost
+# in the fluff, and big round copper eyes under heavy, unimpressed lids. A
+# small down-turned mouth (`mouth`, shown at rest) completes the grumpy,
+# regal look. `paws.groom` lifts a paw to the mouth for the rare action.
+id = "cat-persian"
+name = "Persian Cat"
+category = "cats-dogs"
+aliases = ["persian"]
+accent = "rose"
+extends = "cat-sit"
+# The head fills the badge: template props (doze's zzz) go a little higher
+# and further right, clear of the eyes.
+prop_offset = [1, -3]
+
+[palette]
+"l" = "white"       # fur light
+"f" = "cream"       # long cream fur
+"F" = "brown-1"     # fur shadow
+"w" = "white"       # face and chest
+"M" = "brown-2"     # mouth lines
+"e" = "orange-2"    # copper iris
+"h" = "white"       # glint
+"n" = "pink-2"      # nose
+"p" = "pink-1"      # inner ear, tongue
+
+# A fluffy plume peeking out under the ruff.
+[layers.tail]
+at = [25, 14]
+grid = """
+..kkk.
+.klffk
+klfffk
+klffFk
+kffFFk
+kffFFk
+kfFFk.
+kfFFk.
+"""
+
+# A huge round head, the ruff zigzagging out on both sides.
+[layers.head]
+at = [3, 3]
+grid = """
+........kkkkkkkkkk........
+......kklllllllllfkk......
+....kkllllffffffffFFkk....
+...kllffffffffffffffFFk...
+..kllffffffffffffffffFFk..
+.kllffffffffffffffffffFFk.
+kllffffffffffffffffffffFFk
+.klfffffffffffffffffffFFk.
+klffffffffffffffffffffFFFk
+.kfffffffwwwwwwwwfffffFFk.
+kffffffwwwwwwwwwwwwffffFFk
+.kffffffwwwwwwwwwwffffFFk.
+..kFffffwwwwwwwwwwffffFk..
+...kkFFFFFFFFFFFFFFFFkk...
+"""
+
+# Tiny ears, nearly lost in the fluff.
+[layers.ears]
+at = [7, 2]
+grid = """
+.kk............kk.
+klpk..........kpFk
+klppl........lppFk
+"""
+
+[layers."ears.flick"]
+at = [7, 2]
+grid = """
+.kk...............
+klpk...........kk.
+klppl........lppFk
+"""
+
+# Round copper eyes under heavy, unimpressed lids.
+[layers.eyes]
+at = [10, 8]
+grid = """
+kkkk....kkkk
+hkke....hkke
+ekke....ekke
+.ee......ee.
+"""
+
+[layers."eyes.closed"]
+at = [10, 9]
+grid = """
+.FF......FF.
+kkkk....kkkk
+"""
+
+# Lids lower still: deeply unimpressed, or nodding off.
+[layers."eyes.half"]
+at = [10, 8]
+grid = """
+FFFF....FFFF
+kkkk....kkkk
+ekke....ekke
+.ee......ee.
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+grid = """
+kkkk....kkkk
+kkhe....kkhe
+kkee....kkee
+.ee......ee.
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+grid = """
+kkkk....kkkk
+hekk....hekk
+eekk....eekk
+.ee......ee.
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+# The flat face: a tiny nose pushed up between the eyes.
+[layers.nose]
+at = [15, 11]
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [15, 10]
+grid = """
+nn
+"""
+
+# A small, down-turned mouth.
+[layers.mouth]
+at = [14, 12]
+follows = "head"
+grid = """
+.MM.
+M..M
+"""
+
+[layers."mouth.lick"]
+at = [14, 12]
+grid = """
+.MM.
+pp.M
+"""
+
+# One paw raised to the mouth to groom.
+[layers."paws.groom"]
+at = [8, 12]
+grid = """
+.MMMM..........
+MllllM.........
+MlFlFM.........
+.MMMM..........
+...............
+..........FFFF.
+.........FllllF
+.........klFlFk
+"""
+
+[[actions]]
+use = "blink"
+weight = 5
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "yawn"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a huffy snort. The lids drop, the nose twitches, and it blows
+# out two indignant puffs; the ruff poofs up a pixel.
+[[actions]]
+name = "huff"
+weight = 4
+frames = [
+  { ops = ["eyes=half"], ms = 600 },
+  { ops = ["eyes=closed", "nose=sniff"], ms = 150 },
+  { ops = ["eyes=closed", "all+0,-1", "prop:puff@1,12", "prop:puff@22,12"], ms = 250 },
+  { ops = ["eyes=closed", "prop:puff@0,11", "prop:puff@23,11"], ms = 300 },
+  { ops = ["eyes=half"], ms = 900 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: grooming, it gets slower and slower, and falls asleep with its
+# paw still up; then wakes with a start and pretends nothing happened.
+[[actions]]
+name = "groom-nap"
+weight = 1
+frames = [
+  { ops = ["paws=groom", "mouth=lick"], ms = 300 },
+  { ops = ["paws=groom", "paws+0,1"], ms = 250 },
+  { ops = ["paws=groom", "mouth=lick", "eyes=half"], ms = 400 },
+  { ops = ["paws=groom", "eyes=half", "head+0,1"], ms = 500 },
+  { ops = ["paws=groom", "eyes=closed", "head+0,1", "prop:zzz@21,0"], ms = 1200 },
+  { ops = ["paws=groom", "all+0,-1", "prop:bang@27,0"], ms = 200 },
+  { ops = ["eyes=half"], ms = 600 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,168 @@
+# Saturn, an object on `orb`: a pale gold planet with soft bands and a big
+# cream ring, tilted, that passes behind it at the top and in front of it
+# below the smile. The ring is what makes it itself: it reaches nearly the
+# whole width of the crate. The signature rocks the ring level and over to
+# the other tilt while Saturn watches it go; the rare one sends a tiny moon
+# zipping round the ring, in front, out to the tip, and away behind.
+id = "saturn"
+name = "Saturn"
+category = "space"
+aliases = []
+accent = "ochre"
+extends = "orb"
+
+[palette]
+"l" = "yellow-1"    # planet light
+"f" = "orange-1"    # planet
+"F" = "yellow-2"    # planet shadow
+"w" = "cream"       # light band
+"m" = "brown-1"     # dark band
+"M" = "brown-2"     # dark band shadow
+"r" = "cream"       # ring
+"R" = "brown-2"     # ring underside
+"h" = "grey-3"      # eye highlight: white would vanish on pale gold
+"o" = "grey-1"      # moon
+"O" = "grey-2"      # moon shadow
+
+# The planet, a little smaller than the plain orb so the ring has room.
+[layers.head]
+grid = """
+................................
+................................
+................................
+................................
+............kkkkkkkk............
+..........kkllllllllkk..........
+.........kwwwwwwwwwwwwk.........
+.........klfffffffffffk.........
+........kllffffffffffFFk........
+........klffffffffffffFk........
+.......kllffffffffffffFFk.......
+.......klffffffffffffFFFk.......
+.......klfffffffffffffFFk.......
+.......klffffffffffffFFFk.......
+.......kllfffffffffffFFFk.......
+........kmmmmmmmmmmmMMMk........
+........kmmmmmmmmmmmMMMk........
+.........kffffffffFFFFk.........
+.........kFFFFFFFFFFFFk.........
+..........kkFFFFFFFFkk..........
+............kkkkkkkk............
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# The ring: its far side shows only past the planet's edges, its near side
+# crosses in front, under the smile. Variants for the signature tilt.
+[layers.ring]
+at = [1, 7]
+follows = "head"
+grid = """
+......................kkkkkk..
+.......................Rrrrrk.
+.......................kkRRrrk
+.........................kRRrk
+....kk..................kkRrk.
+...krr................kkRRrk..
+..krRR.............kkkRRrrk...
+.krRkk.........kkkkRRRrrkk....
+krRkkkkkkkkkkkkRRRRrrrkk......
+krrRRRRRRRRRRRRrrrrkkk........
+.kkrrrrrrrrrrrrkkkk...........
+...kkkkkkkkkkkk...............
+"""
+
+[layers."ring.flat"]
+at = [1, 8]
+follows = "head"
+grid = """
+......k................k......
+...kkkr................rkkk...
+..krrr..................rrrk..
+.krRRk..................kRRrk.
+krRkk....................kkRrk
+krRRkk..................kkRRrk
+.krRRRkkkkkkkkkkkkkkkkkkRRRrk.
+..kkrrRRRRRRRRRRRRRRRRRRrrkk..
+....kkkrrrrrrrrrrrrrrrrkkk....
+.......kkkkkkkkkkkkkkkk.......
+"""
+
+[layers."ring.over"]
+at = [1, 7]
+follows = "head"
+grid = """
+..kkkkkk......................
+.krrrrR.......................
+krrRRkk.......................
+krRRk.........................
+.krRkk..................kk....
+..krRRkk................rrk...
+...krrRRkkk.............RRrk..
+....kkrrRRRkkkk.........kkRrk.
+......kkrrrRRRRkkkkkkkkkkkkRrk
+........kkkrrrrRRRRRRRRRRRRrrk
+...........kkkkrrrrrrrrrrrrkk.
+...............kkkkkkkkkkkk...
+"""
+
+# A tiny moon for the rare action (hidden at rest).
+[layers."moon.zip"]
+at = [14, 15]
+follows = "head"
+grid = """
+.kk.
+kwok
+koOk
+.kk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the ring rocks level and over to the other tilt, and back,
+# while Saturn follows it with its eyes.
+[[actions]]
+name = "ring-tilt"
+weight = 4
+frames = [
+  { ops = ["ring=flat"], ms = 160 },
+  { ops = ["ring=over", "eyes=right"], ms = 900 },
+  { ops = ["ring=flat", "eyes=right"], ms = 160 },
+  { ops = ["eyes=left"], ms = 700 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a tiny moon zips round the ring, from behind the planet on the
+# right, along the near side, past the left tip and away behind again.
+[[actions]]
+name = "moon-zip"
+weight = 1
+frames = [
+  { ops = ["+moon.zip", "moon+11,-10", "eyes=right"], ms = 130 },
+  { ops = ["+moon.zip", "moon+14,-7", "eyes=right"], ms = 130 },
+  { ops = ["+moon.zip", "moon+10,-4", "eyes=right"], ms = 130 },
+  { ops = ["+moon.zip", "moon+1,0"], ms = 130 },
+  { ops = ["+moon.zip", "moon+-9,1", "eyes=left"], ms = 130 },
+  { ops = ["+moon.zip", "moon+-14,-1", "eyes=left"], ms = 130 },
+  { ops = ["+moon.zip", "moon+-13,-4", "eyes=left"], ms = 130 },
+  { ops = ["eyes=happy"], ms = 600 },
+]

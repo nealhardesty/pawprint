@@ -1,0 +1,133 @@
+# Iceberg, an object on `object`: a craggy ice peak, white on its lit face
+# and blue in its shadows, with a smaller second summit, standing in the
+# sea that fills the crate (a water line in front, like the sea creatures').
+# The signature bobs it down into the water and back up; the rare one has a
+# little orange fish leap out of the sea beside it and dive back in.
+id = "iceberg"
+name = "Iceberg"
+category = "nature"
+aliases = []
+accent = "ice"
+extends = "object"
+
+[palette]
+"l" = "white"       # ice, lit face
+"f" = "blue-1"      # ice
+"F" = "blue-2"      # ice shadow, facets, crevices
+"h" = "grey-3"      # eye highlight: white would vanish on pale ice
+"u" = "white"       # foam
+"v" = "teal"        # sea
+"V" = "blue-3"      # deep sea
+"o" = "orange-2"    # fish
+"O" = "orange-3"    # fish shadow
+
+# The berg: a main summit, a second lower one, and the bulk under water.
+[layers.head]
+grid = """
+................................
+..............kk................
+.............klFk...............
+............kllfFk..............
+...........kllffFFk..kk.........
+..........kllfffFfFkklFk........
+..........kllfffFffffllFk.......
+.........kllfffffFfflffFk.......
+........kllffffffFffffffFk......
+........kllffffffFfffffFFk......
+.......kllfffffffFfffffFFk......
+.......kllffffffffFfffffFFk.....
+......kllfffffffffFfffffFFk.....
+......kllfffffffffFffffFFFk.....
+.....kllFfffffffffFfffFffFFk....
+.....kllfFfffffffffFfffffFFk....
+....kllffffffffffffFfffffFFk....
+....kllffffffffffffFfffffFFk....
+....kllfffffffffffffFffffFFk....
+....kllfffffffffffffFffffFFk....
+....kllfffffffffffffFffffFFk....
+....kllfffffffffffffFffffFFk....
+....kllffffffffffffffFfffFFk....
+....kllffffffffffffffFfffFFk....
+....kllffffffffffffffFfffFFk....
+....kllffffffffffffffFfffFFk....
+....kllfffffffffffffffFffFFk....
+....kllfffffffffffffffFffFFk....
+....kllfffffffffffffffFffFFk....
+....kllfffffffffffffffFffFFk....
+....kllffffffffffffffffFfFFk....
+....kkkkkkkkkkkkkkkkkkkkkkkk....
+"""
+
+# The sea, drawn in front; it stays put when the berg bobs.
+[layers.water]
+at = [1, 16]
+grid = """
+kkk.....kkk.....kkk.....kkk...
+kuukkkkkuuukkkkkuuukkkkkuuukkk
+kvvvuuvvvvvvuuvvvvvvuuvvvvvvuk
+kVvvvvvvVVvvvvvvVVvvvvvvVVvvvk
+"""
+
+[layers."water.ripple"]
+at = [1, 16]
+grid = """
+....kkk.....kkk.....kkk.....kk
+kkkkuuukkkkkuuukkkkkuuukkkkkuk
+kuvvvvvvuuvvvvvvuuvvvvvvuuvvvk
+kvvvVVvvvvvvVVvvvvvvVVvvvvvvVk
+"""
+
+# A little fish for the rare action (hidden at rest).
+[layers."fish.leap"]
+at = [23, 14]
+grid = """
+..kkk...
+.kooOkkk
+kkoooOok
+.kOOOkkk
+..kkk...
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: it bobs at the water line, down into the sea and back up, the
+# water rippling round it.
+[[actions]]
+name = "bob"
+weight = 4
+frames = [
+  { ops = ["head+0,1", "water=ripple"], ms = 300 },
+  { ops = ["head+0,2", "eyes=happy"], ms = 400 },
+  { ops = ["head+0,1", "water=ripple", "eyes=happy"], ms = 300 },
+  { ops = ["head+0,-1"], ms = 400 },
+  { ops = ["water=ripple"], ms = 300 },
+]
+
+# Rare: a little fish leaps out of the sea beside it, arcs over, and dives
+# back in; the iceberg watches it go, delighted.
+[[actions]]
+name = "fish-leap"
+weight = 1
+frames = [
+  { ops = ["+fish.leap", "fish+2,4", "water=ripple", "eyes=right"], ms = 140 },
+  { ops = ["+fish.leap", "fish+1,-3", "eyes=right"], ms = 140 },
+  { ops = ["+fish.leap", "fish+-1,-8", "eyes=right"], ms = 200 },
+  { ops = ["+fish.leap", "fish+-4,-7"], ms = 160 },
+  { ops = ["+fish.leap", "fish+-6,-2"], ms = 140 },
+  { ops = ["+fish.leap", "fish+-7,4", "water=ripple", "eyes=happy"], ms = 140 },
+  { ops = ["water=ripple", "eyes=happy"], ms = 700 },
+  { ops = [], ms = 200 },
+]

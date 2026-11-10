@@ -1,0 +1,182 @@
+# Satellite, an object on `object`: a gold-foil box with a grey deck on
+# top, a little dish antenna on a mast at the top left, and a solar panel
+# on a strut at each side, blue cells in a grid. The signature folds the
+# panels in and spreads them wide again, pleased; the rare one points its
+# dish at the sky and pings: rings of signal go out and a note comes back.
+id = "satellite"
+name = "Satellite"
+category = "space"
+aliases = []
+accent = "slate"
+extends = "object"
+
+[palette]
+"l" = "yellow-1"    # foil light
+"f" = "amber"       # gold foil
+"F" = "orange-3"    # foil shadow
+"w" = "white"       # deck light, dish
+"m" = "grey-1"      # deck, dish
+"M" = "grey-2"      # deck shadow, dish shadow, struts
+"g" = "grey-2"      # mast, strut
+"b" = "blue-1"      # panel cell glint
+"c" = "blue-2"      # panel cells, signal
+"C" = "blue-3"      # panel grid lines
+
+# The box: a grey deck over gold foil.
+[layers.head]
+grid = """
+................................
+................................
+................................
+................................
+................................
+........kkkkkkkkkkkkkkkk........
+........kwmmmmmmmmmmmmMk........
+........kMMMMMMMMMMMMMMk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klfffffffffFffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+"""
+
+# The dish antenna on its mast.
+[layers.dish]
+at = [7, 0]
+follows = "head"
+grid = """
+.kk....
+kbwkk..
+kwwwwk.
+.kmmwMk
+..kMMMk
+...kkgk
+"""
+
+# Solar panels on struts, open; half and shut for the signature.
+[layers.panels]
+at = [1, 8]
+follows = "head"
+grid = """
+kkkkkk..................kkkkkk
+kbcCbk..................kbCcbk
+kccCck..................kcCcck
+kCCCCkg................gkCCCCk
+kbcCbkM................MkbCcbk
+kccCck..................kcCcck
+kCCCCk..................kCCCCk
+kbcCbk..................kbCcbk
+kkkkkk..................kkkkkk
+"""
+
+[layers."panels.half"]
+at = [3, 8]
+follows = "head"
+grid = """
+kkkk..................kkkk
+kbck..................kcbk
+kcck..................kcck
+kCCkg................gkCCk
+kbckM................Mkcbk
+kcck..................kcck
+kCCk..................kCCk
+kbck..................kcbk
+kkkk..................kkkk
+"""
+
+[layers."panels.shut"]
+at = [5, 8]
+follows = "head"
+grid = """
+kk..................kk
+kk..................kk
+kk..................kk
+kkg................gkk
+kkM................Mkk
+kk..................kk
+kk..................kk
+kk..................kk
+kk..................kk
+"""
+
+# Rings of signal off the dish for the rare action (hidden at rest).
+[layers."signal.near"]
+at = [4, 1]
+follows = "head"
+grid = """
+.c
+c.
+c.
+"""
+
+[layers."signal.far"]
+at = [1, 0]
+follows = "head"
+grid = """
+..c
+.c.
+c..
+c..
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "curious"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the panels fold in to the box, then unfold and spread wide.
+[[actions]]
+name = "unfold"
+weight = 4
+frames = [
+  { ops = ["panels=half"], ms = 120 },
+  { ops = ["panels=shut", "eyes=closed"], ms = 500 },
+  { ops = ["panels=half", "eyes=closed"], ms = 140 },
+  { ops = ["eyes=happy", "all+0,-1"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 700 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it aims its dish at the sky and pings; rings of signal go out, and a
+# note comes back.
+[[actions]]
+name = "ping"
+weight = 1
+frames = [
+  { ops = ["eyes=left"], ms = 400 },
+  { ops = ["eyes=left", "+signal.near"], ms = 200 },
+  { ops = ["eyes=left", "signal=far"], ms = 200 },
+  { ops = ["eyes=left", "+signal.near"], ms = 200 },
+  { ops = ["eyes=left", "signal=far"], ms = 300 },
+  { ops = ["eyes=happy", "prop:note@0,0"], ms = 900 },
+  { ops = [], ms = 200 },
+]

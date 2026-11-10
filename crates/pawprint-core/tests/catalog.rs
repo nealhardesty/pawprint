@@ -7,7 +7,7 @@ use pawprint_core::sprite::{Origin, When, compile, export_png};
 
 /// Words that show up in hostnames on their own. An alias equal to one of
 /// these would pull every `web-01`, `lab-3`, or `bug-tracker` onto the same
-/// mascot (rules 3 and 4), which defeats telling machines apart.
+/// mascot (rules 2 and 3), which defeats telling machines apart.
 const HOSTNAME_WORDS: &[&str] = &[
     // roles and services
     "db",
@@ -268,7 +268,7 @@ fn no_alias_is_a_common_hostname_word() {
 }
 
 /// Realistic machine names with no animal in them. None may match an
-/// alias by rule 3 or 4: each goes to the hash, so a fleet spreads out.
+/// alias by rule 2 or 3: each goes to the hash, so a fleet spreads out.
 const NO_ANIMAL: &[&str] = &[
     "web-01",
     "web02",
@@ -428,7 +428,19 @@ fn nocturnal_mascots_have_night_actions() {
         .collect();
     assert_eq!(
         nocturnal,
-        ["cat-black", "ghost", "moth", "opossum", "owl", "raccoon"]
+        [
+            "bat",
+            "cat-black",
+            "ghost",
+            "lantern",
+            "moon",
+            "moth",
+            "opossum",
+            "owl",
+            "pumpkin",
+            "raccoon",
+            "reindeer"
+        ]
     );
     for id in nocturnal {
         let m = Catalog::bundled().get(id).unwrap();

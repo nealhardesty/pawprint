@@ -411,10 +411,17 @@ Rules apply in order. The first one that produces a mascot wins.
 | # | Rule | Example |
 |---|---|---|
 | 1 | **Explicit override.** `mascot = "<id>"` in config, from the matching `[hosts]` entry or the top level ([8.3](#83-precedence)). | `mascot = "cat-maine-coon-black"` |
-| 2 | **Cached assignment.** A previous rule-5 result for this `short` name, read from the state file. | — |
-| 3 | **Whole-name alias.** `squash(short)` equals a normalized alias. | `owl` → owl, `polar-bear` → polar-bear, `red-panda-01` → red-panda |
-| 4 | **Token match.** Longest token n-gram that names exactly one mascot. | `prod-owl-02` → owl, `snowless` → none |
-| 5 | **Deterministic fallback.** Rendezvous hash over all eligible mascots. The result is cached (rule 2). | `buildbox` → (stable mascot) |
+| 2 | **Whole-name alias.** `squash(short)` equals a normalized alias. | `owl` → owl, `polar-bear` → polar-bear, `red-panda-01` → red-panda |
+| 3 | **Token match.** Longest token n-gram that names exactly one mascot. | `prod-owl-02` → owl, `snowless` → none |
+| 4 | **Cached assignment.** A previous rule-5 result for this `short` name, read from the state file. | — |
+| 5 | **Deterministic fallback.** Rendezvous hash over all eligible mascots. The result is cached (rule 4). | `buildbox` → (stable mascot) |
+
+The cache comes **after** the name rules. It exists so that catalog growth
+never reshuffles hosts that got a hashed mascot, but it must not hide a
+mascot a host is *named* after: a host `mars` that cached a fallback before
+the planet joined the catalog shows the planet once it does. Its stale
+cache entry stays in the state file, unused (`pawprint forget` removes
+it).
 
 **Normalization.**
 
@@ -424,7 +431,7 @@ Rules apply in order. The first one that produces a mascot wins.
 - `tokens(short)`: split on every non-alphanumeric character and at every
   letter↔digit boundary, then drop tokens that are entirely digits.
   `prod-owl02` → `[prod, owl]`.
-- For rule 3, `squash(short)` is computed after removing all-digit tokens:
+- For rule 2, `squash(short)` is computed after removing all-digit tokens:
   `red-panda-01` → `redpanda`.
 - Because host names lose their digits before lookup, an alias or id that
   contains a digit (`r2d2`, `owl2`) can never match one. Such a mascot is
@@ -432,14 +439,14 @@ Rules apply in order. The first one that produces a mascot wins.
   digits in bundled ids and aliases and warns about them in user mascots
   ([12.11](#1211-validation-rules) rule 8).
 
-**Rule 4 in detail.** For `n` from `len(tokens)` down to 1, form every run of
+**Rule 3 in detail.** For `n` from `len(tokens)` down to 1, form every run of
 `n` adjacent tokens, concatenated (`[prod, red, panda]` at `n = 2` gives
 `prodred` and `redpanda`). Look each one up in the alias table. At the first
 `n` that yields **any** match:
 
 - exactly one distinct mascot → that mascot wins;
-- more than one distinct mascot → no winner, fall through to rule 5 (ambiguity
-  is resolved by the hash, never by token order).
+- more than one distinct mascot → no winner, fall through to rules 4 and 5 (ambiguity
+  is resolved by the cache or the hash, never by token order).
 
 Tokens are whole words only. `snowless` never matches `owl`, and `bearded`
 never matches `bear`.
@@ -625,7 +632,7 @@ already sends.
 | Resident memory | < 30 MB |
 | Redraws | Only on a frame, label, size, scale, or position change |
 | Startup to visible | < 300 ms |
-| Binary size, all 100 mascots embedded | < 15 MB |
+| Binary size, every bundled mascot embedded | < 15 MB (the 214-mascot catalog of 1.2: 6.0 MB, macOS arm64 release build) |
 
 The event loop blocks on OS events with a timeout equal to the next animation
 deadline. There is no fixed tick.
@@ -1848,7 +1855,7 @@ Why text:
 - **Authorable by anyone.** Humans in any editor, coding agents directly, and
   pixel-art tools through PNG import/export ([12.7](#127-png-bridges)).
 - **DRY.** Shared **bases**, **recolors**, **motion templates**, and **props**
-  let 100 distinct mascots reuse the same blinks, bobs, and body plans without
+  let every mascot reuse the same blinks, bobs, and body plans without
   copying pixels.
 - **One compiler everywhere.** `build.rs`, user mascots at runtime, `pawdev`,
   and `pawprint mascot check` all use the same crate, so they can't disagree.
@@ -1870,7 +1877,7 @@ Why text:
 ```toml
 id = "owl"
 name = "Owl"
-category = "birds"                  # mammals | cats-dogs | birds | aquatic | critters | oddballs
+category = "birds"                  # mammals | cats-dogs | birds | aquatic | critters | mythical | oddballs | space | nature | food | things
 aliases = ["owls", "hoot"]          # the id is always an implicit alias
 accent = "violet"
 fallback = true                     # eligible for the deterministic fallback (default true)
@@ -2071,7 +2078,8 @@ whale, dolphin, pufferfish, gecko, swan, mushroom, cactus, and teapot do.
   briefly shows `> hello_`.
 - **Day and night:** `when = "day" | "night" | "any"` (default `any`). Night
   is 20:00–06:00 by the local clock. Nocturnal mascots (owl, raccoon, moth,
-  opossum, cat-black, and ghost) are livelier at night: their `when = "night"` actions
+  opossum, cat-black, ghost, bat, reindeer, moon, pumpkin, and lantern)
+  are livelier at night: their `when = "night"` actions
   weigh 3× at night (`anim::NOCTURNAL_NIGHT_BOOST`). Everyone else gets
   `doze` at night. No network or location is involved.
 
@@ -2102,7 +2110,11 @@ How 100 complete mascots get made:
      every action playing: each mascot loops rest, then each action in turn
      with 700 ms of rest between. The sheet is sampled on a 100 ms clock
      and each GIF frame stores only the pixels that changed, which keeps
-     all 100 mascots in about 1.3 MB.
+     all 100 launch mascots in about 1.3 MB (2.6 MB for 214).
+   - `make mascot-sheet DIR=<folder>` renders a folder of mascots in
+     progress frame by frame without touching `assets/` or the build,
+     and fails on any warning: new waves are drawn in staging folders
+     this way and moved into `assets/mascots/` when they pass review.
    - `make building-blocks` renders `docs/building-blocks.png`: the crate in
      all 16 accents with a label, every prop at 4×, and a grid of every base
      with every motion template (each cell shows the template's most-changed
@@ -2189,7 +2201,18 @@ shared by the badge and every command that uses the catalog (`run`,
 | `sea-creature` | Body rising from water inside the crate (water line layer) | whale, dolphin, shark, narwhal, pufferfish, axolotl |
 | `critter` | Small body, big eyes | gecko, frog, snake, tortoise, snail |
 | `bug` | Segmented body, wing and antenna slots | moth, beetle, bee |
-| *(bespoke)* | No base | armadillo, rabbit, capybara, elephant, wolf, octopus, jellyfish, crab, and all 8 oddballs |
+| `orb` | A round object, 22 px across, with the object face | Planets, the moon, a pumpkin, a donut |
+| `object` | An upright rounded object with the object face; every member redraws `head` as its own shape | Most objects: food, tools, gadgets, games |
+| *(bespoke)* | No base | armadillo, rabbit, capybara, elephant, wolf, octopus, jellyfish, crab, the 8 oddballs, and a few newer mascots |
+
+**The object face.** Objects are friendly characters, and every one wears
+the same face in the same place, from `orb` and `object`: 2 × 2 eyes on
+rows 9–10 at columns 11–12 and 19–20, a small smile on rows 12–13
+(`mouth.open` for yawns), and blush on row 11, all following `head`, the
+object's main shape. So the face templates (blink, look-left/right,
+content, yawn, doze, curious, startle) work on every object, and a planet,
+a mug, and a chess piece read as one family. A mascot moves the face only
+when its shape leaves no room, by replacing every face layer.
 
 Conventions every base follows, so mascots and templates work across them
 (each base file's header lists its own roles and slots):
@@ -2420,6 +2443,7 @@ builds include `x11` (with its GNOME profile), `wayland`, and the shared
 | `palette` | Regenerate `assets/palette.gpl` from `assets/palette.toml` |
 | `art-export` | Export a mascot's layers and frames as PNGs: `make art-export MASCOT=owl` |
 | `art-import` | Convert a PNG layer into a grid: `make art-import MASCOT=owl PNG=eyes.png` |
+| `mascot-sheet` | Compile every mascot folder in `DIR` with the user-mascot rules and render each one frame by frame (rest at 1×, 2×, 4× on light and dark, every action's frames with their times) into `out/mascot-sheet/`, plus an `index.png`; fails on any warning. For drawing new mascots outside `assets/`, and for user mascots: `make mascot-sheet DIR=~/.config/pawprint/mascots` |
 | `ci` | `lint` + `test` (what CI runs on every OS) |
 | `release` | Optimized build for this platform, checked and run ([14.5](#145-release-builds)): static musl x86_64 + aarch64 on Linux, universal re-signed ad hoc on macOS, MSVC on Windows |
 | `package` | `release` + archives + `.sha256` sidecars into `dist/` ([15.2](#152-release-assets)), plus `dist/COMMIT`; enforces catalog gates |
@@ -3068,7 +3092,7 @@ taking the bottom 48 px) through `make test-windows-display`.
 
 ## Appendix A: launch catalog
 
-The planned 100 mascots, in six packs. Base assignments are in
+The 100 launch mascots, in six packs (the 1.2 expansion follows them). Base assignments are in
 [12.8](#128-bases). ★ marks the **showcase set** (the 12
 `required` IDs). Aliases listed are in addition to the ID itself. Accents are
 from [Appendix B](#appendix-b-accent-palette). The signature action is the art
@@ -3211,8 +3235,8 @@ belong only to `cat-orange-tabby` and `dog-labrador`, and `cow` is not an
 alias of `cat-cow` (it stays free for a future `cow`).
 
 **Alias audit (M3).** No alias may be a word that machines are commonly
-named with (`db`, `web`, `prod`, `lab`, `bug`, `monitor`, ...): rules 3 and
-4 would send every `lab-3` or `monitor-01` to the same mascot, which defeats
+named with (`db`, `web`, `prod`, `lab`, `bug`, `monitor`, ...): rules 2 and
+3 would send every `lab-3` or `monitor-01` to the same mascot, which defeats
 telling machines apart. The M3 audit removed eight aliases: `bug` (beetle),
 `lab` (dog-labrador), `grey` (dog-greyhound), `monitor`, `tv`, and
 `terminal` (crt; terminal servers are common among remote-desktop users),
@@ -3221,6 +3245,181 @@ still match (`beetle-1`, `labrador-01`, `crt`). `pawprint-core`'s
 `tests/catalog.rs` enforces this with a list of common hostname words and a
 corpus of ordinary hostnames that must match no alias. Mascot ids are not
 audited: a host named `elk` or `fox` gets that animal on purpose.
+
+### Catalog expansion (1.2): 114 more
+
+Added in waves by base like M3, each wave drawn in a staging folder with
+`make mascot-sheet` and reviewed on its contact sheet before moving into
+`assets/mascots/`: 47 animals, 12 mythical creatures, and 55 objects
+(the four object categories and the mythical one are new). Objects wear
+the shared object face ([12.8](#128-bases)). Signature and rare actions
+are named here; each file's header describes them.
+
+#### Mammals (20) — category `mammals`
+
+| ID | Extra aliases | Accent | Base | Signature | Rare |
+|---|---|---|---|---|---|
+| `bat` | — | plum | `bespoke` | wing-stretch | hang |
+| `camel` | dromedary | honey | `ungulate-head` | slow-chew | sigh |
+| `cheetah` | — | honey | `big-cat` | crouch-alert | sprint |
+| `cow` | cattle | moss | `ungulate-head` | cud-bell | moo |
+| `fennec` | — | marigold | `small-quadruped` | ear-swivel | gust |
+| `ferret` | — | charcoal | `small-quadruped` | slink | war-dance |
+| `giraffe` | — | ochre | `ungulate-head` | browse | nose-lick |
+| `gorilla` | silverback | charcoal | `primate` | chest-pat | sigh-scratch |
+| `guinea-pig` | cavy | honey | `rodent-upright` | popcorn | wheek |
+| `hippo` | hippopotamus | plum | `bespoke` | big-yawn | ear-wiggle-bubbles |
+| `horse` | pony, stallion | copper | `ungulate-head` | mane-toss | rear |
+| `kangaroo` | roo, joey | copper | `bespoke` | boxing | joey |
+| `leopard` | — | ochre | `big-cat` | tail-watch | lazy-stretch |
+| `lynx` | bobcat | slate | `big-cat` | tuft-twitch | snow-pounce |
+| `meerkat` | — | ochre | `rodent-upright` | sentry | two-on-watch |
+| `pangolin` | — | copper | `bespoke` | roll-up | shuffle |
+| `platypus` | — | copper | `bespoke` | dabble | bubble |
+| `reindeer` | caribou | cranberry | `ungulate-head` | snow-shake | red-nose |
+| `sheep` | lamb, ewe | ice | `ungulate-head` | fluff-baa | big-poof |
+| `zebra` | — | charcoal | `ungulate-head` | ear-swivel | fly-shake |
+
+#### Cats and dogs (9) — category `cats-dogs`
+
+| ID | Extra aliases | Accent | Base | Signature | Rare |
+|---|---|---|---|---|---|
+| `cat-bengal` | bengal | ochre | `cat-sit` | pounce | missed |
+| `cat-persian` | persian | rose | `cat-sit` | huff | groom-nap |
+| `cat-russian-blue` | russianblue | slate | `cat-sit` | slow-blink | static |
+| `cat-scottish-fold` | scottishfold | honey | `cat-sit` | perk-tilt | belly-sit |
+| `dog-bernese` | bernese | copper | `dog-sit` | paw-tilt | chin-sigh |
+| `dog-bulldog` | bulldog | brick | `dog-sit` | wobble-snort | snore |
+| `dog-dalmatian` | dalmatian | cranberry | `dog-sit` | shake | tail-chase |
+| `dog-golden-retriever` | goldenretriever | marigold | `dog-sit` | happy-thump | stick |
+| `dog-samoyed` | samoyed | ice | `dog-sit` | fluff-smile | beam |
+
+#### Birds (8) — category `birds`
+
+| ID | Extra aliases | Accent | Base | Signature | Rare |
+|---|---|---|---|---|---|
+| `cardinal` | redbird | cranberry | `bird-perched` | crest-raise | song |
+| `kingfisher` | — | sky | `bird-perched` | dive-glint | dive |
+| `magpie` | — | charcoal | `bird-perched` | stash | treasure |
+| `ostrich` | — | plum | `bird-water` | head-bob | head-in-crate |
+| `peacock` | peafowl | teal | `bird-water` | strut | fan-display |
+| `robin` | — | brick | `bird-perched` | listen | worm-tug |
+| `stork` | — | ice | `bird-water` | bill-clack | one-leg-wobble |
+| `woodpecker` | — | brick | `bird-perched` | peck | drumroll |
+
+#### Aquatic (5) — category `aquatic`
+
+| ID | Extra aliases | Accent | Base | Signature | Rare |
+|---|---|---|---|---|---|
+| `clownfish` | — | marigold | `sea-creature` | dart | anemone |
+| `manatee` | seacow | slate | `sea-creature` | lazy-roll | munch |
+| `seahorse` | — | rose | `sea-creature` | tail-curl | spin |
+| `starfish` | seastar | rose | `sea-creature` | wave | cartwheel |
+| `stingray` | manta | sky | `sea-creature` | ripple-glide | leap |
+
+#### Critters and bugs (5) — category `critters`
+
+| ID | Extra aliases | Accent | Base | Signature | Rare |
+|---|---|---|---|---|---|
+| `butterfly` | — | violet | `bug` | wing-fold | flutter-up |
+| `chameleon` | — | moss | `critter` | tongue-zap | color-change |
+| `dragonfly` | — | teal | `bug` | hover | dart |
+| `iguana` | — | pine | `critter` | bob-and-flare | bask |
+| `ladybug` | ladybird | cranberry | `bug` | wing-buzz | flip-over |
+
+#### Mythical creatures (12) — category `mythical`
+
+| ID | Extra aliases | Accent | Base | Signature | Rare |
+|---|---|---|---|---|---|
+| `basilisk` | — | teal | `critter` | frill-flare | hypno-stare |
+| `cerberus` | — | charcoal | `bespoke` | take-turns | triple-howl |
+| `dragon` | wyrm | cranberry | `bespoke` | smoke-puff | fire-breath |
+| `golem` | — | slate | `primate` | rub | stomp |
+| `griffin` | gryphon | honey | `bird-perched` | preen | screech |
+| `jackalope` | — | ochre | `rodent-upright` | antler-scratch | thump |
+| `kitsune` | — | cranberry | `small-quadruped` | tail-fan | foxfire |
+| `nessie` | lochness | moss | `sea-creature` | look-around | dive |
+| `pegasus` | — | sky | `ungulate-head` | wing-flap | lift-off |
+| `phoenix` | — | marigold | `bird-perched` | flare | rebirth |
+| `unicorn` | — | violet | `ungulate-head` | horn-sparkle | rear-star |
+| `yeti` | sasquatch, bigfoot | ice | `primate` | snow-shake | snowball |
+
+#### Space (10) — category `space`
+
+| ID | Extra aliases | Accent | Base | Signature | Rare |
+|---|---|---|---|---|---|
+| `black-hole` | — | violet | `orb` | star-spiral | burp |
+| `comet` | — | teal | `orb` | stream | zoom |
+| `jupiter` | — | copper | `orb` | belt-drift | moon-pass |
+| `mars` | — | brick | `orb` | dust-devil | flag |
+| `moon` | luna | ice | `orb` | crater-sparkle | nightcap |
+| `neptune` | — | sky | `orb` | storm-drift | sneeze |
+| `pluto` | — | ice | `orb` | heart-glint | loved |
+| `rocket` | — | cranberry | `object` | rumble | lift-off |
+| `satellite` | — | slate | `object` | unfold | ping |
+| `saturn` | — | ochre | `orb` | ring-tilt | moon-zip |
+
+#### Nature (9) — category `nature`
+
+| ID | Extra aliases | Accent | Base | Signature | Rare |
+|---|---|---|---|---|---|
+| `bonsai` | — | pine | `object` | leaf-fall | blossom |
+| `iceberg` | — | ice | `object` | bob | fish-leap |
+| `pumpkin` | jackolantern | marigold | `orb` | wobble | jack-o-lantern |
+| `rainbow` | — | sky | `object` | sparkle-run | sneeze |
+| `raincloud` | — | slate | `object` | drizzle | zap |
+| `snowman` | — | ice | `object` | hat-tip | lost-nose |
+| `sunflower` | — | marigold | `object` | sun-turn | seed-drop |
+| `venus-flytrap` | flytrap | moss | `object` | snap | catch |
+| `volcano` | — | brick | `object` | rumble | erupt |
+
+#### Food (10) — category `food`
+
+| ID | Extra aliases | Accent | Base | Signature | Rare |
+|---|---|---|---|---|---|
+| `avocado` | — | moss | `object` | belly-pat | pit-pop |
+| `coffee-mug` | coffee, mug | copper | `object` | steam | first-sip |
+| `croissant` | — | honey | `object` | flake | fluff-up |
+| `cupcake` | — | rose | `object` | cherry-wobble | candle |
+| `donut` | doughnut | rose | `orb` | twinkle | self-bite |
+| `pizza` | — | marigold | `object` | cheese-drip | olive-catch |
+| `pretzel` | — | copper | `object` | salt-glint | untwist |
+| `ramen` | noodles | honey | `object` | slurp | noodle-lift |
+| `sushi` | nigiri | cranberry | `object` | chopstick-tap | bow |
+| `taco` | — | ochre | `object` | lettuce-drop | wiggle-dance |
+
+#### Things (26) — category `things`
+
+| ID | Extra aliases | Accent | Base | Signature | Rare |
+|---|---|---|---|---|---|
+| `alarm-clock` | — | brick | `object` | tick | ring |
+| `anchor` | — | slate | `object` | sway | seaweed |
+| `arcade` | — | violet | `object` | attract | high-score |
+| `calculator` | — | slate | `object` | compute | spell |
+| `cassette` | — | charcoal | `object` | play | unspool |
+| `chess-knight` | knight | charcoal | `object` | l-hop | check |
+| `chess-rook` | rook | slate | `object` | flag-wave | castle |
+| `compass` | — | copper | `orb` | swing | spin |
+| `dice` | die | ice | `object` | tumble | six |
+| `drum` | — | brick | `object` | tap | drumroll |
+| `guitar` | — | copper | `object` | twang | riff |
+| `hourglass` | — | ochre | `object` | trickle | flip |
+| `joystick` | — | cranberry | `object` | play | victory |
+| `kite` | — | teal | `object` | flutter | gust |
+| `lantern` | — | honey | `object` | flicker | glow |
+| `lava-lamp` | — | plum | `object` | flow | split |
+| `lightbulb` | bulb | honey | `object` | idea | bright-idea |
+| `magnet` | — | cranberry | `object` | attract | heap |
+| `paper-plane` | — | ice | `object` | glide | loop |
+| `rubber-duck` | rubberducky | marigold | `object` | squeak | bob-on-a-wave |
+| `trumpet` | — | honey | `object` | toot | fanfare |
+| `typewriter` | — | charcoal | `object` | type | ding |
+| `umbrella` | brolly | sky | `object` | drip | inside-out |
+| `vinyl` | turntable | charcoal | `object` | spin | scratch |
+| `walkie-talkie` | walkie | moss | `object` | crackle | over-and-out |
+| `yoyo` | — | cranberry | `orb` | drop | walk-the-dog |
+
+Totals: 100 at launch + 114 = **214**.
 
 ---
 

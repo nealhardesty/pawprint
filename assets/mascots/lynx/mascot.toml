@@ -1,0 +1,197 @@
+# Lynx on big-cat. A grey-buff wildcat with the tallest ears in the
+# catalog: black-backed triangles topped with long black tufts. A white
+# facial ruff, barred with black, flares out in points either side of its
+# jaw (it replaces the lion's mane), dark brow spots, pale yellow eyes, and
+# a little bobbed tail with a black tip in place of the long one. The
+# signature twitches its ear tufts; the rare one pounces head first into
+# the snow inside the crate and comes up covered in it.
+id = "lynx"
+name = "Lynx"
+category = "mammals"
+aliases = ["bobcat"]
+accent = "slate"
+extends = "big-cat"
+
+[palette]
+"l" = "grey-1"      # fur light
+"f" = "brown-1"     # fur
+"F" = "brown-2"     # fur shadow
+"w" = "white"       # muzzle and chest
+"M" = "grey-2"      # mouth lines
+"d" = "fur-black"   # NEW: ear backs, bars, spots
+"s" = "white"       # ruff
+"S" = "grey-2"      # ruff shadow
+"e" = "yellow-1"    # iris
+"n" = "pink-2"      # nose
+"p" = "white"       # inner ear
+"P" = "pink-2"      # NEW: mouth
+
+# A short bobbed tail with a black tip.
+[layers.tail]
+at = [26, 12]
+grid = """
+.kkk.
+kdddk
+kfffk
+kfFk.
+kfFk.
+"""
+
+[layers."tail.flick"]
+at = [26, 11]
+grid = """
+..kkk.
+.kdddk
+.kffk.
+kfFk..
+kfFk..
+kfFk..
+"""
+
+# The facial ruff, flaring out in barred points either side of the jaw.
+[layers.mane]
+at = [1, 10]
+grid = """
+.....kk................kk.....
+....ksk................ksk....
+..kkssk................ksskk..
+.ksdssk................kssdsk.
+kssdsSk................kSsdssk
+.ksssdk................kdsssk.
+..kdsSk................kSsdk..
+...kSsk................ksSk...
+....kk..................kk....
+"""
+
+[layers.head]
+at = [5, 4]
+grid = """
+.....kkkkkkkkkkkk.....
+...kkllllllllllffkk...
+..kllffdffffffdffFFk..
+.klfffffdffffdffffFFk.
+.klffffffffffffffffFk.
+.klfffffffffffffffFFk.
+.klffffffffffffffffFk.
+.klffffwwwwwwwwffffFk.
+klfffwwwwwwwwwwwwffFFk
+klffwwwwwMMwwwwwwwfFFk
+klffwwwMwwwwMwwwwffFFk
+.kfFfwwwwwwwwwwwwfFFk.
+...kkFFwwwwwwwwFFkk...
+"""
+
+# Tall black-backed ears with long tufts.
+[layers.ears]
+at = [7, 0]
+follows = "head"
+grid = """
+.k..............k.
+.k..............k.
+.kk............kk.
+kddk..........kddk
+kdppk........kppdk
+kdppk........kppdk
+"""
+
+# The tufts twitch outward.
+[layers."ears.flick"]
+at = [6, 0]
+follows = "head"
+grid = """
+k..................k
+.k................k.
+..kk............kk..
+.kddk..........kddk.
+.kdppk........kppdk.
+.kdppk........kppdk.
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+ek......ek
+kk......kk
+"""
+
+[layers.nose]
+at = [14, 12]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."mouth.open"]
+at = [13, 14]
+follows = "head"
+grid = """
+kkkkkk
+kPkkPk
+kPPPPk
+.kkkk.
+"""
+
+[layers.paws]
+at = [7, 17]
+grid = """
+.FFFFF......FFFFF.
+FlldlfF....FldllfF
+klFlFlk....klFlFlk
+"""
+
+# Snow on its head after the pounce.
+[layers."snowcap.on"]
+at = [9, 2]
+grid = """
+...kkkkkkkk...
+.kksssssssskk.
+kssSsssssSsssk
+.kkkSkkkkSkkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the ear tufts twitch, one and then both.
+[[actions]]
+name = "tuft-twitch"
+weight = 4
+frames = [
+  { ops = ["eyes=left"], ms = 300 },
+  { ops = ["eyes=left", "ears=flick"], ms = 120 },
+  { ops = ["eyes=left"], ms = 160 },
+  { ops = ["eyes=left", "ears=flick"], ms = 120 },
+  { ops = ["eyes=right"], ms = 500 },
+  { ops = ["eyes=right", "ears=flick"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: wiggles, pounces head first into the snow inside the crate, and
+# pops back up wearing it.
+[[actions]]
+name = "snow-pounce"
+weight = 1
+frames = [
+  { ops = ["all+0,2", "eyes=right", "tail=flick"], ms = 400 },
+  { ops = ["all+1,2", "eyes=right"], ms = 120 },
+  { ops = ["all+0,-3", "eyes=closed", "ears=flick"], ms = 160 },
+  { ops = ["all+0,14", "prop:puff@4,13", "prop:puff@19,13"], ms = 600 },
+  { ops = ["all+0,4", "+snowcap.on", "eyes=closed"], ms = 200 },
+  { ops = ["+snowcap.on", "eyes=happy"], ms = 900 },
+  { ops = ["all+-1,0", "prop:puff@11,0"], ms = 120 },
+  { ops = ["eyes=happy"], ms = 300 },
+]

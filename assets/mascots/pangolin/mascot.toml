@@ -1,0 +1,290 @@
+# Pangolin, bespoke (no base). A walking pinecone: standing up on its hind
+# legs, every inch of it shingled in overlapping copper-brown scales, from
+# the top of its small head to the thick tail curling up its right side.
+# Only the narrow face is bare: soft pink skin, small eyes, a long tapering
+# snout. The signature rolls it up into a tight scaly ball (custom
+# frames), rocks once, and unrolls. The rare one is a curious shuffle
+# along the rim, snout twitching, with a question.
+id = "pangolin"
+name = "Pangolin"
+category = "mammals"
+aliases = []
+accent = "copper"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "brown-1"     # scale light
+"f" = "brown-2"     # scales
+"F" = "brown-3"     # scale shadow
+"d" = "brown-4"     # scale edges, nose
+"w" = "pink-1"      # bare face
+"M" = "pink-2"      # face shadow, snout tip
+"h" = "white"       # eye glint
+"n" = "brown-4"     # nostrils
+
+# The thick, scaly tail, curling up behind on the right.
+[layers.tail]
+at = [23, 1]
+grid = """
+....kk.
+...kllk
+..kfffk
+.kFFfFk
+.klFFFk
+kfffFfk
+kfFFlFk
+kFFlllk
+kFffffk
+klFFfFk
+kllFFFk
+kfffFfk
+kfFFlFk
+kFFlllk
+kFffffk
+klFFfFk
+"""
+
+[layers."tail.flick"]
+at = [23, 0]
+grid = """
+.....kk
+....kFk
+...kllk
+..kfffk
+.kFFfFk
+.klFFFk
+kfffFfk
+kfFFlFk
+kFFlllk
+kFffffk
+klFFfFk
+kllFFFk
+kfffFfk
+kfFFlFk
+kFFlllk
+kFffffk
+klFFfFk
+"""
+
+# The pinecone body: overlapping scales in staggered rows.
+[layers.body]
+at = [5, 7]
+grid = """
+.....kkkkkkkkkkkk.....
+...kklFFFlllFFFllkk...
+..kffffFfffffFfffffk..
+.kFFfFFlFFfFFlFFfFFlk.
+kllFFFlllFFFlllFFFlllk
+kfffFfffffFfffffFffffk
+kfFFlFFfFFlFFfFFlFFfFk
+kFFlllFFFlllFFFlllFFFk
+kFfffffFfffffFfffffFfk
+klFFfFFlFFfFFlFFfFFlFk
+kllFFFlllFFFlllFFFlllk
+kfffFfffffFfffffFffffk
+kfFFlFFfFFlFFfFFlFFfFk
+kFFlllFFFlllFFFlllFFFk
+kFfffffFfffffFfffffFfk
+klFFfFFlFFfFFlFFfFFlFk
+kllFFFlllFFFlllFFFlllk
+kfffFfffffFfffffFffffk
+kfFFlFFfFFlFFfFFlFFfFk
+kFFlllFFFlllFFFlllFFFk
+kFfffffFfffffFfffffFfk
+klFFfFFlFFfFFlFFfFFlFk
+kllFFFlllFFFlllFFFlllk
+kfffFfffffFfffffFffffk
+kfFFlFFfFFlFFfFFlFFfFk
+"""
+
+# A small head, scaled on top, bare and narrow below, tapering to a long snout.
+[layers.head]
+at = [11, 4]
+grid = """
+..kkkkkk..
+.klFFFllk.
+kfffFffffk
+kfFFlFFfFk
+kFFwwwwFFk
+kFwwwwwMfk
+klwwwwwMFk
+.klwwwMlk.
+..kwwwMk..
+..kwwwMk..
+...kwMk...
+...kMMk...
+....kk....
+"""
+
+[layers.eyes]
+at = [13, 9]
+follows = "head"
+grid = """
+hk..hk
+kk..kk
+"""
+
+[layers."eyes.closed"]
+at = [13, 10]
+follows = "head"
+grid = """
+kk..kk
+"""
+
+[layers."eyes.left"]
+at = [12, 9]
+follows = "head"
+grid = """
+hk..hk
+kk..kk
+"""
+
+[layers."eyes.right"]
+at = [14, 9]
+follows = "head"
+grid = """
+hk..hk
+kk..kk
+"""
+
+[layers."eyes.happy"]
+at = [12, 9]
+follows = "head"
+grid = """
+.kk..kk.
+k..kk..k
+"""
+
+[layers.nose]
+at = [15, 15]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [15, 14]
+follows = "head"
+grid = """
+nn
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 4
+
+[[actions]]
+use = "tail-flick"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: it tucks its head, rolls up into a tight scaly ball, rocks on
+# the rim, and unrolls.
+[[actions]]
+name = "roll-up"
+weight = 5
+frames = [
+  { ops = ["head+0,2", "eyes=closed"], ms = 200 },
+  { grid = "ball-0", ms = 700 },
+  { grid = "ball-1", ops = ["all+1,0"], ms = 200 },
+  { grid = "ball-0", ops = ["all+-1,0"], ms = 200 },
+  { grid = "ball-0", ms = 500 },
+  { ops = ["head+0,2", "eyes=closed"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a curious shuffle. It waddles left along the rim, snout going,
+# stops, wonders, and waddles back.
+[[actions]]
+name = "shuffle"
+weight = 1
+frames = [
+  { ops = ["all+-1,0", "nose=sniff", "eyes=left"], ms = 160 },
+  { ops = ["all+-2,-1", "eyes=left"], ms = 160 },
+  { ops = ["all+-3,0", "nose=sniff", "eyes=left"], ms = 160 },
+  { ops = ["all+-3,0", "head+1,0", "prop:question@22,0"], ms = 900 },
+  { ops = ["all+-3,0", "nose=sniff", "head+1,0", "prop:question@22,1"], ms = 300 },
+  { ops = ["all+-2,-1", "eyes=right"], ms = 160 },
+  { ops = ["all+-1,0", "eyes=right"], ms = 160 },
+  { ops = [], ms = 300 },
+]
+
+[frames."ball-0"]
+grid = """
+................................
+................................
+................................
+.............kkkkkk.............
+...........kklFfFFlkk...........
+..........klllFFFlllFk..........
+.........kllfffFfffffFk.........
+........kklFfFFlFFfFFlkk........
+........kllFFFlllFFFlllk........
+........klffFfffffFffffk........
+........kffFlFFfFFlFFfFk........
+.......kFfflllFFFlllFFFlk.......
+........kfflfffFfffflFfk........
+........kFflfFFlFFfFlfFk........
+........kFfflFlllFFlffFk........
+........kkFfflfffflffFkk........
+.........kFFffllllffFFk.........
+..........kFFffffffFFk..........
+...........kkFFFFFFkk...........
+.............kkkkkk.............
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+[frames."ball-1"]
+grid = """
+................................
+................................
+................................
+.............kkkkkk.............
+...........kklFFlFFkk...........
+..........kllFFlllFFFk..........
+.........kllfFfffffFffk.........
+........kklFFlFFfFFlFFkk........
+........klFFlllFFFlllFFk........
+........klFfffffFfffffFk........
+........kffFFfFFlFFfFFlk........
+.......kFfflFFFlllFFFlllk.......
+........kfflfFfffffFlffk........
+........kFflFlFFfFFllfFk........
+........kFfflllFFFllffFk........
+........kkFfflffFflffFkk........
+.........kFFffllllffFFk.........
+..........kFFffffffFFk..........
+...........kkFFFFFFkk...........
+.............kkkkkk.............
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""

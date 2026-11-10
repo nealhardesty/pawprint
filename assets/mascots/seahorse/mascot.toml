@@ -1,0 +1,171 @@
+# Seahorse, on sea-creature. A little pink seahorse standing upright in the
+# water, side-on and facing left: a long tube snout, a spiky crown of fins
+# on top of its head, a big eye, a slim neck over a round, ridged cream belly,
+# and its tail coiled into a tight spiral that rises out of the water
+# behind it. The signature lets the tail uncurl into a hook and coil up
+# again while it bobs up and down; the rare one is a happy spin, round and round.
+id = "seahorse"
+name = "Seahorse"
+category = "aquatic"
+aliases = []
+accent = "rose"
+extends = "sea-creature"
+# Template props go top-left, over the snout, clear of the crown and tail.
+prop_offset = [-19, -1]
+
+# The base fins are left out: it has no flippers.
+rest = ["body", "head", "eyes", "water"]
+
+[palette]
+"l" = "pink-1"      # skin light
+"f" = "pink-2"      # skin
+"F" = "red-2"       # skin shadow
+"w" = "cream"       # belly ridges and fin
+"M" = "pink-1"      # belly ridge lines, fin rays
+"p" = "red-2"       # snout tip, mouth
+
+# The tail, coiled into a spiral that rises out of the water behind it.
+[layers.body]
+at = [23, 6]
+grid = """
+..kkkkkk.
+.kffffffk
+.kfkkkkfk
+.kfkffkfk
+.kfkfkkfk
+.kfkffffk
+.kfkkkkk.
+.kfk.....
+.kfk.....
+.kfk.....
+"""
+
+# Tail uncurled into a loose hook.
+[layers."body.hook"]
+at = [23, 6]
+grid = """
+.........
+.........
+..kkkk...
+.kffffk..
+.kfkkfk..
+.kfk.k...
+.kfk.....
+.kfk.....
+.kfk.....
+.kfk.....
+"""
+
+# Head, crown, snout, and the upright body.
+[layers.head]
+at = [0, 0]
+grid = """
+................k.k.............
+...............kfkfk............
+.............kklfffFk...........
+............klffffffFk..........
+............klffffffFk..........
+............klfffffffFk.........
+............klfffffffFk.........
+............klffffffFFk.........
+......kkkkkklfffffffFk..........
+.....kllllllfffffffFk...........
+....kpffffffFffffffFk...........
+.....kkkkkkkFfffffFk............
+...........kwwfffffFk...........
+..........kwwwffffffFk..........
+.........kMMMMfffffffFk.........
+.........kwwwwfffffffFk.........
+.........kMMMMfffffffFk.........
+.........kwwwwfffffffFk.........
+.........kwwwwfffffffFk.........
+.........kwwwwfffffffFk.........
+"""
+
+[layers.eyes]
+at = [15, 8]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.closed"]
+at = [15, 9]
+grid = """
+kk
+"""
+
+[layers."eyes.left"]
+at = [14, 8]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.right"]
+at = [16, 8]
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.happy"]
+at = [14, 8]
+grid = """
+.kk.
+k..k
+"""
+
+# A little round "o" at the snout tip.
+[layers."mouth.open"]
+at = [3, 9]
+grid = """
+.kk
+kpk
+.kk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the tail uncurls into a hook and coils up again as it bobs in
+# the water.
+[[actions]]
+name = "tail-curl"
+weight = 4
+frames = [
+  { ops = ["body=hook"], ms = 300 },
+  { ops = ["body=hook", "all+0,-1"], ms = 250 },
+  { ops = ["all+0,-2"], ms = 300 },
+  { ops = ["all+0,-1"], ms = 200 },
+  { ops = ["body=hook"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a happy spin, round and round, rising a little, then a pleased
+# little "o".
+[[actions]]
+name = "spin"
+weight = 1
+frames = [
+  { ops = ["eyes=happy", "all+0,-1"], ms = 150 },
+  { ops = ["eyes=happy", "all+0,-2", "flipx"], ms = 150 },
+  { ops = ["eyes=happy", "all+0,-2"], ms = 150 },
+  { ops = ["eyes=happy", "all+0,-2", "flipx"], ms = 150 },
+  { ops = ["eyes=happy", "all+0,-1"], ms = 150 },
+  { ops = ["+mouth.open", "prop:sparkle@0,0"], ms = 600 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

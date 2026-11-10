@@ -1,0 +1,282 @@
+# Gorilla on primate. A silverback: the biggest frame in the catalog,
+# shoulders out to the crate's edges with a silver saddle across them, a
+# tall crested head, a heavy brow ridge shading small gentle brown eyes,
+# a broad flat nose with wide nostrils, and huge knuckled hands on the rim.
+# Dark grey fur and a lighter grey face so it reads at 32 px. Big, calm,
+# kind. The signature pats its chest, left, right, left; the rare one is a
+# long thoughtful sigh, then a slow scratch of the head.
+id = "gorilla"
+name = "Gorilla"
+category = "mammals"
+aliases = ["silverback"]
+accent = "charcoal"
+extends = "primate"
+
+[palette]
+"l" = "grey-3"      # fur light
+"f" = "grey-4"      # fur
+"F" = "fur-black"   # fur shadow, arm lines
+"S" = "grey-1"      # NEW: silver saddle
+"s" = "grey-2"      # NEW: silver shadow
+"w" = "grey-2"      # face and hands
+"M" = "grey-3"      # brow shadow, nostrils, mouth, knuckles
+"e" = "brown-3"     # iris
+"h" = "white"       # eye glint
+"p" = "pink-2"      # mouth
+
+# Massive shoulders, silver across the top.
+[layers.body]
+grid = """
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ...........kkkkkkkkkk...........
+    .........kkllllllllllkk.........
+    .......kkSlfffffffffflSkk.......
+    ....kkkSSffffffffffffffSSkkk....
+    ..kkSSSffffffffffffffffffSSSkk..
+    .kSSSSffffffffffffffffffffSSSsk.
+    .kSSffffffffffffffffffffffffSsk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+    .klffffffffffffffffffffffffffFk.
+"""
+
+[layers.ears]
+at = [6, 8]
+follows = "head"
+grid = """
+.kk..............kk.
+kwMk............kMwk
+.kk..............kk.
+"""
+
+[layers."ears.flick"]
+at = [6, 7]
+follows = "head"
+grid = """
+.kk.................
+kwMk.............kk.
+.kk.............kMwk
+.................kk.
+"""
+
+# A tall crested head, heavy brow, broad nose.
+[layers.head]
+at = [8, 1]
+grid = """
+......kkkk......
+....kkllffkk....
+...klllfffffk...
+..klffffffffFk..
+.klffffffffffFk.
+klffffffffffffFk
+kfwwwwwffwwwwwFk
+kfMMMMMwwMMMMMFk
+kfwwwwwwwwwwwwFk
+kfwwwwwMMwwwwwFk
+.kfwwwMwwMwwwFk.
+.kfwwMMwwMMwwFk.
+.kfwwwwwwwwwwFk.
+..kfwMMMMMMwFk..
+..kfwwwwwwwwFk..
+...kkwwwwwwkk...
+"""
+
+# Small, gentle brown eyes under the brow.
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+hk......hk
+ek......ek
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+hk......hk
+ek......ek
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+hk......hk
+ek......ek
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [14, 11]
+follows = "head"
+grid = """
+M..M
+"""
+
+[layers."nose.sniff"]
+at = [13, 11]
+follows = "head"
+grid = """
+MM..MM
+"""
+
+[layers."mouth.open"]
+at = [13, 14]
+follows = "head"
+grid = """
+kkkkkk
+kppppk
+.kkkk.
+"""
+
+# Long arms down the sides, huge hands on the rim.
+[layers.paws]
+at = [2, 11]
+grid = """
+............................
+............................
+......F..............F......
+......F..............F......
+.......F............F.......
+.......F............F.......
+.kkkkkk..............kkkkkk.
+kwwwwwwk............kwwwwwwk
+kwMwMwMk............kMwMwMwk
+"""
+
+# Left hand patting the chest.
+[layers."paws.pat"]
+at = [2, 11]
+grid = """
+............................
+......F......F.......F......
+......FFkkkkkkk......F......
+....F..kwwwwwwk......F......
+...F...kwMwMwwk......F......
+..F.....kkkkkk.......F......
+.F...................kkkkkk.
+....................kwwwwwwk
+....................kMwMwMwk
+"""
+
+# Right hand patting the chest.
+[layers."paws.pat2"]
+at = [2, 11]
+grid = """
+............................
+......F.......F......F......
+......F......kkkkkkkFF......
+......F......kwwwwwwk..F....
+......F......kwwMwMwk...F...
+......F.......kkkkkk.....F..
+.kkkkkk...................F.
+kwwwwwwk....................
+kwMwMwMk....................
+"""
+
+# Right arm up, scratching the top of the head.
+[layers."paws.scratch"]
+at = [2, 0]
+grid = """
+.................kkkk.......
+................kwwwwk......
+................kwMwMfk.....
+.................kkkffk.....
+....................kffk....
+.....................kffk...
+......................kffk..
+......................kfFk..
+......................kfFk..
+......................kfFk..
+......................kfFk..
+.....................kffFk..
+............................
+......F.....................
+......F.....................
+.......F....................
+.......F....................
+.kkkkkk.....................
+kwwwwwwk....................
+kwMwMwMk....................
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a gentle chest pat, left, right, left.
+[[actions]]
+name = "chest-pat"
+weight = 4
+frames = [
+  { ops = ["paws=pat"], ms = 200 },
+  { ops = ["paws=pat", "all+0,1"], ms = 120 },
+  { ops = ["paws=pat2"], ms = 200 },
+  { ops = ["paws=pat2", "all+0,1"], ms = 120 },
+  { ops = ["paws=pat", "eyes=happy"], ms = 200 },
+  { ops = ["paws=pat", "eyes=happy", "all+0,1"], ms = 120 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a long thoughtful sigh, eyes closed, then a slow scratch of the head.
+[[actions]]
+name = "sigh-scratch"
+weight = 1
+frames = [
+  { ops = ["eyes=closed", "head+0,-1", "nose=sniff"], ms = 500 },
+  { ops = ["eyes=closed", "+mouth.open", "prop:puff@20,10"], ms = 600 },
+  { ops = ["eyes=closed", "head+0,1"], ms = 400 },
+  { ops = ["eyes=right", "paws=scratch"], ms = 500 },
+  { ops = ["eyes=right", "paws=scratch", "head+-1,0"], ms = 300 },
+  { ops = ["eyes=closed", "paws=scratch"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

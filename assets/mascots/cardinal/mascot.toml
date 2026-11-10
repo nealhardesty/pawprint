@@ -1,0 +1,153 @@
+# Cardinal on bird-perched. A bright red songbird: a tall pointed crest
+# swept back over the crown, a black mask from the eyes down around a stout
+# orange cone of a beak, and a slightly paler red breast. The crest is the
+# `ears` slot: `ears.flick` lifts it halfway, `ears.raise` fans it up into
+# two tall points. Signature: the crest shoots up, a bright stare, and it settles.
+# Rare: crest up, beak open, it sings a little run of notes.
+id = "cardinal"
+name = "Cardinal"
+category = "birds"
+aliases = ["redbird"]
+accent = "cranberry"
+extends = "bird-perched"
+
+[palette]
+"l" = "red-1"       # feathers light
+"f" = "red-2"       # feathers
+"F" = "brown-4"     # feather shadow
+"w" = "red-1"       # breast
+"m" = "red-1"       # no breast markings
+"d" = "fur-black"   # face mask
+"h" = "white"       # eye highlight
+"b" = "orange-2"    # beak and feet
+"B" = "orange-3"    # beak shadow
+"p" = "brown-4"     # inside of the beak
+
+# The base head with the black mask around the beak, clear of the eyes.
+[layers.head]
+at = [6, 3]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllllllffkk...
+..kllllfffffffffFk..
+.kllfffffffffffffFk.
+kllfffffffffffffffFk
+klffffffffffffffffFk
+klffffffddddffffffFk
+klfffffddddddfffffFk
+klffffddddddddffffFk
+.kffffddddddddffFk..
+..fffffddddddffff...
+"""
+
+# A stout cone of a beak.
+[layers.beak]
+at = [14, 9]
+follows = "head"
+grid = """
+.kk.
+kbbk
+kbbk
+kbBk
+.kk.
+"""
+
+[layers."mouth.open"]
+at = [14, 9]
+follows = "head"
+grid = """
+.kk.
+kbbk
+kkkk
+kppk
+kBBk
+.kk.
+"""
+
+# The crest, swept back to a point above the left of the crown.
+[layers.ears]
+at = [5, 0]
+follows = "head"
+grid = """
+.kkk..........
+.klfkk........
+..klffkkk.....
+...klffffkkkkk
+....klffffffff
+"""
+
+# Half raised.
+[layers."ears.flick"]
+at = [5, 0]
+follows = "head"
+grid = """
+....kkk.......
+...klffkk.....
+...klfffkkk...
+...klfffffkkkk
+....klffffffff
+"""
+
+# Raised and fanned: two tall points.
+[layers."ears.raise"]
+at = [5, 0]
+follows = "head"
+grid = """
+.kk....kk.....
+.klk..klfk....
+..klkklfffkk..
+...klfffffffkk
+....klffffffff
+"""
+
+[layers."eyes.wide"]
+at = [11, 7]
+follows = "head"
+grid = """
+.k......k.
+hkk....hkk
+kkk....kkk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the crest shoots straight up with a bright stare, then settles.
+[[actions]]
+name = "crest-raise"
+weight = 5
+frames = [
+  { ops = ["ears=flick"], ms = 100 },
+  { ops = ["ears=raise", "eyes=wide"], ms = 120 },
+  { ops = ["ears=raise", "eyes=wide"], ms = 1200 },
+  { ops = ["ears=raise", "eyes=closed"], ms = 140 },
+  { ops = ["ears=flick"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: crest up, beak open, it sings a little run of rising notes.
+[[actions]]
+name = "song"
+weight = 1
+frames = [
+  { ops = ["ears=raise"], ms = 200 },
+  { ops = ["ears=raise", "-beak", "+mouth.open", "eyes=happy", "head+0,-1", "prop:note@21,7"], ms = 260 },
+  { ops = ["ears=raise", "eyes=happy", "prop:note@22,5"], ms = 200 },
+  { ops = ["ears=raise", "-beak", "+mouth.open", "eyes=happy", "head+0,-1", "prop:note@23,3"], ms = 260 },
+  { ops = ["ears=raise", "eyes=happy", "prop:note@24,1"], ms = 200 },
+  { ops = ["ears=raise", "-beak", "+mouth.open", "eyes=happy", "head+0,-1", "prop:note@25,0"], ms = 400 },
+  { ops = ["ears=flick", "eyes=happy"], ms = 700 },
+  { ops = [], ms = 200 },
+]

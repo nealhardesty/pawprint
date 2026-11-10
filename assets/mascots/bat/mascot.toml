@@ -1,0 +1,275 @@
+# Bat, bespoke (no base). A little fruit bat wrapped up in its own wings
+# like a cloak: two huge pointed ears with pink insides, a round furry
+# brown face with bright eyes and two tiny white fangs, and plum wing
+# membranes folded around the body, their finger bones showing as ridges
+# and their thumb claws poking up at the shoulders. Nocturnal. The
+# signature throws the wings wide open and folds them back. The rare one,
+# at night, flips upside down to hang from the ceiling for a while, then
+# flips back.
+id = "bat"
+name = "Bat"
+category = "mammals"
+aliases = []
+accent = "plum"
+nocturnal = true
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "brown-2"     # fur light
+"f" = "brown-3"     # fur
+"F" = "brown-4"     # fur shadow, mouth
+"w" = "brown-2"     # chest fur
+"a" = "purple-1"    # wing edge light
+"A" = "purple-2"    # wing membrane
+"d" = "grey-4"      # wing bones and folds
+"p" = "pink-2"      # inner ears
+"h" = "white"       # eye glint, fangs
+
+[layers.body]
+at = [10, 12]
+grid = """
+..kkkkkkkk..
+.klfffffFFk.
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+klfwwwwwwfFk
+"""
+
+[layers.wings]
+at = [4, 9]
+grid = """
+...kk..............kk...
+..kaAk............kAdk..
+.kaAAk............kAAdk.
+kaAAAAk..........kAAAAdk
+kaAdAAAk........kAAAdAdk
+kaAdAAAAkkkkkkkkAAAAdAdk
+kaAAdAAAAAAAAAAAAAAdAAdk
+kadAAdAAAAAAAAAAAAdAAddk
+kaAdAAdAAAAddAAAAdAAdAdk
+kaAAdAAdAAAddAAAdAAdAAdk
+kaAAAdAAdAAddAAdAAdAAAdk
+kaAAAAdAAdAddAdAAdAAAAdk
+kaAAAAAdAAAddAAAdAAAAAdk
+kaAAAAAAdAAddAAdAAAAAAdk
+kaAAAAAAAdAddAdAAAAAAAdk
+kaAAAAAAAAAddAAAAAAAAAdk
+kaAAAAAAAAAddAAAAAAAAAdk
+kaAAAAAAAAAddAAAAAAAAAdk
+kaAAAAAAAAAddAAAAAAAAAdk
+kaAAAAAAAAAddAAAAAAAAAdk
+kaAAAAAAAAAddAAAAAAAAAdk
+kaAAAAAAAAAddAAAAAAAAAdk
+kaAAAAAAAAAddAAAAAAAAAdk
+"""
+
+[layers."wings.open"]
+at = [0, 5]
+grid = """
+...kk......................kk...
+..kaAk....................kAak..
+.kaAAAkk................kkAAAak.
+kaAAAAAAkk............kkAAAAAAak
+kaAdAAAAAAkk........kkAAAAAAdAak
+kAAdAAdAAAAAk......kAAAAAdAAdAAk
+kAdAAAdAAAdAk......kAdAAAdAAAdAk
+kAdAAdAAAdAAk......kAAdAAAdAAdAk
+kdAAdAAAdAAAk......kAAAdAAAdAAdk
+.kAkdAAkdAAAk......kAAAdkAAdkAk.
+..k.kAk.kAAAk......kAAAk.kAk.k..
+.....k...kAAk......kAAk...k.....
+..........kk........kk..........
+"""
+
+[layers.head]
+at = [9, 4]
+grid = """
+...kkkkkkkk...
+.kkllllllffkk.
+klllfffffffFFk
+klfffffffffFFk
+kffffffffffFFk
+kffffffffffFFk
+kfffffffffffFk
+.kffffffffffk.
+..kkkkkkkkkk..
+"""
+
+[layers.ears]
+at = [5, 0]
+follows = "head"
+grid = """
+k....................k
+kk..................kk
+kpk................kpk
+kppk..............kppk
+klppk............kppFk
+.klpfk..........kfpFk.
+..klfk..........kfFk..
+"""
+
+[layers."ears.flick"]
+at = [5, 0]
+follows = "head"
+grid = """
+k.....................
+kk....................
+kpk................kkk
+kppk.............kpppk
+klppk..........kkfppFk
+.klpfk.........kffFFk.
+..klfk..........kfFk..
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+# A little mouth with two white fangs over the chin.
+[layers.mouth]
+at = [13, 11]
+follows = "head"
+grid = """
+.FFFF.
+.h..h.
+"""
+
+[layers."mouth.open"]
+at = [13, 11]
+follows = "head"
+grid = """
+.kkkk.
+.hpph.
+..kk..
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "yawn"
+weight = 2
+
+[[actions]]
+use = "doze"
+when = "day"
+
+# Signature: the wings swing wide open, hold, and wrap back up.
+[[actions]]
+name = "wing-stretch"
+weight = 5
+frames = [
+  { ops = ["wings=open", "all+0,1"], ms = 120 },
+  { ops = ["wings=open", "all+0,-1", "eyes=happy"], ms = 900 },
+  { ops = ["wings=open", "eyes=happy"], ms = 300 },
+  { ops = ["all+0,1"], ms = 120 },
+  { ops = [], ms = 300 },
+]
+
+# Rare, at night: it flips upside down and hangs from the ceiling for a
+# while, looking about, then flips back.
+[[actions]]
+name = "hang"
+weight = 1
+when = "night"
+frames = [
+  { ops = ["all+0,-2", "wings=open"], ms = 120 },
+  { grid = "hang", ops = ["all+0,-4"], ms = 120 },
+  { grid = "hang", ms = 1400 },
+  { grid = "hang", ops = ["all+0,1"], ms = 600 },
+  { grid = "hang", ms = 600 },
+  { ops = ["all+0,-2", "wings=open"], ms = 120 },
+  { ops = [], ms = 300 },
+]
+
+[frames.hang]
+grid = """
+....kaAAAdAAdkFkkFkdAAdAAAdk....
+....kaAAdAAdAAAddAAAdAAdAAdk....
+....kaAdAAdAAAAddAAAAdAAdAdk....
+....kadAAdAAAAAAAAAAAAdAAddk....
+....kaAAdAAAAAAAAAAAAAAdAAdk....
+....kaAdAAAAkkkkkkkkAAAAdAdk....
+....kaAdAAAklfffffFFkAAAdAdk....
+....kaAAAAkkkkwkkwkkkkAAAAdk....
+.....kaAAkkfffFFFFfffkkAAdk.....
+......kaAkfffffffffffFkAdk......
+.......kkkfkkffffffkkFkkk.......
+.........kfhkffffffhkFk.........
+.........klfffffffffFFk.........
+.......klfkllfffffffFkfFk.......
+......klpfkkllllllffkkfpFk......
+.....klppk..kkkkkkkk..kppFk.....
+.....kppk..............kppk.....
+.....kpk................kpk.....
+.....kk..................kk.....
+.....k....................k.....
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""

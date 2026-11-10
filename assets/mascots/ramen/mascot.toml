@@ -1,0 +1,172 @@
+# Ramen, an object: a deep cream bowl with a blue wave band, brimming with
+# golden broth, a tangle of noodles, half a soft egg, a slice of naruto,
+# and a sheet of nori standing up at the back; the face is on the bowl.
+# The signature slurps the noodles up and down in a cloud of steam; the
+# rare one has a pair of chopsticks lift one noodle very, very high.
+id = "ramen"
+name = "Ramen"
+category = "food"
+aliases = ["noodles"]
+accent = "honey"
+extends = "object"
+# Template props go to the top left, clear of the nori and the chopsticks.
+prop_offset = [-20, -2]
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "white"       # bowl light, rim
+"f" = "cream"       # bowl
+"F" = "grey-1"      # bowl shadow
+"u" = "blue-2"      # wave band
+"U" = "blue-3"      # wave band shadow
+"o" = "orange-2"    # broth
+"y" = "yellow-1"    # noodles light
+"Y" = "yellow-2"    # noodles, chopstick tips
+"t" = "yellow-2"    # chopstick tips
+"T" = "orange-2"    # chopsticks
+"w" = "white"       # egg white, naruto
+"a" = "orange-1"    # yolk
+"p" = "pink-2"      # naruto swirl
+"n" = "grey-4"      # nori
+"N" = "grey-3"      # nori sheen
+"h" = "grey-3"      # eye highlight, soft on the cream bowl
+"P" = "pink-1"      # blush
+
+# The bowl and its broth, running down behind the crate front.
+[layers."head"]
+grid = """
+................................
+......................kk........
+.....................kNnk.......
+.....kkkk............kNnk.......
+....kwwwwk...........kNnnk......
+...kwwaawwk..........kNnnk.kkk..
+...kwaaaawk..........kNnnkkwpwk.
+.kkowwaawwoooooooooooonnnowwwkk.
+.kllllllllllllllllllllllllFFFFk.
+.kFffffffffffffffffffffffffffFk.
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+...klffffffffffffffffffffffFk...
+...klffffffffffffffffffffffFk...
+....klffffffffffffffffffffFk....
+....kuuuuuuuuuuuuuuuuuuuuuuk....
+.....kUuUUuUUuUUUUuUUuUUuUk.....
+.....klffffffffffffffffffFk.....
+......klffffffffffffffffFk......
+.......kkFFFFFFFFFFFFFFkk.......
+.........kkkkkkkkkkkkkk.........
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# A tangle of noodles in the broth.
+[layers."noodles"]
+at = [11, 4]
+follows = "head"
+grid = """
+..kkkkk..
+.kyYyYyk.
+kyYyyYyYk
+yYyYyYyYy
+"""
+
+# Mid-slurp: the noodles rise.
+[layers."noodles.up"]
+at = [11, 2]
+follows = "head"
+grid = """
+..kkkkk..
+.kyYyYyk.
+kyYyyYyYk
+yYyYyYyYy
+.y.Y.y.Y.
+.Y.y.Y.y.
+"""
+
+# One noodle on the chopsticks, then lifted very high.
+[layers."lift.low"]
+at = [15, 4]
+follows = "head"
+grid = """
+y
+Y
+y
+Y
+"""
+
+[layers."lift.high"]
+at = [15, 1]
+follows = "head"
+grid = """
+Y
+y
+Y
+y
+Y
+y
+Y
+"""
+
+# Chopsticks, from the top right.
+[layers."chopsticks.up"]
+at = [14, 0]
+grid = """
+......kkkkkkkTTTk
+kkkkkkkTTTTTTTTTk
+kttTTTTTTTTTTkkkk
+kttTTTTkkkkkkk...
+kkkkkkkk.........
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the noodles slurp up and down, and the bowl steams.
+[[actions]]
+name = "slurp"
+weight = 4
+frames = [
+  { ops = ["eyes=closed", "noodles=up", "+mouth.open"], ms = 200 },
+  { ops = ["eyes=closed"], ms = 160 },
+  { ops = ["eyes=closed", "noodles=up", "+mouth.open"], ms = 200 },
+  { ops = ["eyes=happy", "prop:steam@4,-2"], ms = 500 },
+  { ops = ["eyes=happy", "prop:steam@5,-3"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a pair of chopsticks comes in and lifts one noodle up, and up, and
+# up; the bowl watches it go, astonished.
+[[actions]]
+name = "noodle-lift"
+weight = 1
+frames = [
+  { ops = ["eyes=right", "+chopsticks.up", "chopsticks+5,1"], ms = 300 },
+  { ops = ["eyes=right", "+chopsticks.up", "chopsticks+0,2"], ms = 300 },
+  { ops = ["+chopsticks.up", "chopsticks+0,1", "+lift.low"], ms = 300 },
+  { ops = ["+mouth.open", "+chopsticks.up", "chopsticks+0,-2", "+lift.high", "all+0,1"], ms = 1200 },
+  { ops = ["eyes=happy", "+chopsticks.up", "chopsticks+5,-2"], ms = 500 },
+  { ops = [], ms = 200 },
+]

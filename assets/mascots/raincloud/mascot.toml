@@ -1,0 +1,151 @@
+# Rain Cloud, an object on `object`: a puffy grey cloud of three bumps
+# with a heavy dark underside, floating over the crate with a sulky little
+# frown and lowered brows (sulky, but cute). The signature lets a little
+# drizzle fall into the crate; the rare one cracks off a tiny lightning bolt
+# that startles the cloud more than anyone.
+id = "raincloud"
+name = "Rain Cloud"
+category = "nature"
+aliases = []
+accent = "slate"
+extends = "object"
+
+[palette]
+"l" = "grey-1"      # cloud light
+"f" = "grey-2"      # cloud
+"F" = "grey-3"      # cloud shadow and creases
+"D" = "grey-4"      # heavy underside
+"r" = "blue-2"      # raindrops
+"y" = "yellow-1"    # lightning
+"Y" = "amber"       # lightning shade
+
+# The cloud, floating clear of the rim.
+[layers.head]
+grid = """
+................................
+................................
+..............kkkk..............
+...........kkklffFkkk...........
+..........klllffffffFk..........
+......kkkklffffffffffFkkkk......
+.....klllFffffffffffffFffFk.....
+....klfffFffffffffffffFfffFk....
+....kfffFffffffffffffffFffFk....
+...klffffffffffffffffffffffFk...
+...kfffffffffffffffffffffffFk...
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+....kfffffffffffffffffffffFk....
+....kDDDDDDDDDDDDDDDDDDDDDDk....
+.....kkkkkkkkkkkkkkkkkkkkkk.....
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# Lowered brows and a frown: sulky.
+[layers.brows]
+at = [9, 7]
+follows = "head"
+grid = """
+kk......kk
+..k....k..
+"""
+
+[layers.mouth]
+at = [14, 12]
+follows = "head"
+grid = """
+.kk.
+k..k
+"""
+
+# Drizzle in two phases, and the lightning bolt (hidden at rest).
+[layers."rain.drip"]
+at = [6, 17]
+follows = "head"
+grid = """
+...r.....r.....r...
+r..r..r..r..r..r..r
+r.....r.....r.....r
+"""
+
+[layers."rain.drop"]
+at = [7, 17]
+follows = "head"
+grid = """
+r.....r.....r.....r
+r..r..r..r..r..r..r
+...r.....r.....r...
+"""
+
+[layers."bolt.zap"]
+at = [19, 16]
+follows = "head"
+grid = """
+.kkkk
+.kyYk
+kyYk.
+kyyyk
+.kYyk
+.kyk.
+kyk..
+kk...
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: a little drizzle falls into the crate, and the cloud closes its
+# eyes, relieved.
+[[actions]]
+name = "drizzle"
+weight = 4
+frames = [
+  { ops = ["+rain.drip"], ms = 180 },
+  { ops = ["+rain.drop", "eyes=closed"], ms = 180 },
+  { ops = ["+rain.drip", "eyes=closed"], ms = 180 },
+  { ops = ["+rain.drop", "eyes=closed"], ms = 180 },
+  { ops = ["+rain.drip", "eyes=closed"], ms = 180 },
+  { ops = ["+rain.drop"], ms = 180 },
+  { ops = [], ms = 400 },
+]
+
+# Rare: a tiny lightning bolt cracks out underneath, and the cloud jumps,
+# startled at itself.
+[[actions]]
+name = "zap"
+weight = 1
+frames = [
+  { ops = ["eyes=closed", "all+0,1"], ms = 400 },
+  { ops = ["+bolt.zap", "-brows", "+mouth.open", "-mouth", "all+0,-3"], ms = 160 },
+  { ops = ["+bolt.zap", "-brows", "+mouth.open", "-mouth", "all+0,-3", "prop:bang@26,0"], ms = 160 },
+  { ops = ["-brows", "+mouth.open", "-mouth", "all+0,-1", "prop:bang@26,1"], ms = 700 },
+  { ops = ["eyes=left", "prop:bang@26,1"], ms = 500 },
+  { ops = [], ms = 200 },
+]

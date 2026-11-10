@@ -1,0 +1,115 @@
+# Magnet, an object: a big red horseshoe magnet standing on its legs, a
+# chunky rounded bridge on top with the face on it, the two legs ending in
+# bright silver pole pieces with a gap between them. The signature pulls a
+# pebble up out of the crate with a clink, right into the gap between its
+# poles, and then lets it drop; the rare one pulls up a whole heap of
+# pebbles at once, gets a little overwhelmed, and shakes them all off.
+id = "magnet"
+name = "Magnet"
+category = "things"
+aliases = []
+accent = "cranberry"
+extends = "object"
+
+[palette]
+"l" = "red-1"       # painted iron light
+"f" = "red-2"       # painted iron
+"F" = "brown-4"     # painted iron shadow, the band above the poles
+"w" = "white"       # pole pieces, light
+"m" = "grey-1"      # pole pieces
+"M" = "grey-2"      # pole pieces, shadow
+"p" = "pink-2"      # inside of the mouth
+
+[layers.head]
+grid = """
+................................
+.............kkkkkk.............
+..........kkkllllFFkkk..........
+........kklllfffffffFFkk........
+......kkllffffffffffffFFkk......
+.....kllffffffffffffffffFFk.....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+...klfffffffffffffffffffffFFk...
+...klfffffffffffffffffffffFFk...
+..klfffffffffffffffffffffffFFk..
+..klfffffffffffffffffffffffFFk..
+..klfffffffffffffffffffffffFFk..
+..klfffffffffffffffffffffffFFk..
+..klfffffffffFkkkklffffffffFFk..
+..kFFFFFFFFFkk....kkFFFFFFFFFk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+..kwmmmmmmMk........kwmmmmmmMk..
+"""
+
+# Glancing down at the gap between its poles.
+[layers."eyes.down"]
+at = [11, 10]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "double-blink"
+weight = 3
+
+[[actions]]
+use = "curious"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a pebble rises out of the crate and snaps up into the gap
+# between the poles with a clink. The magnet admires it, then lets go.
+[[actions]]
+name = "attract"
+weight = 5
+frames = [
+  { ops = ["eyes=down", "prop:pebble@13,19"], ms = 300 },
+  { ops = ["eyes=down", "prop:pebble@13,17"], ms = 100 },
+  { ops = ["eyes=happy", "prop:pebble@13,15", "all+0,-1"], ms = 120 },
+  { ops = ["eyes=happy", "prop:pebble@13,15"], ms = 900 },
+  { ops = ["eyes=down", "prop:pebble@13,15"], ms = 400 },
+  { ops = ["eyes=down", "prop:pebble@13,18"], ms = 120 },
+  { ops = ["eyes=down", "prop:pebble@13,22"], ms = 120 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it pulls a whole heap of pebbles out of the crate at once. Clink,
+# clink, clink, clink. A beat of alarm, a hard shake, and they all drop.
+[[actions]]
+name = "heap"
+weight = 1
+frames = [
+  { ops = ["eyes=down", "prop:pebble@13,15"], ms = 140 },
+  { ops = ["eyes=down", "prop:pebble@13,15", "prop:pebble@0,15"], ms = 140 },
+  { ops = ["eyes=down", "prop:pebble@13,15", "prop:pebble@0,15", "prop:pebble@26,14"], ms = 140 },
+  { ops = ["eyes=right", "prop:pebble@13,15", "prop:pebble@0,15", "prop:pebble@26,14", "prop:pebble@13,11", "prop:pebble@26,10"], ms = 700 },
+  { ops = ["eyes=closed", "all+1,0", "prop:pebble@14,16", "prop:pebble@1,17", "prop:pebble@27,15", "prop:pebble@13,13", "prop:pebble@27,12"], ms = 110 },
+  { ops = ["eyes=closed", "all+-1,0", "prop:pebble@12,19", "prop:pebble@0,20", "prop:pebble@26,19", "prop:pebble@12,17", "prop:pebble@26,16"], ms = 110 },
+  { ops = ["eyes=closed", "all+1,0", "prop:pebble@13,23", "prop:pebble@26,21", "prop:pebble@14,21"], ms = 110 },
+  { ops = ["mouth=open"], ms = 500 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

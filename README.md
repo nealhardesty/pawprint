@@ -13,7 +13,7 @@ turns its head to look at you.
   │  OWL  │              │   MOOSE    │       │ BUILD7 │
   └───────┘              └────────────┘       └────────┘
 ```
-*(Real art is 32×32 pixel sprites: see [all 100 mascots](#the-100-mascots).
+*(Real art is 32×32 pixel sprites: see [all 214 mascots](#the-214-mascots).
 This is the idea in ASCII.)*
 
 - **Always on top, never in the way.** Clicks go straight through it, it never
@@ -25,7 +25,8 @@ This is the idea in ASCII.)*
 - **Picks the right animal automatically.** A host named `owl`, `owl-02`, or
   `prod-owl.lab.example` gets the owl. Names with no animal in them still get
   their own consistent mascot.
-- **100 animated mascots built in**, all replaceable with your own art.
+- **214 animated mascots built in**: animals, mythical creatures, planets,
+  food, and gadgets, all replaceable with your own art.
 - **Calm and light.** A short animation every 8–20 seconds, then it sleeps.
   Static mode turns animation off.
 - **Private.** No network access, no telemetry, and no keyboard or mouse
@@ -43,19 +44,23 @@ on Wayland, and GNOME on Wayland (Ubuntu 24.04 LTS and newer).
 
 ---
 
-## The 100 mascots
+## The 214 mascots
 
-Six packs: mammals, cats and dogs, birds, aquatic, critters, and oddballs.
-Each one has its own signature move and a few shared ones (blinks, ear
-flicks, a doze at night). Here they are at actual size and 2×, grouped by
+Eleven packs. Animals: mammals, cats and dogs, birds, aquatic, and
+critters. Mythical creatures: a dragon, a unicorn, a phoenix, Cerberus,
+Nessie, and more. And things with faces: oddballs, space (every planet
+worth naming a server after), nature, food, and things. A machine named
+`saturn`, `pizza`, or `dragon-01` gets that mascot. Each one has its own
+signature move, a rare one that turns up about once an hour, and a few
+shared ones (blinks, glances, a doze at night). Here they are at actual size and 2×, grouped by
 body plan, with labels hidden:
 
-![All 100 PAWPRINT mascots at 1× and 2×](docs/gallery.png)
+![All 214 PAWPRINT mascots at 1× and 2×](docs/gallery.png)
 
 <details>
-<summary>The same sheet with every animation playing (1.3 MB GIF)</summary>
+<summary>The same sheet with every animation playing (2.6 MB GIF)</summary>
 
-![All 100 PAWPRINT mascots animated](docs/gallery.gif)
+![All 214 PAWPRINT mascots animated](docs/gallery.gif)
 
 </details>
 
@@ -182,10 +187,12 @@ else on the screen are held back while move mode is on.)
 ### How it picks a mascot
 
 1. **Your setting**, if you've chosen one.
-2. **The animal in the name.** `owl`, `owl-02`, `prod-owl.example.com`, and
-   `polar-bear-3` all match. Whole words only: `snowless` doesn't get an owl.
+2. **The mascot in the name.** `owl`, `owl-02`, `prod-owl.example.com`,
+   `polar-bear-3`, `saturn`, and `pizza-oven` all match. Whole words only:
+   `snowless` doesn't get an owl. A machine named after a mascot added in
+   a later version switches to it when you upgrade.
 3. **Otherwise, a consistent pick.** The hostname is hashed to pick one of
-   the 100 mascots and a crate color. The same name gives the same result on
+   the mascots and a crate color. The same name gives the same result on
    every install, and once chosen it is remembered, so adding new mascots
    later won't change your machines.
 
@@ -196,7 +203,7 @@ $ pawprint explain
 hostname    prod-owl-02.lab.example
 short name  prod-owl-02
 label       PRODOWL02              (auto: short hostname, letters and digits, upper case)
-mascot      owl                    (rule 4: token "owl")
+mascot      owl                    (rule 3: token "owl")
 accent      violet                 (from mascot)
 size        64                     (default)
 position    top-right +16+16       (dragged; saved in state file)
@@ -210,7 +217,7 @@ backend     wayland (layer-shell, KDE Plasma)
 ![The settings window's mascot page](docs/settings.png)
 
 **Tray → Settings…** (or `pawprint settings`) opens a window with a control
-for every option in the config file: the mascot (all 100, by category, or
+for every option in the config file: the mascot (all 214, by category, or
 type to search and press Enter), the label, its letter case and text size,
 the size, the crate color, the corner, the distance from the edge, the
 display, the animation and its timing, the tray icon, what to do when a
@@ -531,9 +538,10 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make palette` | Regenerate `assets/palette.gpl`, the master palette for GIMP, Aseprite, and LibreSprite |
 | `make art-export MASCOT=owl` | Export a mascot's layers (one PNG each) and frames into `out/art/<id>/` for editing in a pixel-art tool |
 | `make art-import MASCOT=owl PNG=out/art/owl/eyes.png` | Print an edited PNG layer as a ready-to-paste grid in the mascot's own glyphs |
+| `make mascot-sheet DIR=path/to/mascots` | Render every mascot folder in `DIR` frame by frame into `out/mascot-sheet/` (rest at 1×, 2×, and 4× on light and dark, then every action), with the same checks as the build; works on your own custom mascots too |
 | `make ci` | Everything CI checks (`lint` + `test`) |
 | `make release` | Optimized build for this OS, checked and run: static musl x86_64 and aarch64 on Linux (the aarch64 one runs under `qemu-user-static` if installed), a universal binary re-signed ad hoc on macOS, `pawprint.exe` and `pawprintw.exe` on Windows |
-| `make package` | Release build, then the archives and their `.sha256` files into `dist/`. Fails if the catalog has fewer than 100 valid mascots or is missing a required one. |
+| `make package` | Release build, then the archives and their `.sha256` files into `dist/`. Fails if the catalog has fewer valid mascots than `assets/catalog.toml` requires (214) or is missing a required one. |
 | `make publish` | Upload `dist/` and the installers to the GitHub release `v<version>`, creating it as a draft if needed. Refuses unless the tree is clean, the tag is on `HEAD`, and `dist/` was packaged from that commit. `make publish DRY_RUN=1` prints the `gh` commands without running them |
 | `make release-finalize` | Once every OS has published: check the draft release has all four archives, their `.sha256` files, and both installers, then publish it. `DRY_RUN=1` prints the commands and the expected assets |
 | `make install` | Package, then install that build for this user through the real installer (`--archive dist/...`): autostart on, badge started |
@@ -545,7 +553,7 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make check-all-targets` | Type-check the workspace for every release target (Windows, macOS, Linux musl) from any OS; needs no linkers |
 | `make spike-f22` | Rebuild the F22 spike: proves the Linux window, Wayland, D-Bus, and tray crates link into fully static musl binaries |
 
-`make check-assets` and `make test` report the catalog gates (at least 100
+`make check-assets` and `make test` report the catalog gates (at least 214
 mascots, every showcase mascot present) without failing; only `make package`
 enforces them.
 

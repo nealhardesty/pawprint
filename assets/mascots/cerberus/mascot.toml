@@ -1,0 +1,260 @@
+# Cerberus, a bespoke mythical guard dog: one big charcoal body, one red
+# studded collar per neck, and three small heads, each its own dog. The
+# left head is the alert one (tall prick ears, wide amber eyes), the middle
+# one is sleepy (droopy ears, heavy lids, drawn in front), and the right
+# one is the goofball (one ear folded over, crossed eyes, tongue out at
+# rest). Each side head has its own slots (`lhead`, `leyes`, `lmouth`;
+# `rhead`, `reyes`, `rmouth`); the middle head uses the standard ones, so
+# the templates blink and doze happen to the sleepy head alone. Signature:
+# the heads take turns. Rare: all three howl together.
+id = "cerberus"
+name = "Cerberus"
+category = "mythical"
+aliases = []
+accent = "charcoal"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "grey-2"      # coat light
+"f" = "grey-3"      # charcoal coat
+"F" = "grey-4"      # coat shadow
+"s" = "fur-black"   # droopy ears
+"S" = "grey-4"      # droopy ear sheen
+"w" = "grey-1"      # muzzles
+"M" = "grey-2"      # mouth lines
+"n" = "ink"         # noses
+"e" = "amber"       # glowing amber eyes
+"h" = "white"       # glint
+"p" = "pink-2"      # tongues
+"r" = "red-2"       # collars
+"g" = "grey-1"      # collar studs
+
+# One broad body for three heads.
+[layers.body]
+at = [2, 15]
+grid = """
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+klfffffffffffffffffffffffFFk
+"""
+
+# A studded collar on each neck.
+[layers.collar]
+at = [2, 14]
+grid = """
+..........rrgrrgrr..........
+krgrrgrr............rrgrrgrk
+"""
+
+# The alert head: tall prick ears.
+[layers.lhead]
+at = [1, 3]
+grid = """
+.kk....kk.
+klfk..kfFk
+klffkkffFk
+klffffffFk
+klffffffFk
+klffffffFk
+klffffffFk
+klffffffFk
+kffwwwwffk
+.kwwnnwwk.
+.kwMwwMwk.
+..kkkkkk..
+"""
+
+# The goofball: one ear folded over the top of its head.
+[layers.rhead]
+at = [21, 3]
+grid = """
+.kk.......
+klfk.kkkk.
+klffkssssk
+klfffkSSsk
+klffffkkFk
+klffffffFk
+klffffffFk
+klffffffFk
+kffwwwwffk
+.kwwnnwwk.
+.kwMwwMwk.
+..kkkkkk..
+"""
+
+# The sleepy head, in front, its droopy ears over the other two necks.
+[layers.head]
+at = [9, 4]
+grid = """
+...kkkkkkkk...
+.kkkllfffFkkk.
+ksSkffffffkSsk
+ksSkffffffkSsk
+ksSkffffffkSsk
+ksSkffffffkSsk
+.kSkfwwwwfkSk.
+..kkwwnnwwkk..
+...kwMwwMwk...
+....kkkkkk....
+"""
+
+[layers.leyes]
+at = [3, 9]
+follows = "lhead"
+grid = """
+he..he
+ek..ek
+"""
+
+[layers."leyes.closed"]
+at = [3, 10]
+grid = """
+kk..kk
+"""
+
+# Heavy lids over amber eyes.
+[layers.eyes]
+at = [13, 8]
+follows = "head"
+grid = """
+kk..kk
+ek..ek
+"""
+
+[layers."eyes.closed"]
+at = [13, 9]
+grid = """
+kk..kk
+"""
+
+# Crossed eyes.
+[layers.reyes]
+at = [23, 9]
+follows = "rhead"
+grid = """
+eh..he
+ek..ke
+"""
+
+[layers."reyes.closed"]
+at = [23, 10]
+grid = """
+kk..kk
+"""
+
+[layers."lmouth.bark"]
+at = [4, 13]
+follows = "lhead"
+grid = """
+kppk
+kppk
+.kk.
+"""
+
+[layers."lmouth.howl"]
+at = [4, 12]
+grid = """
+.kk.
+kppk
+.kk.
+"""
+
+# The middle head's yawn.
+[layers."mouth.open"]
+at = [13, 11]
+follows = "head"
+grid = """
+kkkkkk
+kppppk
+kppppk
+.kkkk.
+"""
+
+[layers."mouth.howl"]
+at = [14, 11]
+grid = """
+.kk.
+kppk
+.kk.
+"""
+
+# The goofball's tongue, always out.
+[layers.rmouth]
+at = [26, 13]
+follows = "rhead"
+grid = """
+pk
+pp
+kk
+"""
+
+[layers."rmouth.howl"]
+at = [24, 12]
+grid = """
+.kk.
+kppk
+.kk.
+"""
+
+[layers.paws]
+at = [8, 17]
+grid = """
+.FFFF......FFFF.
+FllllF....FllllF
+klFlFk....klFlFk
+"""
+
+[[actions]]
+use = "blink"
+weight = 5
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the heads take turns. The left one barks, the middle one
+# yawns, and the right one blinks, twice, a beat behind.
+[[actions]]
+name = "take-turns"
+weight = 5
+frames = [
+  { ops = ["lhead+0,-1", "+lmouth.bark", "prop:bang@0,0"], ms = 300 },
+  { ops = ["prop:bang@0,0"], ms = 250 },
+  { ops = ["+mouth.open", "eyes=closed"], ms = 800 },
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = ["reyes=closed"], ms = 150 },
+  { ops = [], ms = 250 },
+  { ops = ["reyes=closed"], ms = 150 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: all three throw their heads back and howl together.
+[[actions]]
+name = "triple-howl"
+weight = 1
+frames = [
+  { ops = ["leyes=closed", "eyes=closed", "reyes=closed", "-rmouth"], ms = 250 },
+  { ops = ["lhead+0,-1", "head+0,-1", "rhead+0,-1", "leyes=closed", "eyes=closed", "reyes=closed", "lmouth=howl", "mouth=howl", "rmouth=howl", "prop:note@12,0"], ms = 600 },
+  { ops = ["lhead+0,-2", "head+0,-2", "rhead+0,-2", "leyes=closed", "eyes=closed", "reyes=closed", "lmouth=howl", "mouth=howl", "rmouth=howl", "prop:note@0,0", "prop:note@24,0"], ms = 900 },
+  { ops = ["lhead+0,-1", "head+0,-1", "rhead+0,-1", "leyes=closed", "eyes=closed", "reyes=closed", "lmouth=howl", "mouth=howl", "rmouth=howl", "prop:note@13,0"], ms = 600 },
+  { ops = ["leyes=closed", "eyes=closed", "reyes=closed", "-rmouth"], ms = 300 },
+  { ops = [], ms = 200 },
+]

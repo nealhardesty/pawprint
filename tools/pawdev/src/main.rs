@@ -24,6 +24,7 @@ commands:
   contact-sheet [--animated] docs/gallery.png (and docs/gallery.gif)
   building-blocks          docs/building-blocks.png: accents, props, bases x templates
   settings-shots           out/settings/<page>.png for every settings page, and docs/settings.png
+  mascot-sheet <dir> [out] every mascot folder in <dir>, frame by frame, into out/mascot-sheet/
   art-export <id>          out/art/<id>/: a PNG per layer and variant, plus frames.png
   art-import <id> <png>    print a PNG layer as a [layers] table in <id>'s glyphs
   power-check [seconds]    measure the release badge against SPEC §7.2 (Linux: Xvfb; macOS, Windows: this desktop)
@@ -50,6 +51,11 @@ fn main() -> ExitCode {
         ["contact-sheet", "--animated"] => sheet::contact_sheet(&root(), true),
         ["building-blocks"] => sheet::building_blocks(&root()),
         ["settings-shots"] => shots::settings_shots(&root()),
+        ["mascot-sheet", dir] => {
+            sheet::mascot_sheet(Path::new(dir), &root().join("out/mascot-sheet"))
+        }
+        ["mascot-sheet", dir, out] => sheet::mascot_sheet(Path::new(dir), Path::new(out)),
+        ["mascot-sheet"] => Err("usage: make mascot-sheet DIR=<folder of mascot folders>".into()),
         ["art-export", id] => art::export(&root(), id),
         ["art-import", id, png] => art::import(&root(), id, Path::new(png)),
         ["art-import", _] => Err("usage: make art-import MASCOT=<id> PNG=<file>".into()),

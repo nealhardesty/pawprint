@@ -1,0 +1,128 @@
+# Chess Rook: a walnut castle tower on a round base, three square
+# battlements on top with a little red flag on the middle one, the face on
+# the tower. The signature flutters the flag in a breeze. The rare one
+# castles: it slides off to one side of the crate and back home again.
+id = "chess-rook"
+name = "Chess Rook"
+category = "things"
+aliases = ["rook"]
+accent = "slate"
+extends = "object"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "brown-1"
+"f" = "brown-2"
+"F" = "brown-3"
+"D" = "brown-4"
+"r" = "red-1"
+"R" = "red-2"
+"d" = "grey-2"
+"h" = "white"
+"P" = "pink-1"
+"p" = "pink-2"
+
+[layers."head"]
+grid = """
+................................
+................................
+................................
+......kkkk.kkk....kkk.kkkk......
+......klFk.klk....klk.klFk......
+......klfFklfFkkkklfFklfFk......
+......klfflfffllllffflffFk......
+......kkFFFFFFFFFFFFFFFFkk......
+........klfffffffffFFfFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klffffffffffffFk........
+........klFFffffffffffFk........
+........klffffffffffFFFk........
+.......klDDDDDDDDDDDDDDFk.......
+......klffffffffffffffffFk......
+.....kFFFFFFFFFFFFFFFFFFFFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+"""
+
+[layers."flag"]
+at = [15, 0]
+follows = "head"
+grid = """
+dkkkkk.
+dkrrrRk
+dkrRRRk
+dkkkkk.
+d......
+d......
+"""
+
+[layers."flag.wave"]
+at = [15, 0]
+follows = "head"
+grid = """
+d.kkkk.
+dkkrrRk
+dkrRRkk
+dkkkk..
+d......
+d......
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the flag on top flutters in a breeze while it looks pleased.
+[[actions]]
+name = "flag-wave"
+weight = 4
+frames = [
+  { ops = ["flag=wave"], ms = 200 },
+  { ops = [], ms = 200 },
+  { ops = ["flag=wave", "eyes=happy"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 200 },
+  { ops = ["flag=wave", "eyes=happy"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: castling. It slides off to one side of the crate, holds there, and
+# slides back home, flag streaming.
+[[actions]]
+name = "castle"
+weight = 1
+frames = [
+  { ops = ["eyes=left"], ms = 300 },
+  { ops = ["all+-2,0", "flag=wave", "eyes=left"], ms = 120 },
+  { ops = ["all+-5,0", "eyes=left"], ms = 120 },
+  { ops = ["all+-7,0", "flag=wave", "eyes=happy"], ms = 900 },
+  { ops = ["all+-4,0", "eyes=right"], ms = 120 },
+  { ops = ["all+-1,0", "flag=wave", "eyes=right"], ms = 120 },
+  { ops = [], ms = 300 },
+]

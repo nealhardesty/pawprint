@@ -1,0 +1,283 @@
+# Sheep on ungulate-head. A round white cloud of wool with a dark grey face
+# peeking out of it: a bumpy wool cap and fringe on top, dark ears sticking
+# straight out sideways from the fleece, and a soft grey muzzle. No horns.
+# Its scalloped outline is unlike any sibling's. The signature fluffs up its
+# wool and baas (a note); the rare one: the wool keeps growing until it is
+# an enormous poof, then settles back.
+id = "sheep"
+name = "Sheep"
+category = "mammals"
+aliases = ["lamb", "ewe"]
+accent = "ice"
+extends = "ungulate-head"
+
+rest = ["body", "ears", "head", "eyes", "nose", "cap"]
+
+[palette]
+"l" = "grey-2"      # face light
+"f" = "grey-3"      # face
+"F" = "grey-4"      # face shadow
+"m" = "grey-2"      # NEW: muzzle
+"M" = "grey-4"      # mouth line
+"a" = "white"       # NEW: wool
+"A" = "grey-1"      # NEW: wool shadow and curls
+"n" = "fur-black"   # nose
+"p" = "pink-2"      # inner ear, mouth
+
+# The fleece: a scalloped cloud behind the face.
+[layers.body]
+grid = """
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ......kkkkaaaaaaaaaaaAkkkk......
+    ....kkaaaakaaaaaaaaaAkaaaAkk....
+    ...kaaaAaaakaaaaaaaAkaaaAaaAk...
+    ...kaaaaaaaaaaaaaaaaaaaaaaaAk...
+    ..kkaAaaaaaaaaaaaaaaaaaaaaAAkk..
+    .kaaaaaaaaaaaaaaaaaaaaaaaaaaaAk.
+    .kaAaaaaaaaaaaaaaaaaaaaaaaaaAAk.
+    .kaaaaaaaaaaaaaaaaaaaaaaaaaaaAk.
+    ..kkaaaaaaaaaaaaaaaaaaaaaaaAkk..
+    .kaaaAaaaaaaaaaaaaaaaaaaaaAaaAk.
+    .kaAaaaaaaaaaaaaaaaaaaaaaaaaAAk.
+    .kaaaaaaaaaaaaaaaaaaaaaaaaaaaAk.
+    ..kaaAaaaaaaaaaaaaaaaaaaaaAaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+    ..kaaaaaaaaaaaaaaaaaaaaaaaaaAk..
+"""
+
+# Grown into a huge poof.
+[layers."body.poof"]
+grid = """
+    ................................
+    ....kkkkaaaaaaaaaaaaaaaAkkkk....
+    ..kkaaaakkaaaaaaaaaaaAkkaaaAkk..
+    .kaaaAaaaakaaaaaaaaaAkaaaaAaaAk.
+    kaaaaaaaaaakaaaaaaaAkaaaaaaaaaAk
+    kaAaaaaaaaaaaaaaaaaaaaaaaaaaaAAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    .kaaaaaaaaaaaaaaaaaaaaaaaaaaaAk.
+    kkaaAaaaaaaaaaaaaaaaaaaaaaaAaAkk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaAaaaaaaaaaaaaaaaaaaaaaaaaaaAAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    .kaaaaaaaaaaaaaaaaaaaaaaaaaaaAk.
+    kkaaaAaaaaaaaaaaaaaaaaaaaaAaaAkk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaAaaaaaaaaaaaaaaaaaaaaaaaaaaAAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    .kaaaAaaaaaaaaaaaaaaaaaaaaAaaAk.
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+    kaaaaaaaaaaaaaaaaaaaaaaaaaaaaaAk
+"""
+
+# Dark ears straight out of the fleece.
+[layers.ears]
+at = [5, 8]
+follows = "head"
+grid = """
+.kkkk............kkkk.
+kllppk..........kppFFk
+.kkkk............kkkk.
+"""
+
+[layers."ears.flick"]
+at = [5, 7]
+follows = "head"
+grid = """
+.................kkkk.
+.kkkk...........kppFFk
+kllppk...........kkkk.
+.kkkk.................
+"""
+
+# The dark face, narrowing to the muzzle.
+[layers.head]
+at = [10, 5]
+grid = """
+.kffffffffk.
+kllfffffffFk
+klffffffffFk
+klffffffffFk
+klffffffffFk
+.klffffffFk.
+.klffffffFk.
+..kffffffk..
+..kmmmmmmk..
+..kmmmmmmk..
+...kmMMmk...
+....kkkk....
+"""
+
+# The wool cap and fringe.
+[layers.cap]
+at = [9, 1]
+follows = "head"
+grid = """
+....kk..kk....
+..kkaakkaAkk..
+.kaaaaaaaaaAk.
+kaaAaaaaaAaaAk
+kaaaaaaaaaaaAk
+.kAaaaaaaaaAk.
+...kAAkkAAk...
+"""
+
+[layers."cap.poof"]
+at = [7, 0]
+follows = "head"
+grid = """
+...kkk....kkk...
+.kkaaakkkkaaAkk.
+kaaaaaaaaaaaaaAk
+kaaAaaaaaaaaAaAk
+kaaaaaaaaaaaaaAk
+kaaaaaAaaaaaaaAk
+.kaaaaaaaaaaaAk.
+..kkAaaaaaaAkk..
+....kAAkkAAk....
+"""
+
+[layers.eyes]
+at = [12, 8]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.closed"]
+at = [12, 9]
+follows = "head"
+grid = """
+kk....kk
+"""
+
+[layers."eyes.left"]
+at = [11, 8]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.right"]
+at = [13, 8]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.happy"]
+at = [11, 8]
+follows = "head"
+grid = """
+.kk....kk.
+k..k..k..k
+"""
+
+[layers."eyes.wide"]
+at = [11, 7]
+follows = "head"
+grid = """
+.kk....kk.
+khkk..khkk
+kkkk..kkkk
+.kk....kk.
+"""
+
+[layers.nose]
+at = [14, 13]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 12]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."mouth.open"]
+at = [14, 15]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: fluffs up its wool and baas.
+[[actions]]
+name = "fluff-baa"
+weight = 4
+frames = [
+  { ops = ["cap+0,-1", "eyes=closed"], ms = 160 },
+  { ops = ["cap+0,-1", "eyes=closed", "all+0,-1"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = ["+mouth.open", "ears=flick", "prop:note@24,2"], ms = 300 },
+  { ops = ["+mouth.open", "prop:note@25,0"], ms = 500 },
+  { ops = ["prop:note@25,-1"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the wool grows, and grows, into an enormous poof, then shakes back.
+[[actions]]
+name = "big-poof"
+weight = 1
+frames = [
+  { ops = ["eyes=wide", "cap+0,-1"], ms = 300 },
+  { ops = ["eyes=wide", "body=poof", "cap=poof"], ms = 900 },
+  { ops = ["eyes=happy", "body=poof", "cap=poof"], ms = 600 },
+  { ops = ["eyes=closed", "all+-1,0"], ms = 100 },
+  { ops = ["eyes=closed", "all+1,0"], ms = 100 },
+  { ops = ["eyes=closed", "all+-1,0"], ms = 100 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

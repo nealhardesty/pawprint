@@ -1,0 +1,142 @@
+# Sushi, an object: a nigiri, a block of rice with a slice of salmon
+# draped over it, its ends drooping, and a band of nori around the middle.
+# The face is on the rice; its smile is drawn in white on the nori. The
+# signature has a pair of chopsticks tap-tap on the salmon; the rare one is
+# a polite little bow.
+id = "sushi"
+name = "Sushi"
+category = "food"
+aliases = ["nigiri"]
+accent = "cranberry"
+extends = "object"
+# Template props go to the top left, away from the chopsticks.
+prop_offset = [-20, -1]
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"a" = "pink-1"      # salmon light
+"s" = "red-1"       # salmon
+"S" = "red-2"       # salmon shadow
+"z" = "orange-1"    # fat stripes
+"w" = "white"       # rice
+"r" = "white"       # rice light edge
+"M" = "grey-1"      # rice shadow, grains
+"n" = "grey-4"      # nori
+"N" = "green-3"     # nori sheen
+"t" = "red-1"       # chopstick tips
+"T" = "red-2"       # lacquered chopsticks
+"h" = "grey-3"      # eye highlight, soft on white rice
+"P" = "pink-1"      # blush
+"p" = "red-2"       # inside of the mouth
+
+# The rice block, the salmon, and the nori band.
+[layers."head"]
+grid = """
+................................
+................................
+................................
+................................
+......kkkkkkkkkkkkkkkkkkkk......
+....kkaazaaaazNnnnssszsssszk....
+...kaaszsssszsNnnnsszsssszssk...
+..kSsszsssszssNnnnszsssszsssSk..
+..kSSSkMMMMMMMNnnnMMMMMMMkSSSk..
+...kSSkwwwwwwwNnnnwwwwwwwkSSk...
+....kkkwwwwwwwNnnnwwwwwwwkkk....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwwMwwwwNnnnwwwwwwMMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwMwwwwwNnnnwwwwwMwMk.....
+.....krwwwwwMwNnnnwwMwwwwMk.....
+.....krwwwMwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwMwwMk.....
+.....krMwwwwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+.....krwwwwwwwNnnnwwwwwwwMk.....
+"""
+
+# A white smile on the dark nori.
+[layers."mouth"]
+at = [14, 12]
+grid = """
+w..w
+.ww.
+"""
+
+[layers."mouth.open"]
+at = [14, 12]
+grid = """
+.ww.
+wppw
+.ww.
+"""
+
+# A pair of chopsticks, coming in from the top right.
+[layers."chopsticks.up"]
+at = [17, 0]
+grid = """
+............kkk
+.........kkkkTk
+......kkkkTTTkk
+...kkkkTTTkkkTk
+kkkkTTTkkTTTTkk
+kttTkTTTTkkkkk.
+kttTTkkkkk.....
+kkkkkk.........
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "yawn"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: a pair of chopsticks comes in and taps the salmon, twice;
+# it looks up at them.
+[[actions]]
+name = "chopstick-tap"
+weight = 4
+frames = [
+  { ops = ["eyes=right", "+chopsticks.up", "chopsticks+4,-3"], ms = 200 },
+  { ops = ["eyes=right", "+chopsticks.up", "chopsticks+1,-2"], ms = 200 },
+  { ops = ["eyes=closed", "+chopsticks.up", "chopsticks+0,-1", "head+0,1"], ms = 120 },
+  { ops = ["eyes=right", "+chopsticks.up", "chopsticks+1,-2"], ms = 200 },
+  { ops = ["eyes=closed", "+chopsticks.up", "chopsticks+0,-1", "head+0,1"], ms = 120 },
+  { ops = ["eyes=happy", "+chopsticks.up", "chopsticks+1,-2"], ms = 500 },
+  { ops = ["eyes=happy", "+chopsticks.up", "chopsticks+4,-3"], ms = 160 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a polite little bow.
+[[actions]]
+name = "bow"
+weight = 1
+frames = [
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = ["eyes=closed", "head+0,1"], ms = 140 },
+  { ops = ["eyes=closed", "head+0,3"], ms = 900 },
+  { ops = ["eyes=closed", "head+0,1"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 700 },
+  { ops = [], ms = 200 },
+]

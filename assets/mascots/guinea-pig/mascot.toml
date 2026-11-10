@@ -1,0 +1,231 @@
+# Guinea pig (cavy), on rodent-upright. A round potato with no neck at all:
+# head and body are one loaf, wider at the bottom. Tricolor coat: a black
+# patch over the left ear and crown, a white blaze and muzzle, ginger over
+# the right eye, and the patches swap sides lower down. Petal ears droop
+# at the top corners, the eyes are wide-set, the nose sits over a little
+# split lip, and tiny pink feet grip the rim. No tail, no buck teeth. The
+# signature is a popcorn: a sudden hop with a twist in mid-air (the
+# patches flip sides). The rare one is a full-volume wheek: mouth wide,
+# notes flying, then an exclamation.
+id = "guinea-pig"
+name = "Guinea Pig"
+category = "mammals"
+aliases = ["cavy"]
+accent = "honey"
+extends = "rodent-upright"
+
+[palette]
+"l" = "orange-1"    # ginger light
+"f" = "orange-2"    # ginger
+"F" = "orange-3"    # ginger shadow
+"w" = "white"       # blaze, muzzle, belly
+"M" = "grey-1"      # shadow on the white, lip lines
+"b" = "fur-black"   # NEW: black patches
+"h" = "grey-3"      # left-eye glint: white would vanish on the white blaze
+"H" = "white"       # NEW: right-eye glint, on ginger
+"n" = "pink-2"      # nose
+"p" = "pink-1"      # inner ears, feet
+
+# No tail to speak of.
+[layers.tail]
+at = [24, 18]
+grid = """
+.
+"""
+
+# The bottom of the potato: wider than the head, patches swapped.
+[layers.body]
+at = [3, 12]
+grid = """
+.kffffwwwwwwwwwwwwwwbbbbk.
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+klfffffwwwwwwwwwwwwwbbbbbk
+"""
+
+# The top of the potato, no neck: black crown on the left, white blaze,
+# ginger on the right.
+[layers.head]
+at = [4, 3]
+grid = """
+........kkkkkkkk........
+......kkbbwwwwffkk......
+.....kbbbbwwwwflffk.....
+....kbbbbbwwwwlffffk....
+...kbbbbbwwwwwwffffFk...
+..kbbbwwwwwwwwwfffffFk..
+.kbbwwwwwwwwwwwfffffffk.
+kbwwwwwwwwwwwwwwffffffFk
+kwwwwwwwwwwwwwwwffffffFk
+kwwwwwwwwwwwwwwwwffffFFk
+kwwwwwwwwwwwwwwwwwffffFk
+kwwwwwwwwwwwwwwwwwwfffMk
+kwwwwwwwwwwwwwwwwwwwffMk
+"""
+
+# Petal ears drooping at the top corners.
+[layers.ears]
+at = [5, 3]
+follows = "head"
+grid = """
+..kkk............kkk..
+.kpbk............kfpk.
+kppbk............kfppk
+kpbk..............kfpk
+.kk................kk.
+"""
+
+[layers."ears.flick"]
+at = [5, 2]
+follows = "head"
+grid = """
+.................kk...
+..kkk............kfpk.
+.kpbk............kfppk
+kppbk............kfpk.
+kpbk..............kk..
+.kk...................
+"""
+
+[layers.eyes]
+at = [10, 9]
+follows = "head"
+grid = """
+hk........Hk
+kk........kk
+"""
+
+[layers."eyes.closed"]
+at = [10, 10]
+follows = "head"
+grid = """
+kk........kk
+"""
+
+[layers."eyes.left"]
+at = [9, 9]
+follows = "head"
+grid = """
+hk........Hk
+kk........kk
+"""
+
+[layers."eyes.right"]
+at = [11, 9]
+follows = "head"
+grid = """
+hk........Hk
+kk........kk
+"""
+
+[layers."eyes.happy"]
+at = [9, 9]
+follows = "head"
+grid = """
+.kk........kk.
+k..k......k..k
+"""
+
+[layers.nose]
+at = [15, 12]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [14, 11]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+# The little split lip under the nose.
+[layers.mouth]
+at = [14, 13]
+follows = "head"
+grid = """
+M..M
+.MM.
+"""
+
+[layers."mouth.open"]
+at = [14, 13]
+follows = "head"
+grid = """
+kkkk
+kppk
+.kk.
+"""
+
+# Tiny pink feet on the rim.
+[layers.paws]
+at = [9, 15]
+grid = """
+.kkk......kkk.
+kpppk....kpppk
+kpMpk....kpMpk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 4
+
+[[actions]]
+use = "ear-flick"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: popcorning. A crouch, a sudden straight-up hop that twists in
+# mid-air (the patches flip sides), a second smaller hop, and a wiggle.
+[[actions]]
+name = "popcorn"
+weight = 5
+frames = [
+  { ops = ["all+0,1"], ms = 140 },
+  { ops = ["all+0,-3", "eyes=happy", "ears=flick"], ms = 120 },
+  { ops = ["all+0,-4", "eyes=happy", "ears=flick", "flipx"], ms = 160 },
+  { ops = ["all+0,-1", "eyes=happy"], ms = 100 },
+  { ops = ["all+0,-2", "eyes=happy", "ears=flick"], ms = 100 },
+  { ops = ["all+1,0", "eyes=happy"], ms = 100 },
+  { ops = ["all+-1,0", "eyes=happy"], ms = 100 },
+  { ops = ["eyes=happy"], ms = 500 },
+]
+
+# Rare: a wheek. It hears the fridge door, draws itself up, and squeals at
+# full volume: notes fly, then an exclamation.
+[[actions]]
+name = "wheek"
+weight = 1
+frames = [
+  { ops = ["eyes=right", "ears=flick"], ms = 600 },
+  { ops = ["all+0,-1", "eyes=closed", "+mouth.open", "prop:note@22,6"], ms = 300 },
+  { ops = ["all+0,-1", "eyes=closed", "+mouth.open", "prop:note@23,3", "prop:note@2,5"], ms = 300 },
+  { ops = ["all+0,-2", "eyes=closed", "+mouth.open", "prop:note@24,0", "prop:note@1,2"], ms = 300 },
+  { ops = ["all+0,-2", "+mouth.open", "prop:bang@26,0"], ms = 600 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,110 @@
+# Taco, an object: a crunchy folded shell standing on its curve, stuffed
+# with ruffled lettuce, diced tomato, and shredded cheese that spill over
+# the top; the face sits on the shell. What makes it itself is the
+# half-moon shell and the ruffle of filling. The signature loses a scrap of
+# lettuce over the side; the rare one breaks into a happy wiggle dance.
+id = "taco"
+name = "Taco"
+category = "food"
+aliases = []
+accent = "ochre"
+extends = "object"
+# Template props sit high, over the right end of the filling.
+prop_offset = [3, -3]
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "yellow-1"    # shell light, rim
+"f" = "yellow-2"    # shell
+"F" = "orange-2"    # shell shadow, toasty spots
+"v" = "green-1"     # lettuce light
+"g" = "green-2"     # lettuce
+"G" = "green-3"     # lettuce shadow
+"q" = "red-1"       # tomato light
+"R" = "red-2"       # tomato
+"Y" = "orange-1"    # cheese
+"h" = "white"       # eye highlight
+"P" = "pink-1"      # blush
+"p" = "pink-2"      # inside of the mouth
+
+# The shell and its filling; the shell's curve runs down behind the crate front.
+[layers."head"]
+grid = """
+................................
+......................kkkk......
+...............kkk...kvvvgk.....
+..........kkk.kvvgkkkvgggqRk....
+......kkk.kvvgkvgqRkgYYgggRgkk..
+....kkvvgkvgqRRggggYYggGgGgllk..
+...kvvggRgggRRggYYgggGllllllfFk.
+..kvgYYggRqRggYgggGllllllffffFk.
+..kgGgGgggGggGllllllfffffffffFk.
+..klllllllllllfffffffffffFfffFk.
+..klfFffffffffffffffffffffffFFk.
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+...klfffffffffffffffffffffFFFk..
+...klffFfffffffffffffffffffFk...
+....klffffffffffffffffffffFFk...
+....kllfffffffffFffffffFfFFk....
+.....kllffffFfffffffffffFFk.....
+......kllFffffffffffFffFFk......
+.......klllfffffffffffFFk.......
+........kkllllfffffFFFkk........
+..........kkklllFFFFkk..........
+.............kkkkkkk............
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "hop"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: a scrap of lettuce slips out over the side and falls; the
+# eyes follow it down.
+[[actions]]
+name = "lettuce-drop"
+weight = 4
+frames = [
+  { ops = ["all+0,1", "prop:leaf@0,4"], ms = 160 },
+  { ops = ["eyes=left", "prop:leaf@0,7"], ms = 260 },
+  { ops = ["eyes=left", "prop:leaf@1,11"], ms = 260 },
+  { ops = ["eyes=left", "prop:leaf@0,15"], ms = 360 },
+  { ops = ["eyes=left"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a happy wiggle dance, side to side, a turn, and a little hop.
+[[actions]]
+name = "wiggle-dance"
+weight = 1
+frames = [
+  { ops = ["eyes=happy", "all+-2,0"], ms = 200 },
+  { ops = ["eyes=happy", "all+2,0"], ms = 200 },
+  { ops = ["eyes=happy", "all+-2,0", "flipx"], ms = 200 },
+  { ops = ["eyes=happy", "all+2,0", "flipx"], ms = 200 },
+  { ops = ["eyes=happy", "all+0,-2", "+mouth.open"], ms = 240 },
+  { ops = ["eyes=happy", "all+0,1"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

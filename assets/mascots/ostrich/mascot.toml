@@ -1,0 +1,222 @@
+# Ostrich on bird-water. Side on and facing left: a big fluffy black body
+# filling the crate, with a white plume of a tail and white wing plumes, a
+# long bare pink neck that runs down in front of it, and a small round head
+# with one huge lashed eye and a broad flat bill. The neck is part of the
+# `head` layer, so it rides along when the head bobs; `head.dive` is the
+# neck alone, arched down into the crate. Signature: the head bobs low,
+# then stretches up high. Rare: it buries its head in the crate, trembles
+# headless for a moment, and pops back out with a start.
+id = "ostrich"
+name = "Ostrich"
+category = "birds"
+aliases = []
+accent = "plum"
+extends = "bird-water"
+rest = ["body", "head", "eyes", "bill"]
+
+[palette]
+"l" = "grey-3"      # feathers light
+"f" = "grey-4"      # black feathers
+"F" = "fur-black"   # feather shadow
+"W" = "white"       # plumes
+"G" = "grey-1"      # plume shadow
+"n" = "pink-1"      # bare skin
+"N" = "pink-2"      # skin shadow
+"h" = "white"       # eye highlight
+"b" = "orange-1"    # bill
+"B" = "brown-1"     # bill shadow
+
+# The fluffy body, the plume of a tail, and the white wing plumes.
+[layers.body]
+at = [10, 10]
+grid = """
+...............kkkk...
+..............kWWWWk..
+.......kkkkkkkWWWWWWk.
+.....kklfffffWWWWWWWWk
+...kklllffffffGGGGGGk.
+..klllllfffffffGGGGk..
+..klllllffWWWWWWWFFk..
+.kfffffffWWWWWWWWWFFk.
+.kffffffffGGGGGGGFFFk.
+kfffffffffffffffFFFFFk
+kfffffffffffffffFFFFFk
+kfffffffffffffffFFFFFk
+kfffffffffffffffFFFFFk
+kfffffffffffffffFFFFFk
+kfffffffffffffffFFFFFk
+kfffffffffffffffFFFFFk
+kfffffffffffffffFFFFFk
+kfffffffffffffffFFFFFk
+kfffffffffffffffFFFFFk
+kfffffffffffffffFFFFFk
+kfffffffffffffffFFFFFk
+kfffffffffffffffFFFFFk
+"""
+
+# A small round head on a long bare neck.
+[layers.head]
+at = [3, 4]
+grid = """
+...kkkkk......
+..knnnnnk.....
+.knnnnnnNk....
+knnnnnnnNNk...
+knnnnnnnNNk...
+knnnnnnnNNk...
+.knnnnnnNk....
+..knnnnnNk....
+...kkkknnNk...
+......knnNk...
+.......knnNk..
+.......knnNk..
+........knnNk.
+........knnNk.
+.........knnNk
+.........knnNk
+.........knnNk
+.........knnNk
+.........knnNk
+..........kkk.
+"""
+
+# Head in the crate: just the neck, arched down over the rim.
+[layers."head.dive"]
+at = [5, 14]
+grid = """
+....kkkk....
+...knnNNk...
+..knnNnnNk..
+.knnNkknnNk.
+knnNk..knnNk
+knnNk..knnNk
+knnNk...kkk.
+knnNk.......
+.kkk........
+"""
+
+# One huge eye with long lashes.
+[layers.eyes]
+at = [6, 6]
+follows = "head"
+grid = """
+k.k.
+.kkk
+.hkk
+.kkk
+"""
+
+[layers."eyes.closed"]
+at = [6, 8]
+follows = "head"
+grid = """
+.kkk
+k.k.
+"""
+
+[layers."eyes.left"]
+at = [5, 6]
+follows = "head"
+grid = """
+k.k.
+.kkk
+.hkk
+.kkk
+"""
+
+[layers."eyes.right"]
+at = [7, 6]
+follows = "head"
+grid = """
+k.k.
+.kkk
+.hkk
+.kkk
+"""
+
+[layers."eyes.happy"]
+at = [6, 6]
+follows = "head"
+grid = """
+k.k.
+..k.
+.k.k
+"""
+
+# Startled: lashes up, a pinned pupil in a ring of white.
+[layers."eyes.wide"]
+at = [6, 5]
+follows = "head"
+grid = """
+k.k..
+.kkk.
+khhhk
+khkhk
+.kkk.
+"""
+
+# A broad flat bill.
+[layers.bill]
+at = [0, 8]
+follows = "head"
+grid = """
+...kkk
+.kkbbb
+kbbbbB
+.kkkkk
+"""
+
+[layers."mouth.open"]
+at = [0, 8]
+follows = "head"
+grid = """
+...kkk
+.kkbbb
+kkkkkk
+kBBBBB
+.kkkkk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "double-blink"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the head bobs down low, then stretches up high.
+[[actions]]
+name = "head-bob"
+weight = 5
+frames = [
+  { ops = ["head+0,1"], ms = 120 },
+  { ops = ["head+0,3", "eyes=left"], ms = 500 },
+  { ops = ["head+0,1"], ms = 120 },
+  { ops = ["head+0,-1", "eyes=wide"], ms = 700 },
+  { ops = ["head+0,-1"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: buries its head in the crate, trembles a moment, and pops back out.
+[[actions]]
+name = "head-in-crate"
+weight = 1
+frames = [
+  { ops = ["head+0,2", "eyes=closed"], ms = 300 },
+  { ops = ["head+0,6", "eyes=closed"], ms = 120 },
+  { ops = ["head=dive", "-eyes", "-bill"], ms = 900 },
+  { ops = ["head=dive", "-eyes", "-bill", "all+1,0"], ms = 100 },
+  { ops = ["head=dive", "-eyes", "-bill", "all+-1,0"], ms = 100 },
+  { ops = ["head=dive", "-eyes", "-bill"], ms = 600 },
+  { ops = ["head+0,-1", "eyes=wide", "prop:bang@14,2"], ms = 700 },
+  { ops = ["eyes=closed"], ms = 140 },
+  { ops = [], ms = 300 },
+]

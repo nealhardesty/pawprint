@@ -1,0 +1,152 @@
+# Alarm Clock, an object: a round red wind-up clock with two brass bells
+# on top like ears, the little hammer between them, a cream dial for a
+# face, and two stubby feet. Its hands sit above the eyes, the minute hand
+# standing up like a cowlick. The signature ticks the minute hand forward
+# step by step, then the clock squints and sets itself back; the rare one
+# goes off: the bells clang and the whole clock rattles, then it goes
+# quiet with a sheepish look and a bead of sweat.
+id = "alarm-clock"
+name = "Alarm Clock"
+category = "things"
+aliases = []
+accent = "brick"
+extends = "object"
+
+[palette]
+"l" = "red-1"       # case light
+"f" = "red-2"       # case
+"F" = "brown-4"     # case shadow, feet
+"w" = "cream"       # dial
+"m" = "grey-1"      # dial rim
+"y" = "yellow-1"    # NEW: bells light
+"b" = "yellow-2"    # NEW: bells
+"Y" = "orange-3"    # NEW: bells shadow
+"H" = "grey-4"      # NEW: the hands
+"r" = "red-2"       # NEW: the pivot
+"h" = "grey-3"      # eye glint (cream eats white)
+"p" = "red-2"       # inside of the mouth
+
+[layers.head]
+grid = """
+.............kyybYk.............
+......kkkk....kbYk....kkkk......
+.....kyyyyk.kkkbYkkk.kyyyyk.....
+....kyyyybbklllllllfkyyyybbk....
+...kyyyyybllllmmmmlfffyyybbbk...
+...kyyyyblllmwwwwwwmfffybYYYk...
+...kyyybYllmwwwwwwwwmffbYYYYk...
+....kkkkllmwwwwwwwwwwmffkkkk....
+.......klmwwwwwwwwwwwwmFk.......
+......kllmwwwwwwwwwwwwmFFk......
+......kllmwwwwwwwwwwwwmFFk......
+......kllwwwwwwwwwwwwwwFFk......
+......kllmwwwwwwwwwwwwmFFk......
+......kllmwwwwwwwwwwwwmFFk......
+.......kfmwwwwwwwwwwwwmFk.......
+.......kffmwwwwwwwwwwmFFk.......
+........kffmwwwwwwwwmFFk........
+........kfffmwwwwwwmFFFk........
+.......kFFfffFmmmmFFFFFFk.......
+......kFFFkkFFFFFFFFkkFFFk......
+.......kkk..kkkkkkkk..kkk.......
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# The hands at a quarter past twelve, and the minute hand stepping on.
+[layers.hands]
+at = [13, 5]
+follows = "head"
+grid = """
+..H...
+..H...
+..H...
+..rHH.
+"""
+
+[layers."hands.one"]
+at = [13, 5]
+follows = "head"
+grid = """
+...H..
+..H...
+..H...
+..rHH.
+"""
+
+[layers."hands.two"]
+at = [13, 5]
+follows = "head"
+grid = """
+......
+....H.
+...H..
+..rHH.
+"""
+
+[layers."eyes.squeeze"]
+at = [11, 8]
+follows = "head"
+grid = """
+k........k
+.k......k.
+k........k
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "yawn"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: tick, tick: the minute hand steps forward with a little
+# jolt each time. The clock squints at it and winds itself back.
+[[actions]]
+name = "tick"
+weight = 5
+frames = [
+  { ops = ["hands=one", "all+0,-1"], ms = 100 },
+  { ops = ["hands=one"], ms = 500 },
+  { ops = ["hands=two", "all+0,-1"], ms = 100 },
+  { ops = ["hands=two"], ms = 500 },
+  { ops = ["hands=two", "eyes=squeeze"], ms = 500 },
+  { ops = ["hands=one", "eyes=squeeze"], ms = 120 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it goes off. Clang-clang-clang: the bells ring and the clock
+# rattles on its feet, then silence, a sheepish look, a bead of sweat.
+[[actions]]
+name = "ring"
+weight = 1
+frames = [
+  { ops = ["eyes=squeeze", "mouth=open", "all+1,-1", "prop:bang@0,0", "prop:bang@27,0"], ms = 90 },
+  { ops = ["eyes=squeeze", "mouth=open", "all+-1,0", "prop:bang@0,1", "prop:bang@27,1"], ms = 90 },
+  { ops = ["eyes=squeeze", "mouth=open", "all+1,0", "prop:bang@0,0", "prop:bang@27,0"], ms = 90 },
+  { ops = ["eyes=squeeze", "mouth=open", "all+-1,-1", "prop:bang@0,1", "prop:bang@27,1"], ms = 90 },
+  { ops = ["eyes=squeeze", "mouth=open", "all+1,0", "prop:bang@0,0", "prop:bang@27,0"], ms = 90 },
+  { ops = ["eyes=squeeze", "mouth=open", "all+-1,0", "prop:bang@0,1", "prop:bang@27,1"], ms = 90 },
+  { ops = ["eyes=closed"], ms = 400 },
+  { ops = ["eyes=left", "prop:sweat@25,6"], ms = 900 },
+  { ops = ["eyes=left", "prop:sweat@25,7"], ms = 300 },
+  { ops = [], ms = 200 },
+]

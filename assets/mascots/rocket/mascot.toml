@@ -1,0 +1,116 @@
+# Rocket, an object on `object`: a white rocket with a round red nose, a
+# big porthole window above its face, a red band, and two swept red fins
+# resting on the crate rim. Its nozzle and flame are tucked down inside the
+# crate. The signature rumbles the engine so puffs of exhaust billow out
+# over the rim; the rare one is a lift-off: it shakes, blasts clean out of
+# the top of the frame on its flame, and comes back down to land.
+id = "rocket"
+name = "Rocket"
+category = "space"
+aliases = []
+accent = "cranberry"
+extends = "object"
+
+[palette]
+"l" = "white"       # body light
+"f" = "cream"       # body
+"F" = "grey-1"      # body shadow
+"r" = "red-1"       # nose, band, fins: light
+"R" = "red-2"       # nose, band, fins
+"Q" = "brown-3"     # red shadow
+"g" = "grey-2"      # window rim, nozzle
+"G" = "grey-3"      # nozzle shadow
+"b" = "blue-1"      # window glass
+"B" = "blue-2"      # window glass shadow
+"W" = "white"       # window glint
+"y" = "yellow-1"    # flame
+"o" = "orange-2"    # flame edge
+"h" = "grey-3"      # eye highlight: white would vanish on the white body
+
+# The rocket: nose, porthole, face, band, fins on the rim, and the nozzle
+# down in the crate.
+[layers.head]
+grid = """
+..............kkkk..............
+............kkrrRRkk............
+...........krrRRRRRQk...........
+..........kQQQQQQQQQQk..........
+.........klfffggggffFFk.........
+........klfffgWbbBgffFFk........
+........klfffgbbbBgffFFk........
+........klfffgbBBBgffFFk........
+........klffffggggfffFFk........
+........klfffffffffffFFk........
+........klfffffffffffFFk........
+.......kklfffffffffffFFkk.......
+......krklfffffffffffFFkQk......
+.....krrkrRRRRRRRRRRRRQkRQk.....
+....krrRkrRRRRRRRRRRRRQkRRQk....
+...krrRRklfffffffffffFFkRRRQk...
+...krRRRklfffffffffffFFkRRQQk...
+...kRRRQklfffffffffffFFkRQQQk...
+...kkkkkklfffffffffffFFkkkkkk...
+........klfffffffffffFFk........
+........klfffffffffffFFk........
+........klfffffffffffFFk........
+........klfffffffffffFFk........
+........klfffffffffffFFk........
+........kFFFFFFFFFFFFFFk........
+..........kggggggggggk..........
+.........kgGGGGGGGGGGGk.........
+.........kkkkkkkkkkkkkk.........
+................................
+................................
+................................
+................................
+"""
+
+# The engine flame under the nozzle (hidden at rest).
+[layers."flame.on"]
+at = [10, 29]
+follows = "head"
+grid = """
+kyyyyyyyyyyk
+.koyyyyyyok.
+..kkooookk..
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the engine rumbles and exhaust puffs billow out over the rim
+# on both sides.
+[[actions]]
+name = "rumble"
+weight = 4
+frames = [
+  { ops = ["all+0,-1", "prop:puff@0,14"], ms = 160 },
+  { ops = ["prop:puff@-1,13", "prop:puff@23,14"], ms = 200 },
+  { ops = ["all+0,-1", "eyes=happy", "prop:puff@-2,12", "prop:puff@24,13"], ms = 200 },
+  { ops = ["eyes=happy", "prop:puff@25,12"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: lift-off. It shakes, blasts up out of the frame on its flame, and
+# comes back down to land in a cloud of exhaust.
+[[actions]]
+name = "lift-off"
+weight = 1
+frames = [
+  { ops = ["eyes=closed", "all+1,0", "prop:puff@0,14", "prop:puff@23,14"], ms = 150 },
+  { ops = ["eyes=closed", "all+-1,0", "prop:puff@-1,13", "prop:puff@24,13"], ms = 150 },
+  { ops = ["+flame.on", "eyes=happy", "all+0,-8", "prop:puff@0,13", "prop:puff@23,13"], ms = 150 },
+  { ops = ["+flame.on", "eyes=happy", "all+0,-20", "prop:puff@-1,12", "prop:puff@24,12"], ms = 150 },
+  { ops = ["all+0,-40"], ms = 700 },
+  { ops = ["+flame.on", "all+0,-16"], ms = 250 },
+  { ops = ["+flame.on", "all+0,-5", "eyes=happy"], ms = 300 },
+  { ops = ["eyes=happy", "prop:puff@0,14", "prop:puff@23,14"], ms = 600 },
+]
