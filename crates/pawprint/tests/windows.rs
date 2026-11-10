@@ -117,6 +117,22 @@ fn window_at(x: i32, y: i32) -> HWND {
     unsafe { WindowFromPoint(POINT { x, y }) }
 }
 
+/// A window's handle, class, owning process, rectangle, and styles, for
+/// failure messages.
+fn describe(hwnd: HWND) -> String {
+    let mut class = [0u16; 64];
+    let n = unsafe { GetClassNameW(hwnd, class.as_mut_ptr(), class.len() as i32) };
+    let mut pid = 0;
+    unsafe { GetWindowThreadProcessId(hwnd, &mut pid) };
+    format!(
+        "{hwnd:?} class {:?} pid {pid} rect {:?} style {:#x} ex {:#x}",
+        String::from_utf16_lossy(&class[..n.max(0) as usize]),
+        window_rect(hwnd),
+        unsafe { GetWindowLongPtrW(hwnd, GWL_STYLE) } as u32,
+        ex_style(hwnd),
+    )
+}
+
 /// The primary monitor's work area and scale.
 fn primary() -> (RECT, f64) {
     unsafe {
@@ -324,6 +340,11 @@ impl FileGuard {
     fn text(&self) -> String {
         std::fs::read_to_string(&self.path).unwrap_or_default()
     }
+
+    fn write(&self, text: &str) {
+        std::fs::create_dir_all(self.path.parent().unwrap()).unwrap();
+        std::fs::write(&self.path, text).unwrap();
+    }
 }
 
 impl Drop for FileGuard {
@@ -440,10 +461,14 @@ fn layered_topmost_click_through_badge() {
             }
 
             // Click-through: a click on the label reaches the window below.
+            let hit = window_at(label.0, label.1);
             assert_eq!(
-                window_at(label.0, label.1),
+                hit,
                 bg,
-                "hit testing skips the badge"
+                "hit testing skips the badge: at {label:?} found {}; badge {}; background {}",
+                describe(hit),
+                describe(hwnd),
+                describe(bg)
             );
             CLICKED.store(false, Ordering::SeqCst);
             click(label.0, label.1);
@@ -979,6 +1004,10 @@ fn badge_hwnd() -> Option<HWND> {
 fn fullscreen_windows_hide_the_badge() {
     unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
     let env = Env::new("windows-fullscreen");
+    // Windows keeps config.toml in the real %APPDATA%, not under the test
+    // HOME: write that one and put it back afterwards.
+    let config = FileGuard::new(&env, "config");
+    let _ = std::fs::remove_file(&config.path);
     let _badge = env.run_badge();
     let hwnd = wait_for("the badge window", badge_window);
     let visible = || unsafe { IsWindowVisible(hwnd) } != 0;
@@ -989,7 +1018,7 @@ fn fullscreen_windows_hide_the_badge() {
     close(cover);
     wait_for("the badge to come back", || visible().then_some(()));
 
-    env.write_config("fullscreen = \"show\"");
+    config.write("fullscreen = \"show\"");
     env.ok(&["reload"]);
     let cover = fullscreen_window();
     std::thread::sleep(Duration::from_secs(1));
@@ -1006,6 +1035,10 @@ fn fullscreen_windows_hide_the_badge() {
 fn settings_window_edits_the_config() {
     unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
     let env = Env::new("windows-settings");
+    // The real %APPDATA% config.toml (see the fullscreen test), put back
+    // afterwards.
+    let config = FileGuard::new(&env, "config");
+    let _ = std::fs::remove_file(&config.path);
     let (work, scale) = primary();
     let mut k = ((2.0 * scale).round() as i32).max(1);
     while k > 1 && (360 * k > work.right - work.left || 252 * k > work.bottom - work.top) {
@@ -1022,7 +1055,7 @@ fn settings_window_edits_the_config() {
     let mut client = RECT::default();
     unsafe { GetClientRect(hwnd, &mut client) };
     assert_eq!((client.right, client.bottom), (360 * k, 252 * k));
-    assert!(!env.config_file().exists(), "opening writes nothing");
+    assert!(!config.path.exists(), "opening writes nothing");
 
     // The grid's third cell on its second row (units 171, 126): the tenth
     // mascot.
@@ -1034,7 +1067,8 @@ fn settings_window_edits_the_config() {
         PostMessageW(hwnd, WM_LBUTTONUP, 0, at);
     }
     wait_for("the click to write config.toml", || {
-        env.config()
+        config
+            .text()
             .contains(&format!("mascot = \"{tenth}\""))
             .then_some(())
     });
@@ -1043,7 +1077,7 @@ fn settings_window_edits_the_config() {
     }
     unsafe { PostMessageW(hwnd, WM_KEYDOWN, VK_RETURN as WPARAM, 0) };
     wait_for("Enter to pick the search's match", || {
-        env.config().contains("mascot = \"moose\"").then_some(())
+        config.text().contains("mascot = \"moose\"").then_some(())
     });
     unsafe { PostMessageW(hwnd, WM_KEYDOWN, VK_ESCAPE as WPARAM, 0) };
     let status = wait_for("Esc to close the settings window", || settings.exited());

@@ -36,7 +36,7 @@ jobs:
         run: rustup toolchain install
 
       - name: Install qemu (runs the aarch64 binary as a check)
-        run: sudo apt-get update && sudo apt-get install -y qemu-user-static
+        run: sudo apt-get update && sudo apt-get install -y qemu-user
 
       - name: make package
         run: make package
