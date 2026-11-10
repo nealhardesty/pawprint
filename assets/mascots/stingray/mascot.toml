@@ -1,0 +1,190 @@
+# Stingray, on sea-creature. A round-shouldered ray tipped up out of the
+# water to show its pale underside, which has the famous smiling face: two
+# little eyes, rosy cheeks, and a wide grin, framed by broad sky-blue wing
+# fins that taper to points at both sides and a thin whip tail that hangs
+# down into the water. Each wing tip is its own slot (`body` is the left
+# tip, `fins` the right) so they can ripple. The signature is a rippling
+# glide, the wing tips rolling up and down in a wave; the rare one is a
+# joyful leap clear of the water, flapping its wings.
+id = "stingray"
+name = "Stingray"
+category = "aquatic"
+aliases = ["manta"]
+accent = "sky"
+extends = "sea-creature"
+
+[palette]
+"l" = "blue-1"      # wing light
+"f" = "blue-2"      # wing
+"F" = "blue-3"      # wing shadow
+"w" = "white"       # underside
+"m" = "grey-1"      # NEW: underside shadow
+"h" = "grey-3"      # eye glint (white would vanish on the white underside)
+"r" = "pink-1"      # NEW: cheeks
+"p" = "pink-2"      # mouth
+
+# The left wing tip, drawn under the disc so it can bend.
+[layers.body]
+at = [0, 6]
+follows = "head"
+grid = """
+........
+......kk
+....kkll
+..kkllff
+kkllffff
+.klFffff
+..kklFff
+....kklF
+......kk
+"""
+
+# The right wing tip.
+[layers.fins]
+at = [24, 6]
+follows = "head"
+grid = """
+........
+kk......
+llkk....
+ffllkk..
+ffffllkk
+ffffFFk.
+ffFFkk..
+FFkk....
+kk......
+"""
+
+# The disc, underside up, and the whip tail hanging into the water.
+[layers.head]
+at = [0, 0]
+grid = """
+................................
+................................
+................................
+..............kkkk..............
+............kklwwlkk............
+..........kklwwwwwwlkk..........
+........kkllwwwwwwwwllkk........
+......kkllfwwwwwwwwwwfllkk......
+.....kllffwwwwwwwwwwwwffllk.....
+.....lffffwwwwwwwwwwwwffffl.....
+.....fffffwwwwwwwwwwwwfffff.....
+.....fffffwwwwwwwwwwwwfffff.....
+.....FffffwwwwwwwwwwwwffffF.....
+.....klFffwwwwwwwwwwwwffFFk.....
+......kklFfwwwwwwwwwwfFFkk......
+........kklFwwwwwwwwFFkk........
+..........kklwwwwwwFkk..........
+............klwwwwFk............
+.............klwwFk.............
+..............klFk..............
+..............klFk..............
+...............kk...............
+...............kk...............
+...............kk...............
+...............kk...............
+...............kk...............
+"""
+
+[layers.eyes]
+at = [12, 8]
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.closed"]
+at = [12, 9]
+grid = """
+kk....kk
+"""
+
+[layers."eyes.left"]
+at = [11, 8]
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.right"]
+at = [13, 8]
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.happy"]
+at = [11, 8]
+grid = """
+.kk..kk.
+k..kk..k
+"""
+
+[layers.mouth]
+at = [13, 11]
+follows = "head"
+grid = """
+k....k
+.kkkk.
+"""
+
+[layers."mouth.open"]
+at = [13, 11]
+follows = "head"
+grid = """
+kkkkkk
+.kppk.
+..kk..
+"""
+
+[layers.blush]
+at = [10, 10]
+follows = "head"
+grid = """
+rr........rr
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a rippling glide, the wing tips rolling up and down in a wave
+# as it drifts a little to one side and back.
+[[actions]]
+name = "ripple-glide"
+weight = 4
+frames = [
+  { ops = ["body+0,-1", "fins+0,1"], ms = 180 },
+  { ops = ["body+0,1", "fins+0,-1", "head+1,0"], ms = 180 },
+  { ops = ["body+0,-1", "fins+0,1", "head+1,0"], ms = 180 },
+  { ops = ["body+0,1", "fins+0,-1", "head+1,0"], ms = 180 },
+  { ops = ["head+1,0", "eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a joyful leap clear of the water, wings flapping, and a splash.
+[[actions]]
+name = "leap"
+weight = 1
+frames = [
+  { ops = ["head+0,-2", "body+0,1", "fins+0,1", "water=ripple"], ms = 120 },
+  { ops = ["head+0,-4", "body+0,-2", "fins+0,-2", "eyes=happy", "+mouth.open"], ms = 150 },
+  { ops = ["head+0,-5", "body+0,1", "fins+0,1", "eyes=happy", "+mouth.open", "prop:sparkle@25,0"], ms = 150 },
+  { ops = ["head+0,-5", "body+0,-2", "fins+0,-2", "eyes=happy", "+mouth.open", "prop:sparkle@25,0"], ms = 150 },
+  { ops = ["head+0,-2", "body+0,1", "fins+0,1", "eyes=happy"], ms = 120 },
+  { ops = ["water=ripple", "eyes=happy", "prop:bubble@24,8"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

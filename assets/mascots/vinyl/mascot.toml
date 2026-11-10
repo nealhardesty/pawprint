@@ -1,0 +1,243 @@
+# Vinyl Record: a black record standing on a little wooden turntable, its
+# yellow label the face, the tonearm reaching up the right side with the
+# needle on the grooves. The signature drops the needle and spins the disc:
+# glints sweep round the grooves while it grooves along. The rare one is a
+# scratch: the needle skips, the record jumps, and it looks shocked.
+id = "vinyl"
+name = "Vinyl Record"
+category = "things"
+aliases = ["turntable"]
+accent = "charcoal"
+extends = "object"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"K" = "fur-black"
+"G" = "grey-4"
+"g" = "grey-2"
+"y" = "yellow-1"
+"Y" = "yellow-2"
+"l" = "brown-1"
+"f" = "brown-2"
+"F" = "brown-3"
+"m" = "grey-1"
+"M" = "grey-2"
+"h" = "white"
+"P" = "pink-1"
+"p" = "pink-2"
+
+[layers."head"]
+grid = """
+............kkkkkkkk............
+..........kkKGGGGGGKkk..........
+.........kgGGKKKKKKGGKk.........
+........kgggKGGGGGGKKGGk........
+.......kggggGKKKKKKGGKGGk.......
+......kgggggKYYYYYYKGGKGGk......
+......kggggKYyyyyyyYKKGKGk......
+.....kGKggKYyyyyyyyyYKGGKGk.....
+.....kGKGKYyyyyyyyyyyYKGKGk.....
+.....kGKGKyyyyyyyyyyyyKGKGk.....
+....kKGKGYyyyyyyyyyyyyYGKGKk....
+....kGGGGYyyyyyyyyyyyyYGGGGk....
+....kKGKGYyyyyyyyyyyyyYGKGKk....
+.....kGKGKyyyyyyyyyyyyKGKGk.....
+.....kGKGKYyyyyyyyyyyYKGKGk.....
+.....kGKGGKYyyyyyyyyYKggKGk.....
+......kGKGKKYyyyyyyYKggggk......
+..kkkkkkkkkkkkkkkkkkkkkkkkkkkk..
+..klllllllllllllllllllllllllFk..
+..kFFFFFFFFFFFFFFFFFFFFFFFFFFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+"""
+
+[layers."head.b"]
+grid = """
+............kkkkkkkk............
+..........kkKggggggKkk..........
+.........kKGGggggggGGKk.........
+........kGGKKggggggKKGGk........
+.......kGGKGGKggggKGGKGGk.......
+......kGGKGGKYYYYYYKGGKGGk......
+......kGKGKKYyyyyyyYKKGKGk......
+.....kGKGGKYyyyyyyyyYKGGKGk.....
+.....kGKGKYyyyyyyyyyyYKGKGk.....
+.....kGKGKyyyyyyyyyyyyKGKGk.....
+....kKGKGYyyyyyyyyyyyyYGKGKk....
+....kGGGGYyyyyyyyyyyyyYGGGGk....
+....kKGKGYyyyyyyyyyyyyYGKGKk....
+.....kGKGKyyyyyyyyyyyyKGKGk.....
+.....kGKGKYyyyyyyyyyyYKGKGk.....
+.....kGKGGKYyyyyyyyyYKGGKGk.....
+......kGKGKKYyyyyyyYKKGKGk......
+..kkkkkkkkkkkkkkkkkkkkkkkkkkkk..
+..klllllllllllllllllllllllllFk..
+..kFFFFFFFFFFFFFFFFFFFFFFFFFFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+"""
+
+[layers."head.c"]
+grid = """
+............kkkkkkkk............
+..........kkKGGGGGGKkk..........
+.........kKGGKKKKKKGGgk.........
+........kGGKKGGGGGGKgggk........
+.......kGGKGGKKKKKKGggggk.......
+......kGGKGGKYYYYYYKgggggk......
+......kGKGKKYyyyyyyYKggggk......
+.....kGKGGKYyyyyyyyyYKggKGk.....
+.....kGKGKYyyyyyyyyyyYKGKGk.....
+.....kGKGKyyyyyyyyyyyyKGKGk.....
+....kKGKGYyyyyyyyyyyyyYGKGKk....
+....kGGGGYyyyyyyyyyyyyYGGGGk....
+....kKGKGYyyyyyyyyyyyyYGKGKk....
+.....kGKGKyyyyyyyyyyyyKGKGk.....
+.....kGKGKYyyyyyyyyyyYKGKGk.....
+.....kGKggKYyyyyyyyyYKGGKGk.....
+......kggggKYyyyyyyYKKGKGk......
+..kkkkkkkkkkkkkkkkkkkkkkkkkkkk..
+..klllllllllllllllllllllllllFk..
+..kFFFFFFFFFFFFFFFFFFFFFFFFFFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+"""
+
+[layers."head.d"]
+grid = """
+............kkkkkkkk............
+..........kkKGGGGGGKkk..........
+.........kKGGKKKKKKGGKk.........
+........kGGKKGGGGGGKKGGk........
+.......kGGKGGKKKKKKGGKGGk.......
+......kGGKGGKYYYYYYKGGKGGk......
+......kGKGKKYyyyyyyYKKGKGk......
+.....kGKGGKYyyyyyyyyYKGGKGk.....
+.....kgKGKYyyyyyyyyyyYKGKgk.....
+.....kgggKyyyyyyyyyyyyKgggk.....
+....kggggYyyyyyyyyyyyyYggggk....
+....kggggYyyyyyyyyyyyyYggggk....
+....kggggYyyyyyyyyyyyyYggggk....
+.....kgggKyyyyyyyyyyyyKgggk.....
+.....kgKGKYyyyyyyyyyyYKGKgk.....
+.....kGKGGKYyyyyyyyyYKGGKGk.....
+......kGKGKKYyyyyyyYKKGKGk......
+..kkkkkkkkkkkkkkkkkkkkkkkkkkkk..
+..klllllllllllllllllllllllllFk..
+..kFFFFFFFFFFFFFFFFFFFFFFFFFFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+"""
+
+[layers."arm"]
+at = [20, 2]
+grid = """
+....kkkkkk.
+...kmmmmmk.
+..kmkkkkmk.
+..kmk..kmk.
+...k...kmk.
+.......kmk.
+.......kmk.
+.......kmk.
+.......kmk.
+.......kmk.
+.......kmk.
+.......kmk.
+.......kmk.
+.......kmk.
+.......kmk.
+.......kmk.
+.......kmk.
+"""
+
+[layers."pivot"]
+at = [26, 16]
+grid = """
+kkkkk
+kmmMk
+kMMMk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the needle drops and the record spins, the glints sweeping
+# round the grooves, while it grooves along with happy eyes.
+[[actions]]
+name = "spin"
+weight = 4
+frames = [
+  { ops = ["arm+0,-2"], ms = 300 },
+  { ops = [], ms = 200 },
+  { ops = ["head=b", "eyes=happy"], ms = 160 },
+  { ops = ["head=c", "eyes=happy"], ms = 160 },
+  { ops = ["head=d", "eyes=happy"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 160 },
+  { ops = ["head=b"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a scratch. The needle skips, the record jumps, and it looks shocked.
+[[actions]]
+name = "scratch"
+weight = 1
+frames = [
+  { ops = ["head=b"], ms = 150 },
+  { ops = ["head=c", "arm+0,-2", "all+0,-2", "mouth=open", "prop:bang@26,0"], ms = 120 },
+  { ops = ["head=d", "arm+0,-2", "all+1,-1", "mouth=open", "prop:bang@26,0"], ms = 100 },
+  { ops = ["arm+0,-2", "all+-1,0", "mouth=open", "prop:bang@26,1"], ms = 100 },
+  { ops = ["arm+0,-2", "mouth=open", "prop:bang@26,1"], ms = 700 },
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = [], ms = 200 },
+]

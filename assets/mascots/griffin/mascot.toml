@@ -1,0 +1,296 @@
+# Griffin on bird-perched. Half eagle, half lion: a golden feathered eagle
+# head with pointed ear tufts, bright eyes under a heavy brow, and a short
+# steel-grey hooked beak, on a tawny lion's body. Big lion paws with cream claws
+# grip the rim where a bird would have talons, brown wings rise above its
+# shoulders, and a lion's tail with a dark tuft curls up over the rim at
+# the right. Signature: lifts one wing and preens it. Rare: spreads its
+# wings wide and screeches.
+id = "griffin"
+name = "Griffin"
+category = "mythical"
+aliases = ["gryphon"]
+accent = "honey"
+extends = "bird-perched"
+
+[palette]
+"l" = "orange-1"    # lion light
+"f" = "brown-1"     # lion body
+"F" = "brown-2"     # lion shadow
+"w" = "orange-1"    # chest
+"m" = "orange-1"    # no breast markings
+"L" = "orange-1"    # head feathers light
+"g" = "yellow-2"    # golden head feathers
+"G" = "orange-3"    # head shadow, brow
+"q" = "brown-3"     # wing feathers
+"Q" = "brown-4"     # wing shadow, tail tuft
+"c" = "cream"       # wing edges, claws
+"h" = "white"       # eye highlight
+"b" = "grey-2"      # steel beak
+"B" = "grey-3"      # beak shadow
+"p" = "red-2"       # inside of the beak
+
+# Wings folded but raised above the shoulders.
+[layers.wings]
+at = [0, 4]
+grid = """
+kk............................kk
+kck..........................kck
+kcqk........................kqck
+kcqqk......................kqqck
+kcqQqk....................kqQqck
+kcqqQk....................kQqqck
+kcqQqQk..................kQqQqck
+.kcqQQk..................kQQqck.
+.kcqqQk..................kQqqck.
+..kcqQk..................kQqck..
+..kkkkk..................kkkkk..
+"""
+
+# Wings spread wide.
+[layers."wings.open"]
+at = [0, 0]
+grid = """
+k.k.k......................k.k.k
+kckckk....................kkckck
+kcqcqqk..................kqqcqck
+kcqqqqQk................kQqqqqck
+.kcqqqQQk..............kQQqqqck.
+.kcqqqqQk..............kQqqqqck.
+..kcqqqQQk............kQQqqqck..
+..kcqqqqQk............kQqqqqck..
+...kcqqqQk............kQqqqck...
+...kcqqQQk............kQQqqck...
+....kcqqQk............kQqqck....
+....kcqQk..............kQqck....
+.....kcQk..............kQck.....
+.....kcQk..............kQck.....
+......kk................kk......
+"""
+
+# One wing lifted for preening.
+[layers."wings.preen"]
+at = [0, 0]
+grid = """
+k.k.k...........................
+kckckk..........................
+kcqcqqk.........................
+kcqqqqQk........................
+.kcqqqQQk.....................kk
+.kcqqqqQk....................kck
+..kcqqqQQk..................kqck
+..kcqqqqQk.................kqqck
+...kcqqqQk................kqQqck
+...kcqqQQk................kQqqck
+....kcqqQk...............kQqQqck
+....kcqQk................kQQqck.
+.....kcQk................kQqqck.
+.....kcQk................kQqck..
+......kk.................kkkkk..
+"""
+
+# A golden eagle head with a ragged ruff where it meets the lion's chest.
+[layers.head]
+at = [6, 3]
+grid = """
+.....kkkkkkkkkk.....
+...kkLLLLLLggggkk...
+..kLLLggggggggggGk..
+.kLLgggggggggggggGk.
+kLLgggggggggggggggGk
+kLgggggggggggggggGGk
+kLgggggggggggggggGGk
+kLgggggggggggggggGGk
+kLgggggggggggggggGGk
+kGLgggggggggggggGGGk
+.kGgGggggggggggGgGk.
+..G.G..........G.G..
+"""
+
+# Pointed ear tufts.
+[layers.ears]
+at = [7, 0]
+follows = "head"
+grid = """
+kk..............kk
+kLk............kGk
+kLgk..........kgGk
+.kgk..........kgk.
+"""
+
+[layers."ears.flick"]
+at = [6, 0]
+follows = "head"
+grid = """
+kk................kk
+.kLk.............kGk
+..kLgk..........kgGk
+...kgk..........kgk.
+"""
+
+[layers.eyes]
+at = [9, 7]
+follows = "head"
+grid = """
+..GG......GG..
+...hk....hk...
+...kk....kk...
+"""
+
+[layers."eyes.closed"]
+at = [9, 7]
+follows = "head"
+grid = """
+..GG......GG..
+..............
+...kk....kk...
+"""
+
+[layers."eyes.left"]
+at = [9, 7]
+follows = "head"
+grid = """
+..GG......GG..
+..hk....hk....
+..kk....kk....
+"""
+
+[layers."eyes.right"]
+at = [9, 7]
+follows = "head"
+grid = """
+..GG......GG..
+....hk....hk..
+....kk....kk..
+"""
+
+[layers."eyes.happy"]
+at = [9, 7]
+follows = "head"
+grid = """
+..............
+..kk......kk..
+.k..k....k..k.
+"""
+
+# Fierce: the brow drops and the pupils pin.
+[layers."eyes.fierce"]
+at = [9, 7]
+follows = "head"
+grid = """
+GGGG......GGGG
+..GGGk..kGGG..
+...hk....hk...
+...kk....kk...
+"""
+
+# A short pale hook of a beak.
+[layers.beak]
+at = [12, 9]
+follows = "head"
+grid = """
+..kkkk..
+.kbbbbk.
+kbcbbbBk
+kbbbbBBk
+.kbbbBk.
+..kbBBk.
+...kBk..
+...kk...
+"""
+
+[layers."mouth.open"]
+at = [12, 9]
+follows = "head"
+grid = """
+..kkkk..
+.kbbbbk.
+kbcbbbBk
+kkkkkkkk
+kppppppk
+.kbbbBk.
+..kbBk..
+...kk...
+"""
+
+# Big lion paws on the rim, claws out.
+[layers.feet]
+at = [7, 16]
+grid = """
+.kkkkkk....kkkkkk.
+kLffffFk..kLffffFk
+kfFfFfFk..kfFfFfFk
+kcfcfcFk..kcfcfcFk
+"""
+
+# The lion's tail, curling up over the rim to a dark tuft.
+[layers.tail]
+at = [24, 12]
+grid = """
+.....kk.
+....kQQk
+...kQQQk
+...kQQQk
+...kfQk.
+..kfFk..
+kkfFk...
+ffFk....
+"""
+
+[layers."tail.flick"]
+at = [24, 12]
+grid = """
+......kk
+.....kQk
+....kQQk
+...kQQQk
+..kfQQk.
+..kfFk..
+kkfFk...
+ffFk....
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "ear-flick"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: lifts one wing and preens it, nibbling at the feathers.
+[[actions]]
+name = "preen"
+weight = 5
+frames = [
+  { ops = ["wings=preen"], ms = 200 },
+  { ops = ["wings=preen", "head+-2,1", "eyes=closed"], ms = 300 },
+  { ops = ["wings=preen", "head+-2,2", "eyes=closed"], ms = 160 },
+  { ops = ["wings=preen", "head+-2,1", "eyes=closed"], ms = 160 },
+  { ops = ["wings=preen", "head+-2,2", "eyes=closed"], ms = 160 },
+  { ops = ["wings=preen", "head+-1,0", "eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the full wingspan and a screech.
+[[actions]]
+name = "screech"
+weight = 1
+frames = [
+  { ops = ["wings=preen", "tail=flick"], ms = 120 },
+  { ops = ["wings=open", "tail=flick", "all+0,-1", "eyes=fierce"], ms = 300 },
+  { ops = ["wings=open", "tail=flick", "all+0,-1", "eyes=fierce", "-beak", "+mouth.open", "prop:bang@27,0"], ms = 900 },
+  { ops = ["wings=open", "all+0,-1", "eyes=fierce", "prop:bang@27,1"], ms = 400 },
+  { ops = ["wings=open", "eyes=closed"], ms = 200 },
+  { ops = [], ms = 300 },
+]

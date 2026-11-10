@@ -1,0 +1,149 @@
+# Arcade Cabinet: a tall purple cabinet with a lit marquee on top, a glowing
+# blue screen for a face, and a control panel of round buttons resting on
+# the rim. The signature is attract mode: a ball bounces across the top of
+# the screen and the eyes chase it. The rare one posts a high score on the
+# screen and cheers with stars.
+id = "arcade"
+name = "Arcade Cabinet"
+category = "things"
+aliases = []
+accent = "violet"
+extends = "object"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "purple-1"
+"f" = "purple-2"
+"F" = "grey-4"
+"y" = "yellow-1"
+"o" = "orange-2"
+"S" = "blue-1"
+"B" = "blue-2"
+"w" = "white"
+"r" = "red-1"
+"h" = "white"
+"P" = "pink-1"
+"p" = "pink-2"
+
+[layers."head"]
+grid = """
+...kkkkkkkkkkkkkkkkkkkkkkkkkk...
+...kyyoyyoyyoyyoyyoyyoyyoyyyk...
+...kyoyyoyyoyyoyyoyyoyyoyyoyk...
+...kyyoyyoyyoyyoyyoyyoyyoyyyk...
+...kFFFFFFFFFFFFFFFFFFFFFFFFk...
+....klfFwwSSSSSSSSSSSSSSFfFk....
+....klfFwSSSSSSSSSSSSSSSFfFk....
+....klfFSSSSSSSSSSSSSSSSFfFk....
+....klfFSSSSSSSSSSSSSSSSFfFk....
+....klfFSSSSSSSSSSSSSSSSFfFk....
+....klfFSSSSSSSSSSSSSSSSFfFk....
+....klfFSSSSSSSSSSSSSSSSFfFk....
+....klfFSSSSSSSSSSSSSSSSFfFk....
+....klfFSSSSSSSSSSSSSSSSFfFk....
+....klfFSSSSSSSSSSSSSSSSFfFk....
+....klfFFFFFFFFFFFFFFFFFFfFk....
+..kFFrrFFyyFFFFFFFFFFBBFFrrFFk..
+..kFFrrFFyyFFFFFFFFFFBBFFrrFFk..
+..klllllllllllllllllllllllllFk..
+..kfffffffffffffffffffffffffFk..
+....kffffffffffffffffffffffk....
+....kffffffffffffffffffffffk....
+....kffffffffffffffffffffffk....
+....kffffffffffffffffffffffk....
+....kffffffffffffffffffffffk....
+....kffffffffffffffffffffffk....
+....kffffffffffffffffffffffk....
+....kffffffffffffffffffffffk....
+....kffffffffffffffffffffffk....
+....kffffffffffffffffffffffk....
+....kffffffffffffffffffffffk....
+....kffffffffffffffffffffffk....
+"""
+
+[layers."attract"]
+at = [8, 6]
+follows = "head"
+grid = """
+................
+...BB...........
+...BB...........
+"""
+
+[layers."attract.b"]
+at = [8, 6]
+follows = "head"
+grid = """
+......BB........
+......BB........
+................
+"""
+
+[layers."attract.c"]
+at = [8, 6]
+follows = "head"
+grid = """
+................
+.........BB.....
+.........BB.....
+"""
+
+[layers."attract.d"]
+at = [8, 6]
+follows = "head"
+grid = """
+............BB..
+............BB..
+................
+"""
+
+[layers."attract.score"]
+at = [9, 5]
+follows = "head"
+grid = """
+fff.fff.fff.fff
+f.f.f.f.f.f.f.f
+fff.fff.fff.f.f
+..f...f...f.fff
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: attract mode. The ball bounces across the top of the screen and
+# the eyes follow it.
+[[actions]]
+name = "attract"
+weight = 4
+frames = [
+  { ops = ["attract=b"], ms = 160 },
+  { ops = ["attract=c", "eyes=right"], ms = 160 },
+  { ops = ["attract=d", "eyes=right"], ms = 300 },
+  { ops = ["attract=c", "eyes=right"], ms = 160 },
+  { ops = ["attract=b"], ms = 160 },
+  { ops = ["eyes=left"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a new high score. The screen flashes the score up top, it cheers
+# with a hop, and stars pop.
+[[actions]]
+name = "high-score"
+weight = 1
+frames = [
+  { ops = ["attract=score"], ms = 400 },
+  { ops = ["attract=score", "eyes=happy", "mouth=open", "all+0,-2", "prop:star@23,0"], ms = 200 },
+  { ops = ["attract=score", "eyes=happy", "mouth=open", "all+0,-1", "prop:star@23,0"], ms = 300 },
+  { ops = ["attract=score", "eyes=happy", "prop:star@0,1"], ms = 700 },
+  { ops = ["attract=score", "eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]

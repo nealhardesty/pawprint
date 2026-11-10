@@ -1,0 +1,169 @@
+# Lantern, an object (nocturnal): a red camp lantern with a wire bail
+# handle arching over a peaked cap, a round glass globe glowing yellow
+# behind its guard wires, and a little flame dancing on the burner at the
+# bottom of the glass, under the smile. The signature makes the flame
+# flicker; the rare one, at night, turns it up: the flame stands tall and
+# sparkles drift around the lantern like moths to the light.
+id = "lantern"
+name = "Lantern"
+category = "things"
+aliases = []
+accent = "honey"
+nocturnal = true
+extends = "object"
+
+[palette]
+"l" = "red-1"       # painted tin light
+"f" = "red-2"       # painted tin
+"F" = "brown-4"     # tin shadow, guard wires
+"w" = "yellow-1"    # glowing glass
+"m" = "orange-1"    # glass toward the edges
+"W" = "white"       # NEW: the flame's hot core
+"O" = "orange-2"    # NEW: the flame's edge
+"h" = "brown-3"     # eye glint (yellow eats white)
+"p" = "red-2"       # inside of the mouth
+"b" = "grey-2"      # NEW: the wire bail handle
+
+[layers.head]
+grid = """
+............bbbbbbbb............
+..........bb........bb..........
+.........b............b.........
+........b.....kkkk.....b........
+........b...kkkfFkkk...b........
+........b..kllffffFFk..b........
+.......kkllllffffffffFFkk.......
+.....kllfffffffffffffffFFFk.....
+.....klk..kFmwwwwwwmFk..kfk.....
+.....klk.kFmwwwwwwwwmFk.kfk.....
+.....klkFmwwwwwwwwwwwwmFkfk.....
+.....klkFmwwwwwwwwwwwwmFkfk.....
+.....klkFmwwwwwwwwwwwwmFkfk.....
+.....klkFmwwwwwwwwwwwwmFkfk.....
+.....klkFmwwwwwwwwwwwwmFkfk.....
+.....klk.kFmwwwwwwwwmFk.kfk.....
+.....klk..kFmwwwwwwmFk..kfk.....
+.....kllfffffffffffffffFFFk.....
+.....kFFFFFFFFFFFFFFFFFFFFk.....
+.....klfffffffffffffffffFFk.....
+.....klfffffffffffffffffFFk.....
+.....klfffffffffffffffffFFk.....
+.....klfffffffffffffffffFFk.....
+.....klfffffffffffffffffFFk.....
+.....klfffffffffffffffffFFk.....
+.....klfffffffffffffffffFFk.....
+.....klfffffffffffffffffFFk.....
+.....klfffffffffffffffffFFk.....
+.....klfffffffffffffffffFFk.....
+.....klfffffffffffffffffFFk.....
+.....klfffffffffffffffffFFk.....
+.....klfffffffffffffffffFFk.....
+"""
+
+# A little smile tucked up under the eyes, to leave the flame its room.
+[layers.mouth]
+at = [14, 11]
+grid = """
+k..k
+.kk.
+"""
+
+[layers."mouth.open"]
+at = [15, 11]
+grid = """
+kk
+kp
+"""
+
+# The flame on the burner at the bottom of the globe, and how it moves.
+[layers.flame]
+at = [13, 12]
+follows = "head"
+grid = """
+......
+...O..
+..OO..
+..wW..
+.OwWO.
+"""
+
+[layers."flame.left"]
+at = [13, 12]
+follows = "head"
+grid = """
+......
+..O...
+..OO..
+..Ww..
+.OWwO.
+"""
+
+[layers."flame.right"]
+at = [13, 12]
+follows = "head"
+grid = """
+......
+....O.
+...OO.
+..wW..
+.OwWO.
+"""
+
+[layers."flame.big"]
+at = [13, 12]
+follows = "head"
+grid = """
+...O..
+..OO..
+.OwwO.
+.OwWO.
+OwWWwO
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "yawn"
+weight = 2
+
+[[actions]]
+use = "content"
+weight = 3
+
+# Signature: the flame flickers in a draft, leaning this way and that,
+# and steadies again.
+[[actions]]
+name = "flicker"
+weight = 5
+frames = [
+  { ops = ["flame=left"], ms = 160 },
+  { ops = ["flame=right"], ms = 140 },
+  { ops = ["flame=left"], ms = 180 },
+  { ops = [], ms = 120 },
+  { ops = ["flame=right"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]
+
+# Rare, at night: the lantern turns itself up. The flame stands tall and
+# sparkles drift in around the glass like moths to the light.
+[[actions]]
+name = "glow"
+weight = 1
+when = "night"
+frames = [
+  { ops = ["flame=big"], ms = 300 },
+  { ops = ["flame=big", "eyes=happy", "prop:sparkle@1,4"], ms = 400 },
+  { ops = ["flame=big", "eyes=happy", "prop:sparkle@2,3", "prop:sparkle@24,8"], ms = 400 },
+  { ops = ["flame=big", "eyes=happy", "prop:sparkle@1,1", "prop:sparkle@25,6"], ms = 400 },
+  { ops = ["flame=big", "eyes=right", "prop:sparkle@25,4"], ms = 600 },
+  { ops = ["flame=left", "eyes=right"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

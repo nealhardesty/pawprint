@@ -1,0 +1,177 @@
+# Robin on bird-perched. A round little garden robin: a brown crown and
+# back, and an orange-red face and breast that fill the whole front of the
+# bird, edged in soft grey. A tiny dark beak and bright black eyes on the
+# orange. Rounder and smaller-beaked than every other perched bird.
+# Signature: the head cocks to one side, listening for something in the
+# crate. Rare: it dives to the rim and tugs a worm out, stretching it all
+# the way, then gulps it down.
+id = "robin"
+name = "Robin"
+category = "birds"
+aliases = []
+accent = "brick"
+extends = "bird-perched"
+
+[palette]
+"l" = "brown-2"     # feathers light
+"f" = "brown-3"     # feathers
+"F" = "brown-4"     # feather shadow
+"Y" = "orange-1"    # breast light
+"o" = "orange-2"    # breast
+"O" = "orange-3"    # breast shadow
+"g" = "grey-1"      # grey edge round the breast
+"w" = "cream"       # belly
+"b" = "brown-4"     # beak and feet
+"B" = "grey-4"      # beak shadow
+"p" = "pink-1"      # worm
+"P" = "pink-2"      # worm shadow
+
+# A rounder body: the orange breast fills the front, with a grey edge.
+[layers.body]
+at = [5, 12]
+grid = """
+..kkllllllllllllffkk..
+.klllfffffffffffffFFk.
+kllffgoooooooooooogFFk
+klffgYooooooooooOOgfFk
+klfgYoooooooooooOOOgFk
+klfgYoooooooooooOOOgFk
+klfgYooooooooooOOOOgFk
+klffgooooooooooOOOgfFk
+klffgwwwwwwwwwwwwwgfFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+klfffwwwwwwwwwwwwfffFk
+"""
+
+# A brown crown over an orange face that runs down into the breast.
+[layers.head]
+at = [6, 3]
+grid = """
+.....kkkkkkkkkk.....
+...kkllllllllffkk...
+..kllllfffffffffFk..
+.kllffffffffffffFFk.
+kllfgYYYYYYYYYYgfFFk
+klfgYoooooooooooOgFk
+klgYooooooooooooOOgk
+klgYooooooooooooOOgk
+kgYoooooooooooooOOOk
+.kYooooooooooooOOk..
+..ooooooooooooooO...
+"""
+
+# A tiny dark beak.
+[layers.beak]
+at = [14, 10]
+follows = "head"
+grid = """
+.kk.
+kbbk
+.kk.
+"""
+
+[layers."mouth.open"]
+at = [14, 9]
+follows = "head"
+grid = """
+.kk.
+kbbk
+kkkk
+kbBk
+.kk.
+"""
+
+# The worm, stretched taut from the beak down into the crate.
+[layers."worm.tug"]
+at = [14, 12]
+follows = "head"
+grid = """
+.kpk
+.kpk
+kpk.
+kpk.
+.kpk
+.kPk
+kpk.
+kPk.
+kpk.
+"""
+
+# The worm, won, dangling and wriggling from the beak.
+[layers."worm.hold"]
+at = [14, 12]
+follows = "head"
+grid = """
+.kpk.
+.kpk.
+kpk..
+kPk..
+.kpk.
+..kk.
+"""
+
+[layers."worm.wiggle"]
+at = [14, 12]
+follows = "head"
+grid = """
+.kpk.
+..kpk
+..kpk
+.kPk.
+.kpk.
+.kk..
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "hop"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the head cocks to one side and holds, listening.
+[[actions]]
+name = "listen"
+weight = 5
+frames = [
+  { ops = ["head+1,0"], ms = 100 },
+  { ops = ["head+2,1", "eyes=right"], ms = 1200 },
+  { ops = ["head+2,1", "eyes=closed"], ms = 140 },
+  { ops = ["head+2,1", "eyes=right"], ms = 500 },
+  { ops = ["head+1,0"], ms = 120 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: dives to the rim, tugs a long worm out of the crate, and gulps it.
+[[actions]]
+name = "worm-tug"
+weight = 1
+frames = [
+  { ops = ["head+0,1", "eyes=right"], ms = 300 },
+  { ops = ["all+0,3", "head+0,4"], ms = 160 },
+  { ops = ["all+0,2", "head+0,2", "+worm.tug", "eyes=closed"], ms = 300 },
+  { ops = ["all+0,1", "head+0,-1", "+worm.tug", "eyes=closed"], ms = 400 },
+  { ops = ["head+0,-1", "+worm.hold", "eyes=happy"], ms = 300 },
+  { ops = ["+worm.wiggle", "eyes=happy"], ms = 250 },
+  { ops = ["+worm.hold", "eyes=happy"], ms = 250 },
+  { ops = ["head+0,1", "eyes=closed"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,181 @@
+# Jupiter, an object on `orb`: the biggest planet in the catalog, a ball two
+# pixels wider than the plain orb, banded rust, tan, and cream. Its great
+# red spot sits on its right cheek like a rosy blush (the left cheek gets
+# an ordinary one). The signature lets the belts drift, the north belt one
+# way and the south belt the other, while the spot swirls round; the rare
+# one sends a little grey moon orbiting past in front, watched all the way.
+id = "jupiter"
+name = "Jupiter"
+category = "space"
+aliases = []
+accent = "copper"
+extends = "orb"
+
+[palette]
+"l" = "white"       # cream zone light
+"f" = "cream"       # cream zones
+"F" = "brown-1"     # cream shadow, tan belts
+"M" = "brown-3"     # belt shadow
+"w" = "orange-2"    # rust belt light
+"m" = "orange-3"    # rust belts
+"r" = "red-1"       # great red spot
+"R" = "red-2"       # spot rim
+"o" = "grey-1"      # moon
+"O" = "grey-2"      # moon shadow
+"h" = "grey-3"      # eye highlight: white would vanish on cream
+
+# The planet: a cream face zone between two rust belts, with tan edges.
+[layers.head]
+grid = """
+................................
+................................
+.............kkkkkk.............
+..........kkkllllllkkk..........
+.........klllllllffffFk.........
+........kwwwwwwwwwwwwmMk........
+.......kwmmmmmmmmmmmmmMMk.......
+......kwmmmmmmmmmmmmmmmMMk......
+.....kfFFFFFFFFFFFFFFFFFMMk.....
+.....klfffffffffffffffffFFk.....
+.....klfffffffffffffffffFFk.....
+....kllffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....kwwwwwwwwwwwwwwwwwwwwwmk....
+....kwmmmmmmmmmmmmmmmmmmmMMk....
+....kwmmmmmmmmmmmmmmmmmmmMMk....
+.....kfFFFFFFFFFFFFFFFFFMMk.....
+.....klfffffffffffffffffFFk.....
+.....kwmmmmmmmmmmmmmmmmmMMk.....
+......kwmmmmmmmmmmmmmmmMMk......
+.......kffffffffffffffFFk.......
+........kFFFFFFFFFFFFFFk........
+.........kFFFFFFFFFFFFk.........
+..........kkkFFFFFFkkk..........
+.............kkkkkk.............
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# One ordinary blush; the other cheek is the great red spot.
+[layers.blush]
+at = [9, 11]
+follows = "head"
+grid = """
+PP
+"""
+
+# Streaks in the belts, to drift in the signature.
+[layers.belt-n]
+at = [9, 6]
+follows = "head"
+grid = """
+ww....www
+"""
+
+[layers.belt-s]
+at = [13, 15]
+follows = "head"
+grid = """
+www....ww
+"""
+
+# The great red spot, a rosy cheek, with its swirl turning.
+[layers.spot]
+at = [19, 11]
+follows = "head"
+grid = """
+.RRRR.
+RrrPrR
+RrPrrR
+.RRRR.
+"""
+
+[layers."spot.a"]
+at = [19, 11]
+follows = "head"
+grid = """
+.RRRR.
+RrPPrR
+RrrrrR
+.RRRR.
+"""
+
+[layers."spot.b"]
+at = [19, 11]
+follows = "head"
+grid = """
+.RRRR.
+RrPrrR
+RrrPrR
+.RRRR.
+"""
+
+[layers."spot.c"]
+at = [19, 11]
+follows = "head"
+grid = """
+.RRRR.
+RrrrrR
+RrPPrR
+.RRRR.
+"""
+
+# A little moon for the rare action (hidden at rest).
+[layers."moon.orbit"]
+at = [14, 2]
+follows = "head"
+grid = """
+.kk.
+kook
+koOk
+.kk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the belts drift, north one way and south the other, and the
+# great red spot swirls round once.
+[[actions]]
+name = "belt-drift"
+weight = 4
+frames = [
+  { ops = ["belt-n+1,0", "belt-s+-1,0", "spot=a"], ms = 260 },
+  { ops = ["belt-n+2,0", "belt-s+-2,0", "spot=b", "eyes=happy"], ms = 260 },
+  { ops = ["belt-n+3,0", "belt-s+-3,0", "spot=c", "eyes=happy"], ms = 260 },
+  { ops = ["belt-n+4,0", "belt-s+-4,0", "eyes=happy"], ms = 600 },
+  { ops = ["belt-n+4,0", "belt-s+-4,0"], ms = 600 },
+]
+
+# Rare: a little moon swings past in front, over the north belt, and Jupiter
+# watches it all the way across.
+[[actions]]
+name = "moon-pass"
+weight = 1
+frames = [
+  { ops = ["+moon.orbit", "moon+-16,4", "eyes=left"], ms = 200 },
+  { ops = ["+moon.orbit", "moon+-11,3", "eyes=left"], ms = 200 },
+  { ops = ["+moon.orbit", "moon+-5,2"], ms = 200 },
+  { ops = ["+moon.orbit", "moon+1,2"], ms = 200 },
+  { ops = ["+moon.orbit", "moon+7,2", "eyes=right"], ms = 200 },
+  { ops = ["+moon.orbit", "moon+12,3", "eyes=right"], ms = 200 },
+  { ops = ["+moon.orbit", "moon+17,4", "eyes=right"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 600 },
+]

@@ -1,0 +1,148 @@
+# Anchor, an object: a ship's iron anchor standing in the crate, its ring
+# on top, the long crossbar (the stock) with ball ends worn like a brow over
+# the eyes, and the curved arms with their barbed flukes reaching up at both
+# sides of the rim. A length of tan rope is wrapped round the left end of
+# the bar and its frayed end hangs free. The signature lets the rope sway
+# back and forth and settle; the rare one has a strand of seaweed snag on a
+# fluke, and the anchor gives itself a good shake to throw it off.
+id = "anchor"
+name = "Anchor"
+category = "things"
+aliases = []
+accent = "slate"
+extends = "object"
+
+[palette]
+"l" = "grey-1"      # iron light
+"f" = "grey-2"      # iron
+"F" = "grey-3"      # iron shadow
+"r" = "brown-1"     # NEW: rope light
+"R" = "brown-2"     # NEW: rope
+"d" = "brown-3"     # NEW: rope shadow
+"p" = "red-2"       # inside of the mouth
+
+[layers.head]
+grid = """
+..............kkkk..............
+.............kllfFk.............
+............klk..kFk............
+............kfk..kFk............
+..kkk........kfkkFk........kkk..
+.klfkkkkkkkkkkkfFkkkkkkkkkkkfFk.
+.kllllllllllllllffffffffffffFFk.
+.kffffffffffffffffffffffffffFFk.
+..kkkkkkklfffffffffffFFkkkkkkk..
+...k....klfffffffffffFFk....k...
+..kFk...klfffffffffffFFk...kFk..
+.klfFk..klfffffffffffFFk..klFFk.
+klfffFk.klfffffffffffFFk.klffFFk
+kFfffFk.kFfffffffffffFFk.kFffFFk
+.klfFk...kFFffffffffFFk...klFFk.
+.klfFk....kkFfffffFFkk....klFFk.
+.klfFk......klfffFFk......klFFk.
+.kFffFkkk...klfffFFk...kkklfFFk.
+..kFFfllFkkkklfffFFkkkklllfFFk..
+...kkFFFFFFFFFFFFFFFFFFFFFFkk...
+.....kkkkkkkkkkkkkkkkkkkkkk.....
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+[layers.rope]
+at = [0, 0]
+grid = """
+......kkkkk...
+....kkrrdrdkk.
+...krdkkkkkrdk
+..krdk.....kk.
+..kdrk........
+..krdk........
+.krddk........
+.krkrk........
+..k.k.........
+"""
+
+# The rope's free end swung toward the shank, and away from it.
+[layers."rope.in"]
+at = [0, 0]
+grid = """
+......kkkkk...
+....kkrrdrdkk.
+...krdkkkkkrdk
+..krdk.....kk.
+...kdrk.......
+...krdk.......
+..krddk.......
+..krkrk.......
+...k.k........
+"""
+
+[layers."rope.out"]
+at = [0, 0]
+grid = """
+......kkkkk...
+....kkrrdrdkk.
+...krdkkkkkrdk
+..krdk.....kk.
+.kdrk.........
+.krdk.........
+krddk.........
+krkrk.........
+.k.k..........
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the rope sways out and back like it's riding a swell; the
+# anchor glances along at it, and it settles.
+[[actions]]
+name = "sway"
+weight = 4
+frames = [
+  { ops = ["eyes=left", "rope=out"], ms = 300 },
+  { ops = ["eyes=left"], ms = 200 },
+  { ops = ["eyes=left", "rope=in"], ms = 300 },
+  { ops = ["eyes=left"], ms = 200 },
+  { ops = ["eyes=left", "rope=out"], ms = 260 },
+  { ops = ["eyes=left"], ms = 500 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: a strand of seaweed snags on the right fluke. The anchor notices,
+# squeezes its eyes shut, shakes it loose, and watches it drop away.
+[[actions]]
+name = "seaweed"
+weight = 1
+frames = [
+  { ops = ["prop:leaf@25,6"], ms = 300 },
+  { ops = ["eyes=right", "prop:leaf@25,6"], ms = 700 },
+  { ops = ["eyes=closed", "all+1,0", "prop:leaf@26,6"], ms = 110 },
+  { ops = ["eyes=closed", "all+-1,0", "prop:leaf@24,6"], ms = 110 },
+  { ops = ["eyes=closed", "all+1,0", "prop:leaf@26,8"], ms = 110 },
+  { ops = ["eyes=closed", "all+-1,0", "prop:leaf@25,11"], ms = 110 },
+  { ops = ["eyes=right", "prop:leaf@26,16"], ms = 260 },
+  { ops = ["eyes=happy"], ms = 800 },
+  { ops = [], ms = 200 },
+]

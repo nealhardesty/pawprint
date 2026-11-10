@@ -1,0 +1,206 @@
+# Golden Retriever on dog-sit: pure sunshine. A rich red-gold coat, long
+# feathery ears whose fringes ripple in darker gold and end in wisps below
+# the jaw, a feathered chest and plume tail, and the big open smile with
+# the tongue out, worn at rest (`mouth`). Unlike the Labrador's short coat
+# and closed mouth, everything about it is fringed and grinning.
+# `mouth.pant` is the long happy tongue; `stick.mouth` is the far too long
+# stick of the rare action.
+id = "dog-golden-retriever"
+name = "Golden Retriever"
+category = "cats-dogs"
+aliases = ["goldenretriever"]
+accent = "marigold"
+extends = "dog-sit"
+
+[palette]
+"l" = "orange-1"    # coat light
+"f" = "amber"       # golden coat
+"F" = "orange-3"    # coat shadow
+"w" = "yellow-1"    # pale gold muzzle and chest
+"M" = "orange-2"    # shadow on the pale gold
+"s" = "orange-2"    # ears, deeper gold
+"S" = "orange-3"    # ear feathering
+"h" = "white"       # glint
+"n" = "fur-black"   # nose
+"p" = "pink-2"      # tongue
+"b" = "brown-2"     # NEW: stick
+"B" = "brown-3"     # NEW: stick shadow, bark
+
+# A plume tail with a feathered underside.
+[layers.tail]
+at = [24, 9]
+grid = """
+...kk.
+..klk.
+..klFk
+.klfFk
+.klfFk
+klffFk
+kffFFk
+kfFSFk
+kfSFk.
+kfFSk.
+kffFk.
+"""
+
+[layers."tail.flick"]
+at = [24, 8]
+grid = """
+.....kk
+....klk
+...klFk
+..klfFk
+.klffFk
+klffFk.
+kffFFk.
+kfFSFk.
+kfSFk..
+kfFSk..
+kffFk..
+kffFk..
+"""
+
+# A feathered chest: wisps of gold in the pale fur.
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klffffwwwwwwfffFFk..
+.klfffffwMwwMwffffFFk.
+klfffffwMwwwwMwffffFFk
+klfffffwwMwwMwwffffFFk
+klfffffwMwwwwMwffffFFk
+klffffffwMwwMwfffffFFk
+klfffffffwwwwffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# Long feathery ears: rippled fringes ending in wisps below the jaw.
+[layers.ears]
+at = [4, 5]
+grid = """
+..kkkk............kkkk..
+.ksssSk..........kSsssk.
+kssssSk..........kSssssk
+kssssSk..........kSssssk
+kssssSk..........kSssssk
+kssssSk..........kSssssk
+kssssSk..........kSssssk
+kssssSk..........kSssssk
+ksSssSk..........kSssSsk
+kSksSSk..........kSSskSk
+.k.kkk............kkk.k.
+"""
+
+[layers."ears.flick"]
+at = [3, 4]
+grid = """
+..kkkk...................
+.ksssSk............kkkk..
+kssssSk...........kSsssk.
+kssssSk...........kSssssk
+kssssSk...........kSssssk
+kssssSk...........kSssssk
+kssssSk...........kSssssk
+ksSssSk...........kSssssk
+kSksSSk...........kSssssk
+.k.kkk............kSssssk
+..................kSssSsk
+..................kSSskSk
+...................kkk.k.
+"""
+
+# The big open grin, tongue out.
+[layers.mouth]
+at = [13, 13]
+follows = "head"
+grid = """
+k....k
+.kppk.
+.kppk.
+..kk..
+"""
+
+# The long, happy pant.
+[layers."mouth.pant"]
+at = [13, 13]
+grid = """
+k....k
+.kppk.
+.kppk.
+.kppk.
+..kk..
+"""
+
+# A stick much too long for the crate, carried proudly across the face.
+[layers."stick.mouth"]
+at = [1, 10]
+follows = "head"
+grid = """
+....kk........................
+...kbk........................
+kkkkbkkkkkkkkkkkkkkkkkkkkkkkkk
+kbbbbbbbbBbbbbbbbbbbbbbbbbBbbk
+kBBBBBBBBBBBBBBBBBBBBBBBBBBBBk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "curious"
+weight = 3
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the happiest pant. Eyes squeeze, the tongue lolls, and the
+# tail thumps on the crate.
+[[actions]]
+name = "happy-thump"
+weight = 5
+frames = [
+  { ops = ["eyes=happy", "mouth=pant"], ms = 300 },
+  { ops = ["eyes=happy", "mouth=pant", "tail=flick", "head+0,1"], ms = 180 },
+  { ops = ["eyes=happy", "mouth=pant", "all+0,1"], ms = 180 },
+  { ops = ["eyes=happy", "mouth=pant", "tail=flick", "head+0,1"], ms = 180 },
+  { ops = ["eyes=happy", "mouth=pant", "all+0,1"], ms = 180 },
+  { ops = ["eyes=happy", "mouth=pant", "tail=flick", "head+0,1"], ms = 180 },
+  { ops = ["eyes=happy", "mouth=pant"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it pops up with a stick far too long for the crate, wags, waits
+# for you to throw it, and wags again.
+[[actions]]
+name = "stick"
+weight = 1
+frames = [
+  { ops = ["all+0,3", "eyes=closed"], ms = 200 },
+  { ops = ["+stick.mouth", "all+0,-1", "eyes=happy"], ms = 300 },
+  { ops = ["+stick.mouth", "eyes=happy", "tail=flick"], ms = 200 },
+  { ops = ["+stick.mouth", "eyes=happy"], ms = 200 },
+  { ops = ["+stick.mouth", "eyes=happy", "tail=flick"], ms = 200 },
+  { ops = ["+stick.mouth"], ms = 1000 },
+  { ops = ["+stick.mouth", "head+1,0"], ms = 600 },
+  { ops = ["+stick.mouth", "eyes=happy", "tail=flick"], ms = 200 },
+  { ops = ["+stick.mouth", "eyes=happy"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = [], ms = 200 },
+]

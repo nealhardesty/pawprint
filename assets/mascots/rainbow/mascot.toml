@@ -1,0 +1,102 @@
+# Rainbow, an object on `object`: a five-band rainbow arching over a
+# fluffy white cloud, its feet landing in two little side puffs. The face
+# is on the cloud. The signature sends a sparkle running along the arc
+# from one end to the other; the rare one is a big happy sneeze that bounces
+# the whole cloud. The bands never change color.
+id = "rainbow"
+name = "Rainbow"
+category = "nature"
+aliases = []
+accent = "sky"
+extends = "object"
+
+[palette]
+"l" = "white"       # cloud light
+"f" = "white"       # cloud
+"F" = "grey-1"      # cloud shadow and creases
+"h" = "grey-3"      # eye highlight: white would vanish on the cloud
+"1" = "red-1"       # rainbow, outside
+"2" = "amber"
+"3" = "yellow-1"
+"4" = "green-1"
+"5" = "blue-2"      # rainbow, inside
+
+# The rainbow, and the cloud in front of its feet.
+[layers.head]
+grid = """
+.............kkkkkk.............
+..........kkk111111kkk..........
+........kk111222222111kk........
+......kk1122233333322211kk......
+.....kk122333444444333221kk.....
+....kk12233445555554433221kk....
+...kk12334455kkkkkk55443321kk...
+...k123345kkkkllllkkkk543321k...
+..k112345kllllfffffffFk543211k..
+..k1234kklffffffffffffFkk4321k..
+.k11234klffffffffffffffFk43211k.
+.k1234klffffffffffffffffFk4321k.
+.k1234kfffffffffffffffffFk4321k.
+.k123klffffffffffffffffffFk321k.
+.kkkklFffffffffffffffffffFFkkkk.
+.kffffFffffffffffffffffffFfffFk.
+.kffffFffffffffffffffffffFfffFk.
+kffffffFffffffffffffffffFfffffFk
+.kffffffFFffffffffffffFFfffffFk.
+.kfffffffffffffffffffffffffffFk.
+..kfffffffffffffffffffffffffFk..
+...kfffffffffffffffffffffffFk...
+...kfffffffffffffffffffffffFk...
+...kfffffffffffffffffffffffFk...
+...kfffffffffffffffffffffffFk...
+...kfffffffffffffffffffffffFk...
+...kfffffffffffffffffffffffFk...
+...kfffffffffffffffffffffffFk...
+...kfffffffffffffffffffffffFk...
+...kfffffffffffffffffffffffFk...
+...kfffffffffffffffffffffffFk...
+...kkkkkkkkkkkkkkkkkkkkkkkkkk...
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a sparkle runs along the arc from end to end, and the cloud
+# beams.
+[[actions]]
+name = "sparkle-run"
+weight = 4
+frames = [
+  { ops = ["eyes=left", "prop:sparkle@1,9"], ms = 180 },
+  { ops = ["eyes=left", "prop:sparkle@5,3"], ms = 180 },
+  { ops = ["prop:sparkle@12,1"], ms = 180 },
+  { ops = ["eyes=right", "prop:sparkle@19,2"], ms = 180 },
+  { ops = ["eyes=happy", "prop:sparkle@24,8"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a big happy sneeze; the whole cloud bounces, and a puff flies off.
+[[actions]]
+name = "sneeze"
+weight = 1
+frames = [
+  { ops = ["eyes=closed", "all+0,-1"], ms = 400 },
+  { ops = ["eyes=closed", "+mouth.open", "-mouth", "all+0,-2"], ms = 300 },
+  { ops = ["eyes=closed", "+mouth.open", "-mouth", "all+0,1", "prop:puff@22,9"], ms = 160 },
+  { ops = ["eyes=happy", "prop:puff@24,7"], ms = 500 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]

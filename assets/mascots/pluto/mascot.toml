@@ -1,0 +1,134 @@
+# Pluto, an object on `orb`: the smallest world in the catalog, a little
+# icy tan ball that sits low in the crate, with a pale heart on its cheek
+# and a dark smudge on the other. The signature makes its heart glint; the
+# rare one has it look small and sad, and then a heart rises over it,
+# because it is loved (planet or not).
+id = "pluto"
+name = "Pluto"
+category = "space"
+aliases = []
+accent = "ice"
+extends = "orb"
+
+[palette]
+"l" = "cream"       # icy light
+"f" = "brown-1"     # icy tan
+"F" = "brown-2"     # shadow
+"w" = "white"       # the heart
+"m" = "cream"       # the heart's shade
+"M" = "brown-3"     # dark smudge
+
+# A small ball, low in the crate.
+[layers.head]
+grid = """
+................................
+................................
+................................
+................................
+................................
+................................
+............kkkkkkkk............
+..........kkllllllllkk..........
+.........kllllffffffffk.........
+........kllffffffffffFFk........
+........klfffffffffffFFk........
+........klffffffffffffFk........
+........klfffffffffffFFk........
+........klfffffffffffFFk........
+........klfffffffffffFFk........
+........klffffffffffFFFk........
+........kffffffffffFFFFk........
+.........kfffffffFFFFFk.........
+..........kFFFFFFFFFFk..........
+...........kkFFFFFFkk...........
+.............kkkkkk.............
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# A dark smudge, and the pale heart below the right eye.
+[layers.smudge]
+at = [10, 14]
+follows = "head"
+grid = """
+.MM
+MMM
+.M.
+"""
+
+[layers.heart]
+at = [17, 14]
+follows = "head"
+grid = """
+ww.ww
+wwwwm
+.wwm.
+..m..
+"""
+
+# Downcast eyes and a frown for the rare action.
+[layers."eyes.sad"]
+at = [11, 10]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."mouth.sad"]
+at = [14, 13]
+follows = "head"
+grid = """
+.kk.
+k..k
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "hop"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the pale heart glints, and Pluto is pleased about it.
+[[actions]]
+name = "heart-glint"
+weight = 4
+frames = [
+  { ops = ["prop:sparkle@19,10"], ms = 200 },
+  { ops = ["prop:sparkle@20,11", "eyes=happy"], ms = 500 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: Pluto looks small and sad; then a heart rises over it, because it
+# is loved, and it hops for joy.
+[[actions]]
+name = "loved"
+weight = 1
+frames = [
+  { ops = ["eyes=sad", "mouth=sad"], ms = 900 },
+  { ops = ["eyes=sad", "mouth=sad", "prop:heart@22,6"], ms = 400 },
+  { ops = ["eyes=right", "prop:heart@22,3"], ms = 400 },
+  { ops = ["eyes=happy", "all+0,-2", "prop:heart@22,0"], ms = 300 },
+  { ops = ["eyes=happy", "prop:heart@22,0"], ms = 900 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

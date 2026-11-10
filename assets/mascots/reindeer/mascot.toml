@@ -1,0 +1,186 @@
+# Reindeer on ungulate-head. A grey-brown caribou with the widest rack in
+# the catalog: two antler beams sweeping straight out to the sides, each
+# with a row of tines standing up along it (the elk's go up, the moose's
+# are paddles). A big frosty white ruff hangs down its neck, and its muzzle
+# is pale. It likes the dark. The signature: snow settles on its antlers
+# until it shakes it all off in a puff. The rare one, at night: its nose
+# glows red.
+id = "reindeer"
+name = "Reindeer"
+category = "mammals"
+aliases = ["caribou"]
+accent = "cranberry"
+nocturnal = true
+extends = "ungulate-head"
+
+rest = ["body", "ears", "head", "antlers", "eyes", "nose"]
+
+[palette]
+"l" = "grey-1"      # coat light
+"f" = "grey-2"      # coat
+"F" = "grey-3"      # coat shadow
+"w" = "white"       # ruff and muzzle
+"M" = "grey-2"      # mouth line
+"z" = "brown-1"     # antler light
+"x" = "brown-2"     # antler
+"X" = "brown-3"     # antler shadow
+"n" = "grey-4"      # nose
+"r" = "red-1"       # NEW: glowing nose
+"R" = "red-2"       # NEW: glowing nose shadow
+"g" = "pink-1"      # NEW: the glow around it
+"a" = "white"       # NEW: snow
+"u" = "grey-2"      # NEW: snowflake edges
+"p" = "pink-2"      # inner ear, mouth
+
+# Neck and shoulders, with a shaggy white ruff.
+[layers.body]
+at = [4, 15]
+grid = """
+.......klfwwwwFFk.......
+......klwwwwwwwwFk......
+....klfwwwwwwwwwwfFk....
+..klffwwwwwwwwwwwwfFFk..
+.klffffwwwwwwwwwwffFFFk.
+klfffffwwwwwwwwwwfffFFFk
+klffffffwwwwwwwwffffFFFk
+klfffffffwFwwFwfffffFFFk
+klffffffffwffwffffffFFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+klfffffffffffffffffffFFk
+"""
+
+# The rack: two beams straight out to the sides, tines standing up.
+[layers.antlers]
+at = [0, 0]
+follows = "head"
+grid = """
+kk...k...k............k...k...kk
+kzk.kzk.kzk..........kxk.kxk.kxk
+kxk.kxk.kxk..........kxk.kxk.kxk
+kxxkkxxkkxxkkk....kkkxxkkxxkkxxk
+.kxxxxxxxxxxXXk..kXXxxxxxxxxxxk.
+..kkkkkkkkkXXk....kXXkkkkkkkkk..
+"""
+
+# Snow settled on the tines and beams.
+[layers."snow.settled"]
+at = [0, 0]
+follows = "head"
+grid = """
+aa...a...a............a...a...aa
+................................
+................................
+.aa..aa..aa..........aa..aa..aa.
+................................
+................................
+"""
+
+# A few flakes drifting down.
+[layers."flakes.fall"]
+at = [2, 0]
+grid = """
+.u...........u..........u.
+uau.........uau........uau
+.u...........u..........u.
+......u.........u.........
+.....uau.......uau........
+......u.........u.........
+"""
+
+[layers.head]
+at = [8, 4]
+grid = """
+...kkkkkkkkkk...
+.kkllllllllffkk.
+kllffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+.klffffffffffFk.
+..klffwwwwffFk..
+...kfwwwwwwFk...
+...kwwwwwwwwk...
+...kwwwwwwwwk...
+....kwwMMwwk....
+.....kkkkkk.....
+"""
+
+[layers.nose]
+at = [14, 13]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+[layers."nose.sniff"]
+at = [14, 12]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+# Glowing red, with a soft halo.
+[layers."nose.glow"]
+at = [12, 11]
+follows = "head"
+grid = """
+..g..g..
+.g....g.
+g.rrrR.g
+..RrRR..
+g..RR..g
+.g....g.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: snowflakes drift down and settle on the rack; it waits, then
+# shakes its head and the snow flies off.
+[[actions]]
+name = "snow-shake"
+weight = 4
+frames = [
+  { ops = ["+flakes.fall", "eyes=right"], ms = 400 },
+  { ops = ["+flakes.fall", "flakes+0,2", "eyes=right"], ms = 400 },
+  { ops = ["+snow.settled", "eyes=closed"], ms = 900 },
+  { ops = ["+snow.settled", "head+-1,0", "ears=flick"], ms = 100 },
+  { ops = ["head+1,0", "ears=flick", "prop:puff@0,0", "prop:puff@23,0"], ms = 100 },
+  { ops = ["head+-1,0", "prop:puff@-1,-1", "prop:puff@24,-1"], ms = 150 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare, at night: the nose lights up red and glows for a while.
+[[actions]]
+name = "red-nose"
+weight = 1
+when = "night"
+frames = [
+  { ops = ["eyes=left"], ms = 400 },
+  { ops = ["nose=glow", "eyes=left"], ms = 300 },
+  { ops = ["nose=glow", "eyes=happy"], ms = 1400 },
+  { ops = ["nose=glow"], ms = 600 },
+  { ops = ["nose=sniff"], ms = 200 },
+  { ops = [], ms = 200 },
+]

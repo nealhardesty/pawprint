@@ -1,0 +1,342 @@
+# Dragon, a bespoke mythical creature. A small, round, green baby dragon
+# sitting in the crate, face on: two curved cream horns and a little crest
+# on its head, big eyes, rosy cheeks, a pale snout with two nostrils, a
+# yellow-scaled belly, rose-pink bat wings spread behind its shoulders, a
+# spade-tipped tail curling over the rim, and clawed paws. The signature
+# snorts a puff of smoke out of its nostrils; the rare one huffs, puffs,
+# and lets out a tiny burst of fire breath, then grins, very proud.
+id = "dragon"
+name = "Dragon"
+category = "mythical"
+aliases = ["wyrm"]
+accent = "cranberry"
+# Template props go top-right between the horn and the wing (the default).
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "green-1"     # scales light
+"f" = "green-2"     # scales
+"F" = "green-3"     # scales shadow, tail spade
+"m" = "green-1"     # snout
+"n" = "green-3"     # nostrils
+"w" = "yellow-1"    # belly scales
+"M" = "yellow-2"    # belly scale lines
+"c" = "cream"       # horns, claws, teeth
+"C" = "brown-1"     # horn shadow
+"r" = "pink-1"      # cheeks
+"R" = "pink-2"      # wing membrane
+"Q" = "red-2"       # wing shadow, mouth inside
+"h" = "white"       # eye glint
+"o" = "orange-2"    # fire
+
+# Bat wings spread behind its shoulders.
+[layers.wings]
+at = [0, 0]
+grid = """
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+.k............................k.
+.kkk........................kkk.
+.krrkk....................kkrrk.
+.krrrFk..................kFrrRk.
+.krrrrFk................kFrrrRk.
+..krrrrFk..............kFrrrRk..
+...krrrRk..............krrrRk...
+..krRRrRk..............krrRRrk..
+..kkkkrRk..............krRkkkk..
+......krk..............krk......
+......kkk..............kkk......
+................................
+................................
+"""
+
+[layers."wings.flap"]
+at = [0, 0]
+grid = """
+................................
+................................
+................................
+................................
+................................
+.k............................k.
+.kkk........................kkk.
+.krrk......................krrk.
+.krrrk....................krrRk.
+.krrrrk..................krrrRk.
+.krrrrrk................krrrrRk.
+..krrrRk................krrrRk..
+..krrrrrk..............krrrrRk..
+...krrrRk..............krrrRk...
+..krRRrRk..............krrRRrk..
+..kkkkrRk..............krRkkkk..
+......krk..............krk......
+......kkk..............kkk......
+................................
+................................
+"""
+
+# The spade-tipped tail curling over the rim on the right.
+[layers.tail]
+at = [22, 12]
+grid = """
+......k..
+.....kFk.
+....kFFFk
+....kkfkk
+...kffk..
+.kkffk...
+kffFk....
+kfFk.....
+"""
+
+[layers."tail.flick"]
+at = [22, 11]
+grid = """
+.......k..
+......kFk.
+.....kFFFk
+.....kkfkk
+...kkffk..
+.kkfffk...
+kffFk.....
+kfFk......
+kfk.......
+"""
+
+# The round body and scaled belly, down behind the crate.
+[layers.body]
+at = [0, 0]
+grid = """
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+.............kkkkkk.............
+...........kkllllllkk...........
+..........kllfMMMMfllk..........
+.........klffwwwwwwfflk.........
+........klffMMMMMMMMfflk........
+........klfwwwwwwwwwwfFk........
+.......klffMMMMMMMMMMfflk.......
+.......klffwwwwwwwwwwffFk.......
+.......klffMMMMMMMMMMffFk.......
+.......klffwwwwwwwwwwffFk.......
+.......klffMMMMMMMMMMffFk.......
+.......klffwwwwwwwwwwffFk.......
+.......klfffMMMMMMMMfffFk.......
+.......klffffwwwwwwffffFk.......
+.......klfffffMMMMfffffFk.......
+.......klffffffffffffffFk.......
+.......klffffffffffffffFk.......
+.......klffffffffffffffFk.......
+.......klffffffffffffffFk.......
+.......klffffffffffffffFk.......
+"""
+
+# Head, horns, and snout.
+[layers.head]
+at = [0, 0]
+grid = """
+......kk................kk......
+......kck..............kck......
+......kcck............kcck......
+.......kccCk...kk...kCcck.......
+........kkkkkkkcckkkkkkk........
+.......kkllllllllllllllkk.......
+......klffffffffffffffffFk......
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klfrrfmmnmmmmnmmfrrfFk.....
+.....klfffmmmmmmmmmmmmfffFk.....
+......kffmmmmmmmmmmmmmmfFk......
+.......kfmmmmmmmmmmmmmmFk.......
+........kkkkkkkkkkkkkkkk........
+"""
+
+[layers.eyes]
+at = [10, 8]
+follows = "head"
+grid = """
+hk........hk
+kk........kk
+"""
+
+[layers."eyes.closed"]
+at = [10, 9]
+follows = "head"
+grid = """
+kk........kk
+"""
+
+[layers."eyes.left"]
+at = [9, 8]
+follows = "head"
+grid = """
+hk........hk
+kk........kk
+"""
+
+[layers."eyes.right"]
+at = [11, 8]
+follows = "head"
+grid = """
+hk........hk
+kk........kk
+"""
+
+[layers."eyes.happy"]
+at = [9, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+# Squeezed shut, for the fire breath.
+[layers."eyes.squeeze"]
+at = [9, 8]
+follows = "head"
+grid = """
+k..........k
+.kk......kk.
+"""
+
+[layers.nose]
+at = [13, 11]
+follows = "head"
+grid = """
+n....n
+"""
+
+[layers."nose.sniff"]
+at = [13, 10]
+follows = "head"
+grid = """
+n....n
+n....n
+"""
+
+[layers.mouth]
+at = [13, 13]
+follows = "head"
+grid = """
+k....k
+.kkkk.
+"""
+
+[layers."mouth.open"]
+at = [13, 12]
+follows = "head"
+grid = """
+kkkkkk
+kQQQQk
+.kkkk.
+"""
+
+# A proud, toothy grin.
+[layers."mouth.grin"]
+at = [12, 12]
+follows = "head"
+grid = """
+k......k
+kkkkkkkk
+.kcccck.
+..kkkk..
+"""
+
+# A tiny burst of fire, small then big.
+[layers."fire.small"]
+at = [12, 14]
+grid = """
+..kkkk..
+.kwwwwk.
+kowwwwok
+.koook..
+..kkk...
+"""
+
+[layers."fire.big"]
+at = [10, 13]
+grid = """
+...kkkkkk...
+.kkowwwwokk.
+kooowwwwwook
+kowwwwwwwwok
+koowwwwwwook
+.kooowwooQk.
+..kQoooQQk..
+...kkkkkk...
+"""
+
+[layers.paws]
+at = [7, 17]
+grid = """
+.kkk..........kkk.
+klffk........kffFk
+kcfck........kcfck
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "yawn"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the nostrils flare and it snorts out a puff of smoke, which
+# drifts up over its head.
+[[actions]]
+name = "smoke-puff"
+weight = 4
+frames = [
+  { ops = ["nose=sniff"], ms = 200 },
+  { ops = ["nose=sniff", "eyes=closed"], ms = 200 },
+  { ops = ["eyes=closed", "prop:puff@11,7"], ms = 250 },
+  { ops = ["eyes=happy", "prop:puff@11,3"], ms = 350 },
+  { ops = ["eyes=happy", "prop:puff@12,0"], ms = 350 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it huffs, puffs, and lets out a tiny burst of fire breath, wings
+# up, then grins, very proud of itself.
+[[actions]]
+name = "fire-breath"
+weight = 1
+frames = [
+  { ops = ["nose=sniff", "head+0,-1"], ms = 250 },
+  { ops = ["nose=sniff", "head+0,-1", "eyes=closed"], ms = 300 },
+  { ops = ["eyes=squeeze", "+mouth.open", "-mouth", "+fire.small", "wings=flap"], ms = 120 },
+  { ops = ["eyes=squeeze", "+mouth.open", "-mouth", "+fire.big", "wings=flap"], ms = 500 },
+  { ops = ["eyes=squeeze", "+mouth.open", "-mouth", "+fire.small"], ms = 150 },
+  { ops = ["eyes=happy", "-mouth", "+mouth.grin", "prop:puff@11,2"], ms = 400 },
+  { ops = ["eyes=happy", "-mouth", "+mouth.grin", "prop:sparkle@24,2"], ms = 700 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,191 @@
+# Leopard on big-cat. No mane: a golden head with small black spots on the
+# brow and cheeks, green eyes, and a cream muzzle, over a body covered in
+# rosettes (black rings round a darker gold centre). Instead of standing up
+# the right side, its long spotted tail lies along the crate rim at the
+# left and curls up at the tip, as if it owns the crate. The signature
+# flicks that tail tip while it watches it; the rare one is a lazy stretch
+# over the rim, paws out and chin down, before it settles back.
+id = "leopard"
+name = "Leopard"
+category = "mammals"
+aliases = []
+accent = "ochre"
+extends = "big-cat"
+
+rest = ["body", "head", "ears", "eyes", "nose", "paws", "drape"]
+
+[palette]
+"l" = "yellow-1"    # fur light
+"f" = "orange-1"    # fur
+"F" = "orange-2"    # fur shadow
+"w" = "cream"       # muzzle and chest
+"M" = "orange-2"    # mouth lines
+"d" = "fur-black"   # NEW: spots and rosette rings
+"o" = "orange-3"    # NEW: rosette centres
+"e" = "green-1"     # iris
+"n" = "brown-3"     # nose
+"p" = "pink-2"      # inner ear, mouth
+
+[layers.body]
+at = [4, 14]
+grid = """
+....klffffffffffffFk....
+...klfffffffffffffFFk...
+.kkldfffffwwwwffffffFkk.
+klfdodfffwwwwwwfffdffFFk
+klffdffffwwwwwwffdodfFFk
+klffffffffwwwwffffdffFFk
+klffffffffffffffffffffFk
+klfdfffffffffffdffffffFk
+kldodffffdffffdodfffffFk
+klfdffffdodffffdffffdfFk
+klfffffffdfffffffffdodFk
+klffffffffffffffffffdfFk
+klffffdffffffdffffffffFk
+klfffdodffffdodfffffffFk
+klffffdffffffdfffffdffFk
+klffffffffffffffffdodfFk
+klfffffffffffffffffdffFk
+klffffffffffffffffffffFk
+"""
+
+# A slightly narrower head than the tiger's, spotted.
+[layers.head]
+at = [5, 4]
+grid = """
+.....kkkkkkkkkkkk.....
+...kkllllllllllffkk...
+..kllfdffdffdffdfFFk..
+..klffffdffffdffffFk..
+.klfdfffffffffffdfFFk.
+.klffffffffffffffffFk.
+.kldffffffffffffffdFk.
+.klffffwwwwwwwwffffFk.
+.kldfwwwwwwwwwwwwfdFk.
+klffwwwwwMMwwwwwwwfFFk
+.kfdwwwMwwwwMwwwwdfFk.
+..kFfwwwwwwwwwwwwfFk..
+...kkFFwwwwwwwwFFkk...
+"""
+
+[layers.ears]
+at = [7, 3]
+follows = "head"
+grid = """
+.kkk..........kkk.
+kdppk........kppdk
+kdpfk........kfpdk
+"""
+
+[layers."ears.flick"]
+at = [6, 3]
+follows = "head"
+grid = """
+.kkk...........kkk.
+kdppk.........kppdk
+kdpfk.........kfpdk
+.kff...............
+"""
+
+[layers.paws]
+at = [7, 17]
+grid = """
+.FFFFF......FFFFF.
+FldllfF....FlldlfF
+klFlFlk....klFlFlk
+"""
+
+[layers."paws.stretch"]
+at = [2, 17]
+grid = """
+.FFFFF................FFFFF.
+FldllfF..............FlldlfF
+kwFwFwk..............kwFwFwk
+"""
+
+# The long tail, lying along the rim and curling up at the tip.
+[layers.drape]
+at = [0, 11]
+grid = """
+.kkk.....
+kdddk....
+kfdfk....
+kffk.....
+kodk.....
+kfdk.....
+kffkkkkF.
+kfodffdF.
+.kkkkkkk.
+"""
+
+[layers."drape.flick"]
+at = [0, 11]
+grid = """
+.........
+..kkk....
+.kdddk...
+.kfdfk...
+kfffk....
+kodk.....
+kffkkkkF.
+kfodffdF.
+.kkkkkkk.
+"""
+
+[layers."drape.curl"]
+at = [0, 11]
+grid = """
+.........
+.........
+.kkkk....
+kdddfk...
+kfk.kk...
+kodk.....
+kffkkkkF.
+kfodffdF.
+.kkkkkkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: watches its own tail tip flick, twice, unimpressed.
+[[actions]]
+name = "tail-watch"
+weight = 4
+frames = [
+  { ops = ["eyes=left"], ms = 400 },
+  { ops = ["eyes=left", "drape=flick"], ms = 140 },
+  { ops = ["eyes=left", "drape=curl"], ms = 300 },
+  { ops = ["eyes=left", "drape=flick"], ms = 140 },
+  { ops = ["eyes=left"], ms = 300 },
+  { ops = ["eyes=left", "drape=curl"], ms = 600 },
+  { ops = ["eyes=closed"], ms = 160 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a long, lazy stretch over the rim, chin down on the edge.
+[[actions]]
+name = "lazy-stretch"
+weight = 1
+frames = [
+  { ops = ["paws=stretch"], ms = 300 },
+  { ops = ["paws=stretch", "head+0,1", "eyes=closed"], ms = 300 },
+  { ops = ["paws=stretch", "head+0,3", "eyes=closed", "drape=flick"], ms = 1200 },
+  { ops = ["paws=stretch", "head+0,3", "eyes=happy", "drape=curl"], ms = 600 },
+  { ops = ["paws=stretch", "head+0,1"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,272 @@
+# Ferret, on small-quadruped. The longest body in the catalog: instead of
+# sitting up, it lies along the crate rim like a furry tube, a low arched
+# back running from the head at the left to a dark tail at the right. A
+# sable coat with dark legs, a cream face with a dark bandit mask across
+# the eyes, a cream stripe up the forehead, small round cream-rimmed ears,
+# and a pink nose. The signature is a slink: it pours itself along the rim
+# to the left, glances back, and pours back. The rare one is the war
+# dance: back arched, mouth open, bouncing sideways hops.
+id = "ferret"
+name = "Ferret"
+category = "mammals"
+aliases = []
+accent = "charcoal"
+extends = "small-quadruped"
+
+[palette]
+"l" = "brown-2"     # fur light
+"f" = "brown-3"     # sable fur, mask
+"F" = "brown-4"     # fur shadow
+"w" = "cream"       # face, ear rims, underside
+"M" = "brown-1"     # shadow on the cream
+"s" = "brown-3"     # legs light
+"S" = "brown-4"     # legs
+"n" = "pink-2"      # nose
+"p" = "pink-2"      # mouth inside
+"q" = "pink-1"      # NEW: inner ears
+
+# A long tail, held out and up at the right end.
+[layers.tail]
+at = [26, 8]
+grid = """
+..kk.
+.kSSk
+.kSSk
+.kfSk
+kffSk
+kffSk
+kfSk.
+kfSk.
+"""
+
+[layers."tail.flick"]
+at = [26, 7]
+grid = """
+...kk.
+..kSSk
+..kSSk
+.kfSk.
+kffSk.
+kffSk.
+kfSk..
+kfSk..
+kfSk..
+"""
+
+# The long, low body lying along the rim, back arched.
+[layers.body]
+at = [12, 11]
+grid = """
+......kkkkkkkk.....
+....kklllllllfkk...
+..kklffffffffffFk..
+.klffffffffffffFFk.
+klfffffffffffffFFFk
+klfffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+"""
+
+# The war-dance arch: the back humps right up.
+[layers."body.arch"]
+at = [12, 8]
+grid = """
+........kkkkk......
+......kkllllfkk....
+....kklllffffffkk..
+...klffffffffffFFk.
+..klfffffffffffFFFk
+.klffffffffffffFFFk
+klfffffffffffffFFFk
+klfffffffffffffFFFk
+klfffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+kffffffffffffffFFFk
+"""
+
+# A wedge of a head: sable crown, a cream stripe up the forehead, the dark
+# mask across the eyes, and a cream muzzle tapering to the nose.
+[layers.head]
+at = [5, 4]
+grid = """
+...kkkkkkkk...
+.kklwwwwwwfkk.
+kflwwwwwwwwfFk
+kfwwwwwwwwwwFk
+kFFFFwwwwFFFFk
+kFFFFFwwFFFFFk
+kFFFFwwwwFFFFk
+.kfwwwwwwwwFk.
+..kwwwwwwwwk..
+...kwwwwwwk...
+....kwwwwk....
+.....kkkk.....
+"""
+
+[layers.ears]
+at = [3, 3]
+follows = "head"
+grid = """
+.kkk..........kkk.
+kwqwk........kwqwk
+kwqwk........kwqwk
+.kkk..........kkk.
+"""
+
+[layers."ears.flick"]
+at = [3, 2]
+follows = "head"
+grid = """
+..............kkk.
+.kkk.........kwqwk
+kwqwk........kwqwk
+kwqwk.........kkk.
+.kkk..............
+"""
+
+[layers.eyes]
+at = [7, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [7, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [6, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [8, 9]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [6, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [11, 13]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [10, 12]
+follows = "head"
+grid = """
+nnnn
+"""
+
+[layers."mouth.open"]
+at = [10, 14]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+# Dark legs: two front paws on the rim under the chin, one hind paw at
+# the far end.
+[layers.paws]
+at = [6, 15]
+grid = """
+.SSS....SSS..........SSS.
+SsssS..SsssS........SsssS
+kSsSk..kSsSk........kSsSk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "curious"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the slink. It pours itself left along the rim, glances back
+# over its shoulder, and pours back again.
+[[actions]]
+name = "slink"
+weight = 5
+frames = [
+  { ops = ["head+-1,1", "paws+-1,0"], ms = 160 },
+  { ops = ["all+-2,0", "head+-1,1", "eyes=left"], ms = 160 },
+  { ops = ["all+-4,0", "head+-1,1", "eyes=left"], ms = 600 },
+  { ops = ["all+-4,0", "eyes=right"], ms = 700 },
+  { ops = ["all+-2,0", "eyes=right"], ms = 160 },
+  { ops = ["eyes=right"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the war dance. Back arched high, mouth open, it bounces sideways
+# across the rim and back, then flops.
+[[actions]]
+name = "war-dance"
+weight = 1
+frames = [
+  { ops = ["body=arch", "+mouth.open", "eyes=happy"], ms = 220 },
+  { ops = ["body=arch", "+mouth.open", "eyes=happy", "all+-2,-2"], ms = 120 },
+  { ops = ["body=arch", "+mouth.open", "eyes=happy", "all+-4,0"], ms = 120 },
+  { ops = ["body=arch", "+mouth.open", "eyes=happy", "all+-2,-2", "flipx"], ms = 120 },
+  { ops = ["body=arch", "+mouth.open", "eyes=happy", "flipx"], ms = 160 },
+  { ops = ["body=arch", "+mouth.open", "eyes=happy"], ms = 200 },
+  { ops = ["all+0,1", "eyes=closed", "prop:heart@20,1"], ms = 800 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,143 @@
+# Coffee Mug, an object: a chunky red mug with a big handle on the right
+# and a dark brew inside, rimmed with crema. What makes it itself is the
+# handle and the steam. The signature curls a wisp of steam up out of the
+# cup; the rare one starts the morning half asleep, takes a long sip, and
+# goes wide awake.
+id = "coffee-mug"
+name = "Coffee Mug"
+category = "food"
+aliases = ["coffee", "mug"]
+accent = "copper"
+extends = "object"
+# Template props go to the top left, away from the handle and the steam.
+prop_offset = [-20, -1]
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "pink-1"      # glaze light
+"w" = "white"       # glaze shine
+"f" = "red-1"       # glaze
+"F" = "red-2"       # glaze shadow, inside wall
+"m" = "brown-1"     # crema
+"M" = "brown-3"     # coffee
+"c" = "brown-4"     # coffee at the back of the cup
+"h" = "white"       # eye highlight
+"P" = "pink-1"      # blush
+"p" = "brown-4"     # inside of the mouth
+
+# The mug and its handle, running down behind the crate front.
+[layers."head"]
+grid = """
+................................
+................................
+................................
+................................
+.......kkkkkkkkkkkkkkkkkk.......
+......kFFFFFFFFFFFFFFFFFFk......
+......klccccccccccccccccFk......
+......kwwlllllllFFFFFFFFFk......
+......klffffffffffffffffFkkkk...
+......klffffffffffffffffFffFFk..
+......klffffffffffffffffFkkkfFk.
+......klffffffffffffffffFk..kFk.
+......klffffffffffffffffFk..kFk.
+......klffffffffffffffffFk..kFk.
+......klffffffffffffffffFkkkfFk.
+......klffffffffffffffffFffFFk..
+......klffffffffffffffffFkkkk...
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+"""
+
+# The coffee, filled to the brim.
+[layers."coffee"]
+at = [7, 5]
+follows = "head"
+grid = """
+FccccccccccccccccF
+mMMMMMMMMMMMMMMMMm
+"""
+
+# After a sip: the level drops and the inside wall shows.
+[layers."coffee.low"]
+at = [7, 5]
+follows = "head"
+grid = """
+FFFFFFFFFFFFFFFFFF
+FccccccccccccccccF
+"""
+
+# Heavy-lidded, first thing in the morning.
+[layers."eyes.sleepy"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+hk......hk
+"""
+
+# Wide awake.
+[layers."eyes.wide"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kkk....kkk.
+khkk....khkk
+kkkk....kkkk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: a wisp of steam curls up out of the cup.
+[[actions]]
+name = "steam"
+weight = 5
+frames = [
+  { ops = ["prop:steam@12,-1"], ms = 400 },
+  { ops = ["eyes=happy", "prop:steam@13,-2"], ms = 500 },
+  { ops = ["eyes=happy", "prop:steam@12,-3"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a sleepy morning face, then a long sip (the level drops), then wide
+# awake with a jolt.
+[[actions]]
+name = "first-sip"
+weight = 1
+frames = [
+  { ops = ["eyes=sleepy"], ms = 900 },
+  { ops = ["eyes=closed", "+mouth.open"], ms = 300 },
+  { ops = ["eyes=closed", "+mouth.open", "coffee=low"], ms = 500 },
+  { ops = ["eyes=wide", "coffee=low", "all+0,-2"], ms = 120 },
+  { ops = ["eyes=wide", "coffee=low", "prop:sparkle@22,0"], ms = 900 },
+  { ops = ["coffee=low"], ms = 300 },
+  { ops = [], ms = 200 },
+]

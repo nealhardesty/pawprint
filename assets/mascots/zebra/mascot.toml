@@ -1,0 +1,252 @@
+# Zebra on ungulate-head. A horse's long face in bold black and white:
+# narrow stripes up the forehead, bands across the cheeks and nose bridge,
+# chevrons wrapping the neck, a dark grey muzzle, and a short upright
+# mohawk mane, banded like the rest of it, standing straight up between big
+# black-tipped ears. Symmetric where the horse is swept to one side. The
+# signature swivels its ears, one way and then the other; the rare one is
+# bothered by a fly that lands on its nose and shakes it off.
+id = "zebra"
+name = "Zebra"
+category = "mammals"
+aliases = []
+accent = "charcoal"
+extends = "ungulate-head"
+
+rest = ["body", "ears", "head", "eyes", "nose", "mohawk"]
+
+[palette]
+"l" = "white"       # coat light
+"f" = "white"       # coat
+"F" = "grey-1"      # coat shadow
+"d" = "fur-black"   # NEW: stripes
+"m" = "grey-3"      # NEW: muzzle
+"M" = "grey-4"      # mouth line
+"h" = "grey-3"      # eye glint (a dot that reads on white)
+"n" = "fur-black"   # nostrils
+"p" = "grey-1"      # inner ear
+"P" = "pink-2"      # NEW: mouth
+"g" = "grey-2"      # NEW: fly wings
+
+# The neck, banded in chevrons.
+[layers.body]
+at = [4, 15]
+grid = """
+    .......klfddddFFk.......
+    ......klfllllllFdk......
+    ....klffddllllddfFFk....
+    ..klddffflddddlfffddFk..
+    .klfffddfllllllfddffFFk.
+    klddffffddllllddffffddFk
+    klffddffflddddlfffddfFFk
+    klffffddfllllllfddfffFdk
+    klddffffddffffddffffddFk
+    klffddffffddddffffddfFFk
+    klffffddffffffffddfffFdk
+    klddffffddffffddffffddFk
+    klffddffffddddffffddfFFk
+    klffffddffffffffddfffFdk
+    klddffffddffffddffffddFk
+    klffddffffddddffffddfFFk
+    klffffddffffffffddfffFdk
+"""
+
+# Big rounded ears with black tips.
+[layers.ears]
+at = [7, 1]
+follows = "head"
+grid = """
+.kkk..........kkk.
+kdddk........kdddk
+klppk........kppFk
+.klpk........kpFk.
+..kk..........kk..
+"""
+
+[layers."ears.flick"]
+at = [7, 0]
+follows = "head"
+grid = """
+..............kkk.
+.kkk.........kdddk
+kdddk........kppFk
+klppk.........kpFk
+.klpk.........kk..
+..kk..............
+"""
+
+# Swivelled to the left: the left ear turns side-on, the right one forward.
+[layers."ears.swl"]
+at = [7, 1]
+follows = "head"
+grid = """
+.kk...........kkk.
+kddk.........kdddk
+kllk.........kppFk
+.kllk........kpFk.
+..kk..........kk..
+"""
+
+[layers."ears.swr"]
+at = [7, 1]
+follows = "head"
+grid = """
+.kkk...........kk.
+kdddk.........kddk
+klppk.........kFFk
+.klpk........kFFk.
+..kk..........kk..
+"""
+
+[layers.head]
+at = [9, 3]
+grid = """
+...kkkkkkkk...
+..kldldldlFk..
+.kldldldldlFk.
+kddldldldldFFk
+kllllllllllFFk
+kllllllllllFFk
+klllllllllllFk
+.kddllllllddk.
+.klllddddllFk.
+..kddllllddk..
+..kllmmmmlFk..
+..kmmmmmmmmk..
+..kmmmmmmmMk..
+...kmMMMMmk...
+....kkkkkk....
+"""
+
+# The mohawk: short, upright, and banded.
+[layers.mohawk]
+at = [13, 0]
+follows = "head"
+grid = """
+.kkkk.
+kddddk
+kllllk
+kddddk
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+# Cross-eyed, watching the fly on its nose.
+[layers."eyes.cross"]
+at = [11, 8]
+follows = "head"
+grid = """
+.k......k.
+kk......kk
+"""
+
+[layers.nose]
+at = [12, 14]
+follows = "head"
+grid = """
+n......n
+"""
+
+[layers."nose.sniff"]
+at = [12, 14]
+follows = "head"
+grid = """
+nn....nn
+"""
+
+[layers."mouth.open"]
+at = [14, 16]
+follows = "head"
+grid = """
+kPPk
+.kk.
+"""
+
+# A fly: hidden until the rare action moves it about with offsets.
+[layers."fly.buzz"]
+at = [14, 7]
+grid = """
+gkg
+.k.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the ears swivel to the left, then to the right, then forward.
+[[actions]]
+name = "ear-swivel"
+weight = 4
+frames = [
+  { ops = ["ears=swl"], ms = 160 },
+  { ops = ["ears=swl", "eyes=left"], ms = 700 },
+  { ops = [], ms = 160 },
+  { ops = ["ears=swr"], ms = 160 },
+  { ops = ["ears=swr", "eyes=right"], ms = 700 },
+  { ops = ["ears=flick"], ms = 140 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a fly buzzes in and lands on its nose; it goes cross-eyed, then
+# shakes its head hard and the fly zips off.
+[[actions]]
+name = "fly-shake"
+weight = 1
+frames = [
+  { ops = ["+fly.buzz", "fly+12,-10", "eyes=right"], ms = 200 },
+  { ops = ["+fly.buzz", "fly+6,-6", "eyes=right"], ms = 200 },
+  { ops = ["+fly.buzz", "eyes=cross"], ms = 900 },
+  { ops = ["+fly.buzz", "eyes=closed", "head+-1,0", "ears=flick"], ms = 100 },
+  { ops = ["+fly.buzz", "fly+3,-4", "eyes=closed", "head+1,0", "ears=flick"], ms = 100 },
+  { ops = ["+fly.buzz", "fly+10,-9", "eyes=closed", "head+-1,0", "ears=flick"], ms = 100 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,148 @@
+# Cupcake, an object: a swirl of pink frosting piled up in tiers with a
+# cherry on top, sitting in a pleated blue paper wrapper that carries the
+# face. The signature wobbles the cherry back and forth; the rare one
+# finds a birthday candle on itself and blows it out.
+id = "cupcake"
+name = "Cupcake"
+category = "food"
+aliases = []
+accent = "rose"
+extends = "object"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"w" = "white"       # frosting light
+"m" = "pink-1"      # frosting
+"M" = "pink-2"      # frosting shadow
+"l" = "blue-1"      # wrapper light
+"f" = "blue-2"      # wrapper
+"F" = "blue-3"      # wrapper pleats and shadow
+"q" = "red-1"       # cherry light
+"R" = "red-2"       # cherry
+"G" = "brown-3"     # cherry stem
+"y" = "yellow-1"    # candle flame
+"a" = "amber"       # flame core
+"b" = "blue-1"      # candle stripe
+"h" = "white"       # eye highlight
+"P" = "pink-2"      # blush, a shade deeper than the frosting
+"p" = "red-2"       # inside of the mouth
+
+# The frosting and the wrapper, running down behind the crate front.
+[layers."head"]
+grid = """
+................................
+................................
+................................
+............kkkkkkkk............
+..........kkwwmmmmmmMk..........
+.........kwmmmwmmmmmmMk.........
+........kwmmMMMMMMMMmmMk........
+.......kwmmmmmmmmmmmmmmMk.......
+.....kkwMMMmmmmmmmmmmMMMmMk.....
+....kwmmmmMMmmmmmmmmMMmmmmMk....
+...kwmmmmmmmmmmmmmmmmmmmmmmMk...
+...kmmmmmmmmmmmmmmmmmmmmmmmMk...
+...kmmmmmmmmmmmmmmmmmmmmmmmMk...
+...kMmmmmmmmmmmmmmmmmmmmmmmMk...
+....kMMMMMMMMMMMMMMMMMMMMMMk....
+.....kFFFFFFFFFFFFFFFFFFFFk.....
+.....klfFfffffFffFfffffFfFk.....
+.....klfFfffffFffFfffffFfFk.....
+......klFfffffFffFfffffFFk......
+......klFfffffFffFfffffFFk......
+......klFfffffFffFfffffFFk......
+......klFfffffFffFfffffFFk......
+......klFfffffFffFfffffFFk......
+......klFfffffFffFfffffFFk......
+......klFfffffFffFfffffFFk......
+......klFfffffFffFfffffFFk......
+......klFfffffFffFfffffFFk......
+......klFfffffFffFfffffFFk......
+......klFfffffFffFfffffFFk......
+......klFfffffFffFfffffFFk......
+......klFfffffFffFfffffFFk......
+......klFfffffFffFfffffFFk......
+"""
+
+# The cherry on top.
+[layers."cherry"]
+at = [13, 0]
+follows = "head"
+grid = """
+....kk
+...kGk
+.kkkk.
+kqhRRk
+kqRRRk
+.kkkk.
+"""
+
+# A birthday candle, lit, and then blown out.
+[layers."candle.lit"]
+at = [9, 0]
+follows = "head"
+grid = """
+.y.
+yay
+.k.
+kwk
+kbk
+kwk
+"""
+
+[layers."candle.out"]
+at = [9, 0]
+follows = "head"
+grid = """
+...
+...
+.k.
+kwk
+kbk
+kwk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the cherry on top wobbles, side to side, and settles.
+[[actions]]
+name = "cherry-wobble"
+weight = 4
+frames = [
+  { ops = ["cherry+1,0", "eyes=right"], ms = 120 },
+  { ops = ["cherry+-1,0", "eyes=left"], ms = 140 },
+  { ops = ["cherry+1,0", "eyes=right"], ms = 140 },
+  { ops = ["cherry+-1,0", "eyes=left"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a birthday candle pops up out of the frosting, already lit. A deep
+# breath, a big puff, and it is out. Happy birthday.
+[[actions]]
+name = "candle"
+weight = 1
+frames = [
+  { ops = ["+candle.lit", "candle+0,3"], ms = 140 },
+  { ops = ["+candle.lit", "eyes=happy"], ms = 700 },
+  { ops = ["+candle.lit", "eyes=closed", "all+0,1"], ms = 400 },
+  { ops = ["+candle.out", "eyes=closed", "+mouth.open", "prop:puff@3,-1"], ms = 500 },
+  { ops = ["+candle.out", "eyes=happy", "prop:puff@2,-3"], ms = 500 },
+  { ops = ["+candle.out", "eyes=happy"], ms = 400 },
+  { ops = ["+candle.out", "candle+0,3"], ms = 140 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,145 @@
+# Pumpkin, an object: a fat ribbed pumpkin with a woody stem, a leaf, and
+# a curly tendril. What makes it itself is the squat, wide, ribbed body.
+# It is nocturnal. The signature is a happy little wobble; the rare one,
+# after dark, carves itself into a jack-o'-lantern for a moment, its face
+# glowing and the candle flickering, before it goes back to being itself.
+id = "pumpkin"
+name = "Pumpkin"
+category = "nature"
+aliases = ["jackolantern"]
+accent = "marigold"
+nocturnal = true
+extends = "orb"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "orange-1"    # light
+"f" = "orange-2"    # rind
+"F" = "orange-3"    # ribs and shadow
+"s" = "brown-2"     # stem
+"S" = "brown-3"     # stem shadow
+"v" = "green-1"     # leaf light
+"g" = "green-2"     # leaf, tendril
+"G" = "green-3"     # leaf shadow
+"y" = "yellow-1"    # candle glow
+"A" = "amber"       # glow at the carved edges
+"h" = "white"       # eye highlight
+"P" = "pink-1"      # blush
+"p" = "pink-2"      # inside of the mouth
+
+# The pumpkin, its stem, leaf, and tendril.
+[layers."head"]
+grid = """
+................kk.gggg.........
+...............kssg....g........
+........kkkk..kSskg..g.g........
+.......kvvggk.kSsk.g..g.........
+......kvggGGkkSSskgkk...........
+.......kkkkkllFllFffFkkk........
+.......klfFfffFffFfffFfFk.......
+......klfFfffFffffFfffFfFk......
+.....klfFffffFffffFffffFfFk.....
+....kllfFffffFffffFffffFffFk....
+...kllffFffffFffffFffffFffFFk...
+...kllfFfffffFffffFfffffFfFFk...
+...kllfFfffffFffffFfffffFffFk...
+...kllfFfffffFffffFfffffFffFk...
+...kllfFfffffFffffFfffffFffFk...
+...kllfFfffffFffffFfffffFfFFk...
+...kllffFffffFffffFffffFffFFk...
+....kllfFffffFffffFffffFffFk....
+.....klfFffffFffffFffffFfFk.....
+......klfFfffFffffFfffFfFk......
+.......klfFfffFffFfffFfFk.......
+........kkkFFFFFFFFFFkkk........
+...........kkkkkkkkkk...........
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# The jack-o'-lantern face, carved and lit from inside.
+[layers."eyes.carved"]
+at = [8, 8]
+follows = "head"
+grid = """
+...kk......kk...
+..kyAk....kAyk..
+.kyyyAk..kAyyyk.
+.kkkkkk..kkkkkk.
+"""
+
+[layers."mouth.carved"]
+at = [8, 12]
+follows = "head"
+grid = """
+kk............kk
+kAk..........kAk
+kyAkkfkkkkfkkAyk
+.kyyyyyyyyyyyyk.
+..kkkkkfkkkkkk..
+"""
+
+# The same grin as the candle gutters.
+[layers."mouth.flicker"]
+at = [8, 12]
+follows = "head"
+grid = """
+kk............kk
+kAk..........kAk
+kAAkkfkkkkfkkAAk
+.kAyyyyyyyyyyAk.
+..kkkkkfkkkkkk..
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: a happy wobble from side to side.
+[[actions]]
+name = "wobble"
+weight = 4
+frames = [
+  { ops = ["eyes=happy", "all+-1,0"], ms = 140 },
+  { ops = ["eyes=happy", "all+1,0"], ms = 140 },
+  { ops = ["eyes=happy", "all+-1,0"], ms = 140 },
+  { ops = ["eyes=happy", "all+1,0"], ms = 140 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]
+
+# Rare, at night: the face turns into a carved, glowing jack-o'-lantern,
+# the candle inside flickers, and then it is just a pumpkin again.
+[[actions]]
+name = "jack-o-lantern"
+weight = 1
+when = "night"
+frames = [
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = ["eyes=carved", "mouth=carved", "-blush"], ms = 700 },
+  { ops = ["eyes=carved", "mouth=flicker", "-blush"], ms = 150 },
+  { ops = ["eyes=carved", "mouth=carved", "-blush"], ms = 400 },
+  { ops = ["eyes=carved", "mouth=flicker", "-blush"], ms = 150 },
+  { ops = ["eyes=carved", "mouth=carved", "-blush"], ms = 700 },
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = [], ms = 200 },
+]

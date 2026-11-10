@@ -1,0 +1,285 @@
+# Yeti on primate, mythical. A big shaggy white snow beast: a ragged,
+# zigzag outline all the way down, a spiky tuft on top, shaggy cheek fur
+# sticking out at the sides, and a pale blue face with small dark eyes and
+# a grin with two tiny friendly fangs. Its hands on the rim are blue too.
+# Where the gorilla is dark and smooth, the yeti is white and scruffy. The
+# signature shakes the snow out of its fur in a puff; the rare one packs a
+# snowball and lobs it out of the frame, very pleased with itself.
+id = "yeti"
+name = "Yeti"
+category = "mythical"
+aliases = ["sasquatch", "bigfoot"]
+accent = "ice"
+extends = "primate"
+
+[palette]
+"l" = "white"       # fur light
+"f" = "white"       # fur
+"F" = "grey-1"      # fur shadow and shag
+"G" = "grey-2"      # NEW: deep shag
+"w" = "blue-1"      # face and hands
+"M" = "blue-2"      # face shadow, nose, knuckles
+"e" = "blue-3"      # iris
+"h" = "white"       # eye glint
+"a" = "white"       # NEW: fangs
+"p" = "pink-2"      # mouth
+
+[layers.body]
+grid = """
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ..........kkkkkkkkkkkk..........
+    ........kkllllllllllllkk........
+    ......kkllffffffffffffllkk......
+    ....kkllfffffffFffffffffllkk....
+    .kkkllffffffffffffffffffffllkkk.
+    ..klffffffffFffffffffFffffffFk..
+    .klffffffffffffffffffffffffffFk.
+    ..klfffffFffffffffFffffffffFFk..
+    .klffffffffffffffffffffffffffFk.
+    ..klffFffffffffFffffffffFfffFk..
+    .klffffffffffffffffffffffffffFk.
+    ..klffffffffFffffffffFffffffFk..
+    .klffffffffffffffffffffffffffFk.
+    ..klfffffFffffffffFffffffffFFk..
+    .klffffffffffffffffffffffffffFk.
+    ..klffFffffffffFffffffffFfffFk..
+    .klffffffffffffffffffffffffffFk.
+    ..klffffffffFffffffffFffffffFk..
+    .klffffffffffffffffffffffffffFk.
+    ..klfffffFffffffffFffffffffFFk..
+"""
+
+# Shaggy cheek fur sticking out at the sides.
+[layers.ears]
+at = [4, 7]
+follows = "head"
+grid = """
+..kk................kk..
+.kffk..............kfFk.
+kfFfk..............kfGFk
+.kffk..............kfFk.
+kfFk................kFfk
+.kk..................kk.
+"""
+
+[layers."ears.flick"]
+at = [4, 6]
+follows = "head"
+grid = """
+..kk....................
+.kffk...............kk..
+kfFfk..............kfFk.
+.kffk..............kfGFk
+kfFk...............kfFk.
+.kk.................kFfk
+.....................kk.
+"""
+
+# A round shaggy head with a pale blue face.
+[layers.head]
+at = [8, 2]
+grid = """
+.....kkkkkk.....
+...kkllllllkk...
+..kllllffffFFk..
+.kllfffffffFFFk.
+klffwwwwwwwwfFFk
+klfwwwwwwwwwwfFk
+klfwwwwwwwwwwfFk
+kFfwwwwwwwwwwfFk
+klfwwwwwwwwwwfFk
+kfFwwwwwwwwwwFfk
+klfwwwwwwwwwwfFk
+.kfwwwwwwwwwwFk.
+.kFfwwwwwwwwfFk.
+..kffFwwwwFffk..
+...kkfFfFfFkk...
+.....kkkkkk.....
+"""
+
+# A spiky tuft on top.
+[layers.tuft]
+at = [12, 0]
+follows = "head"
+grid = """
+..k..k..
+.kfkkfk.
+kffffFFk
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+ek......ek
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+ek......ek
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+ek......ek
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [14, 11]
+follows = "head"
+grid = """
+MMMM
+.MM.
+"""
+
+[layers."nose.sniff"]
+at = [14, 10]
+follows = "head"
+grid = """
+MMMM
+.MM.
+"""
+
+# A friendly grin with two tiny fangs, always on.
+[layers.mouth]
+at = [12, 13]
+follows = "head"
+grid = """
+k......k
+.kkkkkk.
+.ka..ak.
+"""
+
+[layers."mouth.open"]
+at = [12, 13]
+follows = "head"
+grid = """
+kkkkkkkk
+.kappak.
+..kkkk..
+"""
+
+# Shaggy arms down the sides, blue hands on the rim.
+[layers.paws]
+at = [1, 12]
+grid = """
+..............................
+..............................
+..............................
+......G..................G....
+.......G................G.....
+.kkkkkkk..............kkkkkkk.
+kwwwwwwwk............kwwwwwwwk
+kwMwMwMwk............kMwMwMwMk
+"""
+
+# Right arm raised, a snowball in the hand.
+[layers."paws.throw"]
+at = [1, 2]
+grid = """
+......................kkkk....
+.....................kffffk...
+.....................kffffk...
+......................kkkk....
+......................kwwk....
+.....................kwwwwk...
+......................kffk....
+......................kfFk....
+......................kfFk....
+.....................kffFk....
+..............................
+..............................
+..............................
+......G.......................
+.......G......................
+.kkkkkkk......................
+kwwwwwwwk.....................
+kwMwMwMwk.....................
+"""
+
+# The snowball, in flight (moved by offsets in the throw).
+[layers."ball.fly"]
+at = [23, 3]
+grid = """
+.kk.
+kffk
+kfFk
+.kk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: shakes the snow out of its fur, head to toe, in a puff.
+[[actions]]
+name = "snow-shake"
+weight = 4
+frames = [
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = ["eyes=closed", "all+-1,0", "ears=flick"], ms = 100 },
+  { ops = ["eyes=closed", "all+1,0", "prop:puff@0,8"], ms = 100 },
+  { ops = ["eyes=closed", "all+-1,0", "ears=flick", "prop:puff@22,6"], ms = 100 },
+  { ops = ["eyes=closed", "all+1,0", "prop:puff@1,7", "prop:puff@23,5"], ms = 120 },
+  { ops = ["eyes=happy", "prop:puff@22,4"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: packs a snowball, winds up, and lobs it off the top of the frame.
+[[actions]]
+name = "snowball"
+weight = 1
+frames = [
+  { ops = ["eyes=right", "paws=throw"], ms = 600 },
+  { ops = ["eyes=closed", "paws=throw", "head+-1,0"], ms = 300 },
+  { ops = ["eyes=right", "+ball.fly", "ball+3,-4", "+mouth.open"], ms = 120 },
+  { ops = ["eyes=right", "+ball.fly", "ball+7,-9", "+mouth.open"], ms = 120 },
+  { ops = ["eyes=happy", "+mouth.open"], ms = 700 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

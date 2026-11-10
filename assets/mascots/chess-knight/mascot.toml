@@ -1,0 +1,117 @@
+# Chess Knight: an ivory knight on a round base, a horse's head with pricked
+# ears, a long muzzle to the left with a nostril, and a ridged mane down
+# its neck. The signature is the knight's move: up two and over one, a high
+# hop with a sideways step in the air, then home. The rare one gives check:
+# it puffs up with a smug, half-lidded look and a bang.
+id = "chess-knight"
+name = "Chess Knight"
+category = "things"
+aliases = ["knight"]
+accent = "charcoal"
+extends = "object"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "white"
+"f" = "cream"
+"F" = "grey-1"
+"M" = "grey-2"
+"d" = "grey-3"
+"h" = "grey-3"
+"P" = "pink-1"
+"p" = "pink-2"
+
+[layers."head"]
+grid = """
+.................kk..kk.........
+................kMk.kMMk........
+...............klfFklffFk.......
+..............klffflffFMMk......
+.............klffffffffMMk......
+............klfffffffffFMMk.....
+...........klffffffffffMMk......
+..........klfffffffffffFMMk.....
+.........klffffffffffffMMk......
+........klfffffffffffffFMMk.....
+......kklffffffffffffffMMk......
+....kdllfffffffffffffffFMMk.....
+...kldfffffffffffffffffMMk......
+...kMMMffFkkklfffffffffFMMk.....
+....kkkkkk...klffffffffMMk......
+...........kklfffffffFkkk.......
+...........kMMMMMMMMMk..........
+........kkklfffffffffFkk........
+......kklllffffffffffflFkk......
+.....kFFFFFFFFFFFFFFFFFFFFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+"""
+
+[layers."eyes.proud"]
+at = [10, 9]
+follows = "head"
+grid = """
+kkk......kkk
+.kk......kk.
+"""
+
+[layers."mouth.smirk"]
+at = [14, 12]
+follows = "head"
+grid = """
+...k
+kkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "curious"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the knight's move. Up two, over one: it hops high, steps
+# sideways in the air, lands, and hops back home.
+[[actions]]
+name = "l-hop"
+weight = 4
+frames = [
+  { ops = ["all+0,-2"], ms = 100 },
+  { ops = ["all+0,-4", "eyes=right"], ms = 200 },
+  { ops = ["all+3,-4", "eyes=right"], ms = 200 },
+  { ops = ["all+3,0", "eyes=happy"], ms = 600 },
+  { ops = ["all+2,-2"], ms = 120 },
+  { ops = ["all+0,-1"], ms = 120 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: check! It puffs up and gives a proud, smug look, with a bang.
+[[actions]]
+name = "check"
+weight = 1
+frames = [
+  { ops = ["all+0,-1", "prop:bang@26,0"], ms = 200 },
+  { ops = ["all+0,-1", "eyes=proud", "mouth=smirk", "prop:bang@26,0"], ms = 1200 },
+  { ops = ["eyes=proud", "mouth=smirk", "prop:bang@26,1"], ms = 600 },
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = [], ms = 200 },
+]

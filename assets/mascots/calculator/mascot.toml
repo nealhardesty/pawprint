@@ -1,0 +1,158 @@
+# Calculator: a pale grey pocket calculator standing in the crate, a green
+# LCD across the top, its face in the middle, and two rows of keys at the
+# rim with an orange equals key. The signature does a sum: numbers tick up
+# on the display while it glances at them. The rare one spells YAY! on the
+# display in its own LCD letters and hops with a sparkle.
+id = "calculator"
+name = "Calculator"
+category = "things"
+aliases = []
+accent = "slate"
+extends = "object"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "white"
+"f" = "grey-1"
+"F" = "grey-2"
+"d" = "grey-3"
+"g" = "green-1"
+"G" = "green-2"
+"s" = "green-3"
+"n" = "grey-2"
+"K" = "grey-3"
+"o" = "orange-2"
+"O" = "orange-3"
+"h" = "white"
+"P" = "pink-1"
+"p" = "pink-2"
+
+[layers."head"]
+grid = """
+......kkkkkkkkkkkkkkkkkkkk......
+.....klddddddddddddddddddFk.....
+.....kldGGGGGGGGGGGGGGGgdFk.....
+.....kldggggggggggggggggdFk.....
+.....kldggggggggggggggggdFk.....
+.....kldggggggggggggggggdFk.....
+.....kldggggggggggggggggdFk.....
+.....klddddddddddddddddddFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klffffffffffffffffffFk.....
+.....klnnnfnnnffffnnnfnnnFk.....
+.....klKKdfKKdffffKKdfKKdFk.....
+.....klffffffffffffffffffFk.....
+.....klnnnfnnnffffnnnfoooFk.....
+.....klKKdfKKdffffKKdfooOFk.....
+.....kfffffffffffffffffffFk.....
+.....kfffffffffffffffffffFk.....
+.....kfffffffffffffffffffFk.....
+.....kfffffffffffffffffffFk.....
+.....kfffffffffffffffffffFk.....
+.....kfffffffffffffffffffFk.....
+.....kfffffffffffffffffffFk.....
+.....kfffffffffffffffffffFk.....
+.....kfffffffffffffffffffFk.....
+.....kfffffffffffffffffffFk.....
+.....kfffffffffffffffffffFk.....
+.....kfffffffffffffffffffFk.....
+"""
+
+[layers."screen"]
+at = [8, 2]
+follows = "head"
+grid = """
+............sss
+............s.s
+............s.s
+............s.s
+............sss
+"""
+
+[layers."screen.a"]
+at = [8, 2]
+follows = "head"
+grid = """
+............sss
+..............s
+.............s.
+.............s.
+.............s.
+"""
+
+[layers."screen.b"]
+at = [8, 2]
+follows = "head"
+grid = """
+........s.s.sss
+........s.s...s
+........sss.sss
+..........s.s..
+..........s.sss
+"""
+
+[layers."screen.c"]
+at = [8, 2]
+follows = "head"
+grid = """
+.....s..sss.sss
+....ss....s.s.s
+.....s..sss.sss
+.....s..s...s.s
+....sss.sss.sss
+"""
+
+[layers."screen.word"]
+at = [8, 2]
+follows = "head"
+grid = """
+.s.s..s..s.s.s.
+.s.s.s.s.s.s.s.
+..s..sss..s..s.
+..s..s.s..s....
+..s..s.s..s..s.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: it does a sum. Numbers tick up on the display while the eyes
+# glance at it, and it finishes pleased with itself.
+[[actions]]
+name = "compute"
+weight = 4
+frames = [
+  { ops = ["screen=a", "eyes=left"], ms = 300 },
+  { ops = ["screen=b", "eyes=right"], ms = 300 },
+  { ops = ["screen=c", "all+0,-1"], ms = 200 },
+  { ops = ["screen=c", "eyes=happy"], ms = 900 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: it spells a word. YAY! lights up on the display, with a hop and a
+# sparkle.
+[[actions]]
+name = "spell"
+weight = 1
+frames = [
+  { ops = ["screen=b"], ms = 200 },
+  { ops = ["screen=word", "eyes=happy", "mouth=open", "all+0,-2", "prop:sparkle@25,0"], ms = 200 },
+  { ops = ["screen=word", "eyes=happy", "mouth=open", "all+0,-1", "prop:sparkle@25,1"], ms = 200 },
+  { ops = ["screen=word", "eyes=happy", "prop:sparkle@0,2"], ms = 900 },
+  { ops = ["screen=word", "eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

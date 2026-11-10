@@ -1,0 +1,290 @@
+# Bulldog on dog-sit: a sourpuss with a heart of gold. Red-fawn and white:
+# an enormous, wide head wider than the body, a white blaze down to the nose,
+# deep wrinkles over the brow, heavy white jowls
+# hanging past the chin on both sides, and the underbite: a jutting lower
+# jaw with two little teeth poking up over the lip. Small rose ears folded
+# back at the top corners, wide-set eyes, a broad nose. `head.wobble-l` and
+# `head.wobble-r` swing the jowls; `eyes.squeeze` and `mouth.snore` are for the rare snore.
+id = "dog-bulldog"
+name = "Bulldog"
+category = "cats-dogs"
+aliases = ["bulldog"]
+accent = "brick"
+extends = "dog-sit"
+rest = ["tail", "body", "head", "ears.fold", "eyes", "nose", "paws"]
+
+[palette]
+"l" = "orange-2"    # red-fawn light
+"f" = "orange-3"    # red-fawn coat
+"F" = "brown-3"     # coat shadow, brow wrinkles
+"w" = "white"       # blaze, jowls, chest, teeth
+"M" = "grey-2"      # wrinkles and lip lines on the white
+"q" = "brown-4"     # NEW: inside the mouth
+"s" = "orange-3"    # rose ears
+"S" = "brown-3"     # rose ear shadow
+"h" = "white"       # glint
+"n" = "fur-black"   # nose
+"N" = "grey-4"      # NEW: nostril sheen
+"p" = "pink-2"      # tongue
+
+# A short screw tail.
+[layers.tail]
+at = [25, 14]
+grid = """
+.kk.
+klfk
+kfFk
+.kk.
+"""
+
+[layers."tail.flick"]
+at = [25, 13]
+grid = """
+.kk.
+klfk
+kfFk
+.kk.
+"""
+
+# Broad and low, the white chest between bowed front legs.
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klffffwwwwwwfffFFk..
+.klfffwwwwwwwwwwffFFk.
+klfffwwwwwwwwwwwwffFFk
+klfffwwwwwwwwwwwwffFFk
+klfffwwwwwwwwwwwwffFFk
+klffffwwwwwwwwwwfffFFk
+klfffffwwwwwwwwffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# The huge head: brow wrinkles, the blaze down to the nose, the
+# underbite with two teeth, and jowls hanging past the chin.
+[layers.head]
+at = [3, 4]
+grid = """
+........kkkkkkkkkk........
+......kkllllwwllllkk......
+....kkllfffwwwwffffFkk....
+...kllFFFfwwwwwwfFFFfFk...
+..kllfffffwwwwwwfffffFFk..
+.klffffffwwwwwwwwffffffFk.
+.klfffffwwwwwwwwwwfffffFk.
+klfffffwwwwwwwwwwwwffffFFk
+klffffwwwwwwMMwwwwwwfffFFk
+klfffwwwwMwMMMMwMwwwwffFFk
+klffwwwMqqwqqqqwqqMwwwfFFk
+klfwwMwwwwwwwwwwwwwwMwwFFk
+.kfwMwwwwwwwwwwwwwwwwMwFk.
+..kwwMwkkkkkkkkkkkkwMwwk..
+...kkkk............kkkk...
+"""
+
+# Jowls swinging: the lower face swings one way, then the other.
+[layers."head.wobble-l"]
+at = [3, 4]
+grid = """
+........kkkkkkkkkk........
+......kkllllwwllllkk......
+....kkllfffwwwwffffFkk....
+...kllFFFfwwwwwwfFFFfFk...
+..kllfffffwwwwwwfffffFFk..
+.klffffffwwwwwwwwffffffFk.
+.klfffffwwwwwwwwwwfffffFk.
+klfffffwwwwwwwwwwwwffffFFk
+klffffwwwwwwMMwwwwwwfffFFk
+klfffwwwwMwMMMMwMwwwwffFFk
+klffwwwMqqwqqqqwqqMwwwfFFk
+klfwwMwwwwwwwwwwwwwwMwwFFk
+kfwMwwwwwwwwwwwwwwwwMwFk..
+.kwwMwkkkkkkkkkkkkwMwwk...
+..kkkk............kkkk....
+"""
+
+[layers."head.wobble-r"]
+at = [3, 4]
+grid = """
+........kkkkkkkkkk........
+......kkllllwwllllkk......
+....kkllfffwwwwffffFkk....
+...kllFFFfwwwwwwfFFFfFk...
+..kllfffffwwwwwwfffffFFk..
+.klffffffwwwwwwwwffffffFk.
+.klfffffwwwwwwwwwwfffffFk.
+klfffffwwwwwwwwwwwwffffFFk
+klffffwwwwwwMMwwwwwwfffFFk
+klfffwwwwMwMMMMwMwwwwffFFk
+klffwwwMqqwqqqqwqqMwwwfFFk
+klfwwMwwwwwwwwwwwwwwMwwFFk
+..kfwMwwwwwwwwwwwwwwwwMwFk
+...kwwMwkkkkkkkkkkkkwMwwk.
+....kkkk............kkkk..
+"""
+
+# Small rose ears, folded back at the top corners.
+[layers."ears.fold"]
+at = [4, 3]
+grid = """
+.kkkk..............kkkk.
+ksssSk............kSsssk
+kSSk................kSSk
+.kk..................kk.
+"""
+
+[layers."ears.flick"]
+at = [4, 2]
+grid = """
+...................kkkk.
+.kkkk.............kSsssk
+ksssSk..............kSSk
+kSSk.................kk.
+.kk.....................
+"""
+
+# Wide-set eyes, low under the brow.
+[layers.eyes]
+at = [9, 8]
+grid = """
+FFF........FFF
+hkk........hkk
+kkk........kkk
+"""
+
+[layers."eyes.closed"]
+at = [9, 8]
+grid = """
+FFF........FFF
+..............
+kkk........kkk
+"""
+
+[layers."eyes.left"]
+at = [8, 8]
+grid = """
+FFF........FFF
+hkk........hkk
+kkk........kkk
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+grid = """
+FFF........FFF
+hkk........hkk
+kkk........kkk
+"""
+
+[layers."eyes.happy"]
+at = [9, 9]
+grid = """
+.kk........kk.
+k..k......k..k
+"""
+
+[layers."eyes.squeeze"]
+at = [9, 9]
+grid = """
+k............k
+.kkk......kkk.
+"""
+
+# A broad, flat nose.
+[layers.nose]
+at = [13, 10]
+grid = """
+knNNnk
+.knnk.
+"""
+
+[layers."nose.sniff"]
+at = [13, 9]
+grid = """
+knNNnk
+.knnk.
+"""
+
+[layers."mouth.open"]
+at = [12, 14]
+grid = """
+kkkkkkkk
+kqppppqk
+.kkkkkk.
+"""
+
+# The big snore: the mouth falls open.
+[layers."mouth.snore"]
+at = [10, 13]
+grid = """
+wkkkkkkkkkkw
+kqqqqqqqqqqk
+kqqqppppqqqk
+.kkkkkkkkkk.
+"""
+
+[layers.paws]
+at = [8, 17]
+grid = """
+.MMMM......MMMM.
+MwwwwM....MwwwwM
+kwMwMk....kwMwMk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the jowls wobble, then a big snort blows a puff.
+[[actions]]
+name = "wobble-snort"
+weight = 4
+frames = [
+  { ops = ["head=wobble-l"], ms = 140 },
+  { ops = ["head=wobble-r"], ms = 140 },
+  { ops = ["head=wobble-l"], ms = 140 },
+  { ops = ["head=wobble-r"], ms = 140 },
+  { ops = [], ms = 300 },
+  { ops = ["nose=sniff", "eyes=closed"], ms = 150 },
+  { ops = ["eyes=squeeze", "all+0,-1", "prop:puff@20,9"], ms = 250 },
+  { ops = ["eyes=closed", "prop:puff@21,7"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a colossal snore. Each one heaves the whole dog and blows a puff;
+# on the last, it wakes itself up.
+[[actions]]
+name = "snore"
+weight = 1
+frames = [
+  { ops = ["eyes=closed"], ms = 400 },
+  { ops = ["eyes=squeeze", "mouth=snore", "all+0,-1", "prop:puff@21,8"], ms = 300 },
+  { ops = ["eyes=closed", "all+0,1"], ms = 600 },
+  { ops = ["eyes=squeeze", "mouth=snore", "all+1,-2", "prop:puff@22,6"], ms = 120 },
+  { ops = ["eyes=squeeze", "mouth=snore", "all+-1,-2", "prop:puff@22,5"], ms = 120 },
+  { ops = ["eyes=squeeze", "mouth=snore", "all+0,-2", "prop:puff@23,4"], ms = 300 },
+  { ops = ["all+0,-1", "prop:bang@27,0"], ms = 400 },
+  { ops = ["eyes=left"], ms = 500 },
+  { ops = [], ms = 200 },
+]

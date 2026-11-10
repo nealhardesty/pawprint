@@ -1,0 +1,143 @@
+# Kite, an object: a diamond kite in teal and sunny yellow quarters, its
+# two wooden spars crossing high up, the face on the lower half, and a
+# long string tail with two red bows streaming out to the right over the
+# rim. The signature makes the tail flutter and ripple in the breeze; the
+# rare one catches a gust that lifts the whole kite up out of the crate,
+# and it drifts back down, swaying, to land.
+id = "kite"
+name = "Kite"
+category = "things"
+aliases = []
+accent = "teal"
+extends = "object"
+
+[palette]
+"f" = "teal"        # teal sail
+"F" = "green-3"     # teal sail, shadow
+"w" = "yellow-1"    # yellow sail
+"m" = "yellow-2"    # yellow sail, shadow
+"s" = "brown-1"     # NEW: spars
+"S" = "brown-2"     # NEW: spars, shadow
+"g" = "grey-2"      # NEW: the tail string
+"r" = "red-1"       # NEW: bows
+"R" = "red-2"       # NEW: bow knots
+"h" = "white"       # eye glint
+"p" = "red-2"       # inside of the mouth
+
+[layers.head]
+grid = """
+.............kksSkk.............
+............kffsSwmk............
+..........kkfffsSwwmkk..........
+........kkfffffsSwwwwmkk........
+......kkfffffffsSwwwwwwmkk......
+.....kfffffffffsSwwwwwwwwmk.....
+...kkffffffffffsSwwwwwwwwwmkk...
+..ksssssssssssssSssssssssssssk..
+...kmwwwwwwwwwwwfffffffffffFk...
+....kmwwwwwwwwwwffffffffffFk....
+.....kmwwwwwwwwwfffffffffFk.....
+......kmwwwwwwwwffffffffFk......
+.......kmwwwwwwwfffffffFk.......
+........kmwwwwwwffffffFk........
+.........kmwwwwwfffffFk.........
+..........kmwwwsSfffFk..........
+...........kmwwsSffFk...........
+............kmwsSfFk............
+.............kmsSFk.............
+..............ksSk..............
+...............kk...............
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# The tail and its bows, rippling.
+[layers."tail"]
+at = [16, 15]
+follows = "head"
+grid = """
+................
+....r.r.........
+....rRr......gg.
+...gr.rg..r.r..g
+.gg.....ggrRr...
+"""
+
+[layers."tail.ripple"]
+at = [16, 15]
+follows = "head"
+grid = """
+................
+................
+.......g........
+.g..r.r.ggr.r.gg
+..ggrRr...rRrg..
+"""
+
+[layers."tail.wave"]
+at = [16, 15]
+follows = "head"
+grid = """
+................
+..........r.r...
+...gr.r...rRr...
+.gg.rRr...r.rg..
+....r.rggg....gg
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a breeze runs down the tail and it flutters, ripple after
+# ripple; the kite watches it, pleased.
+[[actions]]
+name = "flutter"
+weight = 5
+frames = [
+  { ops = ["tail=ripple", "eyes=right"], ms = 160 },
+  { ops = ["tail=wave", "eyes=right"], ms = 160 },
+  { ops = ["eyes=right"], ms = 160 },
+  { ops = ["tail=ripple", "eyes=right"], ms = 160 },
+  { ops = ["tail=wave", "eyes=happy"], ms = 160 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a gust! The kite is lifted clean up out of the crate, tail
+# streaming, hangs there swaying, and drifts back down to land.
+[[actions]]
+name = "gust"
+weight = 1
+frames = [
+  { ops = ["tail=ripple", "eyes=closed", "prop:puff@0,13"], ms = 200 },
+  { ops = ["tail=wave", "all+0,-3", "eyes=happy", "prop:puff@2,12"], ms = 150 },
+  { ops = ["tail=ripple", "all+1,-7", "eyes=happy"], ms = 150 },
+  { ops = ["tail=wave", "all+2,-9", "eyes=happy"], ms = 400 },
+  { ops = ["tail=ripple", "all+0,-8", "eyes=happy"], ms = 400 },
+  { ops = ["tail=wave", "all+-2,-6", "eyes=left"], ms = 400 },
+  { ops = ["all+-1,-3", "eyes=left"], ms = 300 },
+  { ops = ["tail=ripple", "all+0,-1"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]

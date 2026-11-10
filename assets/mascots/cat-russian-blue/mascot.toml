@@ -1,0 +1,212 @@
+# Russian Blue on cat-sit: plush, quiet, and a little smug. A short dense
+# coat of silver-blue with silver tipping across the crown, a head that
+# tapers to a neat narrow chin, tall wide-set ears with mauve insides, big
+# round vivid green eyes, a slate nose, and the breed's famous slight smile
+# (`mouth`, shown at rest). `eyes.half` is the half-lidded look of the slow
+# blink; `head.puff` and `tail.puff` are the static-charged fluff of the
+# rare action.
+id = "cat-russian-blue"
+name = "Russian Blue"
+category = "cats-dogs"
+aliases = ["russianblue"]
+accent = "slate"
+extends = "cat-sit"
+
+[palette]
+"l" = "grey-1"      # coat light
+"f" = "grey-2"      # silver-blue coat
+"F" = "grey-3"      # coat shadow
+"S" = "blue-1"      # NEW: silver-blue tipping
+"w" = "grey-1"      # whisker pads and chest
+"M" = "grey-3"      # mouth and chin lines
+"e" = "green-1"     # iris
+"E" = "green-2"     # NEW: lower iris
+"h" = "white"       # eye glint
+"n" = "blue-3"      # slate-blue nose
+"p" = "pink-2"      # mauve inner ear
+
+[layers.body]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klfffffffffffffFFk..
+.klfffffffffffffffFFk.
+klfffffffwwwwfffffffFk
+klffffffwwwwwwffffffFk
+klffffffwwwwwwffffffFk
+klfffffffwwwwfffffffFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# A soft wedge: full across the brow, tapering to a neat chin, silver
+# tipping over the crown.
+[layers.head]
+at = [6, 4]
+grid = """
+....kkkkkkkkkkkk....
+..kklSllSllSllffkk..
+.kllSlfSffSffSffFFk.
+kllffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+klfffffffffffffffFFk
+.klffffffffffffffFk.
+.klffffwwwwwwffffFk.
+..kfffwwwwwwwwfffk..
+..kfffwwwwwwwwffFk..
+...kffwwwwwwwwfFk...
+....kkFFFFFFFFkk....
+"""
+
+# Static: every hair stands on end.
+[layers."head.puff"]
+at = [5, 3]
+grid = """
+......k..k..k..k......
+....kklkklkklkklkk....
+..kklSllSllSllSlffkk..
+..kllSlfSffSffSffFFk..
+klllffffffffffffffFFFk
+.klfffffffffffffffFFk.
+kllfffffffffffffffFFFk
+.klfffffffffffffffFFk.
+.kllffffffffffffffFFk.
+..klffffwwwwwwffffFk..
+..kffffwwwwwwwwffffk..
+...kFffwwwwwwwwffFk...
+...kFFFfwwwwwwfFFFk...
+.....kkFFFFFFFFkk.....
+"""
+
+[layers."tail.puff"]
+at = [25, 9]
+grid = """
+.k..k.
+.klkFk
+klffFk
+.kfFk.
+klffFk
+.kfFk.
+klffFk
+.kfFk.
+klffFk
+.kfFk.
+klffFk
+.kfFk.
+"""
+
+# Big, round, vivid green eyes.
+[layers.eyes]
+at = [10, 8]
+grid = """
+hee......hee
+eke......eke
+EkE......EkE
+"""
+
+[layers."eyes.closed"]
+at = [10, 10]
+grid = """
+kkk......kkk
+"""
+
+# The slow blink, halfway.
+[layers."eyes.half"]
+at = [10, 9]
+grid = """
+kkk......kkk
+EkE......EkE
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+grid = """
+hee......hee
+kee......kee
+kEE......kEE
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+grid = """
+hee......hee
+eek......eek
+EEk......EEk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.k........k.
+k.k......k.k
+"""
+
+# The slight smile, upturned at the corners.
+[layers.mouth]
+at = [13, 13]
+follows = "head"
+grid = """
+M....M
+.MMMM.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the slow, trusting blink. Eyes ease shut, stay shut a long
+# beat, and open again, smiling.
+[[actions]]
+name = "slow-blink"
+weight = 4
+frames = [
+  { ops = ["eyes=half"], ms = 400 },
+  { ops = ["eyes=closed"], ms = 1100 },
+  { ops = ["eyes=half"], ms = 400 },
+  { ops = [], ms = 700 },
+  { ops = ["eyes=half"], ms = 300 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: static. Its coat crackles and puffs up on end, sparks flying; it
+# gives the sparks an unimpressed look, then shakes it all smooth.
+[[actions]]
+name = "static"
+weight = 1
+frames = [
+  { ops = ["ears=flick"], ms = 200 },
+  { ops = ["head=puff", "tail=puff", "prop:sparkle@24,2"], ms = 200 },
+  { ops = ["head=puff", "tail=puff", "prop:sparkle@25,0", "prop:sparkle@1,4"], ms = 400 },
+  { ops = ["head=puff", "tail=puff", "eyes=right", "prop:sparkle@1,2"], ms = 500 },
+  { ops = ["head=puff", "tail=puff", "eyes=half"], ms = 800 },
+  { ops = ["head=puff", "eyes=closed", "all+1,0"], ms = 120 },
+  { ops = ["eyes=closed", "all+-1,0"], ms = 120 },
+  { ops = ["eyes=closed", "all+1,0"], ms = 120 },
+  { ops = ["eyes=half"], ms = 300 },
+  { ops = [], ms = 200 },
+]

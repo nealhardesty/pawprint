@@ -1,0 +1,287 @@
+# Fennec fox, on small-quadruped. A tiny desert fox that is mostly ears:
+# two enormous pink-lined ears fan out from a small pale face and fill the
+# whole top of the frame. Big dark eyes, a little black nose, white cheeks,
+# pale sand fur, cream socks, and a bushy tail with a black tip. The
+# signature swivels the giant ears toward one side, then the other, like
+# radar dishes; the rare one is a gust of wind that flattens them sideways
+# (a puff) until they spring back up.
+id = "fennec"
+name = "Fennec Fox"
+category = "mammals"
+aliases = []
+accent = "marigold"
+extends = "small-quadruped"
+
+[palette]
+"l" = "cream"       # fur light
+"f" = "brown-1"     # pale sand fur
+"F" = "brown-2"     # fur shadow
+"w" = "white"       # cheeks, chest
+"M" = "grey-1"      # shadow on the white
+"s" = "cream"       # socks light
+"S" = "brown-1"     # socks
+"p" = "pink-1"      # inner ears
+"n" = "fur-black"   # nose, tail tip
+"h" = "white"       # eye glint
+
+# A short bushy tail with a black tip, curled low on the right.
+[layers.tail]
+at = [22, 11]
+grid = """
+...kk..
+..knnk.
+.knnnnk
+.kllffk
+kllfffk
+kfffFFk
+kffFFk.
+kfFFk..
+"""
+
+[layers."tail.flick"]
+at = [22, 10]
+grid = """
+....kk.
+...knnk
+..knnnk
+.kllfnk
+.klfffk
+kllffFk
+kfffFFk
+kffFFk.
+kfFFk..
+"""
+
+# A slim body with a white chest.
+[layers.body]
+at = [8, 13]
+grid = """
+.klfffwwwwfffFk.
+klffffwwwwffffFk
+klffffwwwwffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+klfffffwwfffffFk
+"""
+
+# A tiny face: pale sand crown, white cheeks, a short pointed muzzle.
+[layers.head]
+at = [9, 5]
+grid = """
+...kkkkkkkk...
+.kkllllllffkk.
+kllffffffffFFk
+klfffffffffFFk
+klfffffffffFFk
+kwwffffffffwwk
+kwwwwffffwwwMk
+.kwwwwwwwwwMk.
+..kkwwwwwwkk..
+....kwwwwk....
+.....kkkk.....
+"""
+
+[layers.ears]
+at = [1, 0]
+follows = "head"
+grid = """
+kkk........................kkk
+kppkk....................kkppk
+.kppfkk................kkfppk.
+.kppppfkk............kkfppppk.
+..kppppffkk........kkffppppk..
+..kfpppppff........ffpppppfk..
+...kppppp............pppppk...
+....kppp..............pppk....
+....kppp..............pppk....
+.....kpp..............ppk.....
+.....kpk..............kpk.....
+......k................k......
+"""
+
+[layers."ears.flick"]
+at = [0, 0]
+follows = "head"
+grid = """
+.........................kkk
+........................kfpk
+kkkkk.................kkfppk
+.kfpfkk..............kffppk.
+.kfppffkkk.........kkffpppk.
+..kfppffffkk........fpppppk.
+...kfpppff............pppk..
+....kfppp..............ppk..
+....kfppf..............ppk..
+.....kfpf..............pk...
+......kfk..............kk...
+.......k................k...
+"""
+
+[layers."ears.right"]
+at = [4, 0]
+follows = "head"
+grid = """
+kkk.........................
+kpfk........................
+kppfkk.................kkkkk
+.kppffk..............kkfpfk.
+.kpppffkk.........kkkffppfk.
+.kpppppf........kkffffppfk..
+..kppp............ffpppfk...
+..kpp..............pppfk....
+..kpp..............fppfk....
+...kp..............fpfk.....
+...kk..............kfk......
+...k................k.......
+"""
+
+[layers."ears.flat"]
+at = [0, 7]
+follows = "head"
+grid = """
+kkkkkkkkk..............kkkkkkkkk
+kpppppppp..............pppppppfk
+kkkpppppp..............ppppppkkk
+...kkpppp..............ppppkk...
+.....kkkf..............fkkk.....
+........k..............k........
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers."eyes.squint"]
+at = [10, 8]
+follows = "head"
+grid = """
+k..........k
+.kk......kk.
+"""
+
+[layers.nose]
+at = [15, 12]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [15, 11]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."mouth.open"]
+at = [14, 13]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+[layers.paws]
+at = [9, 17]
+grid = """
+.SSS......SSS.
+SsssS....SsssS
+kSsSk....kSsSk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 2
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "yawn"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: radar ears. Both ears swing to listen left, hold, swing to
+# the right, hold, and come back to the middle.
+[[actions]]
+name = "ear-swivel"
+weight = 5
+frames = [
+  { ops = ["ears=flick"], ms = 140 },
+  { ops = ["ears=flick", "eyes=left"], ms = 800 },
+  { ops = [], ms = 140 },
+  { ops = ["ears=right"], ms = 140 },
+  { ops = ["ears=right", "eyes=right"], ms = 800 },
+  { ops = ["ears=right"], ms = 140 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: a gust of desert wind flattens the ears out sideways. It squints,
+# braces, and they spring back up.
+[[actions]]
+name = "gust"
+weight = 1
+frames = [
+  { ops = ["ears=flat", "eyes=squint", "prop:puff@0,1"], ms = 160 },
+  { ops = ["ears=flat", "eyes=squint", "all+1,0", "prop:puff@3,1"], ms = 400 },
+  { ops = ["ears=flat", "eyes=squint", "all+1,0", "prop:puff@7,0"], ms = 400 },
+  { ops = ["ears=flat", "eyes=closed"], ms = 300 },
+  { ops = ["all+0,-1"], ms = 120 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

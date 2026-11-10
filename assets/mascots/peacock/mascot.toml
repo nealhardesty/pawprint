@@ -1,0 +1,271 @@
+# Peacock on bird-water. A front-facing peacock: a small blue head striped
+# white above and below the eyes, a crest of three teal-tipped plumes, a
+# shimmering blue neck and chest, and the long green train folded behind it,
+# drooping to both sides with its eyespots peeking out. The train is drawn
+# in the `body` slot (the first layer) so it stays behind everything:
+# `body.half` and `body.fan` open it. The base's side `wings` are left out.
+# Signature: a little strut, chest out, head bobbing. Rare: the whole train
+# fans open in a wheel of eyespots and shimmers.
+id = "peacock"
+name = "Peacock"
+category = "birds"
+aliases = ["peafowl"]
+accent = "teal"
+extends = "bird-water"
+rest = ["body", "head", "ears", "eyes", "bill", "feet"]
+
+[palette]
+"l" = "blue-1"      # feathers light
+"f" = "blue-2"      # blue neck and chest
+"F" = "blue-3"      # blue shadow, crest stalks
+"W" = "white"       # face stripes
+"h" = "white"       # eye highlight
+"g" = "green-1"     # train, light
+"G" = "green-2"     # train
+"q" = "green-3"     # train shadow
+"t" = "teal"        # crest tips
+"e" = "teal"        # eyespot ring
+"E" = "blue-3"      # eyespot centre
+"y" = "yellow-2"    # eyespot gold
+"b" = "brown-1"     # bill
+"B" = "grey-2"      # feet
+
+# The chest, with the folded train drooping behind it on both sides.
+[layers.body]
+at = [0, 10]
+grid = """
+.........k............k.........
+........kgk..........kgk........
+.......kggk..........kggk.......
+......kggqqqklfffFFkqqqggk......
+.....kggGqqklfffffFFkqqGggk.....
+....kgeGGqklfffffffFFkqGGegk....
+...kgeEeGqklfffffffFFkqGeEegk...
+...kggeGGqklfffffffFFkqGGeggk...
+..kgGGGeGqklfffffffFFkqGeGGGgk..
+.kgGGGeEeqklfffffffFFkqeEeGGGgk.
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+"""
+
+[layers."body.half"]
+at = [0, 8]
+grid = """
+.............kkkkkk.............
+..........kkkggggggkkk..........
+.........kggggggggggggk.........
+........kggyeyGGGGyeyggk........
+.......kgggeEeGGGGeEegggk.......
+......kgggGGklfffFFkGGgggk......
+.....kgggGGklfffffFFkGGgggk.....
+.....kgyeyklfffffffFFkyeygk.....
+.....kgeEeklfffffffFFkeEegk.....
+....kggyeyklfffffffFFkyeyggk....
+....kggGGGklfffffffFFkGGGggk....
+....kggGGGklfffffffFFkGGGggk....
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+"""
+
+# The full wheel.
+[layers."body.fan"]
+at = [0, 4]
+grid = """
+...........kkkkkkkkkk...........
+.........kkggggggggggkk.........
+.......kkggggggggggggggkk.......
+......kgggggGGGGGGGGgggggk......
+.....kgggyeyGGGGGGGGyeygggk.....
+....kgggGeEeGGGGGGGGeEeGgggk....
+...kgggGGyeyGGGGGGGGyeyGGgggk...
+..kggyeyGGGyeyGGGGyeyGGGyeyggk..
+..kggeEeGGGeEeqqqqeEeGGGeEeggk..
+.kgggyeyGGGGklfffFFkGGGGyeygggk.
+.kggGGGGGGGklfffffFFkGGGGGGGggk.
+kgggGGGyeyklfffffffFFkyeyGGGgggk
+kggyeyGeEeklfffffffFFkeEeGyeyggk
+kggeEeGyeyklfffffffFFkyeyGeEeggk
+kggyeyGGqqklfffffffFFkqqGGyeyggk
+kggGGGGGqqklfffffffFFkqqGGGGGggk
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+..........klfffffffFFk..........
+"""
+
+# A small head striped white above and below the eyes, on a slim neck.
+[layers.head]
+at = [11, 4]
+grid = """
+...kkkk...
+..kllffk..
+.kllffffk.
+kWWWffWWWk
+kffffffffk
+kffffffffk
+.kWWffWWk.
+..kffffk..
+..kffffk..
+..kfffFk..
+"""
+
+# Three teal-tipped plumes.
+[layers.ears]
+at = [11, 0]
+follows = "head"
+grid = """
+.kk.kk.kk.
+kttkttkttk
+.kk.kk.kk.
+..F.FF.F..
+"""
+
+[layers."ears.flick"]
+at = [10, 0]
+follows = "head"
+grid = """
+kk..kk..kk..
+ttk.ktt.ttk.
+kk..kk..kk..
+..F..FF..F..
+"""
+
+[layers.eyes]
+at = [12, 8]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.closed"]
+at = [12, 9]
+follows = "head"
+grid = """
+kk....kk
+"""
+
+[layers."eyes.left"]
+at = [11, 8]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.right"]
+at = [13, 8]
+follows = "head"
+grid = """
+hk....hk
+kk....kk
+"""
+
+[layers."eyes.happy"]
+at = [11, 8]
+follows = "head"
+grid = """
+.kk....kk.
+k..k..k..k
+"""
+
+[layers.bill]
+at = [14, 9]
+follows = "head"
+grid = """
+.kk.
+kbbk
+.kk.
+"""
+
+[layers."mouth.open"]
+at = [14, 9]
+follows = "head"
+grid = """
+.kk.
+kbbk
+kkkk
+kbbk
+.kk.
+"""
+
+[layers.feet]
+at = [11, 18]
+grid = """
+.kBk..kBk.
+kBBBkkBBBk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: chest out, a proud little strut, head bobbing with each step.
+[[actions]]
+name = "strut"
+weight = 5
+frames = [
+  { ops = ["all+1,-1", "head+1,0"], ms = 180 },
+  { ops = ["all+1,0"], ms = 160 },
+  { ops = ["all+-1,-1", "head+-1,0"], ms = 180 },
+  { ops = ["all+-1,0"], ms = 160 },
+  { ops = ["all+1,-1", "head+1,0", "ears=flick"], ms = 180 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the train rises and opens into a full wheel of eyespots, shimmers,
+# and folds away again.
+[[actions]]
+name = "fan-display"
+weight = 1
+frames = [
+  { ops = ["body=half", "ears=flick"], ms = 160 },
+  { ops = ["body=fan", "ears=flick"], ms = 400 },
+  { ops = ["body=fan", "ears=flick", "eyes=happy"], ms = 900 },
+  { ops = ["body=fan", "eyes=happy", "all+1,0"], ms = 100 },
+  { ops = ["body=fan", "eyes=happy", "all+-1,0"], ms = 100 },
+  { ops = ["body=fan", "eyes=happy", "all+1,0"], ms = 100 },
+  { ops = ["body=fan", "eyes=happy"], ms = 700 },
+  { ops = ["body=half"], ms = 200 },
+  { ops = [], ms = 300 },
+]

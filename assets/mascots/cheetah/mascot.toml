@@ -1,0 +1,201 @@
+# Cheetah on big-cat. Built for speed: a narrower, finer head than the
+# tiger's or the leopard's, small round ears set low, and the black "tear"
+# lines that run from the inner corners of its amber eyes down to the
+# corners of its mouth. Pale gold fur with solid black spots (not
+# rosettes), a white muzzle, and a spotted tail up the right side ending
+# in black-and-white rings. No mane. The signature drops into a crouch and
+# goes on alert; the rare one bursts into a sprint on the spot, shimmying
+# side to side in a cloud of dust, then pants.
+id = "cheetah"
+name = "Cheetah"
+category = "mammals"
+aliases = []
+accent = "honey"
+extends = "big-cat"
+
+rest = ["tail", "body", "head", "ears", "eyes", "nose", "paws"]
+
+[palette]
+"l" = "cream"       # fur light
+"f" = "yellow-1"    # fur
+"F" = "yellow-2"    # fur shadow
+"w" = "white"       # muzzle and chest
+"M" = "fur-black"   # mouth corners
+"d" = "fur-black"   # NEW: spots and tear lines
+"s" = "white"       # tail rings, light
+"S" = "fur-black"   # tail rings, dark
+"e" = "amber"       # iris
+"n" = "fur-black"   # nose
+"p" = "pink-2"      # inner ear, mouth
+
+[layers.tail]
+at = [25, 11]
+grid = """
+.kkk.
+kSSSk
+ksssk
+.kSk.
+.kdk.
+.kfk.
+.kdk.
+kfFk.
+kdFk.
+"""
+
+[layers."tail.flick"]
+at = [25, 11]
+grid = """
+..kkk.
+.kSSSk
+.ksssk
+.kSk..
+.kdk..
+.kfk..
+.kdk..
+kfFk..
+kdFk..
+"""
+
+[layers.body]
+at = [4, 14]
+grid = """
+....klffffffffffffFk....
+...klfffffffffffffFFk...
+.kklffffffwwwwffffffFkk.
+klffdffffwwwwwwfffdffFFk
+klfffffdfwwwwwwffffffFFk
+klffffffffwwwwffffffdFFk
+klfdffffffffffffdfffffFk
+klfffffffdffffffffffffFk
+klfffdffffffffdffffdffFk
+klffffffffffffffffffffFk
+kldfffffffffdfffffffffFk
+klfffffdfffffffffdffffFk
+klfffffffffffffffffffdFk
+klffdffffffffffdffffffFk
+klffffffffdfffffffffffFk
+klfffffffffffffffffdffFk
+klffffdfffffffffffffffFk
+klfffffffffffdffffffffFk
+"""
+
+# A narrow, fine head with tear lines from eye to mouth.
+[layers.head]
+at = [7, 4]
+grid = """
+....kkkkkkkkkk....
+..kkllllllllffkk..
+.kllfdffffffdffFk.
+kllffffdffdffffFFk
+klffdffffffffdfFFk
+klfffffffffffffFFk
+klffffffffffffffFk
+.klffdwwwwwwdffFk.
+.kfffdwwwwwwdfFFk.
+..kffwdwwwwdwfFk..
+...kfwdMwwMdwfk...
+....kkwwwwwwkk....
+......kkkkkk......
+"""
+
+# Small round ears, set low and wide.
+[layers.ears]
+at = [8, 3]
+follows = "head"
+grid = """
+.kk..........kk.
+kpdk........kdpk
+kffk........kffk
+"""
+
+[layers."ears.flick"]
+at = [8, 2]
+follows = "head"
+grid = """
+.kk.............
+kpdk.........kk.
+kffk........kdpk
+............kffk
+"""
+
+# Wide, alert eyes for the crouch.
+[layers."eyes.wide"]
+at = [11, 8]
+follows = "head"
+grid = """
+.k......k.
+ekk....kke
+kkk....kkk
+"""
+
+[layers.nose]
+at = [14, 12]
+follows = "head"
+grid = """
+nnnn
+.nn.
+"""
+
+# Panting after the sprint.
+[layers."mouth.pant"]
+at = [14, 14]
+follows = "head"
+grid = """
+kppk
+kppk
+.kk.
+"""
+
+[layers.paws]
+at = [7, 17]
+grid = """
+.FFFFF......FFFFF.
+FldllfF....FlldlfF
+klFlFlk....klFlFlk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: drops into a low crouch, ears flat, and locks on to
+# something to the right; then relaxes.
+[[actions]]
+name = "crouch-alert"
+weight = 4
+frames = [
+  { ops = ["all+0,1"], ms = 140 },
+  { ops = ["all+0,3", "ears=flick", "eyes=right"], ms = 200 },
+  { ops = ["all+0,3", "eyes=wide", "tail=flick"], ms = 900 },
+  { ops = ["all+0,3", "eyes=right"], ms = 400 },
+  { ops = ["all+0,1", "eyes=closed"], ms = 160 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: bursts into a sprint on the spot, shimmying side to side in a cloud
+# of dust, then stops and pants.
+[[actions]]
+name = "sprint"
+weight = 1
+frames = [
+  { ops = ["all+0,2", "eyes=wide"], ms = 300 },
+  { ops = ["all+-3,0", "eyes=closed", "tail=flick", "prop:puff@20,13"], ms = 100 },
+  { ops = ["all+3,0", "eyes=closed", "prop:puff@1,13"], ms = 100 },
+  { ops = ["all+-3,0", "eyes=closed", "tail=flick", "prop:puff@22,12"], ms = 100 },
+  { ops = ["all+3,0", "eyes=closed", "prop:puff@0,12"], ms = 100 },
+  { ops = ["eyes=happy", "mouth=pant"], ms = 300 },
+  { ops = ["eyes=happy", "mouth=pant", "all+0,1"], ms = 300 },
+  { ops = ["eyes=happy", "mouth=pant"], ms = 300 },
+  { ops = [], ms = 200 },
+]

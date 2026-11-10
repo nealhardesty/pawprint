@@ -1,0 +1,166 @@
+# Walkie-Talkie: a chunky green two-way radio in the crate, a stubby
+# rubber antenna on the left, a dial and a talk light on top, a push-to-talk
+# button on its side, and a slotted speaker grille under the face. The
+# signature takes a call: the light comes on, the antenna wobbles, and a
+# crackle floats up. The rare one signs off over and out: the antenna snaps
+# to its brow in a salute, with a wink.
+id = "walkie-talkie"
+name = "Walkie-Talkie"
+category = "things"
+aliases = ["walkie"]
+accent = "moss"
+extends = "object"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "green-1"
+"f" = "green-2"
+"F" = "green-3"
+"d" = "grey-3"
+"D" = "grey-4"
+"m" = "grey-2"
+"M" = "grey-3"
+"o" = "grey-4"
+"r" = "red-1"
+"h" = "white"
+"P" = "pink-1"
+"p" = "pink-2"
+
+[layers."head"]
+grid = """
+................................
+................................
+................................
+..................kkkk..........
+.........kkkkkkkkkkmMkk.........
+........kllllllolllllFFk........
+.......klfffffffffffffFFk.......
+.......klfffffffffffffFFk.......
+.....kkklfffffffffffffFFk.......
+.....kDDlfffffffffffffFFk.......
+.....kDDlfffffffffffffFFk.......
+.....kDDlfffffffffffffFFk.......
+.....kkklfffffffffffffFFk.......
+.......klfffffffffffffFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+.......klFDDDDDDDDDDDDFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+.......klFDDDDDDDDDDDDFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+.......klFDDDDDDDDDDDDFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+.......klFDDDDDDDDDDDDFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+.......klFFFFFFFFFFFFFFFk.......
+"""
+
+[layers."antenna"]
+at = [10, 0]
+follows = "head"
+grid = """
+.k.
+kdk
+kDk
+kDk
+kDk
+kDk
+"""
+
+[layers."antenna.left"]
+at = [9, 0]
+follows = "head"
+grid = """
+.k..
+kdk.
+kDk.
+.kDk
+.kDk
+.kDk
+"""
+
+[layers."antenna.right"]
+at = [10, 0]
+follows = "head"
+grid = """
+..k.
+.kdk
+.kDk
+kDk.
+kDk.
+kDk.
+"""
+
+[layers."antenna.salute"]
+at = [10, 0]
+follows = "head"
+grid = """
+.kkkkkk.
+kdDDDDDk
+kDkkkkkk
+kDk.....
+kDk.....
+kDk.....
+"""
+
+[layers."light.on"]
+at = [15, 5]
+follows = "head"
+grid = """
+r
+"""
+
+[layers."eyes.wink"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk.....hk
+k..k....kk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a call comes in. The talk light comes on, the antenna wobbles,
+# and a crackle of sound floats up beside it.
+[[actions]]
+name = "crackle"
+weight = 4
+frames = [
+  { ops = ["+light.on", "antenna=left"], ms = 120 },
+  { ops = ["+light.on", "antenna=right", "prop:note@1,3"], ms = 120 },
+  { ops = ["+light.on", "antenna=left", "prop:note@1,2"], ms = 120 },
+  { ops = ["+light.on", "prop:note@0,1", "mouth=open"], ms = 600 },
+  { ops = ["+light.on", "prop:note@0,0", "eyes=right"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: over and out. The antenna snaps to its brow in a salute, with a
+# wink, held a beat.
+[[actions]]
+name = "over-and-out"
+weight = 1
+frames = [
+  { ops = ["+light.on", "mouth=open"], ms = 300 },
+  { ops = ["antenna=right"], ms = 100 },
+  { ops = ["antenna=salute", "eyes=wink", "all+0,-1"], ms = 1200 },
+  { ops = ["antenna=salute", "eyes=wink"], ms = 300 },
+  { ops = ["antenna=right"], ms = 100 },
+  { ops = [], ms = 200 },
+]

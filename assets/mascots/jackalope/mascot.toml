@@ -1,0 +1,258 @@
+# Jackalope, on rodent-upright. A jackrabbit with antlers: a long-legged
+# tawny hare with huge splayed ears tipped in black, big side-set eyes, a
+# cream muzzle and buck teeth, and a pair of small forked antlers sprouting
+# between the ears. The signature is an itch: it reaches up and scratches
+# an antler, eyes squeezed in bliss. The rare one is a jackrabbit thump: a
+# hind foot slams the crate (puff of dust) and the thump launches it into
+# a big hop.
+id = "jackalope"
+name = "Jackalope"
+category = "mythical"
+aliases = []
+accent = "ochre"
+extends = "rodent-upright"
+
+[palette]
+"l" = "brown-1"     # fur light
+"f" = "brown-2"     # tawny fur
+"F" = "brown-3"     # fur shadow
+"w" = "cream"       # muzzle, belly
+"M" = "brown-1"     # shadow on the cream
+"t" = "white"       # teeth
+"n" = "pink-2"      # nose
+"p" = "pink-1"      # inner ears
+"d" = "fur-black"   # NEW: ear tips
+"A" = "brown-3"     # NEW: antlers: thin tines, no outline (like whiskers)
+"x" = "brown-2"     # NEW: antler tips
+
+# The scut is tucked away behind.
+[layers.tail]
+at = [24, 18]
+grid = """
+.
+"""
+
+# A lean body with a cream belly.
+[layers.body]
+at = [7, 13]
+grid = """
+.klffwwwwwwwwfFFk.
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+klfffwwwwwwwwffFFk
+"""
+
+# A round head with big side-set eyes and a cream muzzle.
+[layers.head]
+at = [7, 4]
+grid = """
+....kkkkkkkkkk....
+..kkllllllllffkk..
+.klllfffffffffFFk.
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klffffffffffffffFk
+kfffwwwwwwwwwwffFk
+.kfwwwwwwwwwwwwFk.
+..kwwwwwwwwwwwwk..
+...kkwwwwwwwwkk...
+.....kkkkkkkk.....
+"""
+
+# Huge ears, splayed out, black at the tips.
+[layers.ears]
+at = [2, 0]
+follows = "head"
+grid = """
+kkk......................kkk
+kddk....................kddk
+kdpfk..................kfpdk
+.klpfk................kfpFk.
+..klpfk..............kfpFk..
+...klpfk............kfpFk...
+....klffk..........kffFk....
+"""
+
+# The right ear folds over.
+[layers."ears.flick"]
+at = [2, 0]
+follows = "head"
+grid = """
+kkk.........................
+kddk....................kkkk
+kdpfk.................kkdddk
+.klpfk..............kkfppdk.
+..klpfk............kfppFkk..
+...klpfk...........kffFk....
+....klffk..........kfk......
+"""
+
+[layers.eyes]
+at = [10, 9]
+follows = "head"
+grid = """
+hk........hk
+kk........kk
+"""
+
+[layers."eyes.closed"]
+at = [10, 10]
+follows = "head"
+grid = """
+kk........kk
+"""
+
+[layers."eyes.left"]
+at = [9, 9]
+follows = "head"
+grid = """
+hk........hk
+kk........kk
+"""
+
+[layers."eyes.right"]
+at = [11, 9]
+follows = "head"
+grid = """
+hk........hk
+kk........kk
+"""
+
+[layers."eyes.happy"]
+at = [9, 9]
+follows = "head"
+grid = """
+.kk........kk.
+k..k......k..k
+"""
+
+[layers."eyes.squeeze"]
+at = [9, 9]
+follows = "head"
+grid = """
+k............k
+.kk........kk.
+"""
+
+[layers."eyes.wide"]
+at = [10, 8]
+follows = "head"
+grid = """
+kk........kk
+hk........hk
+kk........kk
+"""
+
+# Small forked antlers between the ears. Thin tines past the silhouette
+# take no outline, like whiskers: a mid-dark brown that reads on light
+# and dark desktops.
+[layers.antlers]
+at = [8, 0]
+follows = "head"
+grid = """
+xA..xA....xA..xA
+.xA.xA....xA.xA.
+..xAA......xAA..
+..xA........xA..
+..xA........xA..
+..xA........xA..
+"""
+
+[layers.paws]
+at = [10, 15]
+grid = """
+.FFFF..FFFF.
+FffffFFffffF
+.FfFfFFfFfF.
+"""
+
+[layers."paws.one"]
+at = [10, 15]
+grid = """
+.FFFF.......
+FffffF......
+.FfFfF......
+"""
+
+# The scratching arm, reaching up the side of the head to the right
+# antler.
+[layers."scratch.up"]
+at = [21, 2]
+grid = """
+.kkk..
+kfffk.
+kfFffk
+.kkfFk
+..kfFk
+..kfFk
+..kfFk
+..kfFk
+..kfFk
+..kfFk
+..kfFk
+..kfFk
+..kfFk
+..kfFk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: an itch. A paw reaches up and scratches the right antler,
+# the head leaning into it, eyes squeezed in bliss.
+[[actions]]
+name = "antler-scratch"
+weight = 5
+frames = [
+  { ops = ["paws=one", "+scratch.up", "scratch+0,2"], ms = 140 },
+  { ops = ["paws=one", "+scratch.up", "head+1,0", "eyes=squeeze"], ms = 160 },
+  { ops = ["paws=one", "+scratch.up", "scratch+0,1", "head+1,0", "eyes=squeeze"], ms = 120 },
+  { ops = ["paws=one", "+scratch.up", "head+1,0", "eyes=squeeze"], ms = 120 },
+  { ops = ["paws=one", "+scratch.up", "scratch+0,1", "head+1,0", "eyes=squeeze"], ms = 120 },
+  { ops = ["paws=one", "+scratch.up", "scratch+0,2", "eyes=happy"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the thump. Eyes go wide, a hind foot slams the crate floor with a
+# puff of dust, and the thump launches it into a big hop.
+[[actions]]
+name = "thump"
+weight = 1
+frames = [
+  { ops = ["eyes=wide", "ears=flick"], ms = 500 },
+  { ops = ["eyes=wide", "all+0,1", "prop:puff@0,12", "prop:puff@23,12"], ms = 160 },
+  { ops = ["eyes=happy", "all+0,-3"], ms = 120 },
+  { ops = ["eyes=happy", "all+0,-5"], ms = 220 },
+  { ops = ["eyes=happy", "all+0,-2"], ms = 100 },
+  { ops = ["all+0,1"], ms = 140 },
+  { ops = [], ms = 300 },
+]

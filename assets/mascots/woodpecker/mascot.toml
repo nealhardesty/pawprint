@@ -1,0 +1,225 @@
+# Woodpecker on bird-perched. A black-and-white woodpecker in three-quarter
+# view facing left: a bright red cap, a white face crossed by a black eye
+# stripe and moustache, a white breast, and a folded black wing laddered
+# with white bars. The beak is a straight grey chisel jutting left, and a
+# stiff black tail props it up at the back. Signature: leans down and pecks
+# the crate rim, a puff of splinters flying. Rare: a full drumroll of pecks,
+# then a dizzy wobble under a star.
+id = "woodpecker"
+name = "Woodpecker"
+category = "birds"
+aliases = []
+accent = "brick"
+extends = "bird-perched"
+
+[palette]
+"d" = "fur-black"   # black feathers
+"D" = "grey-4"      # black feathers, light
+"W" = "white"       # face, breast, wing bars
+"G" = "grey-1"      # white shadow
+"r" = "red-2"       # cap
+"R" = "red-1"       # cap light
+"h" = "grey-3"      # eye glint (solid on the white face)
+"b" = "grey-2"      # beak and feet
+"B" = "grey-3"      # beak and feet shadow
+
+# A white breast in front, black flanks behind.
+[layers.body]
+at = [5, 12]
+grid = """
+..kkWWWWWWWWDDDDddkk..
+.kWWWWWWWWWWWDDddddDk.
+kWWWWWWWWWWWWDdddddddk
+kWWWWWWWWWWWGDdddddddk
+kWWWWWWWWWWWGDdddddddk
+kWWWWWWWWWWGGDdddddddk
+kWWWWWWWWWWGDddddddddk
+kWWWWWWWWWWGDddddddddk
+kWWWWWWWWWWGDddddddddk
+kWWWWWWWWWGGDddddddddk
+kWWWWWWWWWGDdddddddddk
+kWWWWWWWWWGDdddddddddk
+kWWWWWWWWWGDdddddddddk
+kWWWWWWWWWGDdddddddddk
+kWWWWWWWWWGDdddddddddk
+kWWWWWWWWWGDdddddddddk
+kWWWWWWWWWGDdddddddddk
+kWWWWWWWWWGDdddddddddk
+kWWWWWWWWWGDdddddddddk
+kWWWWWWWWWGDdddddddddk
+"""
+
+# One folded wing on the far side, laddered with white bars, and the stiff
+# tail sticking out behind.
+[layers.wings]
+at = [16, 13]
+grid = """
+...kkkkkkk....
+..kDDDDDDDk...
+.kdWWddWWddk..
+.kdddddddddk..
+.kddWWddWWddk.
+.kdddddddddDk.
+.kdWWddWWdddk.
+..kddddddddddk
+..kddWWddWWddk
+...kdddddddkdk
+....kkkkkkk.kk
+"""
+
+[layers."wings.open"]
+at = [16, 9]
+grid = """
+...........kk.
+.........kkDDk
+.......kkDdWdk
+.....kkDdWWddk
+...kkDddddWWdk
+..kDdWWdWWdddk
+.kdddddddddddk
+.kdWWdWWdWWddk
+.kdddddddddddk
+.kdWWdWWdWWdk.
+..kddddddddk..
+..kdWWdWWdWWk.
+...kdddddddkdk
+....kkkkkkk.kk
+"""
+
+# Red cap, white face, a black stripe back from the eye and a moustache
+# back from the beak.
+[layers.head]
+at = [6, 3]
+grid = """
+.....kkkkkkkkkk.....
+...kkRRRRRRrrrrkk...
+..kRRRrrrrrrrrrrrk..
+.kWWWWrrrrrrrrrrddk.
+kWWWWWWWWWWWWWWddddk
+kWWWWWWWWddddddddddk
+kWWWWWWWWddddddddddk
+kWWWWWWWWWWWWWWWdddk
+kWdddddWWWWWWWWWdddk
+.kWWWWdddddWWWWWddk.
+..WWWWWWWWdddddddd..
+"""
+
+# One eye, on the near side of the face.
+[layers.eyes]
+at = [10, 8]
+follows = "head"
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.closed"]
+at = [10, 9]
+follows = "head"
+grid = """
+kk
+"""
+
+[layers."eyes.left"]
+at = [9, 8]
+follows = "head"
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.right"]
+at = [11, 8]
+follows = "head"
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.happy"]
+at = [9, 8]
+follows = "head"
+grid = """
+.kk.
+k..k
+"""
+
+# Dizzy: a little spiral of an eye.
+[layers."eyes.dizzy"]
+at = [9, 7]
+follows = "head"
+grid = """
+kkkk
+k..k
+k.kk
+kkk.
+"""
+
+# The chisel beak, straight out to the left.
+[layers.beak]
+at = [2, 8]
+follows = "head"
+grid = """
+...kkkk
+.kkbbbb
+kbbbbBB
+.kkkkkk
+"""
+
+[layers."mouth.open"]
+at = [2, 7]
+follows = "head"
+grid = """
+...kkkk
+.kkbbbb
+kkkkkbb
+.kBBBBB
+..kkkkk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "startle"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: leans down to the rim and pecks it twice; splinters puff up.
+[[actions]]
+name = "peck"
+weight = 5
+frames = [
+  { ops = ["all+0,1", "head+-1,1"], ms = 160 },
+  { ops = ["all+0,2", "head+-1,3", "eyes=closed", "prop:puff@0,13"], ms = 120 },
+  { ops = ["all+0,1", "head+-1,1"], ms = 160 },
+  { ops = ["all+0,2", "head+-1,3", "eyes=closed", "prop:puff@0,12"], ms = 120 },
+  { ops = ["all+0,1", "head+-1,1"], ms = 400 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: a whole drumroll, faster and faster, then a dizzy wobble.
+[[actions]]
+name = "drumroll"
+weight = 1
+frames = [
+  { ops = ["all+0,1", "head+-1,1"], ms = 200 },
+  { ops = ["all+0,2", "head+-1,3", "eyes=closed", "prop:puff@0,13"], ms = 90 },
+  { ops = ["all+0,1", "head+-1,1", "eyes=closed"], ms = 80 },
+  { ops = ["all+0,2", "head+-1,3", "eyes=closed", "prop:puff@0,12"], ms = 90 },
+  { ops = ["all+0,1", "head+-1,1", "eyes=closed"], ms = 80 },
+  { ops = ["all+0,2", "head+-1,3", "eyes=closed", "prop:puff@1,11"], ms = 90 },
+  { ops = ["all+0,1", "head+-1,1", "eyes=closed", "prop:puff@1,10"], ms = 80 },
+  { ops = ["eyes=dizzy", "head+1,0", "prop:star@22,0"], ms = 300 },
+  { ops = ["eyes=dizzy", "head+-1,0", "prop:star@23,1"], ms = 300 },
+  { ops = ["eyes=dizzy", "head+1,0", "prop:star@22,1"], ms = 300 },
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = [], ms = 300 },
+]

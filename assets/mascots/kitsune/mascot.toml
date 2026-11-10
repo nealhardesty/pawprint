@@ -1,0 +1,306 @@
+# Kitsune, on small-quadruped. A white spirit fox with a fan of tails:
+# snow-white fur, red-rimmed ears, red flame markings over the eyes and on
+# the brow, golden eyes, red-tipped toes, and four white tails with
+# crimson tips rising behind it like a halo. The signature fans the tails out to all
+# nine; the rare one, at night, sends blue foxfire wisps drifting up on
+# either side while it smiles with its eyes closed.
+id = "kitsune"
+name = "Kitsune"
+category = "mythical"
+aliases = []
+accent = "cranberry"
+extends = "small-quadruped"
+
+[palette]
+"l" = "white"       # fur light
+"f" = "white"       # white fur
+"F" = "grey-1"      # fur shadow
+"w" = "white"       # cheeks, chest
+"M" = "grey-1"      # shadow on the white
+"S" = "red-2"       # ear rims
+"r" = "red-2"       # NEW: markings, tail tips
+"R" = "red-1"       # NEW: tail tip light
+"e" = "amber"       # iris
+"h" = "white"       # eye glint
+"n" = "fur-black"   # nose
+"p" = "red-2"       # mouth inside
+"b" = "blue-1"      # NEW: foxfire
+"B" = "blue-2"      # NEW: foxfire core
+
+# Four tails at rest, two on each side, rising behind it like a halo.
+[layers.tail]
+at = [1, 3]
+grid = """
+...kk....................kk...
+..krrk..................krrk..
+..krrRk................kRrrk..
+.krrrRk................kRrrrk.
+.krrrrFk..............klrrrrk.
+.klfffFk..............klfffFk.
+.klffffFk............klffffFk.
+kklffffFk............klffffFkk
+kkllfffFk............klfffFFkk
+krklffffFk..........klffffFkrk
+krkllfffFk..........klfffFFkrk
+kffkllfffk..........kfffFFkffk
+klffkllffk..........kffFFkffFk
+kllffkllfk..........kfFFkffFFk
+.kllfkkllk..........kFFkkfFFk.
+..klfk..................kfFk..
+...klk..................kFk...
+"""
+
+[layers."tail.flick"]
+at = [1, 2]
+grid = """
+...kk....................kk...
+..krrk..................krrk..
+..krrRk................kRrrk..
+.krrrRk................kRrrrk.
+.krrrrFk..............klrrrrk.
+.klfffFk..............klfffFk.
+kklffffFk............klffffFkk
+kklffffFk............klffffFkk
+kkllfffFk............klfffFFkk
+krklffffFk..........klffffFkrk
+kfkllfffFk..........klfffFFkfk
+klfkllfffk..........kfffFFkfFk
+kllfkllffk..........kffFFkfFFk
+.kllfkllfk..........kfFFkfFFk.
+..klfkkllk..........kFFkkfFk..
+...klk..................kFk...
+"""
+
+[layers."tail.fan"]
+at = [1, 0]
+grid = """
+..............kk..............
+...kk........krrk........kk...
+..krrk......kRrrrk......krrk..
+..krrRk.....kRrrrk.....kRrrk..
+.krrrRk.....klrrFk.....kRrrrk.
+.krrrrFk....klffFk....klrrrrk.
+.klfffFk....klffFk....klfffFk.
+.klffffFk...klffFk...klffffFk.
+.klffffFk...klffFk...klffffFk.
+.kllfffFk...klffFk...klfffFFk.
+.kklffffFk..........klffffFkk.
+.kkllfffFk..........klfffFFkk.
+.klkllfffk..........kfffFFkFk.
+krklkllffk..........kffFFkFkrk
+krrklkllfk..........kfFFkFkrrk
+krrRklkllk..........kFFkFkRrrk
+krrrFk..................klrrrk
+kfffFk..................klfffk
+klffFk..................klffFk
+kllffk..................kffFFk
+.kllfk..................kfFFk.
+..klfk..................kfFk..
+...klk..................kFk...
+"""
+
+# A slim white body, so the tails show on both sides.
+[layers.body]
+at = [8, 13]
+grid = """
+.klffffwwffffFk.
+klfffffwwfffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+"""
+
+# Small head, big cheek ruff.
+[layers.head]
+at = [7, 5]
+grid = """
+....kkkkkkkkkk....
+..kkllllllllffkk..
+.kllfffffffffffFk.
+klffffffffffffffFk
+klffffffffffffffFk
+klffffffffffffffFk
+kwwfffffffffffwwMk
+.kwwwffffffffwwMk.
+..MwwwwffffwwwMM..
+...MwwwwwwwwwMM...
+....MMwwwwwwMM....
+......MMMMMM......
+"""
+
+[layers.ears]
+at = [7, 1]
+follows = "head"
+grid = """
+kk..............kk
+kSk............kSk
+kSSk..........kSSk
+kSlfk........kflSk
+klwwfk......kfwwlk
+.kwwffk....kffwwk.
+"""
+
+[layers."ears.flick"]
+at = [6, 1]
+follows = "head"
+grid = """
+...................
+kk...............kk
+kSk.............kSk
+kSSk...........kSSk
+kSlfk.........kflSk
+klwwfk.......kfwwlk
+.kwwffk.....kffwwk.
+"""
+
+# Red markings: a flame on the brow and a flick at the outer corner of
+# each eye.
+[layers.markings]
+at = [9, 6]
+follows = "head"
+grid = """
+......rr......
+.......r......
+r............r
+.r..........r.
+"""
+
+[layers.paws]
+at = [9, 17]
+grid = """
+.FFF......FFF.
+FfffF....FfffF
+kFrFk....kFrFk
+"""
+
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+ek......ke
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+ek......ek
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+ke......ke
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers.nose]
+at = [15, 13]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."nose.sniff"]
+at = [15, 12]
+follows = "head"
+grid = """
+nn
+"""
+
+[layers."mouth.open"]
+at = [14, 14]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+# Foxfire wisps, one each side, hidden until the night action.
+[layers."foxfire.lit"]
+at = [0, 12]
+grid = """
+...k.......................k...
+..kbk.....................kbk..
+.kbbk.....................kbbk.
+kbhbBk...................kBbhbk
+kbhBBk...................kBBhbk
+.kBBk.....................kBBk.
+..kk.......................kk..
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "tail-flick"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the tails fan out, all nine, and hold; then fold back.
+[[actions]]
+name = "tail-fan"
+weight = 5
+frames = [
+  { ops = ["tail=flick"], ms = 120 },
+  { ops = ["tail=fan"], ms = 160 },
+  { ops = ["tail=fan", "eyes=happy", "all+0,-1"], ms = 1200 },
+  { ops = ["tail=fan", "eyes=happy"], ms = 300 },
+  { ops = ["tail=flick"], ms = 140 },
+  { ops = [], ms = 300 },
+]
+
+# Rare, at night: foxfire. Blue wisps flicker up on either side and drift
+# away while it smiles with its eyes closed, tails fanned.
+[[actions]]
+name = "foxfire"
+weight = 1
+when = "night"
+frames = [
+  { ops = ["eyes=happy", "tail=flick", "+foxfire.lit", "foxfire+0,6"], ms = 200 },
+  { ops = ["eyes=happy", "tail=fan", "+foxfire.lit", "foxfire+0,2"], ms = 400 },
+  { ops = ["eyes=happy", "tail=fan", "+foxfire.lit", "foxfire+0,-3"], ms = 500 },
+  { ops = ["eyes=happy", "tail=fan", "+foxfire.lit", "foxfire+0,-8"], ms = 500 },
+  { ops = ["eyes=happy", "tail=fan", "+foxfire.lit", "foxfire+0,-13"], ms = 400 },
+  { ops = ["eyes=happy", "tail=flick"], ms = 300 },
+  { ops = [], ms = 200 },
+]

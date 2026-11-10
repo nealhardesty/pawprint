@@ -1,0 +1,223 @@
+# Chameleon, on critter. A leafy green chameleon side-on on the crate rim,
+# facing left: a tall pointed casque helmet sweeping back from its head, a
+# big turret eye (a cone of skin with a pinhole pupil that swivels on its
+# own), a long smiling mouth with a yellow lip line, a yellow flank stripe,
+# a little crest along its back, its tail rolled into a tight spiral, and
+# mitten feet gripping the rim. The signature zaps its sticky tongue out
+# and back; the rare one changes its pattern once, bold stripes washing
+# over it, gives a sly sideways look, and fades back to green.
+id = "chameleon"
+name = "Chameleon"
+category = "critters"
+aliases = []
+accent = "moss"
+extends = "critter"
+
+# Everything but the feet and face is one drawing; the base head is unused.
+rest = ["body", "eyes", "feet"]
+
+[palette]
+"l" = "green-1"     # skin light
+"f" = "green-2"     # skin, turret
+"F" = "green-3"     # skin shadow, mouth line
+"w" = "yellow-1"    # lip line and flank stripe
+"h" = "white"       # pupil glint
+"p" = "pink-2"      # tongue
+"r" = "orange-2"    # NEW: bold stripes
+"R" = "yellow-2"    # NEW: stripes fading
+
+# Head, casque, body, and spiral tail.
+[layers.body]
+at = [0, 0]
+grid = """
+................................
+............kk..................
+...........klk..................
+..........klfFk.................
+.........klfffFk................
+.......kklffffFk................
+......kllfffffflk...............
+.....klkkkffffffkkk.............
+.....kkfffkfffflfllkkk..........
+....klkfffkffffflfflllkk........
+...klfkfffkffffffffffflk..kkkkk.
+...kwwwkkkwwffffffffffflkkfffffk
+....kFFFFFFFFFfffffffffFkkfkkkfk
+.....kkkkklffFfffffffffflkfkfkfk
+..........klffffffffffffFkfffkfk
+...........klfwwwwwwwwwwkkkkkkfk
+...........klffffffffffFfffffffk
+...........klffffffffffFkkkkkkk.
+...........klffffffffffFk.......
+...........klffffffffffFk.......
+...........klffffffffffFk.......
+...........klffffffffffFk.......
+...........klffffffffffFk.......
+...........klffffffffffFk.......
+...........klffffffffffFk.......
+...........klffffffffffFk.......
+...........klffffffffffFk.......
+...........klffffffffffFk.......
+...........klffffffffffFk.......
+...........klffffffffffFk.......
+...........klffffffffffFk.......
+...........klffffffffffFk.......
+"""
+
+# Turret eye: the pupil moves around inside the cone.
+[layers.eyes]
+at = [7, 8]
+grid = """
+fhk
+fkk
+fff
+"""
+
+[layers."eyes.closed"]
+at = [7, 8]
+grid = """
+fff
+kkk
+fff
+"""
+
+[layers."eyes.left"]
+at = [7, 8]
+grid = """
+hkf
+kkf
+fff
+"""
+
+[layers."eyes.right"]
+at = [7, 8]
+grid = """
+fff
+fhk
+fkk
+"""
+
+[layers."eyes.happy"]
+at = [7, 8]
+grid = """
+fkf
+kfk
+fff
+"""
+
+# Lid half down, looking back over its shoulder.
+[layers."eyes.sly"]
+at = [7, 8]
+grid = """
+FFF
+fhk
+fkk
+"""
+
+[layers.feet]
+at = [9, 17]
+grid = """
+kffkf.......kffkk
+kfFfk.......kfFfk
+kFkFk.......kFkFk
+"""
+
+[layers."mouth.open"]
+at = [4, 11]
+grid = """
+pppp
+"""
+
+[layers."tongue.mid"]
+at = [1, 10]
+grid = """
+.kkk.
+kpppp
+.kkk.
+"""
+
+[layers."tongue.out"]
+at = [0, 9]
+grid = """
+.kkk.
+kpppk
+kpppp
+kpppk
+.kkk.
+"""
+
+[layers."stripes.bold"]
+at = [0, 3]
+grid = """
+...........rr...................
+...........rr.r.................
+...........rr.r.................
+...........rr.rr................
+...........rr.rr................
+...........rr.rr.rr.............
+...........rr.rr.rr.rr..........
+...........rr.rr.rr.rr..........
+............r.rr.rr.rr.r........
+...........rr.rr.rr.rr.r........
+...........rr.rr.rr.rr.r........
+...........rr.rr.rr.rr.r........
+"""
+
+[layers."stripes.faint"]
+at = [0, 3]
+grid = """
+...........RR...................
+...........RR.R.................
+...........RR.R.................
+...........RR.RR................
+...........RR.RR................
+...........RR.RR.RR.............
+...........RR.RR.RR.RR..........
+...........RR.RR.RR.RR..........
+............R.RR.RR.RR.R........
+...........RR.RR.RR.RR.R........
+...........RR.RR.RR.RR.R........
+...........RR.RR.RR.RR.R........
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the eye swivels forward, the tongue zaps out and back, gulp.
+[[actions]]
+name = "tongue-zap"
+weight = 4
+frames = [
+  { ops = ["eyes=left"], ms = 400 },
+  { ops = ["eyes=left", "+mouth.open", "+tongue.mid"], ms = 80 },
+  { ops = ["eyes=left", "+mouth.open", "+tongue.out"], ms = 200 },
+  { ops = ["eyes=left", "+mouth.open", "+tongue.mid"], ms = 80 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: its pattern changes once. Bold stripes wash over it, it gives a
+# sly sideways look, and they fade back to plain green.
+[[actions]]
+name = "color-change"
+weight = 1
+frames = [
+  { ops = ["+stripes.faint"], ms = 300 },
+  { ops = ["+stripes.bold"], ms = 600 },
+  { ops = ["+stripes.bold", "eyes=sly"], ms = 1000 },
+  { ops = ["+stripes.faint", "eyes=sly"], ms = 400 },
+  { ops = ["eyes=sly"], ms = 300 },
+  { ops = [], ms = 200 },
+]

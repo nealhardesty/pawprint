@@ -1,0 +1,219 @@
+# Platypus, bespoke (no base). Swimming in a crate full of water: a round
+# brown furry head with tiny eyes set high, and below them the thing no
+# duck or otter has: a broad, flat, rubbery grey bill, much wider than the
+# head, with two nostrils on top. Behind it, its flat beaver paddle floats
+# on the water, cross-hatched. The signature dabbles: the bill dips under
+# the surface and comes up again. The rare one: a bubble pops up right in
+# front of it, and it startles, eyes wide.
+id = "platypus"
+name = "Platypus"
+category = "mammals"
+aliases = []
+accent = "copper"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "brown-1"     # fur light
+"f" = "brown-2"     # fur
+"F" = "brown-3"     # fur shadow, paddle
+"d" = "brown-4"     # paddle hatching
+"b" = "grey-2"      # bill
+"B" = "grey-3"      # bill shadow
+"q" = "grey-4"      # nostrils
+"h" = "white"       # eye glint
+"u" = "blue-1"      # foam
+"v" = "blue-2"      # water
+"V" = "blue-3"      # deep water
+
+# The flat paddle tail, floating on the water behind it.
+[layers.tail]
+at = [21, 12]
+grid = """
+..kkkkkkk.
+.kFdFdFdFk
+kFdFdFdFdk
+kdFdFdFdFk
+.kkkkkkkk.
+"""
+
+[layers."tail.flick"]
+at = [21, 11]
+grid = """
+..kkkkkkk.
+.kFdFdFdFk
+kFdFdFdFdk
+kdFdFdFdFk
+.kkkkkkkk.
+"""
+
+[layers.body]
+at = [8, 11]
+grid = """
+..kkllffffffkk..
+.klffffffffffFk.
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+klfffffffffffFFk
+"""
+
+# A round furry head.
+[layers.head]
+at = [9, 3]
+grid = """
+...kkkkkkkk...
+.kkllllllffkk.
+klllffffffffFk
+klffffffffffFk
+klffffffffffFk
+kfffffffffffFk
+kfffffffffffFk
+kfffffffffffFk
+.kffffffffffk.
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+[layers."eyes.wide"]
+at = [10, 7]
+follows = "head"
+grid = """
+.kk......kk.
+khkk....khkk
+.kk......kk.
+"""
+
+# The broad, flat bill, wider than the head, nostrils on top.
+[layers.bill]
+at = [6, 10]
+follows = "head"
+grid = """
+...kkkkkkkkkkkkkk...
+.kkbbbbbbbbbbbbbbkk.
+kbbbbbbqbbbbqbbbbBBk
+kBbbbbbbbbbbbbbbbBBk
+.kBBBBBBBBBBBBBBBBk.
+..kkkkkkkkkkkkkkkk..
+"""
+
+[layers."bill.open"]
+at = [6, 10]
+follows = "head"
+grid = """
+...kkkkkkkkkkkkkk...
+.kkbbbbbbbbbbbbbbkk.
+kbbbbbbqbbbbqbbbbBBk
+.kkkkkkkkkkkkkkkkkk.
+.kBBBBBBBBBBBBBBBBk.
+..kkkkkkkkkkkkkkkk..
+"""
+
+# It swims in a crate full of water, drawn in front of everything.
+[layers.water]
+at = [1, 16]
+grid = """
+..kkk......kkk......kkk......
+kkuuukkkkkkuuukkkkkkuuukkkkkk
+uuvvvuuuuuuvvvuuuuuuvvvuuuuuu
+vvvvvvvvVVvvvvvvvVVvvvvvvvVVv
+VVvvvvVVVVVVvvvvVVVVVVvvvvVVV
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "tail-flick"
+weight = 2
+
+[[actions]]
+use = "look-right"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: dabbling. The bill dips under the surface, roots about, and
+# comes back up dripping.
+[[actions]]
+name = "dabble"
+weight = 5
+frames = [
+  { ops = ["head+0,1"], ms = 140 },
+  { ops = ["head+0,3", "eyes=closed"], ms = 160 },
+  { ops = ["head+0,4", "eyes=closed"], ms = 500 },
+  { ops = ["head+1,4", "eyes=closed"], ms = 200 },
+  { ops = ["head+-1,4", "eyes=closed"], ms = 200 },
+  { ops = ["head+0,2"], ms = 140 },
+  { ops = ["eyes=happy", "bill=open"], ms = 500 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a bubble wobbles up out of the water right in front of it. It
+# stares, eyes wide, and the bubble floats off.
+[[actions]]
+name = "bubble"
+weight = 1
+frames = [
+  { ops = ["prop:bubble@22,13"], ms = 300 },
+  { ops = ["eyes=right", "prop:bubble@22,9"], ms = 400 },
+  { ops = ["eyes=wide", "head+0,-2", "body+0,-2", "bill=open", "prop:bubble@23,6"], ms = 160 },
+  { ops = ["eyes=wide", "head+0,-1", "body+0,-1", "bill=open", "prop:bubble@23,4", "prop:bang@3,2"], ms = 700 },
+  { ops = ["eyes=right", "prop:bubble@24,1"], ms = 500 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

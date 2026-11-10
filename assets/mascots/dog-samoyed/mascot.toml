@@ -1,0 +1,200 @@
+# Samoyed on dog-sit: a cloud that smiles. Pure white with cool blue-white
+# shading, a big fluffy ruff that zigzags out on every side so the head is
+# wider than the body, small rounded prick ears, a plume tail, dark eyes,
+# a black nose, and black lips curling up into the famous Samoyed smile,
+# worn at rest (`mouth`). `mouth.grin` and `mouth.beam` are the smile
+# getting bigger; `head.puff` is the ruff fluffing out.
+id = "dog-samoyed"
+name = "Samoyed"
+category = "cats-dogs"
+aliases = ["samoyed"]
+accent = "ice"
+extends = "dog-sit"
+rest = ["tail", "body", "head", "ears.prick", "eyes", "nose", "mouth", "paws"]
+
+[palette]
+"l" = "white"       # coat light
+"f" = "white"       # white coat
+"F" = "blue-1"      # cool shadow
+"w" = "white"       # chest
+"M" = "blue-1"      # shadow on the chest
+"s" = "white"       # ears
+"L" = "fur-black"   # NEW: black lips
+"h" = "grey-3"      # catchlight: white would vanish into the coat at 1x
+"n" = "fur-black"   # nose
+"p" = "pink-2"      # tongue
+
+# A plume curled up over the back.
+[layers.tail]
+at = [25, 11]
+grid = """
+..kkk.
+.klffk
+klfffk
+kfffFk
+.kfFFk
+klfFk.
+.kfFk.
+klfFk.
+.kfFk.
+"""
+
+[layers."tail.flick"]
+at = [25, 10]
+grid = """
+...kk.
+..klfk
+.klffk
+klffFk
+kffFFk
+.kfFk.
+klfFk.
+.kfFk.
+klfFk.
+.kfFk.
+"""
+
+# The cloud: a ruff that zigzags out on every side.
+[layers.head]
+at = [4, 3]
+grid = """
+.......kkkkkkkkkk.......
+.....kkllllllllffkk.....
+...klllllffffffffFFFk...
+...kllffffffffffffFFk...
+.kllfffffffffffffffFFFk.
+..klfffffffffffffffFFk..
+kllfffffffffffffffffFFFk
+.klfffffffffffffffffFFk.
+kllfffffffffffffffffFFFk
+..klfffFffffffffFffFFk..
+.kllfffFffffffffFffFFFk.
+...kffffFffffffFfffFk...
+...kFFFffffffffffFFFk...
+......kkFFFFFFFFkk......
+"""
+
+# Fluffed out: every tuft a pixel further.
+[layers."head.puff"]
+at = [3, 2]
+grid = """
+.........kk.kk.kk.........
+........kkkkkkkkkk........
+......kkllllllllffkk......
+...kllllllffffffffFFFFk...
+....kllffffffffffffFFk....
+.klllfffffffffffffffFFFFk.
+...klfffffffffffffffFFk...
+klllfffffffffffffffffFFFFk
+..klfffffffffffffffffFFk..
+klllfffffffffffffffffFFFFk
+...klfffFffffffffFffFFk...
+.klllfffFffffffffFffFFFFk.
+....kffffFffffffFfffFk....
+...kFFFFffffffffffFFFFk...
+.......kkFFFFFFFFkk.......
+"""
+
+# Small, thick, rounded prick ears, fluffy white all through.
+[layers."ears.prick"]
+at = [7, 1]
+grid = """
+..kk..........kk..
+.klfk........kfFk.
+klffFk......kfFFFk
+klfFFk......kFFFFk
+"""
+
+[layers."ears.flick"]
+at = [7, 0]
+grid = """
+..............kk..
+..kk.........kfFk.
+.klfk.......kfFFFk
+klffFk......kFFFFk
+klfFFk............
+"""
+
+# The Samoyed smile: black lips curling up, the tongue just showing.
+[layers.mouth]
+at = [12, 13]
+follows = "head"
+grid = """
+L......L
+.LppppL.
+..LLLL..
+"""
+
+[layers."mouth.grin"]
+at = [11, 13]
+grid = """
+L........L
+.LppppppL.
+..LppppL..
+...LLLL...
+"""
+
+[layers."mouth.beam"]
+at = [10, 12]
+grid = """
+L..........L
+.L........L.
+.LppppppppL.
+..LppppppL..
+...LLLLLL...
+"""
+
+[layers."mouth.open"]
+at = [11, 13]
+grid = """
+L........L
+.LLLLLLLL.
+.LppppppL.
+..LppppL..
+...LLLL...
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "yawn"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the smile gets bigger, the eyes squeeze, and the whole cloud
+# fluffs out with a little puff of fur.
+[[actions]]
+name = "fluff-smile"
+weight = 5
+frames = [
+  { ops = ["mouth=grin"], ms = 300 },
+  { ops = ["mouth=grin", "eyes=happy"], ms = 300 },
+  { ops = ["mouth=grin", "eyes=happy", "head=puff", "tail=flick", "prop:puff@22,1"], ms = 250 },
+  { ops = ["mouth=grin", "eyes=happy", "head=puff", "prop:puff@23,0"], ms = 700 },
+  { ops = ["mouth=grin", "eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the smile keeps going. It widens to a beam, and sparkles burst out
+# all around the cloud.
+[[actions]]
+name = "beam"
+weight = 1
+frames = [
+  { ops = ["mouth=grin", "eyes=happy"], ms = 300 },
+  { ops = ["mouth=beam", "eyes=happy", "all+0,-1"], ms = 250 },
+  { ops = ["mouth=beam", "eyes=happy", "head=puff", "all+0,-1", "prop:sparkle@24,2"], ms = 200 },
+  { ops = ["mouth=beam", "eyes=happy", "head=puff", "all+0,-1", "prop:sparkle@24,2", "prop:sparkle@1,3"], ms = 200 },
+  { ops = ["mouth=beam", "eyes=happy", "head=puff", "all+0,-1", "prop:sparkle@25,0", "prop:sparkle@0,1", "prop:sparkle@13,0"], ms = 600 },
+  { ops = ["mouth=beam", "eyes=happy", "head=puff", "prop:sparkle@12,0"], ms = 400 },
+  { ops = ["mouth=grin", "eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]

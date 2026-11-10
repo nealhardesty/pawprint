@@ -1,0 +1,137 @@
+# Guitar: an acoustic guitar standing in the crate, its sunburst body the
+# face and the dark fretboard running up between its eyes to a headstock
+# with tuning pegs. Its mouth is the round sound hole in a cream rosette,
+# a little open as if singing, with the strings running on to the bridge.
+# The signature plucks a string: it shivers over the sound hole and a note
+# floats up. The rare one plays a riff, notes climbing round its head.
+id = "guitar"
+name = "Guitar"
+category = "things"
+aliases = []
+accent = "copper"
+extends = "object"
+
+[palette]
+"." = "clear"
+"k" = "ink"
+"l" = "orange-1"
+"f" = "orange-2"
+"F" = "orange-3"
+"n" = "brown-3"
+"D" = "brown-4"
+"m" = "grey-1"
+"r" = "cream"
+"h" = "white"
+"P" = "pink-1"
+"p" = "pink-2"
+
+[layers."head"]
+grid = """
+.............kkkkkk.............
+............mknnnnkm............
+............mkknnkkm............
+..............kDDk..............
+..............kmmk..............
+..............kDDk..............
+...........kkkkDDkkkk...........
+.........kkllllmmllFFkk.........
+........kllffffDDffffFFk........
+.......klffffffDDfffffFFk.......
+.......klfffffffffffffFFk.......
+.......klfffffffffffffFFk.......
+........klfffffffffffFFk........
+........klfffffffffffFFk........
+......kklfffffffffffffFFkk......
+.....kllffffffmffmffffffFFk.....
+....klffffffffmffmfffffffFFk....
+....klffffffkkkkkkkkfffffFFk....
+....klfffffknnDDDDnnkffffFFk....
+....klffffffkkkkkkkkfffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+....klfffffffffffffffffffFFk....
+"""
+
+[layers."mouth"]
+at = [13, 10]
+grid = """
+.rrrr.
+rDDDDr
+rDDDDr
+rDDDDr
+.rrrr.
+"""
+
+[layers."mouth.open"]
+at = [12, 9]
+grid = """
+..rrrr..
+.rDDDDr.
+rDDDDDDr
+rDDDDDDr
+rDDDDDDr
+.rDDDDr.
+..rrrr..
+"""
+
+[layers."strings.twang"]
+at = [14, 15]
+follows = "head"
+grid = """
+m..m
+.mm.
+m..m
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: a twang. A string is plucked and shivers over the sound hole,
+# the body hums, and a note floats up.
+[[actions]]
+name = "twang"
+weight = 4
+frames = [
+  { ops = ["+strings.twang", "eyes=closed"], ms = 100 },
+  { ops = ["all+1,0", "eyes=happy", "prop:note@24,3"], ms = 100 },
+  { ops = ["+strings.twang", "all+-1,0", "eyes=happy", "prop:note@24,2"], ms = 100 },
+  { ops = ["eyes=happy", "prop:note@24,1"], ms = 500 },
+  { ops = ["eyes=happy", "prop:note@25,0"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a riff. Four quick plucks, a note for each climbing round its head,
+# and it rocks along, mouth open, then bows.
+[[actions]]
+name = "riff"
+weight = 1
+frames = [
+  { ops = ["+strings.twang", "eyes=happy", "mouth=open", "prop:note@1,8"], ms = 200 },
+  { ops = ["all+0,-1", "eyes=happy", "mouth=open", "prop:note@1,6", "prop:note@24,7"], ms = 200 },
+  { ops = ["+strings.twang", "eyes=happy", "mouth=open", "prop:note@2,4", "prop:note@24,5"], ms = 200 },
+  { ops = ["all+0,-1", "eyes=happy", "mouth=open", "prop:note@3,2", "prop:note@25,3", "prop:note@20,0"], ms = 250 },
+  { ops = ["+strings.twang", "eyes=happy", "prop:note@25,1", "prop:note@20,0"], ms = 500 },
+  { ops = ["all+0,1", "eyes=closed"], ms = 400 },
+  { ops = [], ms = 200 },
+]

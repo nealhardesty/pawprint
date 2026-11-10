@@ -1,0 +1,271 @@
+# Basilisk, on critter. The little serpent king: a teal lizard face on,
+# wearing a three-pointed golden crown on its head, with a fierce, heavy-
+# lidded golden stare (slit pupils), two tiny white fangs, a yellow scaled
+# belly, a snaky tail curling up beside it, and claws on the rim. Fierce,
+# but mostly cute. The signature flares a spiky golden frill out behind
+# its head like a royal collar; the rare one is a hypnotic stare, eyes
+# narrowing to slits, that falls apart into a goofy grin.
+id = "basilisk"
+name = "Basilisk"
+category = "mythical"
+aliases = []
+accent = "teal"
+extends = "critter"
+
+[palette]
+"l" = "green-1"     # scales light
+"f" = "teal"        # scales
+"F" = "green-3"     # scales shadow
+"w" = "yellow-1"    # belly plates
+"M" = "yellow-2"    # NEW: belly shadow
+"e" = "yellow-1"    # iris
+"g" = "amber"       # NEW: crown
+"G" = "orange-3"    # NEW: crown band shadow
+"y" = "yellow-2"    # NEW: frill
+"Y" = "orange-2"    # NEW: frill spines
+"W" = "white"       # NEW: fangs
+"p" = "red-1"       # mouth inside and tongue
+
+# Body, belly, and the tail curling up on the right.
+[layers.body]
+at = [0, 0]
+grid = """
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+............................kk..
+...........................kllk.
+...........................klk..
+.........kkkkkkkkkkkkkk...klFk..
+.........kllllllllllllk..klfFk..
+.........klfwwwwwwwwfFkkklffFk..
+.........klfwwwwwwwwfFkllffFk...
+.........klfwwwwwwwwfFkffffFk...
+.........klfwwwwwwwwfFkFFFFFk...
+.........klfwwwwwwwwfFkkkkkk....
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+"""
+
+# The same with the golden frill fanned out behind the head.
+[layers."body.flare"]
+at = [0, 0]
+grid = """
+................................
+............kkk..kkk............
+.......kk...kYykkyYk...kk.......
+.......kYkkkyYyyyyYykkkYk.......
+.......kyYyyyYYyyYYyyyYyk.......
+...kkk..kYYyyyYyyYyyyYYk..kkk...
+....kYkkyyyYyyYyyYyyYyyykkYk....
+....kyYYYyyYyyyyyyyyYyyYYYyk....
+.....kyyYYYyyyyyyyyyyYYYyyk.....
+.kkkkyyyyyyyyyyyyyyyyyyyyyykkkk.
+..kkYYYYYYyyyyyyyyyyyyYYYYYYkk..
+....kyyyyyyyyyyyyyyyyyyyyyykllk.
+....kyyyYYyyyyyyyyyyyyYYyyyklk..
+..kkYYYYYffffffffffffffYYYYYkk..
+.kkkkkkkklffffffffffffFkkkkkkkk.
+.........klfwwwwwwwwfFkkklffFk..
+.........klfwwwwwwwwfFkllffFk...
+.........klfwwwwwwwwfFkffffFk...
+.........klfwwwwwwwwfFkFFFFFk...
+.........klfwwwwwwwwfFkkkkkk....
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+.........klfwwwwwwwwfFk.........
+"""
+
+# Head and crown.
+[layers.head]
+at = [0, 0]
+grid = """
+................................
+...............kk...............
+..........k...kggk...k..........
+.........kgk..kggk..kgk.........
+.........kggkkggggkkggk.........
+.........kggggggggggggk.........
+.........kGGGGGGGGGGGGk.........
+.........kklllfffflllkk.........
+........kllffffffffffllk........
+........klffffffffffffFk........
+.......klfffffffffffffflk.......
+.......klffffffffffffffFk.......
+.......klffffffffffffffFk.......
+.......klffffffffffffffFk.......
+.......klFFFffffffffFFFFk.......
+........kkkklFFFFFFFkkkk........
+............kkkkkkkk............
+................................
+................................
+................................
+"""
+
+[layers.eyes]
+at = [11, 8]
+grid = """
+kkk....kkk
+eke....eke
+eke....eke
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+grid = """
+kkk....kkk
+"""
+
+[layers."eyes.left"]
+at = [11, 8]
+grid = """
+kkk....kkk
+kee....kee
+kee....kee
+"""
+
+[layers."eyes.right"]
+at = [11, 8]
+grid = """
+kkk....kkk
+eek....eek
+eek....eek
+"""
+
+[layers."eyes.happy"]
+at = [11, 8]
+grid = """
+.k......k.
+k.k....k.k
+"""
+
+# Lids down to slits for the hypnotic stare.
+[layers."eyes.narrow"]
+at = [11, 8]
+grid = """
+kkk....kkk
+kkk....kkk
+eke....eke
+"""
+
+# Swirly, dizzy eyes after the stare breaks.
+[layers."eyes.goofy"]
+at = [11, 8]
+grid = """
+kkk....kkk
+eke....kee
+eke....kee
+"""
+
+[layers."nose"]
+at = [14, 11]
+grid = """
+F..F
+"""
+
+[layers."nose.sniff"]
+at = [14, 10]
+grid = """
+F..F
+"""
+
+[layers.mouth]
+at = [13, 12]
+grid = """
+kkkkkk
+.W..W.
+"""
+
+[layers."mouth.open"]
+at = [13, 12]
+grid = """
+kkkkkk
+kWppWk
+.kkkk.
+"""
+
+[layers."mouth.grin"]
+at = [12, 12]
+grid = """
+kkkkkkkk
+kWppppWk
+.kkppkk.
+...kk...
+"""
+
+[layers.feet]
+at = [8, 17]
+grid = """
+.kfk........kfk.
+kfffk......kfffk
+kWkWk......kWkWk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "look-right"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: the golden frill flares out behind the crown, and it holds a
+# fierce little pose.
+[[actions]]
+name = "frill-flare"
+weight = 4
+frames = [
+  { ops = ["all+0,-1"], ms = 120 },
+  { ops = ["body=flare", "all+0,-1", "+mouth.open"], ms = 150 },
+  { ops = ["body=flare", "+mouth.open"], ms = 900 },
+  { ops = ["body=flare"], ms = 300 },
+  { ops = ["eyes=closed"], ms = 150 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a hypnotic stare, the eyes narrowing to slits and leaning in...
+# then it cracks into a goofy grin.
+[[actions]]
+name = "hypno-stare"
+weight = 1
+frames = [
+  { ops = ["eyes=narrow"], ms = 500 },
+  { ops = ["eyes=narrow", "head+0,1"], ms = 900 },
+  { ops = ["eyes=narrow", "head+0,1"], ms = 400 },
+  { ops = ["eyes=goofy", "-mouth", "+mouth.grin"], ms = 700 },
+  { ops = ["eyes=happy", "-mouth", "+mouth.grin"], ms = 600 },
+  { ops = [], ms = 200 },
+]

@@ -332,6 +332,6 @@ frames = [{ ops = ["head+1,0", "prop:heart@22,1"] }]
         let b = bundle();
         assert_eq!(b.font.glyphs.len(), 95);
         assert_eq!(b.crate_art.front.height, 12);
-        assert_eq!(b.minimum, 100);
+        assert_eq!(b.minimum, 214);
     }
 }

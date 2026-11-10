@@ -39,14 +39,20 @@ pub enum Origin {
     User,
 }
 
-/// Valid mascot categories (SPEC §12.3).
-pub const CATEGORIES: [&str; 6] = [
+/// Valid mascot categories (SPEC §12.3): five of animals, the original
+/// oddballs, and four of things (SPEC Appendix A).
+pub const CATEGORIES: [&str; 11] = [
     "mammals",
     "cats-dogs",
     "birds",
     "aquatic",
     "critters",
+    "mythical",
     "oddballs",
+    "space",
+    "nature",
+    "food",
+    "things",
 ];
 
 /// One validation finding, with where it came from.

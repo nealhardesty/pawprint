@@ -1330,7 +1330,7 @@ impl App {
         );
         y += CHIP_H + 3;
 
-        // Categories, in the micro font to fit on one line.
+        // Categories, in the micro font, wrapping onto a second line.
         let user = self
             .catalog
             .entries()
@@ -1342,6 +1342,9 @@ impl App {
         }
         let mut x = CX;
         for (c, label) in cats {
+            if x + ui.measure_small(&label) > CX + CW {
+                (x, y) = (CX, y + 10);
+            }
             let on = self.category == c;
             x += ui.small_pick(x, y, &label, on, Target::Category(c)) + 2;
         }

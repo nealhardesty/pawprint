@@ -1,6 +1,6 @@
 # PAWPRINT art guide
 
-How to draw a mascot that looks like it belongs with the other 99. The rules
+How to draw a mascot that looks like it belongs with the other 213. The rules
 are in [SPEC §12](../SPEC.md#12-mascot-assets); this is the practical
 version, with the things that only become obvious once you've drawn a few.
 
@@ -73,6 +73,17 @@ built on `bird-perched` and shows every technique worth copying:
 - **Iris rings.** The base's eyes are plain 2 × 2 black with a glint. The owl
   replaces all five eye layers with 4 × 4 amber irises, keeping
   `follows = "head"`.
+
+## Objects
+
+Objects (planets, food, gadgets, games) extend `orb` or `object` and keep
+the **object face**: eyes on rows 9–10 at columns 11–12 and 19–20, the
+smile on rows 12–13, blush on row 11, all following `head`. Redraw `head`
+as your object, keeping the face area plain and light enough for ink eyes
+(on a dark object, map `h` so the eyes show), and add slots for the parts
+that move: a ring, a lid, a flame, a needle. The face is what makes a
+saturn and a coffee mug look like siblings, so move it only when the shape
+leaves no room.
 
 ## Shared conventions
 
@@ -169,6 +180,7 @@ the 32 × 32 canvas.
 | `make contact-sheet` | Every mascot at 1× and 2×, labels hidden, grouped by base: the squint test |
 | `make contact-sheet ANIMATED=1` | The same with every action playing (`docs/gallery.gif`) |
 | `make building-blocks` | Every base and every template, to pick a base and see what you inherit |
+| `make mascot-sheet DIR=<folder>` | Every mascot folder in `<folder>` frame by frame (rest at 1×, 2×, 4× on light and dark, then every action), without touching `assets/`; fails on any warning |
 | `make art-export MASCOT=<id>` | Layers and frames as PNGs in `out/art/<id>/` for a pixel-art tool |
 | `make art-import MASCOT=<id> PNG=<file>` | Back again: prints a `[layers]` table in your mascot's glyphs |
 | `assets/palette.gpl` | The master palette for GIMP, Aseprite, and LibreSprite |

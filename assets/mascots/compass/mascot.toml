@@ -1,0 +1,199 @@
+# Compass, an object: a round brass pocket compass with a winding knob on
+# top, a thick polished bezel, and a cream dial with tick marks at the
+# cardinal points. The face sits on the dial, and the red-tipped needle
+# pivots right between the eyes like a nose. The signature swings the
+# needle back and forth until it settles on north; the rare one sends it
+# spinning round and round until the compass is cross-eyed with dizziness,
+# then it wobbles home and sighs.
+id = "compass"
+name = "Compass"
+category = "things"
+aliases = []
+accent = "copper"
+extends = "orb"
+
+[palette]
+"l" = "yellow-1"    # brass light
+"f" = "yellow-2"    # brass
+"F" = "orange-3"    # brass shadow, the dial's rim
+"w" = "cream"       # dial
+"m" = "grey-1"      # dial shade
+"M" = "grey-2"      # tick marks, the needle's tail
+"r" = "red-1"       # NEW: needle, north half
+"R" = "red-2"       # NEW: needle shadow
+"h" = "grey-3"      # eye glint (cream eats white)
+"p" = "red-2"       # inside of the mouth
+
+[layers.head]
+grid = """
+.............kkkkkk.............
+............kllffFFk............
+............klk..kFk............
+...........kkfkkkkFkk...........
+.........kkllllllllffkk.........
+........kllllFFMMFFffffk........
+.......klllFFmmmmmmFFfffk.......
+......klllFmmwwwwwwwwFfffk......
+......kllFmmwwwwwwwwwwFffk......
+.....kllFmmwwwwwwwwwwwwFffk.....
+.....kllFmwwwwwwwwwwwwwFffk.....
+....kllFmwwwwwwwwwwwwwwwFFFk....
+....kllFmwwwwwwwwwwwwwwwFFFk....
+....kllMmwwwwwwwwwwwwwwwMFFk....
+....kllFmwwwwwwwwwwwwwwwFFFk....
+....kllFmwwwwwwwwwwwwwwwFFFk....
+....kllFmwwwwwwwwwwwwwwwFFFk....
+.....kffFwwwwwwwwwwwwwwFFFk.....
+.....kffFwwwwwwwwwwwwwwFFFk.....
+......kffFwwwwwwwwwwwwFFFk......
+......kfffFwwwwwwwwwwFFFFk......
+.......kfffFFwwMMwwFFFFFk.......
+........kffffFFFFFFFFFFk........
+.........kkffFFFFFFFFkk.........
+...........kkFFFFFFkk...........
+.............kkkkkk.............
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# The needle pivots between the eyes: red north tip up, grey tail down.
+[layers."needle"]
+at = [13, 6]
+follows = "head"
+grid = """
+..rR..
+..rR..
+.rrRR.
+.MFFM.
+..MM..
+..MM..
+"""
+
+# Swung left and right, then the four points of its spin.
+[layers."needle.left"]
+at = [13, 6]
+follows = "head"
+grid = """
+.rR...
+.rR...
+.rrR..
+.MFFM.
+...MM.
+...MM.
+"""
+
+[layers."needle.right"]
+at = [13, 6]
+follows = "head"
+grid = """
+...rR.
+...rR.
+..rRR.
+.MFFM.
+.MM...
+.MM...
+"""
+
+[layers."needle.east"]
+at = [13, 6]
+follows = "head"
+grid = """
+......
+......
+...rr.
+MMFFrR
+...RR.
+......
+"""
+
+[layers."needle.south"]
+at = [13, 6]
+follows = "head"
+grid = """
+..MM..
+..MM..
+.MMMM.
+.MFFM.
+..rR..
+..rR..
+"""
+
+[layers."needle.west"]
+at = [13, 6]
+follows = "head"
+grid = """
+......
+......
+.rr...
+rRFFMM
+.RR...
+......
+"""
+
+# Cross-eyed with dizziness: > <
+[layers."eyes.squeeze"]
+at = [11, 8]
+follows = "head"
+grid = """
+k........k
+.k......k.
+k........k
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "double-blink"
+weight = 3
+
+[[actions]]
+use = "curious"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the needle swings left and right, smaller each time, and
+# settles on north; the compass looks pleased with itself.
+[[actions]]
+name = "swing"
+weight = 4
+frames = [
+  { ops = ["needle=left"], ms = 220 },
+  { ops = ["needle=right"], ms = 240 },
+  { ops = ["needle=left"], ms = 280 },
+  { ops = [], ms = 160 },
+  { ops = ["needle=right"], ms = 320 },
+  { ops = ["eyes=happy"], ms = 800 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: something magnetic goes by and the needle spins round and round,
+# faster than the eye can follow; the compass goes cross-eyed and sweats,
+# the needle wobbles home, and it shakes itself straight.
+[[actions]]
+name = "spin"
+weight = 1
+frames = [
+  { ops = ["needle=east"], ms = 90 },
+  { ops = ["needle=south"], ms = 90 },
+  { ops = ["needle=west", "eyes=squeeze"], ms = 90 },
+  { ops = ["eyes=squeeze"], ms = 90 },
+  { ops = ["needle=east", "eyes=squeeze", "all+1,0"], ms = 90 },
+  { ops = ["needle=south", "eyes=squeeze", "all+-1,0"], ms = 90 },
+  { ops = ["needle=west", "eyes=squeeze", "all+1,0"], ms = 90 },
+  { ops = ["eyes=squeeze", "all+-1,0"], ms = 110 },
+  { ops = ["needle=east", "eyes=squeeze"], ms = 140 },
+  { ops = ["needle=south", "eyes=squeeze"], ms = 180 },
+  { ops = ["needle=west", "eyes=squeeze", "prop:sweat@24,2"], ms = 240 },
+  { ops = ["needle=left", "eyes=squeeze", "prop:sweat@24,3"], ms = 400 },
+  { ops = ["needle=right", "eyes=closed", "prop:sweat@24,4"], ms = 300 },
+  { ops = ["eyes=closed", "mouth=open"], ms = 500 },
+  { ops = [], ms = 200 },
+]

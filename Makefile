@@ -13,12 +13,13 @@ PNG ?=
 ANIMATED ?=
 POWER_SECONDS ?= 120
 DRY_RUN ?=
+DIR ?=
 
 # Every release target (keep in sync with rust-toolchain.toml).
 TARGETS = x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwin aarch64-apple-darwin x86_64-pc-windows-msvc
 
 .DEFAULT_GOAL := help
-.PHONY: help build run preview settings settings-shots power-check test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden golden-hosts contact-sheet building-blocks palette art-export art-import ci release package publish release-finalize install uninstall test-install lint-installers doctor clean check-all-targets spike-f22
+.PHONY: help build run preview settings settings-shots mascot-sheet power-check test test-x11 test-wayland test-linux-display test-macos-display test-windows-display check-assets lint fmt golden golden-hosts contact-sheet building-blocks palette art-export art-import ci release package publish release-finalize install uninstall test-install lint-installers doctor clean check-all-targets spike-f22
 
 help: ## List targets
 	@$(PAWDEV) help $(firstword $(MAKEFILE_LIST))
@@ -80,6 +81,9 @@ building-blocks: ## Render the crate accents, props, and every base with every m
 
 settings-shots: ## Render every page of the settings window into out/settings/, and docs/settings.png for the README
 	$(PAWDEV) settings-shots
+
+mascot-sheet: ## Render every mascot folder in DIR frame by frame into out/mascot-sheet/ (user-mascot rules; any warning fails): make mascot-sheet DIR=path/to/mascots
+	$(PAWDEV) mascot-sheet $(DIR)
 
 palette: ## Regenerate assets/palette.gpl (for GIMP, Aseprite, LibreSprite) from assets/palette.toml
 	$(PAWDEV) palette

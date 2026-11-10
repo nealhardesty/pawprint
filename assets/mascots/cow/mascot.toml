@@ -1,0 +1,194 @@
+# Cow on ungulate-head. A black-and-white dairy cow: a broad, short face
+# (wider and blunter than the goat's), irregular black patches over one
+# brow, the other cheek, and the neck, a big pink muzzle with round
+# nostrils, little curved horns, ears out to the sides, and a brass bell on
+# a leather collar under its chin. The signature chews its cud and swings
+# its head so the bell rings (a note); the rare one is a surprised moo.
+id = "cow"
+name = "Cow"
+category = "mammals"
+aliases = ["cattle"]
+accent = "moss"
+extends = "ungulate-head"
+
+rest = ["body", "ears", "head", "antlers", "eyes", "nose", "bell"]
+
+[palette]
+"l" = "white"       # coat light
+"f" = "white"       # coat
+"F" = "grey-1"      # coat shadow
+"w" = "white"       # throat
+"d" = "fur-black"   # NEW: patches
+"m" = "pink-1"      # NEW: muzzle
+"M" = "pink-2"      # mouth line
+"h" = "grey-3"      # eye glint (a dot that reads on white)
+"n" = "pink-2"      # nostrils
+"p" = "pink-1"      # inner ear
+"P" = "pink-2"      # NEW: mouth
+"z" = "cream"       # horn light
+"x" = "grey-1"      # horn
+"X" = "grey-2"      # horn shadow
+"c" = "brown-3"     # NEW: collar
+"y" = "yellow-1"    # NEW: bell light
+"Y" = "yellow-2"    # NEW: bell
+
+# The neck and shoulders, patched, with a leather collar.
+[layers.body]
+at = [4, 15]
+grid = """
+.......klfffffFFk.......
+......klfwwwwwwFFk......
+....kcccccccccccccck....
+..klfffffwwwwwwffffFFk..
+.kdddffffwwwwwwfffffFFk.
+kdddddfffwwwwwwffffffFFk
+kldddffffwwwwwwfdddffFFk
+klfdfffffwwwwwwdddddfFFk
+klffffffffffffffdddffFFk
+klfffffffffffffffdfffFFk
+klffffffdddffffffffffFFk
+klfffffdddddfffffffffFFk
+klffffffdddffffffffffFFk
+klfffffffdffffffffdddFFk
+klfffffffffffffffdddddFk
+klffffffffffffffffdddFFk
+klfffffffffffffffffdfFFk
+"""
+
+# A broad face with a patch over one brow and the other cheek.
+[layers.head]
+at = [8, 4]
+grid = """
+...kkkkkkkkkk...
+.kkddddlllllfkk.
+klddddffffffffFk
+kldddfffffffffFk
+klffffffffffffFk
+klffffffffffffFk
+.klfffffffffddk.
+..klffffffddFk..
+..kmmmmmmmmmmk..
+.kmmmmmmmmmmmmk.
+.kmmmmmmmmmmmmk.
+..kmmMMMMMMmmk..
+...kkkkkkkkkk...
+"""
+
+# Little horns curving up and out.
+[layers.antlers]
+at = [8, 1]
+follows = "head"
+grid = """
+kk............kk
+kzk..........kzk
+.kxk........kxk.
+..kxk......kxk..
+"""
+
+# Big eyes, a little lower and wider apart.
+[layers.eyes]
+at = [10, 8]
+follows = "head"
+grid = """
+hk........hk
+kk........kk
+"""
+
+# Eyes popped wide for the moo.
+[layers."eyes.wide"]
+at = [9, 7]
+follows = "head"
+grid = """
+.kk........kk.
+khkk......khkk
+kkkk......kkkk
+.kk........kk.
+"""
+
+[layers.nose]
+at = [11, 13]
+follows = "head"
+grid = """
+.nn....nn.
+"""
+
+[layers."nose.sniff"]
+at = [11, 13]
+follows = "head"
+grid = """
+nnn....nnn
+"""
+
+[layers."mouth.open"]
+at = [14, 15]
+follows = "head"
+grid = """
+kPPk
+.kk.
+"""
+
+# The moo: a round open mouth.
+[layers."mouth.moo"]
+at = [13, 14]
+follows = "head"
+grid = """
+.kkkk.
+kPPPPk
+kPPPPk
+.kkkk.
+"""
+
+# A brass bell hanging from the collar.
+[layers.bell]
+at = [13, 16]
+grid = """
+..kk..
+.kyyk.
+kyyyYk
+kYYYYk
+.kkkk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: chews its cud, then swings its head and the bell rings.
+[[actions]]
+name = "cud-bell"
+weight = 4
+frames = [
+  { ops = ["+mouth.open"], ms = 200 },
+  { ops = [], ms = 200 },
+  { ops = ["+mouth.open"], ms = 200 },
+  { ops = ["head+-1,0", "bell+-1,0"], ms = 160 },
+  { ops = ["head+1,0", "bell+1,0", "eyes=closed", "prop:note@24,2"], ms = 200 },
+  { ops = ["bell+-1,0", "eyes=closed", "prop:note@25,0"], ms = 200 },
+  { ops = ["bell+1,0", "eyes=closed", "prop:note@25,-1"], ms = 300 },
+  { ops = ["eyes=closed"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: something startles it; eyes wide, a big surprised moo.
+[[actions]]
+name = "moo"
+weight = 1
+frames = [
+  { ops = ["eyes=wide"], ms = 400 },
+  { ops = ["eyes=wide", "all+0,-1", "ears=flick", "mouth=moo", "prop:bang@26,1"], ms = 900 },
+  { ops = ["eyes=wide", "mouth=moo", "bell+1,0", "prop:bang@26,2"], ms = 300 },
+  { ops = ["eyes=wide", "bell+-1,0"], ms = 300 },
+  { ops = ["eyes=closed"], ms = 200 },
+  { ops = [], ms = 200 },
+]

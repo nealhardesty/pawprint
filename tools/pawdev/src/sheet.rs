@@ -506,6 +506,112 @@ fn lib_prop(lib: &pawprint_core::sprite::Library, name: &str) -> RgbaImage {
     img
 }
 
+// ------------------------------------------------------------ mascot sheet
+
+const DARK: Rgb = Rgb(0x23, 0x26, 0x2b);
+
+/// `make mascot-sheet DIR=<folder>`: every mascot folder in `dir`, compiled
+/// with the user-mascot rules (SPEC §12.11) against the embedded library,
+/// so work in progress never touches `assets/` or the build. Writes one
+/// PNG per mascot into `out` (its rest frame at 1× and 2× on a light and a
+/// dark desktop, then every action frame by frame at 2× with its time) and
+/// `index.png` with every rest frame at 1× and 2×. Fails on any compile
+/// error or warning, as the bundled build would.
+pub fn mascot_sheet(dir: &Path, out: &Path) -> Result<(), String> {
+    let lib = pawprint_core::catalog::library();
+    let (mascots, warnings) = pawprint_core::catalog::load_user_mascots(dir, lib);
+    for w in &warnings {
+        println!("warning: {w}");
+    }
+    std::fs::create_dir_all(out).map_err(|e| format!("{}: {e}", out.display()))?;
+    for m in &mascots {
+        write_png(&out.join(format!("{}.png", m.id)), &mascot_strip(m))?;
+    }
+    if !mascots.is_empty() {
+        write_png(&out.join("index.png"), &index_sheet(&mascots))?;
+    }
+    if warnings.is_empty() {
+        println!("{} mascot(s), no warnings", mascots.len());
+        Ok(())
+    } else {
+        Err(format!(
+            "{} warning(s) or error(s); a bundled mascot must have none",
+            warnings.len()
+        ))
+    }
+}
+
+fn mascot_strip(m: &Mascot) -> RgbaImage {
+    const F: u32 = 64;
+    const STEP: u32 = F + 6;
+    let accent = accent_of(m);
+    let longest = m.actions.iter().map(|a| a.frames.len()).max().unwrap_or(0) as u32;
+    let width = (PAD * 2 + longest * STEP).max(PAD * 2 + 2 * (32 + 4 + F + 18) + 128);
+    let row_h = F + 7 + 4 + 7 + 10;
+    let height = PAD * 2 + 14 + 6 + (128 + 10) + m.actions.len() as u32 * row_h;
+    let mut img = RgbaImage::new(width, height);
+    fill(&mut img, 0, 0, width, height, BG);
+    let title = format!("{} - {} - {}", m.id, m.name, m.category);
+    text(&mut img, &title.to_uppercase(), PAD, PAD, 2, INK);
+    // Rest: 1x and 2x on light, then on dark.
+    let mut x = PAD;
+    let y = PAD + 14 + 6;
+    for bg in [BG, DARK] {
+        fill(&mut img, x, y + 64, 32 + 4 + F + 8, F + 4, bg);
+        blit(&mut img, &badge(m, 0, 32, accent), x + 2, y + 64 + 2 + 32);
+        blit(
+            &mut img,
+            &badge(m, 0, F, accent),
+            x + 2 + 32 + 4,
+            y + 64 + 2,
+        );
+        x += 32 + 4 + F + 8 + 10;
+    }
+    // And at 4x, to read single pixels.
+    blit(&mut img, &badge(m, 0, 128, accent), x, y);
+    let mut y = y + 128 + 10;
+    for a in &m.actions {
+        let kind = match &a.template {
+            Some(t) => format!("template {t}"),
+            None => "own".to_string(),
+        };
+        let caption = format!("{}  ({kind}, weight {}, {:?})", a.name, a.weight, a.when);
+        text(&mut img, &caption.to_uppercase(), PAD, y, 1, INK);
+        for (i, f) in a.frames.iter().enumerate() {
+            let fx = PAD + i as u32 * STEP;
+            blit(
+                &mut img,
+                &badge(m, usize::from(f.frame), F, accent),
+                fx,
+                y + 11,
+            );
+            text(&mut img, &format!("{}MS", f.ms), fx, y + 11 + F + 2, 1, DIM);
+        }
+        y += row_h;
+    }
+    img
+}
+
+fn index_sheet(mascots: &[Mascot]) -> RgbaImage {
+    const COLS: u32 = 8;
+    const W: u32 = 32 + 4 + 64;
+    const H: u32 = 64 + 4 + 7;
+    let rows = (mascots.len() as u32).div_ceil(COLS);
+    let width = PAD * 2 + COLS * (W + 14);
+    let height = PAD * 2 + rows * (H + 10);
+    let mut img = RgbaImage::new(width, height);
+    fill(&mut img, 0, 0, width, height, BG);
+    for (i, m) in mascots.iter().enumerate() {
+        let (col, row) = (i as u32 % COLS, i as u32 / COLS);
+        let (x, y) = (PAD + col * (W + 14), PAD + row * (H + 10));
+        let accent = accent_of(m);
+        blit(&mut img, &badge(m, 0, 32, accent), x, y + 32);
+        blit(&mut img, &badge(m, 0, 64, accent), x + 36, y);
+        text(&mut img, &m.id, x, y + 64 + 4, 1, INK);
+    }
+    img
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

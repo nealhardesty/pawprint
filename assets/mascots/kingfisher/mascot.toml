@@ -1,0 +1,220 @@
+# Kingfisher on bird-perched. All head and beak: an oversized electric
+# blue head speckled with pale blue, an orange stripe through the eye, a
+# blue moustache over a white throat, an orange breast, and a long black
+# dagger of a beak jutting left. Small red feet on the rim. Three-quarter
+# view facing left. Signature: it fixes on something below and a glint
+# flashes along the beak. Rare: it dives off the badge into the crate and
+# comes back up with a fish.
+id = "kingfisher"
+name = "Kingfisher"
+category = "birds"
+aliases = []
+accent = "sky"
+extends = "bird-perched"
+
+[palette]
+"l" = "blue-1"      # feathers light
+"S" = "blue-1"      # crown speckles
+"f" = "blue-2"      # electric blue
+"F" = "blue-3"      # blue shadow
+"T" = "teal"        # back stripe
+"Y" = "orange-1"    # breast light
+"o" = "orange-2"    # breast, eye stripe
+"O" = "orange-3"    # breast shadow
+"W" = "white"       # throat, neck patch, fish belly
+"d" = "fur-black"   # beak
+"D" = "grey-4"      # beak light
+"h" = "white"       # eye highlight
+"b" = "red-1"       # feet
+"B" = "red-2"       # feet shadow
+"p" = "red-2"       # inside of the beak
+
+# Orange breast in front, blue back behind.
+[layers.body]
+at = [5, 12]
+grid = """
+..kkYYYYYYYYYYffffkk..
+.kYYooooooooooofffFFk.
+kYoooooooooooooffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+kYooooooooooooOffffFFk
+"""
+
+# The folded wing, speckled, with the teal stripe down the back.
+[layers.wings]
+at = [17, 13]
+grid = """
+.kkkkkkkk.
+kTTTTffffk
+kSfSffSFFk
+kfSffSfFFk
+kfffSffFFk
+.kffffFFk.
+..kffFFk..
+...kkkk...
+"""
+
+# The big head: speckled blue crown, an orange stripe through the eye, a
+# white neck patch, a blue moustache, and a white throat.
+[layers.head]
+at = [5, 2]
+grid = """
+......kkkkkkkkkk......
+....kklllllfffffkk....
+...kllfffSffffffffFk..
+..klfffffffSffffffFFk.
+.kffSffffffffffSffFFFk
+kffffffffffffffffffFFk
+kYooooooooooooWWffffFk
+kooooooooooooWWWfffFFk
+kffffffffffffWWfffFFFk
+.kWWWWWWfffffffffffFk.
+..kWWWWWYoooooofffFk..
+...YoooooooooooofFF...
+"""
+
+[layers.eyes]
+at = [12, 8]
+follows = "head"
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.closed"]
+at = [12, 9]
+follows = "head"
+grid = """
+kk
+"""
+
+[layers."eyes.left"]
+at = [11, 8]
+follows = "head"
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.right"]
+at = [13, 8]
+follows = "head"
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.happy"]
+at = [11, 8]
+follows = "head"
+grid = """
+.kk.
+k..k
+"""
+
+# Fixed on the water: a hard brow over a lowered pupil.
+[layers."eyes.focus"]
+at = [11, 7]
+follows = "head"
+grid = """
+FFF
+.ok
+.kk
+"""
+
+# The long black dagger.
+[layers.beak]
+at = [0, 8]
+follows = "head"
+grid = """
+...kkkkk
+.kkDDDDd
+kddddddd
+.kkkkkkk
+"""
+
+[layers."mouth.open"]
+at = [0, 7]
+follows = "head"
+grid = """
+..kkkkkk
+.kDDDDdd
+kkkkkkkk
+.kpppppp
+..kddddd
+...kkkkk
+"""
+
+# A little silver fish crosswise in the beak.
+[layers."catch.fish"]
+at = [1, 9]
+follows = "head"
+grid = """
+.kk.
+kWSk
+kWSk
+kWSk
+.kk.
+kSSk
+kkkk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: it fixes on something below and a glint runs along the beak.
+[[actions]]
+name = "dive-glint"
+weight = 5
+frames = [
+  { ops = ["head+-1,1", "eyes=focus"], ms = 300 },
+  { ops = ["head+-1,1", "eyes=focus", "prop:sparkle@4,6"], ms = 160 },
+  { ops = ["head+-1,1", "eyes=focus", "prop:sparkle@0,7"], ms = 300 },
+  { ops = ["head+-1,1", "eyes=focus"], ms = 700 },
+  { ops = ["eyes=closed"], ms = 140 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: off it goes, headfirst into the crate, and back up with a fish.
+[[actions]]
+name = "dive"
+weight = 1
+frames = [
+  { ops = ["head+-1,1", "eyes=focus", "all+0,1"], ms = 400 },
+  { ops = ["all+-3,4", "eyes=focus"], ms = 100 },
+  { ops = ["all+-6,12", "eyes=focus"], ms = 100 },
+  { ops = ["all+-6,24", "prop:bubble@3,11"], ms = 500 },
+  { ops = ["all+0,10", "+catch.fish"], ms = 120 },
+  { ops = ["all+0,2", "+catch.fish", "eyes=happy"], ms = 120 },
+  { ops = ["+catch.fish", "eyes=happy"], ms = 800 },
+  { ops = ["head+0,-1", "eyes=closed"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

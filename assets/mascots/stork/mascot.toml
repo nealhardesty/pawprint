@@ -1,0 +1,233 @@
+# Stork on bird-water. A white stork standing tall on the rim, side on and
+# facing left: a white head and thick white neck, a long straight red bill
+# angled down like a spear, a white body with black flight feathers along
+# the back and tail, and long red legs. Straighter and heavier than the
+# flamingo's bent pink bill, upright where the heron hunches. The base's
+# side `wings` are left out of `rest`; `wings.open` is a raised
+# black-tipped wing. Signature: throws its head back and clacks its bill,
+# clatter-clatter. Rare: stands on one leg, wobbles, flaps for balance,
+# and clacks in triumph.
+id = "stork"
+name = "Stork"
+category = "birds"
+aliases = []
+accent = "ice"
+extends = "bird-water"
+rest = ["body", "head", "eyes", "bill", "feet"]
+
+[palette]
+"W" = "white"       # feathers
+"G" = "grey-1"      # feather shadow
+"d" = "fur-black"   # flight feathers
+"D" = "grey-4"      # flight feather edges
+"h" = "grey-3"      # eye glint (solid on the white head)
+"b" = "red-1"       # bill and legs light
+"B" = "red-2"       # bill and legs
+
+# White body, black flight feathers along the back and the tail.
+[layers.body]
+at = [9, 7]
+grid = """
+.......kkkkkk......
+.....kkWWWWWWkk....
+....kWWWWWWWWWDkk..
+..kkWWWWWWWWWWDddk.
+.kWWWWWWWWWWWWGDddk
+kGWWWWWWWWWWWGDdddk
+.kGWWWWWWWWWGDddddk
+..kGGGGGGGGDddddkk.
+...kkkkkkkkkkkkk...
+"""
+
+[layers."wings.open"]
+at = [14, 0]
+grid = """
+..........kkk
+.......kkkddk
+.....kkWWDddk
+...kkWWWWDdk.
+..kWWWWWWDk..
+.kWWWWWWGk...
+kWWWWWWGk....
+kkkkkkkkk....
+"""
+
+# The head and the thick neck.
+[layers.head]
+at = [6, 4]
+grid = """
+...kkkkk...
+..kWWWWWk..
+.kWWWWWWWk.
+kWWWWWWWWGk
+kWWWWWWWWWG
+.kWWWWWWWWW
+..kWWWWWWWW
+..kWWWWWWW.
+..kWWWWWWW.
+"""
+
+[layers.eyes]
+at = [9, 8]
+follows = "head"
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.closed"]
+at = [9, 9]
+follows = "head"
+grid = """
+kk
+"""
+
+[layers."eyes.left"]
+at = [8, 8]
+follows = "head"
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk
+kk
+"""
+
+[layers."eyes.happy"]
+at = [8, 8]
+follows = "head"
+grid = """
+.kk.
+k..k
+"""
+
+# The long red bill, angled down to a point.
+[layers.bill]
+at = [0, 7]
+follows = "head"
+grid = """
+.....kkkk
+....kbBBk
+...kbBk..
+..kbBk...
+.kbBk....
+kbBk.....
+kkk......
+"""
+
+# Thrown back: the bill points up at the sky.
+[layers."bill.up"]
+at = [1, 0]
+follows = "head"
+grid = """
+kk......
+kbk.....
+kbBk....
+.kbBk...
+..kbBk..
+...kbBk.
+....kbBk
+"""
+
+# Thrown back and open: clack.
+[layers."bill.clack"]
+at = [0, 0]
+follows = "head"
+grid = """
+.kk......
+.kbk.....
+..kbk....
+kk.kbk...
+kbk.kBk..
+.kbBkkBk.
+..kkbBBBk
+"""
+
+[layers."mouth.open"]
+at = [0, 7]
+follows = "head"
+grid = """
+.....kkkk
+....kbBBk
+...kbkk..
+..kbk.kk.
+.kbk..kBk
+kbk....kk
+kk.......
+"""
+
+# Long red legs, down past the rim.
+[layers.feet]
+at = [16, 16]
+grid = """
+kbk..kbk.
+kbk..kbk.
+kbk..kbk.
+kbk..kbk.
+kBk..kBk.
+kBk..kBk.
+"""
+
+[layers."feet.lift"]
+at = [16, 16]
+grid = """
+kbk..kbk.
+kbk..kbbk
+kbk...kk.
+kbk......
+kBk......
+kBk......
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: head thrown back, bill to the sky, clatter-clatter-clatter.
+[[actions]]
+name = "bill-clack"
+weight = 5
+frames = [
+  { ops = ["head+1,0", "bill=up", "eyes=closed"], ms = 200 },
+  { ops = ["head+1,0", "bill=clack", "eyes=closed"], ms = 100 },
+  { ops = ["head+1,0", "bill=up", "eyes=closed"], ms = 100 },
+  { ops = ["head+1,0", "bill=clack", "eyes=closed"], ms = 100 },
+  { ops = ["head+1,0", "bill=up", "eyes=closed"], ms = 100 },
+  { ops = ["head+1,0", "bill=clack", "eyes=closed"], ms = 100 },
+  { ops = ["head+1,0", "bill=up", "eyes=happy"], ms = 600 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: up on one leg, a wobble, a flap for balance, and a proud clack.
+[[actions]]
+name = "one-leg-wobble"
+weight = 1
+frames = [
+  { ops = ["feet=lift"], ms = 400 },
+  { ops = ["feet=lift", "all+1,0", "feet+-1,0"], ms = 200 },
+  { ops = ["feet=lift", "all+-1,0", "feet+1,0"], ms = 200 },
+  { ops = ["feet=lift", "all+1,0", "feet+-1,0", "+wings.open", "prop:sweat@26,1"], ms = 250 },
+  { ops = ["feet=lift", "+wings.open", "prop:sweat@26,2"], ms = 400 },
+  { ops = ["feet=lift"], ms = 400 },
+  { ops = ["head+1,0", "bill=clack", "eyes=happy"], ms = 120 },
+  { ops = ["head+1,0", "bill=up", "eyes=happy"], ms = 120 },
+  { ops = ["head+1,0", "bill=clack", "eyes=happy"], ms = 120 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,187 @@
+# Black Hole, an object on `orb`: a dark sphere edged with a thin glowing
+# photon ring, its hot accretion disk lying flat across it, behind at the
+# sides and blazing in front under the smile. Its eyes and smile glow
+# light on the dark, so the face still reads. The signature draws stars
+# spiraling in, one after another, and it beams; the rare one lets out a
+# burp and is very embarrassed about it.
+id = "black-hole"
+name = "Black Hole"
+category = "space"
+aliases = []
+accent = "violet"
+extends = "orb"
+
+[palette]
+"f" = "fur-black"   # the dark
+"l" = "purple-2"    # violet sheen
+"g" = "amber"       # photon ring
+"y" = "yellow-1"    # accretion disk, hot
+"o" = "orange-2"    # accretion disk, inner
+"e" = "yellow-1"    # glowing eyes and smile
+"h" = "white"       # eye highlight
+"P" = "pink-2"      # blush
+"p" = "pink-2"      # inside of the mouth
+
+# The sphere: dark, with the photon ring glowing just inside its outline.
+[layers.head]
+grid = """
+................................
+................................
+................................
+............kkkkkkkk............
+..........kkggggggggkk..........
+.........kgggffffffgggk.........
+........kglllffffffffggk........
+.......kgllfffffffffffggk.......
+......kgllfffffffffffffggk......
+......kglfffffffffffffffgk......
+.....kggffffffffffffffffggk.....
+.....kgffffffffffffffffffgk.....
+.....kgffffffffffffffffffgk.....
+.....kgffffffffffffffffffgk.....
+.....kgffffffffffffffffffgk.....
+.....kgffffffffffffffffffgk.....
+.....kgffffffffffffffffffgk.....
+.....kggffffffffffffffffggk.....
+......kgffffffffffffffffgk......
+......kggffffffffffffffggk......
+.......kggffffffffffffggk.......
+........kggffffffffffggk........
+.........kgggffffffgggk.........
+..........kkggggggggkk..........
+............kkkkkkkk............
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+"""
+
+# Light eyes and mouth, so the face reads on the dark.
+[layers.eyes]
+at = [11, 9]
+follows = "head"
+grid = """
+he......he
+ee......ee
+"""
+
+[layers."eyes.closed"]
+at = [11, 10]
+follows = "head"
+grid = """
+ee......ee
+"""
+
+[layers."eyes.left"]
+at = [10, 9]
+follows = "head"
+grid = """
+he......he
+ee......ee
+"""
+
+[layers."eyes.right"]
+at = [12, 9]
+follows = "head"
+grid = """
+he......he
+ee......ee
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+follows = "head"
+grid = """
+.ee......ee.
+e..e....e..e
+"""
+
+[layers."eyes.squeeze"]
+at = [10, 9]
+follows = "head"
+grid = """
+e..........e
+.ee......ee.
+"""
+
+[layers.mouth]
+at = [14, 12]
+follows = "head"
+grid = """
+e..e
+.ee.
+"""
+
+[layers."mouth.open"]
+at = [15, 12]
+follows = "head"
+grid = """
+ee
+ep
+"""
+
+[layers."mouth.wobble"]
+at = [14, 12]
+follows = "head"
+grid = """
+.e.e
+e.e.
+"""
+
+# The accretion disk: the far side shows past the edges, the near side
+# crosses in front.
+[layers.disk]
+at = [0, 11]
+follows = "head"
+grid = """
+...kk......................kk...
+.kkyy......................yykk.
+kyyoo......................ooyyk
+kyokkk....................kkkoyk
+kyyoookkkkkkkkkkkkkkkkkkkkoooyyk
+.kkyyyyooooooooooooooooooyyyykk.
+...kkkkkyyyyyyyyyyyyyyyykkkkk...
+........kkkkkkkkkkkkkkkk........
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: stars spiral in from the top right, round, and down into the
+# dark; it beams.
+[[actions]]
+name = "star-spiral"
+weight = 4
+frames = [
+  { ops = ["eyes=right", "prop:sparkle@25,0"], ms = 220 },
+  { ops = ["eyes=right", "prop:sparkle@26,8", "prop:sparkle@18,-4"], ms = 220 },
+  { ops = ["prop:sparkle@19,14", "prop:sparkle@25,3"], ms = 220 },
+  { ops = ["eyes=left", "prop:sparkle@6,7", "prop:sparkle@24,12"], ms = 220 },
+  { ops = ["prop:sparkle@14,1", "prop:sparkle@13,13"], ms = 220 },
+  { ops = ["eyes=happy"], ms = 700 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: a burp (a little puff escapes), and then a very embarrassed face.
+[[actions]]
+name = "burp"
+weight = 1
+frames = [
+  { ops = ["eyes=squeeze", "all+0,1"], ms = 300 },
+  { ops = ["eyes=squeeze", "+mouth.open", "all+0,-1", "prop:puff@19,4"], ms = 300 },
+  { ops = ["+mouth.open", "prop:puff@20,1"], ms = 400 },
+  { ops = ["eyes=closed", "mouth=wobble", "prop:sweat@23,3"], ms = 900 },
+  { ops = ["eyes=left", "mouth=wobble", "prop:sweat@23,5"], ms = 700 },
+  { ops = [], ms = 200 },
+]

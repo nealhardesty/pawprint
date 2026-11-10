@@ -1,0 +1,197 @@
+# Typewriter, an object: a grey vintage typewriter seen from the front,
+# a sheet of cream paper standing up out of the black platen roller, round
+# knobs at both ends of the roller, the chrome return lever cocked at the
+# left, and two staggered rows of round keys with a space bar below the
+# face. The signature types a few letters: keys clack, each one nudges the
+# carriage a step to the left, and the line on the paper grows. The rare
+# one reaches the end of the line: DING, and the carriage slams back.
+id = "typewriter"
+name = "Typewriter"
+category = "things"
+aliases = []
+accent = "charcoal"
+extends = "object"
+
+[palette]
+"l" = "grey-1"      # body light
+"f" = "grey-2"      # body
+"F" = "grey-3"      # body shadow
+"r" = "fur-black"   # NEW: roller, keys
+"R" = "grey-3"      # NEW: roller shine
+"w" = "cream"       # paper, key tops
+"M" = "grey-2"      # typed letters, the return lever
+"p" = "red-2"       # inside of the mouth
+
+[layers.head]
+grid = """
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+................................
+...kllllllllllllllllllllllFFk...
+...klffffffffffffffffffffFFFk...
+...klffffffffffffffffffffFFFk...
+...klffffffffffffffffffffFFFk...
+...klffffffffffffffffffffFFFk...
+..kkFFFFFFFFFFFFFFFFFFFFFFFFkk..
+..klwrfwrfwrfwrfwrfwrfwrfwrfFk..
+..klrrfrrfrrfrrfrrfrrfrrfrrfFk..
+..klffwrfwrfwrfwrfwrfwrfwrffFk..
+..klffrrfrrfrrfrrfrrfrrfrrffFk..
+..klffffffwwwwwwwwwwwwffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+..klffffffffffffffffffffffffFk..
+"""
+
+# The sheet of paper, rolled into the platen; it rides with the carriage.
+[layers.paper]
+at = [10, 0]
+follows = "carriage"
+grid = """
+kkkkkkkkkkkk
+kwwwwwwwwwwk
+kwMMwMMMwMwk
+kwwwwwwwwwwk
+kwMMMwwwwwwk
+kwwwwwwwwwwk
+"""
+
+[layers."paper.one"]
+at = [10, 0]
+follows = "carriage"
+grid = """
+kkkkkkkkkkkk
+kwwwwwwwwwwk
+kwMMwMMMwMwk
+kwwwwwwwwwwk
+kwMMMwMwwwwk
+kwwwwwwwwwwk
+"""
+
+[layers."paper.two"]
+at = [10, 0]
+follows = "carriage"
+grid = """
+kkkkkkkkkkkk
+kwwwwwwwwwwk
+kwMMwMMMwMwk
+kwwwwwwwwwwk
+kwMMMwMMwwwk
+kwwwwwwwwwwk
+"""
+
+[layers."paper.three"]
+at = [10, 0]
+follows = "carriage"
+grid = """
+kkkkkkkkkkkk
+kwwwwwwwwwwk
+kwMMwMMMwMwk
+kwwwwwwwwwwk
+kwMMMwMMMwwk
+kwwwwwwwwwwk
+"""
+
+# The carriage: platen roller, knobs, and the return lever.
+[layers.carriage]
+at = [0, 1]
+follows = "head"
+grid = """
+kkk.............................
+kMMk............................
+.kkMk...........................
+.kkkMk.......................kk.
+kRrkkkkkkkkkkkkkkkkkkkkkkkkkkRrk
+kRrkRRRRRRRRRRRRRRRRRRRRRRRRkRrk
+krrkrrrrrrrrrrrrrrrrrrrrrrrrkrrk
+krrkkkkkkkkkkkkkkkkkkkkkkkkkkrrk
+.kk..........................kk.
+"""
+
+# A key pressed down, hidden at rest.
+[layers."press.a"]
+at = [10, 15]
+follows = "head"
+grid = """
+ff
+rr
+"""
+
+[layers."press.b"]
+at = [18, 17]
+follows = "head"
+grid = """
+ff
+rr
+"""
+
+[layers."press.c"]
+at = [13, 15]
+follows = "head"
+grid = """
+ff
+rr
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-right"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: clack, clack, clack. Each key nudges the carriage a step to
+# the left and the line on the paper grows by a letter.
+[[actions]]
+name = "type"
+weight = 5
+frames = [
+  { ops = ["eyes=happy", "press=a"], ms = 110 },
+  { ops = ["eyes=happy", "carriage+-1,0", "paper=one"], ms = 200 },
+  { ops = ["eyes=happy", "carriage+-1,0", "paper=one", "press=b"], ms = 110 },
+  { ops = ["eyes=happy", "carriage+-2,0", "paper=two"], ms = 200 },
+  { ops = ["eyes=happy", "carriage+-2,0", "paper=two", "press=c"], ms = 110 },
+  { ops = ["eyes=happy", "carriage+-3,0", "paper=three"], ms = 600 },
+  { ops = ["carriage+-2,0", "paper=two"], ms = 140 },
+  { ops = ["carriage+-1,0", "paper=one"], ms = 140 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the end of the line. DING! The carriage is shoved all the way back
+# with the lever, the paper rolls up a line, and it looks very pleased.
+[[actions]]
+name = "ding"
+weight = 1
+frames = [
+  { ops = ["press=a", "carriage+-3,0", "paper=three"], ms = 120 },
+  { ops = ["carriage+-3,0", "paper=three", "eyes=right", "prop:bang@27,0"], ms = 600 },
+  { ops = ["carriage+-1,0", "paper=three", "eyes=closed"], ms = 90 },
+  { ops = ["carriage+1,0", "paper=three", "paper+0,-1", "eyes=closed", "all+0,1"], ms = 120 },
+  { ops = ["paper+0,-1", "eyes=closed"], ms = 160 },
+  { ops = ["paper+0,-1", "eyes=happy"], ms = 800 },
+  { ops = ["eyes=happy"], ms = 300 },
+  { ops = [], ms = 200 },
+]

@@ -1,0 +1,273 @@
+# Horse on ungulate-head. A chestnut with a long, narrow face (longer and
+# slimmer than any deer), a white blaze from forehead to nose, a dark muzzle,
+# small upright ears, and a dark forelock falling over the brow. Its mane
+# flows down the right side of the arched neck, so the silhouette leans
+# that way. No antlers. The signature tosses the forelock to the other side
+# and nickers (a note); the rare one whinnies and rears back out of the
+# crate, front hooves in the air.
+id = "horse"
+name = "Horse"
+category = "mammals"
+aliases = ["pony", "stallion"]
+accent = "copper"
+extends = "ungulate-head"
+
+rest = ["body", "ears", "head", "eyes", "nose", "mane"]
+
+[palette]
+"l" = "orange-2"    # coat light
+"f" = "orange-3"    # coat
+"F" = "brown-3"     # coat shadow
+"w" = "white"       # blaze
+"m" = "brown-3"     # NEW: muzzle
+"M" = "brown-4"     # mouth line
+"s" = "brown-4"     # NEW: mane
+"S" = "fur-black"   # NEW: mane shadow
+"n" = "fur-black"   # nostrils
+"p" = "pink-2"      # inner ear, mouth
+
+# The arched neck and shoulders, with the mane flowing down the right side.
+[layers.body]
+grid = """
+    ................................
+    ................................
+    ................................
+    .....................kk.........
+    ............fffffffFSssk........
+    ............fffffffFsssSk.......
+    ............ffffffffFsSsk.......
+    ............ffffffffFSsssk......
+    ............ffffffffFsssSk......
+    ............ffffffffFssSssk.....
+    ............ffffffffFsSsssk.....
+    .........klfffffffffFSsssSk.....
+    ........klfffffffffffFssSssk....
+    .......klffffffffffffFsSsssk....
+    ......klfffffffffffffFSsssSk....
+    .....klfffffffffffffffFssSssk...
+    ....klffffffffffffffffFsSsssk...
+    ...klfffffffffffffffffFSsssSk...
+    ...klffffffffffffffffffFssSsk...
+    ...klffffffffffffffffffFsSssk...
+    ...klfffffffffffffffffffFsssk...
+    ...klfffffffffffffffffffFssSk...
+    ...klfffffffffffffffffffFsSsk...
+    ...klfffffffffffffffffffFSssk...
+    ...klfffffffffffffffffffFsssk...
+    ...klfffffffffffffffffffFssSk...
+    ...klfffffffffffffffffffFsSsk...
+    ...klfffffffffffffffffffFSssk...
+    ...klfffffffffffffffffffFsssk...
+    ...klfffffffffffffffffffFssSk...
+    ...klfffffffffffffffffffFsSsk...
+    ...klfffffffffffffffffffFSssk...
+"""
+
+# Small upright ears.
+[layers.ears]
+at = [10, 0]
+follows = "head"
+grid = """
+.k........k.
+klk......kFk
+kpfk....kfpk
+kpfk....kfpk
+.kfk....kfk.
+"""
+
+[layers."ears.flick"]
+at = [10, 0]
+follows = "head"
+grid = """
+.k..........
+klk.......k.
+kpfk.....kFk
+kpfk....kfpk
+.kfk....kfpk
+"""
+
+# A long narrow face with a blaze and a dark muzzle.
+[layers.head]
+at = [9, 3]
+grid = """
+...kkkkkkkk...
+..kllllllFFk..
+.klllllfffFFk.
+klllffwwfffFFk
+klffffwwffffFk
+klffffwwffffFk
+klffffwwffffFk
+.klfffwwfffFk.
+.klfffwwfffFk.
+..kffwwwwfFk..
+..kmmwwwwmMk..
+..kmmmmmmmmk..
+..kmmmmmmmMk..
+...kmMMMMmk...
+....kkkkkk....
+"""
+
+[layers.eyes]
+at = [11, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+follows = "head"
+grid = """
+kk......kk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+# Wide eyes for the whinny: a rim of white.
+[layers."eyes.wide"]
+at = [10, 7]
+follows = "head"
+grid = """
+.ww......ww.
+whkw....whkw
+wkkw....wkkw
+.ww......ww.
+"""
+
+[layers.nose]
+at = [12, 14]
+follows = "head"
+grid = """
+n......n
+"""
+
+[layers."nose.sniff"]
+at = [12, 14]
+follows = "head"
+grid = """
+nn....nn
+"""
+
+[layers."mouth.open"]
+at = [14, 16]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+# The whinny: a long open mouth with teeth.
+[layers."mouth.whinny"]
+at = [13, 15]
+follows = "head"
+grid = """
+kkkkkk
+kwwwwk
+kppppk
+.kkkk.
+"""
+
+# The forelock, falling to the left over the brow.
+[layers.mane]
+at = [12, 1]
+follows = "head"
+grid = """
+...kk...
+..kssk..
+.kssssk.
+ksssSsk.
+kssSk...
+.kk.....
+"""
+
+# Tossed over to the right.
+[layers."mane.toss"]
+at = [12, 1]
+follows = "head"
+grid = """
+...kk...
+..kssk..
+.kssssk.
+.ksSsssk
+...kSssk
+.....kk.
+"""
+
+# Front hooves, raised for the rear.
+[layers."hooves.up"]
+at = [6, 16]
+grid = """
+.kk.............kk.
+kllk...........kffk
+kffk...........kffk
+kfFk...........kfFk
+kSSk...........kSSk
+.kk.............kk.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "sniff"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: tosses the forelock over to the other side and nickers.
+[[actions]]
+name = "mane-toss"
+weight = 4
+frames = [
+  { ops = ["head+-1,0"], ms = 160 },
+  { ops = ["head+1,-1", "mane=toss", "eyes=closed"], ms = 140 },
+  { ops = ["head+1,0", "mane=toss", "eyes=closed"], ms = 200 },
+  { ops = ["mane=toss"], ms = 400 },
+  { ops = ["mane=toss", "nose=sniff", "+mouth.open", "prop:note@24,0"], ms = 260 },
+  { ops = ["mane=toss", "prop:note@25,-1"], ms = 600 },
+  { ops = ["head+-1,0"], ms = 160 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: whinnies and rears back out of the crate, hooves up, then drops back.
+[[actions]]
+name = "rear"
+weight = 1
+frames = [
+  { ops = ["eyes=wide", "ears=flick"], ms = 300 },
+  { ops = ["all+0,-2", "eyes=wide", "+hooves.up"], ms = 160 },
+  { ops = ["all+0,-4", "head+1,0", "eyes=closed", "mouth=whinny", "mane=toss", "+hooves.up", "prop:bang@27,0"], ms = 900 },
+  { ops = ["all+0,-3", "eyes=closed", "mouth=whinny", "+hooves.up", "prop:bang@27,1"], ms = 300 },
+  { ops = ["all+0,1"], ms = 140 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]

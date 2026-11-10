@@ -49,7 +49,7 @@ pub struct Accent {
 }
 
 /// Pick the accent (SPEC §5.4). `fallback_mascot` is true when the mascot
-/// came from rule 2 or 5. Returns a warning when the configured accent is
+/// came from rule 4 or 5. Returns a warning when the configured accent is
 /// unknown (and then behaves as `auto`).
 pub fn resolve(
     setting: &str,

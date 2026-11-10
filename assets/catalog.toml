@@ -6,4 +6,4 @@ required = [
   "owl", "moose", "marmot", "elk", "armadillo", "bear", "walrus", "chipmunk",
   "cat-maine-coon-black", "cat-buff-tabby", "cat-cow", "cat-tuxedo",
 ]
-minimum = 100
+minimum = 214

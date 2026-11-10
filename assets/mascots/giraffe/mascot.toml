@@ -1,0 +1,294 @@
+# Giraffe on ungulate-head. Taller and slimmer than anything else here: a
+# small tan head held up on a long narrow neck covered in a net of
+# orange-brown patches, two ossicone horns with dark knobs on top, ears out
+# to the sides, a pale muzzle, and lashes. The neck is the point: the
+# signature stretches it up and up until the head leaves the top of the
+# frame, then comes back down chewing a leaf. The rare one licks its own
+# nose with a long dark tongue.
+id = "giraffe"
+name = "Giraffe"
+category = "mammals"
+aliases = []
+accent = "ochre"
+extends = "ungulate-head"
+
+[palette]
+"l" = "orange-1"    # coat light, the net between patches
+"f" = "orange-1"    # coat
+"F" = "orange-2"    # coat shadow
+"d" = "orange-3"    # NEW: patches
+"D" = "brown-3"     # NEW: patch shadow
+"w" = "cream"       # muzzle
+"M" = "orange-2"    # mouth line
+"x" = "orange-2"    # ossicones
+"X" = "brown-4"     # ossicone knobs
+"n" = "brown-3"     # nostrils
+"p" = "pink-2"      # inner ear
+"t" = "purple-2"    # NEW: tongue
+
+# The long patched neck.
+[layers.body]
+grid = """
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ................................
+    ............kddlddFk............
+    ............kddlddFk............
+    ............klllllFk............
+    ............klddldDk............
+    ............klddldDk............
+    ............klllllFk............
+    ............kddlddFk............
+    ............kddlddFk............
+    ............klllllFk............
+    ............klddldDk............
+    ...........kdlddlddFk...........
+    ..........klllllllllFk..........
+    .........kddlddlddlddFk.........
+    ........klddlddlddlddlDk........
+    .......klllllllllllllllFk.......
+    ......klddlddlddlddlddldDk......
+    .....kdlddlddlddlddlddlddFk.....
+    .....klllllllllllllllllllFk.....
+    .....klddlddlddlddlddlddlDk.....
+    .....klddlddlddlddlddlddlDk.....
+"""
+
+# The neck stretched all the way up, past the top of the frame.
+[layers."body.tall"]
+grid = """
+    ............kddlddFk............
+    ............kddlddFk............
+    ............klllllFk............
+    ............klddldDk............
+    ............klddldDk............
+    ............klllllFk............
+    ............kddlddFk............
+    ............kddlddFk............
+    ............klllllFk............
+    ............klddldDk............
+    ............klddldDk............
+    ............klllllFk............
+    ............kddlddFk............
+    ............kddlddFk............
+    ............klllllFk............
+    ............klddldDk............
+    ............klddldDk............
+    ............klllllFk............
+    ............kddlddFk............
+    ............kddlddFk............
+    ............klllllFk............
+    ............klddldDk............
+    ...........kdlddlddFk...........
+    ..........klllllllllFk..........
+    .........kddlddlddlddFk.........
+    ........klddlddlddlddlDk........
+    .......klllllllllllllllFk.......
+    ......klddlddlddlddlddldDk......
+    .....kdlddlddlddlddlddlddFk.....
+    .....klllllllllllllllllllFk.....
+    .....klddlddlddlddlddlddlDk.....
+    .....klddlddlddlddlddlddlDk.....
+"""
+
+# Ears straight out to the sides.
+[layers.ears]
+at = [6, 6]
+follows = "head"
+grid = """
+.kkk............kkk.
+kppfk..........kfppk
+.kkk............kkk.
+"""
+
+[layers."ears.flick"]
+at = [6, 5]
+follows = "head"
+grid = """
+................kkk.
+.kkk...........kfppk
+kppfk...........kkk.
+.kkk................
+"""
+
+# A small head with a few patches and a pale muzzle.
+[layers.head]
+at = [10, 3]
+grid = """
+..kkkkkkkk..
+.kllllllFFk.
+klllffffffFk
+klfdffffdfFk
+klffffffffFk
+klffffffffFk
+klffffffffFk
+.klffffffFk.
+.kfwwwwwwFk.
+..kwwwwwwk..
+..kwwwwwMk..
+...kkkkkk...
+"""
+
+# Ossicones with dark knobs.
+[layers.antlers]
+at = [12, 0]
+follows = "head"
+grid = """
+.kk..kk.
+kXXkkXXk
+.kxkkxk.
+.kxkkxk.
+"""
+
+# Eyes with lashes.
+[layers.eyes]
+at = [10, 7]
+follows = "head"
+grid = """
+k..........k
+.hk......hk.
+.kk......kk.
+"""
+
+[layers."eyes.closed"]
+at = [10, 8]
+follows = "head"
+grid = """
+k..........k
+.kk......kk.
+"""
+
+[layers."eyes.left"]
+at = [10, 7]
+follows = "head"
+grid = """
+k..........k
+hk......hk..
+kk......kk..
+"""
+
+[layers."eyes.right"]
+at = [10, 7]
+follows = "head"
+grid = """
+k..........k
+..hk......hk
+..kk......kk
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+follows = "head"
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+# Cross-eyed, watching its own tongue.
+[layers."eyes.cross"]
+at = [10, 7]
+follows = "head"
+grid = """
+k..........k
+..kh....hk..
+..kk....kk..
+"""
+
+[layers.nose]
+at = [13, 12]
+follows = "head"
+grid = """
+n....n
+"""
+
+[layers."nose.sniff"]
+at = [13, 11]
+follows = "head"
+grid = """
+n....n
+"""
+
+[layers."mouth.open"]
+at = [14, 14]
+follows = "head"
+grid = """
+kppk
+.kk.
+"""
+
+# The tongue, out and down.
+[layers."mouth.tongue"]
+at = [14, 13]
+follows = "head"
+grid = """
+kttk
+.ktk
+.ktk
+..k.
+"""
+
+# The tongue curled up over the muzzle to lick the nose.
+[layers."mouth.lick"]
+at = [13, 11]
+follows = "head"
+grid = """
+.ktk..
+kttk..
+kttk..
+.kttk.
+..kk..
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "ear-flick"
+weight = 3
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: the neck rises out of the top of the frame, and the head comes
+# back down with a leaf, chewing.
+[[actions]]
+name = "browse"
+weight = 4
+frames = [
+  { ops = ["body=tall", "head+0,-4", "eyes=closed"], ms = 200 },
+  { ops = ["body=tall", "head+0,-16"], ms = 900 },
+  { ops = ["body=tall", "head+0,-5", "eyes=happy", "prop:leaf@18,3"], ms = 220 },
+  { ops = ["eyes=happy", "prop:leaf@18,9"], ms = 400 },
+  { ops = ["+mouth.open", "prop:leaf@18,10"], ms = 200 },
+  { ops = ["eyes=happy", "prop:leaf@18,9"], ms = 300 },
+  { ops = ["+mouth.open", "prop:leaf@17,11"], ms = 200 },
+  { ops = ["eyes=happy"], ms = 400 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: sticks out a long dark tongue and licks its own nose.
+[[actions]]
+name = "nose-lick"
+weight = 1
+frames = [
+  { ops = ["mouth=tongue"], ms = 300 },
+  { ops = ["mouth=tongue", "eyes=cross"], ms = 400 },
+  { ops = ["mouth=lick", "eyes=cross", "nose=sniff"], ms = 600 },
+  { ops = ["mouth=lick", "eyes=closed"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 500 },
+  { ops = [], ms = 200 },
+]

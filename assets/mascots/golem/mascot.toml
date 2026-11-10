@@ -1,0 +1,199 @@
+# Golem on primate: a friendly stone golem. A blocky slab of a head with
+# chipped corners, moss growing over the top and dripping down, a heavy
+# stone brow, a crack down one cheek, and eyes that glow pale blue like
+# runes. A glowing rune is carved into the dark plate on its chest, and
+# its boulder fists rest on the rim. No ears (`ears` is left out of
+# `rest`). The signature rubs its head with a big stone hand and a pebble
+# comes loose and drops; the rare one is a stomp that shakes the whole
+# crate, raising puffs of dust and knocking a pebble off.
+id = "golem"
+name = "Golem"
+category = "mythical"
+aliases = []
+accent = "slate"
+extends = "primate"
+
+rest = ["body", "head", "eyes", "nose", "grin", "rune", "paws"]
+
+[palette]
+"l" = "grey-1"      # stone light
+"f" = "grey-2"      # stone
+"F" = "grey-3"      # stone shadow, cracks
+"w" = "grey-3"      # the chest plate
+"M" = "grey-3"      # nose, grin
+"g" = "green-1"     # NEW: moss
+"G" = "green-2"     # NEW: moss shadow
+"e" = "blue-1"      # glowing eyes and rune
+"h" = "white"       # the eyes' bright core
+"p" = "grey-4"      # inside of the mouth
+
+[layers.head]
+at = [7, 3]
+grid = """
+....kkkkkkkkkk....
+..kkgGggGggGggkk..
+.kggGggGggGggGggk.
+klgGgffggGffGgfGFk
+klfgFFFFGfFFFgFFFk
+klfffffffffffffFFk
+klfffffffffffffFFk
+klfFfffffffffffFFk
+klffFffffffffffFFk
+klfFfffffffffffFFk
+kFffFffffffffffFFk
+.kFFffffffffffFFk.
+..kkFFFFFFFFFFkk..
+....kkkkkkkkkk....
+"""
+
+# Glowing rune eyes: no ink, just light.
+[layers.eyes]
+at = [11, 8]
+grid = """
+he......he
+ee......ee
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+grid = """
+he......he
+ee......ee
+"""
+
+[layers."eyes.right"]
+at = [12, 8]
+grid = """
+he......he
+ee......ee
+"""
+
+[layers."eyes.happy"]
+at = [10, 8]
+grid = """
+.ee......ee.
+e..e....e..e
+"""
+
+[layers."eyes.closed"]
+at = [11, 9]
+grid = """
+kk......kk
+"""
+
+# A stony little smile.
+[layers.grin]
+at = [13, 12]
+follows = "head"
+grid = """
+M....M
+.MMMM.
+"""
+
+# The rune on its chest.
+[layers.rune]
+at = [13, 15]
+grid = """
+..ee..
+.e..e.
+..ee..
+..ee..
+"""
+
+# Boulder arms with stone fists on the rim.
+[layers.paws]
+at = [1, 1]
+grid = """
+..............................
+..............................
+..............................
+..............................
+..............................
+..............................
+..............................
+..............................
+..............................
+..............................
+..............................
+.kkkk....................kkkk.
+kllffk..................kllffk
+klfffFk................klfffFk
+kffFFFk................kffFFFk
+kFFFFkk................kkFFFFk
+kllllfk................kllllfk
+klFllFk................klFllFk
+.kFFFk..................kFFFk.
+"""
+
+# Right arm raised, rubbing the top of the head.
+[layers."paws.rub"]
+at = [1, 1]
+grid = """
+...................kkkkk......
+..................kllffk......
+..................klfffFk.....
+..................kFFFFFkk....
+......................kfFFk...
+.......................kffFk..
+........................kffFk.
+.........................kffFk
+.........................kffFk
+.........................kffFk
+.........................kffFk
+.kkkk...................kfffFk
+kllffk.................klffFFk
+klfffFk................kffFFFk
+kffFFFk................kkFFFFk
+kFFFFkk.......................
+kllllfk.......................
+klFllFk.......................
+.kFFFk........................
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: it rubs the top of its head with a big stone hand, grinding,
+# and a pebble works loose and drops past its face.
+[[actions]]
+name = "rub"
+weight = 4
+frames = [
+  { ops = ["paws=rub", "eyes=closed"], ms = 300 },
+  { ops = ["paws=rub", "paws+-1,0", "eyes=closed"], ms = 150 },
+  { ops = ["paws=rub", "eyes=closed"], ms = 150 },
+  { ops = ["paws=rub", "paws+-1,0", "eyes=closed", "prop:pebble@25,4"], ms = 150 },
+  { ops = ["paws=rub", "eyes=right", "prop:pebble@26,9"], ms = 140 },
+  { ops = ["eyes=right", "prop:pebble@26,15"], ms = 160 },
+  { ops = ["eyes=right"], ms = 400 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: STOMP. It lifts, comes down hard, and the crate shakes; dust puffs
+# up on both sides and a pebble rattles off its head.
+[[actions]]
+name = "stomp"
+weight = 1
+frames = [
+  { ops = ["eyes=closed", "all+0,-2"], ms = 300 },
+  { ops = ["eyes=closed", "all+0,1", "prop:puff@0,13", "prop:puff@23,13"], ms = 100 },
+  { ops = ["eyes=closed", "all+1,0", "prop:puff@-1,11", "prop:puff@24,11", "prop:pebble@20,1"], ms = 90 },
+  { ops = ["eyes=closed", "all+-1,0", "prop:puff@-2,9", "prop:puff@25,9", "prop:pebble@23,4"], ms = 90 },
+  { ops = ["eyes=closed", "all+1,0", "prop:pebble@25,9"], ms = 90 },
+  { ops = ["eyes=left", "prop:pebble@26,15"], ms = 500 },
+  { ops = ["eyes=happy"], ms = 700 },
+  { ops = [], ms = 200 },
+]

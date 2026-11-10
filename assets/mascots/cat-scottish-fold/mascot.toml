@@ -1,0 +1,223 @@
+# Scottish Fold on cat-sit: the little owl of cats. A brown tabby and white
+# with a perfectly round head, its ears folded flat and forward like a cap
+# so the skull reads as a ball, an M on the brow and bars on the cheeks, a
+# cream muzzle and chest, and huge round amber eyes. `ears.perk` lifts the
+# folds as far as they go (not far); `body.belly` and `paws.dangle` are the
+# rare "Buddha sit", upright with the belly out and paws hanging.
+id = "cat-scottish-fold"
+name = "Scottish Fold"
+category = "cats-dogs"
+aliases = ["scottishfold"]
+accent = "honey"
+extends = "cat-sit"
+
+[palette]
+"l" = "brown-1"     # coat light
+"f" = "brown-2"     # brown tabby coat
+"F" = "brown-3"     # coat shadow
+"d" = "brown-4"     # NEW: tabby stripes
+"w" = "cream"       # muzzle, chest, belly
+"M" = "brown-1"     # shadow on the cream
+"e" = "amber"       # iris
+"h" = "white"       # glint
+"n" = "pink-2"      # nose
+"p" = "pink-1"      # inner ear
+
+[layers.tail]
+at = [26, 11]
+grid = """
+.kk.
+klFk
+kddk
+kfFk
+kddk
+kfFk
+kddk
+kfFk
+kfFk
+kfFk
+"""
+
+[layers."tail.flick"]
+at = [26, 10]
+grid = """
+..kk.
+.klFk
+.kddk
+kffFk
+kddk.
+kfFk.
+kddk.
+kfFk.
+kfFk.
+kfFk.
+"""
+
+# Sitting up: the cream belly on show.
+[layers."body.belly"]
+at = [5, 14]
+grid = """
+...klffffffffffffFk...
+..klffffwwwwwwfffFFk..
+.klffffwwwwwwwwfffFFk.
+klffffwwwwwwwwwwfffFFk
+klffffwwwwwwwwwwfffFFk
+klffffwwwwwwwwwwfffFFk
+klffffwwwwwwwwwwfffFFk
+klffffwwwwwwwwwwfffFFk
+klfffffwwwwwwwwffffFFk
+klffffffwwwwwwfffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+klfffffffffffffffffFFk
+"""
+
+# A perfectly round head with an M on the brow and bars on the cheeks.
+[layers.head]
+at = [5, 4]
+grid = """
+......kkkkkkkkkk......
+....kkllllllllffkk....
+...klllldffffdffFFk...
+..kllfffdfddfdfffFFk..
+.kllffffffddffffffFFk.
+.klfffffffffffffffFFk.
+klfffffffffffffffffFFk
+kldffffffffffffffffdFk
+klfdffffwwwwwwffffdFFk
+.klffffwwwwwwwwffffFk.
+.kFfffwwwwwwwwwwfffFk.
+..kFFfffwwwwwwfffFFk..
+....kkFFFFFFFFFFkk....
+"""
+
+# The folds: little flaps lying flat and forward over the skull.
+[layers.ears]
+at = [7, 3]
+grid = """
+.kkkk........kkkk.
+klfffk......kfffFk
+.FFFF........FFFF.
+"""
+
+# Perked as far as folds go: the flaps lift and point up a little.
+[layers."ears.perk"]
+at = [7, 2]
+grid = """
+.kk............kk.
+klfkk........kkfFk
+klfffk......kfffFk
+.FFFF........FFFF.
+"""
+
+[layers."ears.flick"]
+at = [7, 2]
+grid = """
+...............kk.
+.kkkk........kkfFk
+klfffk......kfffFk
+.FFFF........FFFF.
+"""
+
+# Huge round amber eyes, owlish.
+[layers.eyes]
+at = [10, 8]
+grid = """
+.ee......ee.
+ehke....ehke
+ekke....ekke
+.ee......ee.
+"""
+
+[layers."eyes.closed"]
+at = [10, 9]
+grid = """
+.FF......FF.
+kkkk....kkkk
+"""
+
+[layers."eyes.left"]
+at = [10, 8]
+grid = """
+.ee......ee.
+hkee....hkee
+kkee....kkee
+.ee......ee.
+"""
+
+[layers."eyes.right"]
+at = [10, 8]
+grid = """
+.ee......ee.
+eehk....eehk
+eekk....eekk
+.ee......ee.
+"""
+
+[layers."eyes.happy"]
+at = [10, 9]
+grid = """
+.kk......kk.
+k..k....k..k
+"""
+
+# Front legs hanging limp over the belly.
+[layers."paws.dangle"]
+at = [9, 15]
+grid = """
+FfF........FfF
+FfF........FfF
+FfF........FfF
+FllF......FllF
+FllF......FllF
+.FF........FF.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a sound! The folds perk up, the round head tilts, the huge
+# eyes look over, and it all settles again.
+[[actions]]
+name = "perk-tilt"
+weight = 4
+frames = [
+  { ops = ["ears=perk"], ms = 250 },
+  { ops = ["ears=perk", "eyes=right"], ms = 400 },
+  { ops = ["ears=perk", "eyes=right", "head+1,0"], ms = 900 },
+  { ops = ["ears=perk", "head+1,0"], ms = 400 },
+  { ops = ["ears=perk"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the Buddha sit. It sits bolt upright with the belly out and its
+# front paws dangling, stares into space, blinks, and slumps back down.
+[[actions]]
+name = "belly-sit"
+weight = 1
+frames = [
+  { ops = ["all+0,-1"], ms = 150 },
+  { ops = ["all+0,-3", "body=belly", "paws=dangle"], ms = 400 },
+  { ops = ["all+0,-3", "body=belly", "paws=dangle"], ms = 1200 },
+  { ops = ["all+0,-3", "body=belly", "paws=dangle", "eyes=closed"], ms = 150 },
+  { ops = ["all+0,-3", "body=belly", "paws=dangle", "eyes=left"], ms = 700 },
+  { ops = ["all+0,-1"], ms = 150 },
+  { ops = [], ms = 200 },
+]

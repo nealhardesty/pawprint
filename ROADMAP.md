@@ -315,6 +315,19 @@ remains needs the owner's machines:
       tray, typing, scrolling the mascot grid, a 200% display, and a
       config edited by hand while it is open
 
+## Catalog expansion: 214 mascots
+
+Done (SPEC Appendix A, "Catalog expansion"): 114 new mascots (47 animals,
+12 mythical creatures, 55 objects with faces), five new categories, the
+`orb` and `object` bases with the shared object face, `make mascot-sheet`,
+and a name match now beats a cached fallback (SPEC §5.3).
+
+- [ ] Polish pass on the weakest reads at 1×, as flagged in review:
+      venus-flytrap, compass, anchor, kangaroo, seahorse, paper-plane,
+      croissant, taco
+- [ ] **(owner)** A look at the animated gallery for anything that
+      should go back for another round
+
 ## After 1.0
 
 Ideas worth doing, roughly by value. None are commitments.

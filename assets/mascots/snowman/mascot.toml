@@ -1,0 +1,181 @@
+# Snowman, an object on `object`: two stacked snowballs, a little one for
+# the head and a big one sunk in the crate, a black top hat with a red band,
+# a carrot nose, a coal smile, and twig arms reaching out over the rim. The
+# signature lifts the hat with one twig arm, politely; the rare one loses
+# its carrot nose, which drops to the rim, and it fishes it back up and
+# sticks it on again.
+id = "snowman"
+name = "Snowman"
+category = "nature"
+aliases = []
+accent = "ice"
+extends = "object"
+
+[palette]
+"l" = "white"       # snow light
+"f" = "cream"       # snow
+"F" = "blue-1"      # snow shadow
+"D" = "blue-2"      # the seam between the snowballs
+"h" = "grey-3"      # eye highlight: white would vanish on snow
+"H" = "fur-black"   # top hat
+"G" = "grey-4"      # top hat light
+"R" = "red-2"       # hat band
+"o" = "orange-2"    # carrot
+"O" = "orange-3"    # carrot shadow
+"T" = "brown-3"     # twigs
+
+# Both snowballs: the head, and the body sunk in the crate.
+[layers.head]
+grid = """
+................................
+................................
+................................
+................................
+............kkkkkkkk............
+..........kklllllllfkk..........
+.........klllffffffffFk.........
+........kllffffffffffFFk........
+........klffffffffffffFk........
+........klfffffffffffFFk........
+........klfffffffffffFFk........
+........klffffffffffFFFk........
+........kllffffffffFFFFk........
+.........kffffffFFFFFFk.........
+..........kfFFFFFFFFFk..........
+.........kkkDDDFFDDDkkk.........
+.......kkllFFFFDDFFFFffkk.......
+......klllfffffFFffffffffk......
+.....kllffffffffffffffffFFk.....
+.....klffffffffffffffffffFk.....
+....kllffffffffffffffffffFFk....
+....klffffffffffffffffffFFFk....
+...kllfffffffffffffffffffFFFk...
+...klffffffffffffffffffffFFFk...
+...klfffffffffffffffffffffFFk...
+...klffffffffffffffffffffFFFk...
+...kllfffffffffffffffffffFFFk...
+....kfffffffffffffffffffFFFk....
+....kfffffffffffffffffffFFFk....
+.....kffffffFFFFFFFFFFFFFFk.....
+.....kFFFFFFFFFFFFFFFFFFFFk.....
+......kkkkkkkkkkkkkkkkkkkk......
+"""
+
+# The carrot nose.
+[layers.nose]
+at = [15, 10]
+follows = "head"
+grid = """
+oo..
+ooOO
+"""
+
+# The top hat.
+[layers.hat]
+at = [8, 0]
+follows = "head"
+grid = """
+...kkkkkkkkkk...
+...kGHHHHHHHk...
+...kGHHHHHHHk...
+...kRRRRRRRRk...
+kGGHHHHHHHHHHHHk
+kkkkkkkkkkkkkkkk
+"""
+
+# Twig arms over the rim; one lifts the hat, or reaches for the nose.
+[layers.arms]
+at = [1, 10]
+grid = """
+..T........................T..
+..T........................T..
+.TT........................TT.
+..T........................T..
+..TT......................TT..
+TT..T....................T..TT
+.....T..................T.....
+"""
+
+[layers."arms.up"]
+at = [1, 4]
+grid = """
+.........................T...
+.........................T...
+.........................T..T
+.........................T.T.
+..........................T..
+..........................T..
+..T.......................T..
+..T.......................T..
+.TT......................T...
+..T......................T...
+..TT....................T....
+TT..T...................T....
+.....T.......................
+"""
+
+[layers."arms.pick"]
+at = [1, 10]
+grid = """
+..T......................
+..T......................
+.TT......................
+..T......................
+..TT.....................
+TT..T....................
+.....T..................T
+......................TT.
+....................TTT..
+..................TT..T..
+"""
+
+# Eyes looking down at the fallen nose.
+[layers."eyes.down"]
+at = [11, 10]
+follows = "head"
+grid = """
+hk......hk
+kk......kk
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "look-left"
+weight = 3
+
+[[actions]]
+use = "content"
+weight = 2
+
+[[actions]]
+use = "doze"
+
+# Signature: it raises a twig arm and tips its hat, with a smile.
+[[actions]]
+name = "hat-tip"
+weight = 4
+frames = [
+  { ops = ["arms=up"], ms = 200 },
+  { ops = ["arms=up", "hat+1,-2", "eyes=happy"], ms = 900 },
+  { ops = ["arms=up", "hat+0,-1", "eyes=happy"], ms = 160 },
+  { ops = ["arms=up"], ms = 200 },
+  { ops = [], ms = 200 },
+]
+
+# Rare: the carrot nose falls off onto the rim. It looks down, aghast,
+# fishes the nose back up with a twig, and sticks it on again.
+[[actions]]
+name = "lost-nose"
+weight = 1
+frames = [
+  { ops = ["nose+0,3", "+mouth.open", "-mouth"], ms = 120 },
+  { ops = ["nose+0,7", "eyes=down", "+mouth.open", "-mouth"], ms = 700 },
+  { ops = ["nose+0,7", "eyes=down", "arms=pick", "+mouth.open", "-mouth"], ms = 400 },
+  { ops = ["nose+0,3", "arms=up", "eyes=closed"], ms = 200 },
+  { ops = ["arms=up", "eyes=happy", "all+0,-1"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 600 },
+  { ops = [], ms = 200 },
+]

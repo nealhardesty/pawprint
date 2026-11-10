@@ -1,0 +1,202 @@
+# Manatee, on sea-creature. A gentle grey sea cow rising out of the water,
+# face on: a small wrinkled dome of a head over a huge, square, bristly
+# muzzle split down the middle, two nostrils on top, tiny dark eyes, grey
+# whiskers fanning out past the cheeks, and paddle flippers with little
+# nails resting at the water line. The signature is a slow, lazy roll to
+# one side and the other, then a whisker twitch; the rare one munches a
+# leaf, chewing slowly until it is gone.
+id = "manatee"
+name = "Manatee"
+category = "aquatic"
+aliases = ["seacow"]
+accent = "slate"
+extends = "sea-creature"
+
+[palette]
+"l" = "grey-1"      # hide light
+"f" = "grey-2"      # hide
+"F" = "grey-3"      # hide shadow, wrinkles, nostrils
+"w" = "grey-1"      # muzzle
+"M" = "grey-3"      # NEW: muzzle bristles, cleft
+"g" = "grey-2"      # NEW: whiskers (unoutlined)
+"n" = "cream"       # NEW: flipper nails
+"p" = "pink-2"      # mouth inside
+
+# Paddle flippers at the water line, each with three nails.
+[layers.fins]
+at = [0, 13]
+grid = """
+.kkkk.....................kkkk..
+kllffk...................kffFFk.
+kfnfnfk.................kfnfnFk.
+.kkkkkk..................kkkkk..
+"""
+
+[layers.head]
+at = [0, 0]
+grid = """
+................................
+................................
+...........kkkkkkkkkk...........
+.........kkllllllllllkk.........
+........kllfffffffffffFk........
+.......kllffFFFffFFFfffFk.......
+.......klffffffffffffffFk.......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klffffffffffffffffFk......
+......klfwwwwFFwwFFwwwwfFk......
+.....klwwwwwwwwwwwwwwwwwwFk.....
+.....kwwMwwMwwwwwwwwMwwMwwk.....
+.....kwwwwMwwwwMMwwwwMwwwwk.....
+.....kMwwwwwwwwMMwwwwwwwwMk.....
+......kMMwwwwwMkkMwwwwwMMk......
+......kkMMMMMMkFFkMMMMMMkk......
+.......klffffffffffffffFk.......
+.......klffffffffffffffFk.......
+.......klffffffffffffffFk.......
+"""
+
+# Leaning over in the water, for the lazy roll (mirrored with flipx).
+[layers."head.tilt"]
+at = [0, 0]
+grid = """
+................................
+................................
+.............kkkkkkkkkk.........
+...........kkllllllllllkk.......
+..........kllfffffffffffFk......
+........kklffFFFffFFFfffFk......
+........klffffffffffffffFk......
+.......klffffffffffffffffFk.....
+.......klffffffffffffffffFk.....
+.......klffffffffffffffffFk.....
+......klfwwwwFFwwFFwwwwfFk......
+.....klwwwwwwwwwwwwwwwwwwFk.....
+.....kwwMwwMwwwwwwwwMwwMwwk.....
+.....kwwwwMwwwwMMwwwwMwwwwk.....
+.....kMwwwwwwwwMMwwwwwwwwMk.....
+......kMMwwwwwMkkMwwwwwMMk......
+......kkMMMMMMkFFkMMMMMMkk......
+.......klffffffffffffffFk.......
+.......klffffffffffffffFk.......
+.......klffffffffffffffFk.......
+"""
+
+# Tiny eyes, one pixel wide.
+[layers.eyes]
+at = [10, 8]
+grid = """
+k..........k
+k..........k
+"""
+
+[layers."eyes.closed"]
+at = [9, 9]
+grid = """
+kk..........kk
+"""
+
+[layers."eyes.left"]
+at = [9, 8]
+grid = """
+k..........k
+k..........k
+"""
+
+[layers."eyes.right"]
+at = [11, 8]
+grid = """
+k..........k
+k..........k
+"""
+
+[layers."eyes.happy"]
+at = [9, 8]
+grid = """
+.k..........k.
+k.k........k.k
+"""
+
+[layers."mouth.open"]
+at = [14, 14]
+follows = "head"
+grid = """
+kkkk
+kppk
+.kk.
+"""
+
+[layers."mouth.chew"]
+at = [14, 14]
+follows = "head"
+grid = """
+.kk.
+kppk
+"""
+
+# Grey whiskers fanning out past the muzzle (no outline).
+[layers.whiskers]
+at = [1, 11]
+follows = "head"
+grid = """
+gg..........................gg
+..gg......................gg..
+gg..........................gg
+"""
+
+[layers."whiskers.twitch"]
+at = [1, 10]
+follows = "head"
+grid = """
+.g..........................g.
+g.gg......................gg.g
+..............................
+.gg........................gg.
+"""
+
+[[actions]]
+use = "blink"
+weight = 6
+
+[[actions]]
+use = "yawn"
+weight = 3
+
+[[actions]]
+use = "bob"
+weight = 3
+
+[[actions]]
+use = "doze"
+
+# Signature: a slow, lazy roll to one side and the other, eyes shut in
+# bliss, then a whisker twitch.
+[[actions]]
+name = "lazy-roll"
+weight = 4
+frames = [
+  { ops = ["head=tilt", "eyes+1,0", "eyes=closed"], ms = 700 },
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = ["head=tilt", "eyes+1,0", "eyes=closed", "flipx"], ms = 700 },
+  { ops = ["eyes=closed"], ms = 300 },
+  { ops = ["whiskers=twitch"], ms = 160 },
+  { ops = [], ms = 160 },
+  { ops = ["whiskers=twitch"], ms = 160 },
+  { ops = [], ms = 300 },
+]
+
+# Rare: it finds a leaf, chews it slowly until it is gone, and beams.
+[[actions]]
+name = "munch"
+weight = 1
+frames = [
+  { ops = ["+mouth.open", "prop:leaf@14,9"], ms = 400 },
+  { ops = ["+mouth.chew", "eyes=closed", "prop:leaf@14,11"], ms = 300 },
+  { ops = ["+mouth.open", "whiskers=twitch", "prop:leaf@14,11"], ms = 300 },
+  { ops = ["+mouth.chew", "eyes=closed", "prop:leaf@14,13"], ms = 300 },
+  { ops = ["+mouth.open", "whiskers=twitch"], ms = 300 },
+  { ops = ["+mouth.chew", "eyes=closed"], ms = 300 },
+  { ops = ["eyes=happy"], ms = 800 },
+  { ops = [], ms = 200 },
+]
