@@ -496,7 +496,7 @@ work. Contributor rules for humans and coding agents are in
 | macOS | Xcode Command Line Tools: `xcode-select --install` (provides `make`, `lipo`, `codesign`) |
 | Windows | Visual Studio Build Tools (C++ workload) and GNU Make: `winget install ezwinports.make`. Run targets from PowerShell. |
 | Publishing | [GitHub CLI](https://cli.github.com), authenticated with `gh auth login` |
-| Installer checks (optional) | `make lint-installers` needs `shellcheck`; `make release` on Linux runs the aarch64 binary if `qemu-user-static` is installed. On Ubuntu: `sudo apt-get install shellcheck qemu-user-static` |
+| Installer checks (optional) | `make lint-installers` needs `shellcheck`; `make release` on Linux runs the aarch64 binary if `qemu-aarch64` is installed. On Ubuntu: `sudo apt-get install shellcheck qemu-user` |
 | Linux display tests (optional) | `make test-x11` and `make test-wayland` drive real display servers (and `make power-check` uses Xvfb). On Ubuntu: `sudo apt-get install xvfb xcompmgr openbox sway swaybg grim foot wtype dbus` |
 | Windows display test (optional) | `make test-windows-display` runs the badge on your own desktop: nothing to install, but quit any running badge first and leave the mouse alone for a few seconds |
 
@@ -540,7 +540,7 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make art-import MASCOT=owl PNG=out/art/owl/eyes.png` | Print an edited PNG layer as a ready-to-paste grid in the mascot's own glyphs |
 | `make mascot-sheet DIR=path/to/mascots` | Render every mascot folder in `DIR` frame by frame into `out/mascot-sheet/` (rest at 1×, 2×, and 4× on light and dark, then every action), with the same checks as the build; works on your own custom mascots too |
 | `make ci` | Everything CI checks (`lint` + `test`) |
-| `make release` | Optimized build for this OS, checked and run: static musl x86_64 and aarch64 on Linux (the aarch64 one runs under `qemu-user-static` if installed), a universal binary re-signed ad hoc on macOS, `pawprint.exe` and `pawprintw.exe` on Windows |
+| `make release` | Optimized build for this OS, checked and run: static musl x86_64 and aarch64 on Linux (the aarch64 one runs under `qemu-aarch64` if installed), a universal binary re-signed ad hoc on macOS, `pawprint.exe` and `pawprintw.exe` on Windows |
 | `make package` | Release build, then the archives and their `.sha256` files into `dist/`. Fails if the catalog has fewer valid mascots than `assets/catalog.toml` requires (214) or is missing a required one. |
 | `make publish` | Upload `dist/` and the installers to the GitHub release `v<version>`, creating it as a draft if needed. Refuses unless the tree is clean, the tag is on `HEAD`, and `dist/` was packaged from that commit. `make publish DRY_RUN=1` prints the `gh` commands without running them |
 | `make release-finalize` | Once every OS has published: check the draft release has all four archives, their `.sha256` files, and both installers, then publish it. `DRY_RUN=1` prints the commands and the expected assets |

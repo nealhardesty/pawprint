@@ -249,7 +249,7 @@ fn verify(target: &str, bin: &Path, version: &str) -> Result<(), String> {
             });
             notes.push(format!("ran{how}: {out}"));
         }
-        None => notes.push("not run here (install qemu-user-static to run it)".into()),
+        None => notes.push("not run here (install qemu-user to run it)".into()),
     }
     if target.contains("apple") && cfg!(target_arch = "aarch64") {
         // Informational: the x86_64 slice runs only where Rosetta 2 is installed.
