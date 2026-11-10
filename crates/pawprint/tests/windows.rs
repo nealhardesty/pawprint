@@ -999,9 +999,14 @@ fn badge_hwnd() -> Option<HWND> {
 /// SPEC §6.5: a fullscreen window in front on the badge's display hides it
 /// (the shell's ABN_FULLSCREENAPP and the foreground hook), closing it
 /// shows the badge again, and `fullscreen = "show"` keeps it.
+///
+/// Named to run last (tests run one at a time, in name order): after a
+/// fullscreen window closes, Windows 11 slides Explorer's Snap bar
+/// (`DRAG_BAR_WINDOW_CLASS`) over the top of the screen for a while, where
+/// it covers the badge's pixels and takes its clicks in the next test.
 #[test]
 #[ignore = "needs a Windows desktop session; run `make test-windows-display`"]
-fn fullscreen_windows_hide_the_badge() {
+fn zz_fullscreen_windows_hide_the_badge() {
     unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
     let env = Env::new("windows-fullscreen");
     // Windows keeps config.toml in the real %APPDATA%, not under the test
