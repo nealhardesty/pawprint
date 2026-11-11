@@ -588,7 +588,7 @@ and each backend implements it the native way:
 | Backend | `hide` (default) | `show` |
 |---|---|---|
 | Windows | An appbar registration (`ABM_NEW`, with no `ABM_SETPOS`, so no space is reserved) gets the shell's `ABN_FULLSCREENAPP`, and a `WINEVENT_OUTOFCONTEXT` hook gets `EVENT_SYSTEM_FOREGROUND`. Either one re-checks the foreground window; the badge is hidden (`SW_HIDE`) while it covers the badge's display, and shown again (`SW_SHOWNOACTIVATE`) after | Neither is registered |
-| macOS | The panel leaves out `fullScreenAuxiliary`: a fullscreen app gets a Space of its own, and only auxiliary windows join it | `fullScreenAuxiliary` is set |
+| macOS | The panel sets `fullScreenNone`: a fullscreen app gets a Space of its own, and a `canJoinAllSpaces` panel joins it unless it carries that flag (F39) | `fullScreenAuxiliary` is set |
 | X11 | The backend follows `_NET_ACTIVE_WINDOW` (on the root) and that window's `_NET_WM_STATE` and size (`PropertyNotify`, `ConfigureNotify` on it), and unmaps the badge while the active window is `_NET_WM_STATE_FULLSCREEN` over the badge's display | Nothing is watched |
 | Wayland | The layer surface is on `top`, which compositors draw below fullscreen windows (sway, KWin) | `overlay`, above them |
 | GNOME (X11 profile) | As X11 for XWayland windows. Native Wayland windows are invisible to X11 (`_NET_ACTIVE_WINDOW` is `None` then); Mutter itself puts DOCK windows in the bottom layer while their monitor is fullscreen (F40) | As X11, but Mutter may still lower the badge (F40) |
@@ -1495,8 +1495,9 @@ Implemented in `backend::macos` with `objc2`, `objc2-foundation`,
   `backgroundColor = clear`, `hasShadow = false`,
   `ignoresMouseEvents = true`, `level = .statusBar` (window layer 25),
   `collectionBehavior = canJoinAllSpaces | stationary | ignoresCycle`, plus
-  `fullScreenAuxiliary` only with `fullscreen = "show"` (6.5; without it
-  the panel stays out of fullscreen apps' Spaces, F39),
+  `fullScreenNone` with `fullscreen = "hide"` (which keeps the panel out
+  of fullscreen apps' Spaces, F39) or `fullScreenAuxiliary` with
+  `fullscreen = "show"` (6.5),
   `hidesOnDeactivate = false`. It is ordered in with
   `orderFrontRegardless` at the first `Place`, never made key or main
   outside move mode.
@@ -3046,7 +3047,7 @@ true instead.
 | F36 | zbus 5 (async-io) runs its socket setup (peer credentials, the SASL zero byte) on the `blocking` crate's thread pool. From `blocking` 1.7 an idle pool thread never exits (it exits only above the thread limit) and wakes every 500 ms; 1.6 lets it exit after 500 ms idle. | `blocking` is pinned to `=1.6.2`, so the badge has zero wakeups at rest with the tray running (7.2) | **Confirmed** (`make power-check`: 39 wakeups in 20 s in static mode with 1.7.0, 0 with 1.6.2) |
 | F37 | `toml_edit` keeps a document's trailing comments after its last table, so a table added to a file that ends in comments lands above them. | The `config init` template ends with an empty `[hosts]`, so host tables go after the commented examples (8.6) | **Confirmed** (`config_edit` tests) |
 | F38 | A `ksni` item with `MENU_ON_ACTIVATE` and the dbusmenu layout can be driven entirely over D-Bus: a stand-in StatusNotifierWatcher on a private `dbus-daemon` receives the registration, and a dbusmenu `Event(id, "clicked")` runs the item's callback. | The tray is tested end to end in `make test-x11` without a desktop (16.1.1) | **Confirmed**; real hosts (Plasma, Ubuntu's AppIndicator) are owner checks |
-| F39 | A `canJoinAllSpaces` panel at `NSStatusWindowLevel` without `fullScreenAuxiliary` is not shown in another app's fullscreen Space (Jump Desktop, Screens, a fullscreen browser), and is with it. | macOS hides the badge under fullscreen apps with no detection (6.5) | **Verify** (owner, real Mac with a fullscreen remote client) |
+| F39 | A `canJoinAllSpaces` panel at `NSStatusWindowLevel` is shown in another app's fullscreen Space (Jump Desktop, Screens, a fullscreen browser) with or without `fullScreenAuxiliary`; leaving the flag out hides nothing. With `fullScreenNone` it stays out of that Space and is back on return. Stationary or not, status or floating level, panel or plain window make no difference. | macOS hides the badge under fullscreen apps with one collection-behavior flag and no detection (6.5) | **Confirmed** with test panels on macOS 26.6; **verify** the installed badge (owner) |
 | F40 | Mutter puts DOCK-type windows in its bottom layer while their monitor shows a fullscreen window, native Wayland or XWayland. | GNOME steps aside for native Wayland fullscreen windows, which the X11 backend can't see; with `fullscreen = "show"` Mutter may still lower the badge (6.5) | **Verify** (owner, Ubuntu) |
 | F41 | The shell sends `ABN_FULLSCREENAPP` to an appbar registered with `ABM_NEW` alone (no `ABM_SETPOS`, so no space reserved) when `mstsc` (and other borderless windows covering a monitor) goes full screen or leaves it, including from windowed mode without a foreground change. | Windows needs no polling to catch a window going fullscreen in place (6.5) | **Verify** (CI covers the foreground case; mstsc in place is an owner check) |
 | F42 | KWin draws an active fullscreen window above the layer-shell `top` layer and below `overlay`, like sway. | Plasma hides the badge under fullscreen windows by layer alone (6.5) | **Confirmed on sway** (`make test-wayland`); **verify** on Plasma |
