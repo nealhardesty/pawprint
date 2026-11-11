@@ -171,7 +171,7 @@ fn parse_size(s: &str) -> Result<u32, String> {
     }
 }
 
-/// `pawprint 1.2.0 (commit, target, N mascots)`
+/// `pawprint 1.2.1 (commit, target, N mascots)`
 fn version() -> String {
     let n = pawprint_core::catalog::Catalog::bundled().mascots().len();
     format!(
