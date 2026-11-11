@@ -408,15 +408,16 @@ fn badge_panel(mtm: MainThreadMarker, rect: NSRect) -> Retained<NSWindow> {
     panel
 }
 
-/// Every Space, never in the window cycle. A fullscreen app gets a Space of
-/// its own, and only `fullScreenAuxiliary` windows join it, so leaving that
-/// flag out is how the badge steps aside for fullscreen apps (SPEC §6.5).
+/// Every Space, never in the window cycle. `fullScreenNone` is what keeps
+/// the badge out of a fullscreen app's Space: a `canJoinAllSpaces` panel
+/// joins those too unless it says so, with or without `fullScreenAuxiliary`
+/// (SPEC §6.5, F39).
 fn collection(policy: Fullscreen) -> NSWindowCollectionBehavior {
     let all = NSWindowCollectionBehavior::CanJoinAllSpaces
         | NSWindowCollectionBehavior::Stationary
         | NSWindowCollectionBehavior::IgnoresCycle;
     match policy {
-        Fullscreen::Hide => all,
+        Fullscreen::Hide => all | NSWindowCollectionBehavior::FullScreenNone,
         Fullscreen::Show => all | NSWindowCollectionBehavior::FullScreenAuxiliary,
     }
 }
