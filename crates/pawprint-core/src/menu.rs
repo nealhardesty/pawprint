@@ -5,6 +5,7 @@ use pawprint_sprite::RgbaImage;
 
 use crate::badge::Command;
 use crate::config::Animation;
+use crate::update::{Notice, Version};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MenuItem {
@@ -57,9 +58,30 @@ pub struct TrayState {
 /// Sizes offered in the menu.
 pub const SIZE_PRESETS: [u32; 3] = [32, 64, 128];
 
+/// The update item (SPEC §15.8): it checks, until a check finds a newer
+/// release, and then installs that. While a job runs it says so, and
+/// choosing it again does nothing.
+fn update_item(notice: Option<Notice>, available: Option<Version>) -> MenuItem {
+    match (notice, available) {
+        (Some(Notice::Checking), _) => {
+            MenuItem::action("Checking for updates…", Command::CheckUpdate)
+        }
+        (Some(Notice::Updating), _) => MenuItem::action("Updating…", Command::InstallUpdate),
+        (_, Some(v)) => MenuItem::action(&format!("Install update {v}"), Command::InstallUpdate),
+        _ => MenuItem::action("Check for updates", Command::CheckUpdate),
+    }
+}
+
 /// Move, Size ▸ 32/64/128, Animation ▸ Idle/Static, Settings…, Reset
-/// position, Reload config, Quit.
-pub fn menu(size: u32, animation: Animation, moving: bool) -> Vec<MenuItem> {
+/// position, Reload config, Check for updates (or Install update 1.3.0),
+/// Quit.
+pub fn menu(
+    size: u32,
+    animation: Animation,
+    moving: bool,
+    notice: Option<Notice>,
+    available: Option<Version>,
+) -> Vec<MenuItem> {
     let sizes = SIZE_PRESETS
         .iter()
         .map(|&n| MenuItem::check(&n.to_string(), Command::SetSize(n), size == n))
@@ -85,6 +107,7 @@ pub fn menu(size: u32, animation: Animation, moving: bool) -> Vec<MenuItem> {
         MenuItem::action("Settings…", Command::Settings),
         MenuItem::action("Reset position", Command::ResetPosition),
         MenuItem::action("Reload config", Command::Reload),
+        update_item(notice, available),
         MenuItem::action("Quit", Command::Quit),
     ]
 }
@@ -95,7 +118,7 @@ mod tests {
 
     #[test]
     fn menu_shape_and_checks() {
-        let m = menu(64, Animation::Static, false);
+        let m = menu(64, Animation::Static, false, None, None);
         let labels: Vec<&str> = m.iter().map(|i| i.label.as_str()).collect();
         assert_eq!(
             labels,
@@ -106,6 +129,7 @@ mod tests {
                 "Settings…",
                 "Reset position",
                 "Reload config",
+                "Check for updates",
                 "Quit"
             ]
         );
@@ -114,15 +138,48 @@ mod tests {
         assert_eq!(m[1].children[2].command, Some(Command::SetSize(128)));
         assert_eq!(m[2].children[1].checked, Some(true));
         assert_eq!(m[3].command, Some(Command::Settings));
-        assert_eq!(m[6].command, Some(Command::Quit));
+        assert_eq!(m[6].command, Some(Command::CheckUpdate));
+        assert_eq!(m[7].command, Some(Command::Quit));
         assert_eq!(
-            menu(96, Animation::Idle, true)[1]
+            menu(96, Animation::Idle, true, None, None)[1]
                 .children
                 .iter()
                 .filter(|i| i.checked == Some(true))
                 .count(),
             0
         );
-        assert_eq!(menu(96, Animation::Idle, true)[0].checked, Some(true));
+        assert_eq!(
+            menu(96, Animation::Idle, true, None, None)[0].checked,
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn the_update_item_follows_the_update() {
+        let v: Version = "1.3.0".parse().unwrap();
+        let item = |notice, available| {
+            let m = menu(64, Animation::Idle, false, notice, available);
+            (m[6].label.clone(), m[6].command)
+        };
+        assert_eq!(
+            item(Some(Notice::Checking), None),
+            ("Checking for updates…".into(), Some(Command::CheckUpdate))
+        );
+        // A result is on the crate for a few seconds; the menu already
+        // offers the next step.
+        for notice in [Some(Notice::Available(v)), None] {
+            assert_eq!(
+                item(notice, Some(v)),
+                ("Install update 1.3.0".into(), Some(Command::InstallUpdate))
+            );
+        }
+        assert_eq!(
+            item(Some(Notice::Updating), Some(v)),
+            ("Updating…".into(), Some(Command::InstallUpdate))
+        );
+        assert_eq!(
+            item(Some(Notice::UpToDate), None),
+            ("Check for updates".into(), Some(Command::CheckUpdate))
+        );
     }
 }

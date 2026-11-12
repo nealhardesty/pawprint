@@ -14,7 +14,7 @@ use std::os::unix::process::CommandExt;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use common::{Env, Image, Proc, assert_badge_at, wait_for};
+use common::{Env, Image, Proc, assert_badge_at, release_server, wait_for};
 use x11rb::connection::Connection;
 use x11rb::properties::{WmSizeHints, WmSizeHintsSpecification};
 use x11rb::protocol::xproto::*;
@@ -487,6 +487,12 @@ impl Bus {
 
     /// The menu item at `path` (labels): its id and whether it is checked.
     fn find(&self, item: &str, path: &[&str]) -> (i32, bool) {
+        self.try_find(item, path)
+            .unwrap_or_else(|| panic!("no menu item {path:?}"))
+    }
+
+    /// [`Bus::find`], or `None` while the menu has no such item.
+    fn try_find(&self, item: &str, path: &[&str]) -> Option<(i32, bool)> {
         fn walk(node: &Node, path: &[&str]) -> Option<(i32, bool)> {
             let [first, rest @ ..] = path else {
                 let checked = node
@@ -504,7 +510,7 @@ impl Bus {
                 (label == *first).then(|| walk(&child, rest)).flatten()
             })
         }
-        walk(&self.layout(item), path).unwrap_or_else(|| panic!("no menu item {path:?}"))
+        walk(&self.layout(item), path)
     }
 
     fn click(&self, item: &str, path: &[&str]) {
@@ -992,6 +998,47 @@ fn tray_menu_and_config_edits_reach_the_badge() {
             .any(|l| l.starts_with("animation") && l.contains("static")),
         "{explain}"
     );
+}
+
+/// The tray's update item (SPEC §15.8), against a release server that has
+/// a newer release: the badge runs `pawprint update` in a process of its
+/// own and hears the answer over IPC.
+#[test]
+#[ignore = "needs Xvfb; run `make test-x11`"]
+fn the_tray_checks_for_updates_and_offers_what_it_finds() {
+    let mut env = Env::new("x11-update");
+    let x = X::start(&mut env);
+    x.background(false, (0, 0, W, H), BG_PIXEL);
+    let bus = Bus::start(&mut env);
+    env.set("PAWPRINT_DOWNLOAD_BASE", release_server("99.0.0"));
+    let _badge = env.run_badge();
+    env.wait_rect([1200, 16, 64, 64]);
+    let item = bus.item(None);
+
+    bus.click(&item, &["Check for updates"]);
+    wait_for("the offer in the menu", || {
+        bus.try_find(&item, &["Install update 99.0.0"])
+    });
+    assert!(bus.try_find(&item, &["Check for updates"]).is_none());
+    assert!(
+        env.ok(&["status"]).contains("running"),
+        "still the same badge"
+    );
+
+    // Installing is refused for a cargo build, before anything is
+    // downloaded: the badge says FAILED, the log says why, and the offer
+    // stands.
+    bus.click(&item, &["Install update 99.0.0"]);
+    let log = env.home().join(".local/state/pawprint/pawprint.log");
+    wait_for("the reason in the log", || {
+        std::fs::read_to_string(&log)
+            .ok()
+            .filter(|t| t.contains("development build"))
+    });
+    wait_for("the offer again", || {
+        bus.try_find(&item, &["Install update 99.0.0"])
+    });
+    assert!(env.ok(&["status"]).contains("running"));
 }
 
 #[test]

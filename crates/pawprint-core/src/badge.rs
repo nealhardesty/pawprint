@@ -18,6 +18,7 @@ use crate::movemode::{self, Key, MoveMode, Outcome};
 use crate::render::{self, BadgeSpec, Frame};
 use crate::state::State;
 use crate::surface::{DisplayInfo, select_display};
+use crate::update::{Job, News, Notice, Version};
 
 /// The current time, as the shell sees it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,6 +41,12 @@ pub enum Command {
     Forget,
     /// Open the settings window (the tray's Settings…).
     Settings,
+    /// Ask what the latest release is (the tray's Check for updates).
+    CheckUpdate,
+    /// Install the release a check found (the tray's Install update).
+    InstallUpdate,
+    /// How a check or an install ended (`pawprint update`, over IPC).
+    UpdateNews(News),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -74,6 +81,9 @@ pub enum Effect {
     ReloadConfig,
     /// Start the settings window in a process of its own (SPEC §8.7).
     OpenSettings,
+    /// Run this in a process of its own (`pawprint update`); it answers
+    /// with `Command::UpdateNews` (SPEC §15.8).
+    Update(Job),
     Exit,
 }
 
@@ -125,6 +135,11 @@ pub struct Badge<'c> {
     fullscreen: Option<Fullscreen>,
     /// The tray icon's mascot and accent, so it is composed only on change.
     tray_icon: Option<(String, Rgb)>,
+    /// What the crate says about an update instead of the hostname, and
+    /// until when (SPEC §15.8).
+    notice: Option<(Notice, Instant)>,
+    /// The newer release a check found; the tray offers to install it.
+    available: Option<Version>,
     /// How many times the badge image was composed (for tests).
     compositions: u32,
 }
@@ -173,6 +188,8 @@ impl<'c> Badge<'c> {
             tray: None,
             fullscreen: None,
             tray_icon: None,
+            notice: None,
+            available: None,
             compositions: 0,
         }
     }
@@ -220,7 +237,8 @@ impl<'c> Badge<'c> {
     pub fn next_deadline(&self) -> Option<Instant> {
         let anim = self.anim.next_deadline();
         let moving = self.moving.as_ref().map(MoveMode::deadline);
-        anim.into_iter().chain(moving).min()
+        let notice = self.notice.map(|(_, until)| until);
+        anim.into_iter().chain(moving).chain(notice).min()
     }
 
     pub fn handle(&mut self, event: Event, now: Now) -> Vec<Effect> {
@@ -235,6 +253,15 @@ impl<'c> Badge<'c> {
             Event::Deadline => {
                 if let Some(o) = self.moving.as_mut().and_then(|m| m.timeout(now.instant)) {
                     self.finish_move(o, now, &mut out);
+                }
+                if let Some((notice, until)) = self.notice
+                    && until <= now.instant
+                {
+                    // A job that never answered has failed.
+                    self.notice = None;
+                    if notice.busy() {
+                        self.show_notice(Notice::Failed, now);
+                    }
                 }
                 let mascot = self
                     .catalog
@@ -299,6 +326,25 @@ impl<'c> Badge<'c> {
                 self.flags.animation = Some(mode);
                 self.reresolve(now, out);
             }
+            Command::CheckUpdate | Command::InstallUpdate if self.updating() => {}
+            Command::CheckUpdate => {
+                self.show_notice(Notice::Checking, now);
+                out.push(Effect::Update(Job::Check));
+            }
+            Command::InstallUpdate => {
+                if self.available.is_some() {
+                    self.show_notice(Notice::Updating, now);
+                    out.push(Effect::Update(Job::Install));
+                }
+            }
+            Command::UpdateNews(news) => {
+                self.available = match news {
+                    News::Available(v) => Some(v),
+                    News::UpToDate | News::Updated => None,
+                    News::Failed => self.available,
+                };
+                self.show_notice(news.into(), now);
+            }
             Command::Forget => {
                 if self
                     .state
@@ -313,6 +359,22 @@ impl<'c> Badge<'c> {
                     }
                 }
             }
+        }
+    }
+
+    /// A check or an install is running.
+    fn updating(&self) -> bool {
+        self.notice.is_some_and(|(n, _)| n.busy())
+    }
+
+    /// Say `notice` on the crate for as long as it lasts; good news gets
+    /// the mascot's signature action too.
+    fn show_notice(&mut self, notice: Notice, now: Now) {
+        self.notice = Some((notice, now.instant + notice.duration()));
+        if notice.happy()
+            && let Some(mascot) = self.catalog.get(&self.resolved.mascot)
+        {
+            self.anim.celebrate(now.instant, mascot);
         }
     }
 
@@ -382,6 +444,8 @@ impl<'c> Badge<'c> {
                 self.resolved.settings.size.value,
                 self.resolved.settings.animation.value,
                 self.moving.is_some(),
+                self.notice.map(|(n, _)| n),
+                self.available,
             ),
         };
         if self.tray.as_ref() != Some(&tray) {
@@ -402,7 +466,10 @@ impl<'c> Badge<'c> {
         let key = RenderKey {
             mascot: self.resolved.mascot.clone(),
             frame: self.anim.frame(mascot),
-            label: self.resolved.label.clone(),
+            label: match self.notice {
+                Some((notice, _)) => Some(notice.label()),
+                None => self.resolved.label.clone(),
+            },
             accent: self.resolved.accent.rgb,
             size: s.size.value,
             label_size: s.label_size.value,
@@ -801,6 +868,119 @@ mod tests {
             vec![Effect::ReloadConfig]
         );
         assert_eq!(rig.send(Event::Command(Command::Quit)), vec![Effect::Exit]);
+    }
+
+    fn tray_of(shell: &[Effect]) -> Option<TrayState> {
+        shell.iter().rev().find_map(|e| match e {
+            Effect::SetTray(t) => Some(t.clone()),
+            _ => None,
+        })
+    }
+
+    #[test]
+    fn checking_for_updates_shows_on_the_crate_and_in_the_menu() {
+        let mut rig = Rig::new("owl", "animation = \"static\"");
+        let hostname = rig.surface.frames.last().unwrap().clone();
+        assert_eq!(rig.badge.next_deadline(), None);
+
+        let shell = rig.send(Event::Command(Command::CheckUpdate));
+        assert!(shell.contains(&Effect::Update(Job::Check)));
+        assert_eq!(
+            tray_of(&shell).unwrap().menu[6].label,
+            "Checking for updates…"
+        );
+        let checking = rig.surface.frames.last().unwrap().clone();
+        assert_ne!(checking, hostname, "CHECKING on the crate");
+        assert_eq!(
+            (checking.width, checking.height),
+            (hostname.width, hostname.height)
+        );
+        // A second click while it runs starts nothing.
+        assert!(rig.send(Event::Command(Command::CheckUpdate)).is_empty());
+        assert!(rig.send(Event::Command(Command::InstallUpdate)).is_empty());
+
+        // Up to date: said for a few seconds, then the hostname is back
+        // and the badge sleeps again.
+        let shell = rig.send(Event::Command(Command::UpdateNews(News::UpToDate)));
+        assert_eq!(tray_of(&shell).unwrap().menu[6].label, "Check for updates");
+        assert_ne!(rig.surface.frames.last(), Some(&checking));
+        assert_eq!(
+            rig.badge.next_deadline(),
+            Some(rig.now.instant + Notice::UpToDate.duration())
+        );
+        rig.advance_to_deadline();
+        assert_eq!(rig.surface.frames.last(), Some(&hostname));
+        assert_eq!(rig.badge.next_deadline(), None);
+        assert_eq!(
+            rig.surface.places.len(),
+            1,
+            "a notice never moves the badge"
+        );
+    }
+
+    #[test]
+    fn a_found_update_is_offered_then_installed() {
+        let mut rig = Rig::new("owl", "animation = \"static\"");
+        // Nothing found yet: nothing to install.
+        assert!(rig.send(Event::Command(Command::InstallUpdate)).is_empty());
+
+        let v = "1.3.0".parse().unwrap();
+        rig.send(Event::Command(Command::CheckUpdate));
+        let shell = rig.send(Event::Command(Command::UpdateNews(News::Available(v))));
+        assert_eq!(
+            tray_of(&shell).unwrap().menu[6].label,
+            "Install update 1.3.0"
+        );
+        // The offer outlives the notice.
+        rig.advance_to_deadline();
+        assert_eq!(rig.badge.next_deadline(), None);
+
+        let shell = rig.send(Event::Command(Command::InstallUpdate));
+        assert!(shell.contains(&Effect::Update(Job::Install)));
+        assert_eq!(tray_of(&shell).unwrap().menu[6].label, "Updating…");
+        // It failed (offline): said, and the offer stands.
+        let shell = rig.send(Event::Command(Command::UpdateNews(News::Failed)));
+        assert_eq!(
+            tray_of(&shell).unwrap().menu[6].label,
+            "Install update 1.3.0"
+        );
+        // The new badge hears it was installed.
+        let shell = rig.send(Event::Command(Command::UpdateNews(News::Updated)));
+        assert_eq!(tray_of(&shell).unwrap().menu[6].label, "Check for updates");
+    }
+
+    #[test]
+    fn a_job_that_never_answers_fails_by_itself() {
+        let mut rig = Rig::new("owl", "animation = \"static\"");
+        rig.send(Event::Command(Command::CheckUpdate));
+        let checking = rig.surface.frames.last().unwrap().clone();
+        rig.advance_to_deadline();
+        assert_ne!(rig.surface.frames.last(), Some(&checking), "FAILED");
+        assert_eq!(
+            rig.badge.next_deadline(),
+            Some(rig.now.instant + Notice::Failed.duration())
+        );
+        // And another check may start.
+        assert!(
+            rig.send(Event::Command(Command::CheckUpdate))
+                .contains(&Effect::Update(Job::Check))
+        );
+    }
+
+    #[test]
+    fn good_news_plays_the_signature_action() {
+        let mut rig = Rig::new("owl", "interval = [600, 600]");
+        let rest = rig.badge.next_deadline().unwrap();
+        rig.send(Event::Command(Command::UpdateNews(News::UpToDate)));
+        assert!(
+            rig.badge.next_deadline().unwrap() < rest,
+            "an action started now, not at the next idle time"
+        );
+        let frames = rig.surface.frames.len();
+        for _ in 0..3 {
+            rig.advance_to_deadline();
+        }
+        assert!(rig.surface.frames.len() > frames, "it plays");
     }
 
     #[test]

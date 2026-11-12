@@ -3,9 +3,10 @@
 #   irm https://github.com/nealhardesty/pawprint/releases/latest/download/install.ps1 | iex
 #   & ([scriptblock]::Create((irm https://github.com/nealhardesty/pawprint/releases/latest/download/install.ps1))) -Version 1.2.0 -NoAutostart
 #
-# Options: -Version V, -Archive FILE (offline; FILE.sha256 next to it is
-# checked when it is there), -Prefix DIR, -NoAutostart, -NoStart, -Uninstall,
-# -Purge (with -Uninstall: also delete config, state, and logs), -Help.
+# Options: -Version V, -Latest (print the latest release's version and change
+# nothing), -Archive FILE (offline; FILE.sha256 next to it is checked when it
+# is there), -Prefix DIR, -NoAutostart, -NoStart, -Uninstall, -Purge (with
+# -Uninstall: also delete config, state, and logs), -Help.
 # Environment: PAWPRINT_VERSION, PAWPRINT_PREFIX, and PAWPRINT_DOWNLOAD_BASE
 # (replaces https://github.com/nealhardesty/pawprint/releases; a mirror laid
 # out the same way).
@@ -15,6 +16,7 @@
 
 param(
     [string]$Version = $env:PAWPRINT_VERSION,
+    [switch]$Latest,
     [string]$Archive,
     [string]$Prefix = $env:PAWPRINT_PREFIX,
     [switch]$NoAutostart,
@@ -33,6 +35,7 @@ function Invoke-PawprintInstaller {
 Install PAWPRINT, the pixel-art hostname badge, for this user.
 
   -Version V     install version V (default: the latest release)
+  -Latest        print the latest release's version and change nothing
   -Archive FILE  install from a downloaded .zip, with no network access
                  (FILE.sha256 next to it is checked when it is there)
   -Prefix DIR    install into DIR (default: %LOCALAPPDATA%\Programs\pawprint)
@@ -70,6 +73,10 @@ way: download/v<version>/<asset>, with latest redirecting to tag/v<version>).
     }
     $target = 'x86_64-pc-windows-msvc'  # also runs on Windows on Arm, under emulation
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    if ($Latest) {
+        Write-Host (Get-PawprintLatest $base)
+        return
+    }
 
     $tmp = Join-Path ([IO.Path]::GetTempPath()) ("pawprint-" + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $tmp | Out-Null

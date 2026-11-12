@@ -419,3 +419,34 @@ pub fn assert_badge_at(screen: &Image, badge: &Image, x: i32, y: i32, background
         "{wrong} badge pixels differ at ({x}, {y}); first (x, y, want, got): {first:?}"
     );
 }
+
+/// A release server like GitHub's, as far as a check goes:
+/// `/releases/latest` redirects to `/releases/tag/v<latest>`. Returns its
+/// `PAWPRINT_DOWNLOAD_BASE`.
+pub fn release_server(latest: &str) -> String {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let base = format!("http://{}/releases", listener.local_addr().unwrap());
+    let tag = format!("{base}/tag/v{latest}");
+    std::thread::spawn(move || {
+        use std::io::{BufRead, Write};
+        for mut stream in listener.incoming().flatten() {
+            let mut reader = std::io::BufReader::new(stream.try_clone().unwrap());
+            let mut request = String::new();
+            let _ = reader.read_line(&mut request);
+            let mut header = String::new();
+            while reader.read_line(&mut header).is_ok_and(|n| n > 2) {
+                header.clear();
+            }
+            let answer = if request.contains("/releases/latest ") {
+                format!("302 Found\r\nLocation: {tag}")
+            } else {
+                "200 OK".into()
+            };
+            let _ = write!(
+                stream,
+                "HTTP/1.1 {answer}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+            );
+        }
+    });
+    base
+}

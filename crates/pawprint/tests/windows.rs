@@ -692,6 +692,7 @@ fn choose_size_128(hwnd: HWND, work: RECT) {
             "Settings…",
             "Reset position",
             "Reload config",
+            "Check for updates",
             "Quit"
         ]
     );

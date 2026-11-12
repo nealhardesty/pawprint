@@ -21,6 +21,7 @@ Install PAWPRINT, the pixel-art hostname badge, for this user.
 usage: install.sh [options]
 
   --version V     install version V (default: the latest release)
+  --latest        print the latest release's version and change nothing
   --archive FILE  install from a downloaded archive, with no network access
                   (FILE.sha256 next to it is checked when it is there)
   --prefix DIR    install into DIR (default: ~/.local/bin)
@@ -155,6 +156,7 @@ main() {
     start=1
     uninstall=0
     purge=0
+    latest=0
 
     while [ $# -gt 0 ]; do
         case $1 in
@@ -172,6 +174,7 @@ main() {
         --prefix=*) prefix=${1#*=} ;;
         --no-autostart) autostart=0 ;;
         --no-start) start=0 ;;
+        --latest) latest=1 ;;
         --uninstall) uninstall=1 ;;
         --purge) purge=1 ;;
         -h | --help)
@@ -184,6 +187,10 @@ main() {
     done
 
     [ "$purge" = 0 ] || [ "$uninstall" = 1 ] || die "--purge goes with --uninstall"
+    if [ "$latest" = 1 ]; then
+        latest_version
+        exit 0
+    fi
     [ -n "${HOME:-}" ] || die "HOME is not set"
     [ -n "$prefix" ] || prefix=$HOME/.local/bin
     prefix=$(expand_tilde "$prefix")

@@ -106,6 +106,24 @@ impl Scheduler {
         }
     }
 
+    /// Play the mascot's signature action now (its first action that is
+    /// not a motion template, else its first action), whatever was going
+    /// on. Static mode stays still.
+    pub fn celebrate(&mut self, now: Instant, mascot: &Mascot) {
+        let actions = &mascot.actions;
+        let pick = actions
+            .iter()
+            .position(|a| a.template.is_none() && !a.frames.is_empty())
+            .or_else(|| actions.iter().position(|a| !a.frames.is_empty()));
+        if let (Animation::Idle, Some(action)) = (self.mode, pick) {
+            self.phase = Phase::Playing {
+                action,
+                step: 0,
+                until: now + Duration::from_millis(u64::from(actions[action].frames[0].ms)),
+            };
+        }
+    }
+
     /// Advance if the deadline has passed. Times are measured from `now`, so
     /// a late wakeup (sleep, suspend) never causes a burst of catch-up frames.
     pub fn on_deadline(&mut self, now: Instant, local_hour: u8, mascot: &Mascot) {
@@ -259,6 +277,31 @@ pub(crate) mod tests {
         s.on_deadline(t, 12, &m);
         assert_eq!(s.frame(&m), 0, "back to rest");
         assert!(s.next_deadline().unwrap() >= t + Duration::from_secs(8));
+    }
+
+    #[test]
+    fn celebrating_plays_the_signature_action_at_once() {
+        let m = mascot(&[
+            ("blink", 1, When::Any, &[(1, 140)]),
+            ("hoot", 3, When::Night, &[(2, 300), (3, 100)]),
+        ]);
+        let mut blink = m.clone();
+        blink.actions[0].template = Some("blink".into());
+        let t0 = Instant::now();
+        let mut s = Scheduler::new(Animation::Idle, [8, 20], 7, t0);
+        s.celebrate(t0, &blink);
+        assert_eq!(s.playing(&blink).unwrap().name, "hoot", "not the template");
+        assert_eq!(s.next_deadline(), Some(t0 + Duration::from_millis(300)));
+        s.celebrate(t0, &m);
+        assert_eq!(
+            s.playing(&m).unwrap().name,
+            "blink",
+            "the first, with no templates"
+        );
+
+        let mut still = Scheduler::new(Animation::Static, [8, 20], 7, t0);
+        still.celebrate(t0, &m);
+        assert_eq!(still.next_deadline(), None, "static mode stays still");
     }
 
     #[test]

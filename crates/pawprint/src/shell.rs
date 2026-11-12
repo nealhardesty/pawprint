@@ -28,6 +28,7 @@ use pawprint_core::settings;
 use pawprint_core::state::State;
 use pawprint_core::surface::{self, DisplayInfo, Surface};
 use pawprint_core::ui::{Input, UiKey};
+use pawprint_core::update::{Job, News};
 
 use crate::ipc::{Incoming, Request, Response, Status};
 use crate::paths::Paths;
@@ -334,6 +335,7 @@ impl Shell {
             Request::ResetPosition => Command::ResetPosition,
             Request::Reload => Command::Reload,
             Request::Forget => Command::Forget,
+            Request::Update(news) => Command::UpdateNews(news),
             Request::Quit => {
                 // Answer first: after Quit the loop is gone.
                 incoming.reply(Response::ok());
@@ -483,8 +485,20 @@ impl Shell {
                 }
                 Effect::OpenSettings if preview => {}
                 Effect::OpenSettings => {
-                    if let Err(e) = crate::instance::spawn_detached("settings") {
+                    if let Err(e) = crate::instance::spawn_detached(&["settings"]) {
                         log::error!("cannot open the settings window: {e}");
+                    }
+                }
+                Effect::Update(_) if preview => {}
+                Effect::Update(job) => {
+                    // It reports back over IPC (SPEC §15.8).
+                    let args: &[&str] = match job {
+                        Job::Check => &["update", "--check"],
+                        Job::Install => &["update"],
+                    };
+                    if let Err(e) = crate::instance::spawn_detached(args) {
+                        log::error!("cannot run pawprint {}: {e}", args.join(" "));
+                        self.handle(surface, Event::Command(Command::UpdateNews(News::Failed)));
                     }
                 }
                 Effect::SetTray(state) => {

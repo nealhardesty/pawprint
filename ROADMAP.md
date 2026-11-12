@@ -328,6 +328,25 @@ and a name match now beats a cached fallback (SPEC §5.3).
 - [ ] **(owner)** A look at the animated gallery for anything that
       should go back for another round
 
+## Updates from the app
+
+Implemented and tested (SPEC §15.8): `pawprint update [--check]` and the
+tray's **Check for updates** / **Install update**, through the installer
+embedded in the binary, with the result shown on the crate. The network is
+used only when the user asks. `make test-install` installs a newer release
+with it on every OS, and `make test-x11` drives the tray item. What remains
+needs a real release newer than the installed one, and the owner's
+machines:
+
+- [ ] **(owner)** On each desktop, with the release before the newest
+      installed: **Check for updates** shows `CHECKING` then `NEW <version>`,
+      **Install update** shows `UPDATING`, and the new badge says `UPDATED`
+- [ ] **(owner)** Windows: no console window flashes while the tray's
+      update runs (`pawprintw.exe` starts PowerShell with `CREATE_NO_WINDOW`)
+- [ ] **(owner)** macOS: an update started from the menu bar of a badge
+      that launchd started at login (a short `PATH`, no `TMPDIR`) restarts
+      the badge
+
 ## After 1.0
 
 Ideas worth doing, roughly by value. None are commitments.
@@ -353,8 +372,10 @@ Ideas worth doing, roughly by value. None are commitments.
 
 - Reacting to keystrokes or mouse clicks: it would need input-monitoring
   permissions, and PAWPRINT's privacy promise rules it out.
-- Network features (fleet sync, phoning home). Copy the config file
-  instead.
+- Background network features (fleet sync, phoning home, automatic update
+  checks). Copy the config file instead. The one thing that goes online is
+  the update you ask for (`pawprint update`, the tray's **Check for
+  updates**; SPEC §15.8), and it stays that way.
 
 ---
 

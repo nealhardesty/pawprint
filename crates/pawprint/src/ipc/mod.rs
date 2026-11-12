@@ -10,6 +10,7 @@ use std::path::Path;
 use std::sync::mpsc;
 use std::time::Duration;
 
+use pawprint_core::update::News;
 use serde::{Deserialize, Serialize};
 
 #[cfg(unix)]
@@ -63,9 +64,13 @@ pub enum Request {
     Reload,
     Quit,
     Forget,
+    /// How an update check or install ended (SPEC §15.8); the news travels
+    /// as the request's `arg`.
+    Update(News),
 }
 
 impl Request {
+    /// Every request that takes no argument.
     pub const ALL: [Request; 6] = [
         Request::Status,
         Request::Move,
@@ -83,10 +88,21 @@ impl Request {
             Request::Reload => "reload",
             Request::Quit => "quit",
             Request::Forget => "forget",
+            Request::Update(_) => "update",
         }
     }
 
-    pub fn parse(s: &str) -> Option<Request> {
+    fn arg(self) -> Option<String> {
+        match self {
+            Request::Update(news) => Some(news.wire()),
+            _ => None,
+        }
+    }
+
+    pub fn parse(s: &str, arg: Option<&str>) -> Option<Request> {
+        if s == "update" {
+            return arg.and_then(News::parse).map(Request::Update);
+        }
         Request::ALL.into_iter().find(|r| r.name() == s)
     }
 }
@@ -150,6 +166,8 @@ impl Response {
 struct Wire {
     v: u32,
     cmd: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    arg: Option<String>,
 }
 
 /// A request waiting for the badge's event loop to answer it.
@@ -173,7 +191,10 @@ fn parse_request(line: &str) -> Result<Request, String> {
             wire.v
         ));
     }
-    Request::parse(&wire.cmd).ok_or_else(|| format!("unknown command {:?}", wire.cmd))
+    Request::parse(&wire.cmd, wire.arg.as_deref()).ok_or_else(|| match wire.arg {
+        Some(arg) if wire.cmd == "update" => format!("unknown update news {arg:?}"),
+        _ => format!("unknown command {:?}", wire.cmd),
+    })
 }
 
 fn write_line(stream: &mut dyn Stream, value: &impl Serialize) -> io::Result<()> {
@@ -261,6 +282,7 @@ pub fn call(endpoint: &Path, request: Request) -> Result<Response, CallError> {
         &Wire {
             v: VERSION,
             cmd: request.name().into(),
+            arg: request.arg(),
         },
     )
     .map_err(io)?;
@@ -281,9 +303,15 @@ mod tests {
     #[test]
     fn request_names_round_trip() {
         for r in Request::ALL {
-            assert_eq!(Request::parse(r.name()), Some(r));
+            assert_eq!(Request::parse(r.name(), None), Some(r));
         }
-        assert_eq!(Request::parse("dance"), None);
+        assert_eq!(Request::parse("dance", None), None);
+        let news = Request::Update(News::Available("1.3.0".parse().unwrap()));
+        assert_eq!(
+            Request::parse(news.name(), news.arg().as_deref()),
+            Some(news)
+        );
+        assert_eq!(Request::parse("update", None), None);
     }
 
     #[test]
@@ -295,6 +323,15 @@ mod tests {
         let bad_version = parse_request("{\"v\":2,\"cmd\":\"move\"}").unwrap_err();
         assert!(bad_version.contains("version 2"));
         assert!(parse_request("{\"v\":1,\"cmd\":\"dance\"}").is_err());
+        assert_eq!(
+            parse_request("{\"v\":1,\"cmd\":\"update\",\"arg\":\"available 1.3.0\"}"),
+            Ok(Request::Update(News::Available("1.3.0".parse().unwrap())))
+        );
+        assert!(
+            parse_request("{\"v\":1,\"cmd\":\"update\",\"arg\":\"soon\"}")
+                .unwrap_err()
+                .contains("soon")
+        );
         assert!(parse_request("not json").is_err());
     }
 
