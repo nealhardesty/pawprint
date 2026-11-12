@@ -502,16 +502,17 @@ impl Case<'_> {
             "update --check: finds the newer release",
             Some(&run),
         )?;
-        let before = std::fs::metadata(&exe).and_then(|m| m.modified()).ok();
         let run = self.update(&exe, &[], "next");
         self.check(run.ok, "update installs the newer release", Some(&run))?;
+        // The output is the proof: the file's times are not, since on
+        // Windows a copy keeps the archive's modification time.
         self.check(
-            run.text.contains("Upgrading") && run.text.contains("Checksum OK"),
-            "through the installer: verified, then upgraded",
+            ["Checksum OK", "Upgrading", "Installed"]
+                .iter()
+                .all(|said| run.text.contains(said)),
+            "through the installer: verified, upgraded, installed",
             Some(&run),
         )?;
-        let after = std::fs::metadata(&exe).and_then(|m| m.modified()).ok();
-        self.check(before != after, "the binary was replaced", Some(&run))?;
         self.installed_ok(&bin_dir, &run)?;
         self.autostart_ok(&exe, &run)?;
         if running {

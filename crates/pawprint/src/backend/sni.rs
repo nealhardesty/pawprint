@@ -250,7 +250,7 @@ mod tests {
             unreachable!()
         };
         (big.activate)(&mut item);
-        let ksni::MenuItem::Standard(quit) = &items[6] else {
+        let Some(ksni::MenuItem::Standard(quit)) = items.last() else {
             unreachable!()
         };
         (quit.activate)(&mut item);

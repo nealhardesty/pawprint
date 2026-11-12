@@ -2776,8 +2776,8 @@ latest release is newer (the same archive, published as `99.0.0`).
    ([15.8](#158-updates-from-the-app)): against the good release, `--check`
    and a plain `update` both say this is the latest and install nothing;
    against the newer one, `--check` names it and `update` installs it
-   through the embedded installer ("Checksum OK", "Upgrading"). The binary
-   was replaced by the packaged one, the autostart entry is as it was, the
+   through the embedded installer ("Checksum OK", "Upgrading",
+   "Installed"). The installed binary is the packaged one, the autostart entry is as it was, the
    config is kept, and a badge that was running is running again (none is
    started where none ran).
 3. `--version` from the bad release. It fails and says "checksum". The
