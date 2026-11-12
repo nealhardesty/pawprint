@@ -270,21 +270,23 @@ struct Started(std::process::Child);
 /// controlling terminal, null stdio, and none of our other descriptors.
 #[cfg(unix)]
 fn start_detached() -> io::Result<Started> {
-    spawn("run")
+    spawn(&["run"])
 }
 
 #[cfg(unix)]
-fn spawn(command: &str) -> io::Result<Started> {
-    detached(Command::new(badge_exe()?).arg(command))
+fn spawn(args: &[&str]) -> io::Result<Started> {
+    detached(Command::new(badge_exe()?).args(args))
         .spawn()
         .map(Started)
 }
 
-/// `pawprint <command>` detached, as `pawprint` starts the badge: the
-/// tray's Settings… opens `pawprint settings` this way. A thread reaps it
-/// when it exits, so no zombie is left behind; it sleeps until then.
-pub fn spawn_detached(command: &str) -> io::Result<()> {
-    let child = spawn(command)?;
+/// `pawprint <args>` detached, as `pawprint` starts the badge: the tray's
+/// Settings… opens `pawprint settings` this way, and its update item runs
+/// `pawprint update`. A thread reaps it when it exits, so no zombie is left
+/// behind; it sleeps until then. The arguments are plain words (Windows
+/// joins them with spaces, unquoted).
+pub fn spawn_detached(args: &[&str]) -> io::Result<()> {
+    let child = spawn(args)?;
     #[cfg(unix)]
     {
         let mut child = child;
@@ -354,11 +356,11 @@ struct Started(std::os::windows::io::OwnedHandle);
 /// allows it, so closing a job-bound terminal doesn't take the badge along.
 #[cfg(windows)]
 fn start_detached() -> io::Result<Started> {
-    spawn("run")
+    spawn(&["run"])
 }
 
 #[cfg(windows)]
-fn spawn(command: &str) -> io::Result<Started> {
+fn spawn(args: &[&str]) -> io::Result<Started> {
     use std::os::windows::ffi::OsStrExt;
     use std::os::windows::io::FromRawHandle;
     use windows_sys::Win32::Foundation::CloseHandle;
@@ -370,7 +372,7 @@ fn spawn(command: &str) -> io::Result<Started> {
     let line: Vec<u16> = std::ffi::OsStr::new("\"")
         .encode_wide()
         .chain(exe.as_os_str().encode_wide())
-        .chain(format!("\" {command}").encode_utf16())
+        .chain(format!("\" {}", args.join(" ")).encode_utf16())
         .chain([0])
         .collect();
     let base = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP;

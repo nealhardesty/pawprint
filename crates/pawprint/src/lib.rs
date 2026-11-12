@@ -18,6 +18,7 @@ mod ipc;
 mod logger;
 mod paths;
 mod shell;
+mod update;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -126,6 +127,12 @@ enum Cmd {
     Mascot(MascotCmd),
     /// Start at graphical login: on, off, or status
     Autostart { action: Toggle },
+    /// Check for a new release and install it (the only command that uses the network)
+    Update {
+        /// Only say whether a newer release exists; install nothing
+        #[arg(long)]
+        check: bool,
+    },
     /// Diagnose the desktop session and backend
     Doctor,
     /// Print every file location
@@ -222,6 +229,7 @@ pub fn main() -> ExitCode {
         Some(Cmd::Quit) => send(ipc::Request::Quit).map(|_| println!("PAWPRINT stopped.")),
         Some(Cmd::Status) => status(),
         Some(Cmd::Doctor) => doctor::run(),
+        Some(Cmd::Update { check }) => update::run(check),
         Some(Cmd::Preview { id, size }) => preview(&id, size),
         Some(Cmd::Settings) => settings(),
         Some(Cmd::Set { key, value }) => commands::set(&key, &value),

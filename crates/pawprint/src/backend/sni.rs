@@ -196,7 +196,7 @@ mod tests {
                 visible: true,
                 icon: RgbaImage::new(32, 32),
                 tooltip: "PAWPRINT: OWL (owl)".into(),
-                menu: menu(64, Animation::Idle, false),
+                menu: menu(64, Animation::Idle, false, None, None),
             },
             tx,
         };
@@ -221,6 +221,7 @@ mod tests {
                 "Settings…",
                 "Reset position",
                 "Reload config",
+                "Check for updates",
                 "Quit"
             ]
         );

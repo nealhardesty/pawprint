@@ -8,8 +8,9 @@
 //! has (sh, dash, and bash; Windows PowerShell 5.1 and PowerShell 7) in a
 //! throwaway home: a fresh install from the archive, an upgrade from a local
 //! HTTP server laid out like GitHub releases (so "latest" resolves through
-//! the same redirect), a checksum mismatch that must change nothing, an
-//! uninstall that keeps the config, and a purge.
+//! the same redirect), `pawprint update` from the installed binary against
+//! a release that is newer (SPEC §15.8), a checksum mismatch that must
+//! change nothing, an uninstall that keeps the config, and a purge.
 
 use std::collections::HashMap;
 use std::ffi::OsString;
@@ -298,6 +299,19 @@ impl Case<'_> {
         self.capture(cmd)
     }
 
+    /// `pawprint update` from the installed binary, against the release
+    /// repository `base` on the test server.
+    fn update(&self, exe: &Path, args: &[&str], base: &str) -> Run {
+        let mut cmd = Command::new(exe);
+        cmd.arg("update").args(args);
+        self.layout.env(&mut cmd);
+        cmd.env(
+            "PAWPRINT_DOWNLOAD_BASE",
+            format!("{}/{base}/releases", self.server),
+        );
+        self.capture(cmd)
+    }
+
     fn running(&self) -> bool {
         self.pawprint(self.probe, &["status"]).ok
     }
@@ -463,6 +477,53 @@ impl Case<'_> {
         self.check(
             config.join("config.toml").is_file(),
             "config kept on upgrade",
+            Some(&run),
+        )?;
+
+        // 2b. `pawprint update` (SPEC §15.8): nothing to do while this is the
+        //     latest release; a newer one is found, then installed in
+        //     place with the installer the binary carries, the badge
+        //     restarted, and autostart left as it was.
+        let run = self.update(&exe, &["--check"], "good");
+        self.check(
+            run.ok && run.text.contains("is the latest release"),
+            "update --check: this is the latest release",
+            Some(&run),
+        )?;
+        let run = self.update(&exe, &[], "good");
+        self.check(
+            run.ok && run.text.contains("is the latest release") && !run.text.contains("Upgrading"),
+            "update: nothing to install",
+            Some(&run),
+        )?;
+        let run = self.update(&exe, &["--check"], "next");
+        self.check(
+            run.ok && run.text.contains(&format!("PAWPRINT {NEXT} is available")),
+            "update --check: finds the newer release",
+            Some(&run),
+        )?;
+        let before = std::fs::metadata(&exe).and_then(|m| m.modified()).ok();
+        let run = self.update(&exe, &[], "next");
+        self.check(run.ok, "update installs the newer release", Some(&run))?;
+        self.check(
+            run.text.contains("Upgrading") && run.text.contains("Checksum OK"),
+            "through the installer: verified, then upgraded",
+            Some(&run),
+        )?;
+        let after = std::fs::metadata(&exe).and_then(|m| m.modified()).ok();
+        self.check(before != after, "the binary was replaced", Some(&run))?;
+        self.installed_ok(&bin_dir, &run)?;
+        self.autostart_ok(&exe, &run)?;
+        if running {
+            let again = self.running();
+            self.check(again, "the badge was restarted", Some(&run))?;
+        } else {
+            let off = !self.running();
+            self.check(off, "no badge was started (none was running)", Some(&run))?;
+        }
+        self.check(
+            config.join("config.toml").is_file(),
+            "config kept on update",
             Some(&run),
         )?;
 
@@ -655,6 +716,10 @@ impl Case<'_> {
     }
 }
 
+/// The version of the test server's `next` release: the packaged build
+/// again, published as something newer, for `pawprint update` to find.
+const NEXT: &str = "99.0.0";
+
 /// macOS and Windows: the autostart entry is per user, not per home, so the
 /// test would replace a developer's real entry and then delete it. Refuse
 /// when it is on, unless in CI.
@@ -682,13 +747,20 @@ pub fn test_install() -> Result<(), String> {
         .map_err(|e| format!("{name}.sha256: {e}"))?;
     let wrong = format!("{}  {name}\n", sha256_hex(b"not the archive"));
 
-    // Two releases: `good` as published, and `bad` whose checksum is wrong.
-    let tag = format!("v{version}");
+    // Three release repositories: `good` as published, `bad` whose
+    // checksum is wrong, and `next`, whose latest release is newer.
+    let next_name = build.archive_name(NEXT);
     let mut files = HashMap::new();
-    for (repo, sum) in [("good", sidecar), ("bad", wrong.into_bytes())] {
-        let dir = format!("/{repo}/releases/download/{tag}");
+    let mut tags = HashMap::new();
+    for (repo, release, name, sum) in [
+        ("good", version.as_str(), &name, sidecar.clone()),
+        ("bad", version.as_str(), &name, wrong.into_bytes()),
+        ("next", NEXT, &next_name, sidecar),
+    ] {
+        let dir = format!("/{repo}/releases/download/v{release}");
         files.insert(format!("{dir}/{name}"), data.clone());
         files.insert(format!("{dir}/{name}.sha256"), sum);
+        tags.insert(repo.to_string(), format!("v{release}"));
     }
     if !cfg!(target_os = "linux") {
         let ci = std::env::var_os("CI").is_some_and(|v| !v.is_empty());
@@ -696,7 +768,7 @@ pub fn test_install() -> Result<(), String> {
             .unwrap_or_default();
         refuse_real_autostart(ci, &status)?;
     }
-    let server = serve(files, tag)?;
+    let server = serve(files, tags)?;
     println!("serving the release at {server}");
 
     let shells = shells();
@@ -782,15 +854,15 @@ pub fn test_install() -> Result<(), String> {
 }
 
 /// A tiny HTTP server laid out like GitHub releases: `/<repo>/releases/latest`
-/// redirects to `/<repo>/releases/tag/<tag>`, and files are served from the
-/// map. Returns its base URL.
-fn serve(files: HashMap<String, Vec<u8>>, tag: String) -> Result<String, String> {
+/// redirects to `/<repo>/releases/tag/<tag>` (`tags` has each repository's
+/// latest), and files are served from the map. Returns its base URL.
+fn serve(files: HashMap<String, Vec<u8>>, tags: HashMap<String, String>) -> Result<String, String> {
     let listener = TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
     let base = format!(
         "http://{}",
         listener.local_addr().map_err(|e| e.to_string())?
     );
-    let state = Arc::new((files, tag, base.clone()));
+    let state = Arc::new((files, tags, base.clone()));
     std::thread::spawn(move || {
         for stream in listener.incoming().flatten() {
             let state = state.clone();
@@ -805,7 +877,7 @@ fn serve(files: HashMap<String, Vec<u8>>, tag: String) -> Result<String, String>
 fn respond(
     mut stream: TcpStream,
     files: &HashMap<String, Vec<u8>>,
-    tag: &str,
+    tags: &HashMap<String, String>,
     base: &str,
 ) -> std::io::Result<()> {
     let mut reader = BufReader::new(stream.try_clone()?);
@@ -819,20 +891,22 @@ fn respond(
     }
     let mut parts = request.split_whitespace();
     let (method, path) = (parts.next().unwrap_or(""), parts.next().unwrap_or(""));
-    let (status, extra, body): (&str, String, &[u8]) =
-        if let Some(repo) = path.strip_suffix("/releases/latest") {
-            (
-                "302 Found",
-                format!("Location: {base}{repo}/releases/tag/{tag}\r\n"),
-                b"",
-            )
-        } else if path.contains("/releases/tag/") {
-            ("200 OK", String::new(), b"release page")
-        } else if let Some(data) = files.get(path) {
-            ("200 OK", String::new(), data)
-        } else {
-            ("404 Not Found", String::new(), b"not found")
-        };
+    let latest = path
+        .strip_suffix("/releases/latest")
+        .and_then(|repo| Some((repo, tags.get(repo.trim_start_matches('/'))?)));
+    let (status, extra, body): (&str, String, &[u8]) = if let Some((repo, tag)) = latest {
+        (
+            "302 Found",
+            format!("Location: {base}{repo}/releases/tag/{tag}\r\n"),
+            b"",
+        )
+    } else if path.contains("/releases/tag/") {
+        ("200 OK", String::new(), b"release page")
+    } else if let Some(data) = files.get(path) {
+        ("200 OK", String::new(), data)
+    } else {
+        ("404 Not Found", String::new(), b"not found")
+    };
     write!(
         stream,
         "HTTP/1.1 {status}\r\nContent-Length: {}\r\nContent-Type: application/octet-stream\r\nConnection: close\r\n{extra}\r\n",
@@ -906,7 +980,8 @@ mod tests {
             "/r/releases/download/v1.0.0/a".to_string(),
             b"hello".to_vec(),
         );
-        let base = serve(files, "v1.0.0".into()).unwrap();
+        let tags = HashMap::from([("r".to_string(), "v1.0.0".to_string())]);
+        let base = serve(files, tags).unwrap();
         let get = |path: &str| {
             let mut s = TcpStream::connect(base.trim_start_matches("http://")).unwrap();
             write!(s, "GET {path} HTTP/1.1\r\nHost: x\r\n\r\n").unwrap();
@@ -919,5 +994,6 @@ mod tests {
         assert!(latest.contains(&format!("Location: {base}/r/releases/tag/v1.0.0\r\n")));
         assert!(get("/r/releases/download/v1.0.0/a").ends_with("\r\n\r\nhello"));
         assert!(get("/nope").starts_with("HTTP/1.1 404"));
+        assert!(get("/other/releases/latest").starts_with("HTTP/1.1 404"));
     }
 }

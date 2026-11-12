@@ -29,8 +29,10 @@ This is the idea in ASCII.)*
   food, and gadgets, all replaceable with your own art.
 - **Calm and light.** A short animation every 8–20 seconds, then it sleeps.
   Static mode turns animation off.
-- **Private.** No network access, no telemetry, and no keyboard or mouse
-  monitoring. macOS never asks for special permissions.
+- **Private.** No telemetry, no keyboard or mouse monitoring, and no
+  network access unless you ask: the only thing that goes online is
+  **Check for updates**, when you choose it. macOS never asks for special
+  permissions.
 
 Runs on **Windows 10/11**, **macOS 13+**, and **Linux**: X11, KDE Plasma 6
 on Wayland, and GNOME on Wayland (Ubuntu 24.04 LTS and newer).
@@ -109,9 +111,11 @@ like `--version` and `--prefix`. `PAWPRINT_DOWNLOAD_BASE` replaces
 the same way (`download/v<version>/<asset>`, with `latest` redirecting to
 `tag/v<version>`); the tests use it to point at a local server.
 
-Re-running the installer upgrades in place: it checks the download first,
-then stops the running badge, replaces the binary, and starts it again. A
-failed download or checksum changes nothing. Your config is never touched.
+To upgrade later, pick **Check for updates** in the tray menu, or run
+`pawprint update` ([Updating](#updating)). Re-running the installer does
+the same thing: it checks the download first, then stops the running
+badge, replaces the binary, and starts it again. A failed download or
+checksum changes nothing. Your config is never touched.
 Without a desktop session (over SSH, say) the badge can't start yet; the
 installer says so and the badge starts at your next graphical login.
 
@@ -170,6 +174,7 @@ Install locations: `~/.local/bin/pawprint` on Linux and macOS, and
 | Undo a `set` | `pawprint unset size` (any key) |
 | Change the crate color | `pawprint set accent teal` (`pawprint list --accents` shows them all) |
 | Preview a mascot | `pawprint preview walrus` opens a window that plays every animation; Esc closes it |
+| Update to the latest release | Tray → **Check for updates**, or `pawprint update` ([below](#updating)) |
 | Stop it | `pawprint quit`, or tray → **Quit** |
 | Start it at login | `pawprint autostart on` (`status` shows what is registered) |
 | Stop it starting at login | `pawprint autostart off` |
@@ -211,6 +216,33 @@ backend     wayland (layer-shell, KDE Plasma)
 ```
 
 ---
+
+### Updating
+
+PAWPRINT never checks for updates by itself. When you want to know, choose
+**Check for updates** in the tray menu and watch the crate:
+
+| The crate says | What it means |
+|---|---|
+| `CHECKING` | Asking GitHub what the latest release is |
+| `UP TO DATE` | You have it. Your mascot celebrates |
+| `NEW 1.3.0` | There is a newer release, and the menu item is now **Install update 1.3.0** |
+| `UPDATING` | You chose it: downloading, verifying, and swapping the binary |
+| `UPDATED` | The new version is running |
+| `FAILED` | Offline, or the download didn't verify. Nothing was changed; the log (`pawprint paths`) says why |
+
+A few seconds later the hostname is back. From a terminal it is one
+command:
+
+```sh
+pawprint update --check   # only say whether there is a newer release
+pawprint update           # install it, and restart the badge if it was running
+```
+
+An update is the installer again, carried inside the binary: the same
+checksum check, the same "change nothing unless it all worked", and it
+updates PAWPRINT wherever you installed it. Your config, your position,
+and your autostart setting stay as they are.
 
 ## The settings window
 
@@ -321,8 +353,8 @@ copying the file to another machine doesn't carry them over.
 
 The tray menu (the menu bar on macOS): **Move**,
 **Size ▸ 32/64/128**, **Animation ▸ Idle/Static**, **Settings…**,
-**Reset position**, **Reload config**, **Quit**. Set `tray = false` to
-hide it.
+**Reset position**, **Reload config**, **Check for updates**, **Quit**.
+Set `tray = false` to hide it.
 
 A dragged position is saved separately (in PAWPRINT's state file) so your
 config file is never rewritten behind your back. `pawprint reset-position`
@@ -522,7 +554,7 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make settings` | Open the settings window from the local build (it edits your real config file) |
 | `make power-check` | Build the release badge and measure startup time, CPU and wakeups in idle and static mode, memory, and binary size against the power budget (`POWER_SECONDS=120` per mode). Linux: under Xvfb. Windows: on your desktop, with your config and state files backed up next to them (`*.pawdev-backup`) and put back afterwards, or at the next run if one was interrupted. macOS: on your desktop with a private HOME, from a universal binary. CI jobs run it on `windows-latest` and `macos-latest` |
 | `make test` | Unit tests, golden image tests, and mascot catalog validation |
-| `make test-x11` | Linux: run the badge under Xvfb (bare, with the `xcompmgr` compositor, with the `openbox` window manager) and check its pixels, click-through, move mode and its outline, single instance, the tray menu over a private D-Bus, `set`/`unset` and reloads, hiding under a fullscreen window, the preview window, and the settings window |
+| `make test-x11` | Linux: run the badge under Xvfb (bare, with the `xcompmgr` compositor, with the `openbox` window manager) and check its pixels, click-through, move mode and its outline, single instance, the tray menu over a private D-Bus (including **Check for updates** against a local release server), `set`/`unset` and reloads, hiding under a fullscreen window, the preview window, and the settings window |
 | `make test-wayland` | Linux: run the badge under headless Sway and check placement, click-through, move mode, panels, output changes, fullscreen windows covering it, and the preview and settings windows from screenshots |
 | `make test-linux-display` | Both display-server suites (a separate CI job runs this) |
 | `make test-macos-display` | macOS: run the badge in your logged-in desktop and check its window level, placement, IPC, menu-bar item, `autostart` against launchd, and the preview and settings windows, and (with Screen Recording and Accessibility granted to the terminal) pixels, drag, keys, and a menu choice; a CI job runs it on `macos-latest` |
@@ -546,7 +578,7 @@ windowless twin that bare `pawprint` starts so no console window opens.
 | `make release-finalize` | Once every OS has published: check the draft release has all four archives, their `.sha256` files, and both installers, then publish it. `DRY_RUN=1` prints the commands and the expected assets |
 | `make install` | Package, then install that build for this user through the real installer (`--archive dist/...`): autostart on, badge started |
 | `make uninstall` | Remove the install and autostart through the installer (config is kept) |
-| `make test-install` | Package, then run the installers end to end in a throwaway home under every shell found (`sh`, `dash`, `bash`; `powershell`, `pwsh`): fresh install, upgrade from a local HTTP server, a checksum mismatch that must change nothing, uninstall, purge. On Windows and macOS the autostart entry is your real one, so it refuses to run while `pawprint autostart status` says on (outside CI) |
+| `make test-install` | Package, then run the installers end to end in a throwaway home under every shell found (`sh`, `dash`, `bash`; `powershell`, `pwsh`): fresh install, upgrade from a local HTTP server, `pawprint update` finding and installing a newer release, a checksum mismatch that must change nothing, uninstall, purge. On Windows and macOS the autostart entry is your real one, so it refuses to run while `pawprint autostart status` says on (outside CI) |
 | `make lint-installers` | `shellcheck` the POSIX installer (needs `shellcheck`) |
 | `make doctor` | Run `pawprint doctor` from the local build |
 | `make clean` | Remove build outputs |

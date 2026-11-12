@@ -22,5 +22,6 @@ pub mod settings;
 pub mod state;
 pub mod surface;
 pub mod ui;
+pub mod update;
 
 pub use pawprint_sprite as sprite;

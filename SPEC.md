@@ -84,10 +84,13 @@ integration.
 4. **Everything overridable.** Every mascot, label, size, position, and color
    can be changed in one TOML file, and that file can be shared across a whole
    fleet.
-5. **Private by construction.** No network access, no telemetry, no input
-   monitoring. PAWPRINT never needs Accessibility, Input Monitoring, or Screen
-   Recording permission on macOS. (Unlike keystroke-reactive desktop pets,
-   PAWPRINT's animation is self-timed.)
+5. **Private by construction.** No telemetry, no input monitoring, and no
+   network access unless the user asks for it: the badge never opens a
+   connection, and the one command that does, `pawprint update` (the
+   tray's **Check for updates**, [15.8](#158-updates-from-the-app)), runs
+   only when chosen, never on a timer. PAWPRINT never needs Accessibility,
+   Input Monitoring, or Screen Recording permission on macOS. (Unlike
+   keystroke-reactive desktop pets, PAWPRINT's animation is self-timed.)
 6. **One binary, no runtime dependencies.** All bundled art is embedded in the
    executable. Install is a single file plus an autostart entry.
 
@@ -980,6 +983,7 @@ badge reaches the instance **in the current graphical session**.
 | `pawprint mascot export <id> <dir>` | Write a bundled mascot into the folder `<dir>` (created if needed; existing files are never overwritten) in the simple PNG form ([12.7](#127-png-bridges)) as a starting point for custom art. |
 | `pawprint mascot check <dir>` | Validate a custom mascot directory with the same rules as the build ([12.11](#1211-validation-rules)), report alias collisions with the bundled catalog, and say whether it replaces a bundled mascot or adds one. Exits 1 on errors. |
 | `pawprint autostart on\|off\|status` | Register or remove launch at graphical login for this user: an entry that runs `<this executable> run` (on Windows `pawprintw.exe run`). Linux: `$XDG_CONFIG_HOME/autostart/pawprint.desktop`. Windows and macOS: [11.1.5](#1115-tray-and-autostart), [11.2](#112-macos). |
+| `pawprint update [--check]` | Ask what the latest release is and, if it is newer than this build, install it in place and restart the badge ([15.8](#158-updates-from-the-app)). `--check` only says what it found. The only command that uses the network. Exit code 1 if the release server can't be reached or the install fails (nothing is changed then). |
 | `pawprint doctor` | Diagnose the environment: session type, chosen backend and why, compositor/WM, layer-shell, ARGB visual, compositing manager, displays with names, scales and work areas, primary detection, GNOME fractional-scaling blur (with the fix), tray availability, IPC endpoint, autostart state, config warnings. |
 | `pawprint paths` | Print every file location ([8.1](#81-files-and-locations)). |
 | `pawprint gnome-extension install\|remove` | Plan B only ([11.5.3](#1153-plan-b-the-presenter-extension)): install or remove the GNOME presenter extension. Not built unless a GNOME check fails, so the command is hidden from `--help` and says it is not implemented. |
@@ -1197,7 +1201,10 @@ Newline-delimited JSON, one request and one response per connection:
 {"v":1,"ok":false,"error":"no target display"}
 ```
 
-Commands: `status`, `move`, `reset-position`, `reload`, `quit`, `forget`. `status`
+Commands: `status`, `move`, `reset-position`, `reload`, `quit`, `forget`,
+and `update`, the only one with an argument: `{"v":1,"cmd":"update","arg":"available 1.3.0"}`
+tells the badge how a check or an install ended (`current`, `available
+<version>`, `updated`, or `failed`; [15.8](#158-updates-from-the-app)). `status`
 returns the same fields `pawprint status` prints, under `"status"`: `pid`,
 `backend`, `session`, `display`, `rect` (`[x, y, w, h]`, physical),
 `scale`, `mascot`, `label`, `position`, `position_source`, `size`,
@@ -1415,7 +1422,8 @@ move the window outside the core's constraint, snap, and save):
   `tray = false` removes it (`NIM_DELETE`); quitting removes it before the
   window goes.
 - Menu: **Move**, **Size ▸ 32/64/128**, **Animation ▸ Idle/Static**,
-  **Settings…**, **Reset position**, **Reload config**, **Quit**, built on
+  **Settings…**, **Reset position**, **Reload config**, **Check for
+  updates** ([15.8](#158-updates-from-the-app)), **Quit**, built on
   each opening
   from the core's menu model: an item with children is a submenu, a
   `checked` item gets a check mark, and each command gets an id.
@@ -2363,7 +2371,7 @@ pawprint/
 ├── crates/
 │   ├── pawprint-core/        # pure logic + build.rs asset embedding; no OS deps
 │   ├── pawprint-sprite/      # sprite source compiler (build.rs, runtime, pawdev)
-│   └── pawprint/             # lib + bins pawprint, pawprintw (Windows): cli, ipc, instance, autostart, backend/{windows,macos,linux,x11,wayland}
+│   └── pawprint/             # lib + bins pawprint, pawprintw (Windows): cli, ipc, instance, autostart, update, backend/{windows,macos,linux,x11,wayland}
 ├── tools/
 │   └── pawdev/               # dev-only binary: check-assets, contact-sheet, art import/export, golden, package, publish
 ├── assets/
@@ -2666,10 +2674,12 @@ Steps:
    the next graphical login.
 9. Print `pawprint explain`, and a PATH hint if the prefix is not on `PATH`.
 
-Flags: `--version V`, `--archive PATH` (install from a local archive, with no
-network access), `--prefix DIR`, `--no-autostart`, `--no-start`,
-`--uninstall`, `--purge` (with uninstall, also delete config and state),
-`--help`. Environment equivalents: `PAWPRINT_VERSION`, `PAWPRINT_PREFIX`.
+Flags: `--version V`, `--latest` (print the latest release's version from
+step 2 and change nothing; `pawprint update` asks this way,
+[15.8](#158-updates-from-the-app)), `--archive PATH` (install from a local
+archive, with no network access), `--prefix DIR`, `--no-autostart`,
+`--no-start`, `--uninstall`, `--purge` (with uninstall, also delete config
+and state), `--help`. Environment equivalents: `PAWPRINT_VERSION`, `PAWPRINT_PREFIX`.
 `PAWPRINT_DOWNLOAD_BASE` (default
 `https://github.com/nealhardesty/pawprint/releases`) points the installer at
 a mirror with the same layout. The installer tests use it to reach a local
@@ -2687,7 +2697,7 @@ irm https://github.com/nealhardesty/pawprint/releases/latest/download/install.ps
 & ([scriptblock]::Create((irm https://github.com/nealhardesty/pawprint/releases/latest/download/install.ps1))) -Version 1.2.0 -NoAutostart
 ```
 
-Same steps and flags as `install.sh` (`-Version`, `-Archive`, `-Prefix`,
+Same steps and flags as `install.sh` (`-Version`, `-Latest`, `-Archive`, `-Prefix`,
 `-NoAutostart`, `-NoStart`, `-Uninstall`, `-Purge`, `-Help`, and the same
 environment variables). Installs to `%LOCALAPPDATA%\Programs\pawprint\`,
 adds that directory to the **user** `PATH`, runs `Unblock-File` on the
@@ -2751,8 +2761,9 @@ on macOS; `powershell` (5.1) and `pwsh` on Windows. Each run gets a
 throwaway home. On Unix that means `HOME`, plus a private `XDG_RUNTIME_DIR`
 and `TMPDIR` so that a badge already on the desktop is left alone; on
 Windows, `LOCALAPPDATA` and `APPDATA`. Each run also gets a local HTTP
-server laid out like GitHub releases: a `latest` redirect, a good release,
-and a release whose `.sha256` is wrong.
+server laid out like GitHub releases: a `latest` redirect per repository,
+a good release, a release whose `.sha256` is wrong, and a repository whose
+latest release is newer (the same archive, published as `99.0.0`).
 
 1. Fresh install from `--archive`. The installed binary is the packaged one
    and prints the version. The autostart entry runs it. The output has the
@@ -2761,6 +2772,14 @@ and a release whose `.sha256` is wrong.
 2. Upgrade from `latest` over HTTP. The installer says it is upgrading.
    Where there is a desktop session (the macOS and Windows runners, a Linux
    desktop), the badge was running before and is running again after.
+   Then `pawprint update` from the installed binary
+   ([15.8](#158-updates-from-the-app)): against the good release, `--check`
+   and a plain `update` both say this is the latest and install nothing;
+   against the newer one, `--check` names it and `update` installs it
+   through the embedded installer ("Checksum OK", "Upgrading"). The binary
+   was replaced by the packaged one, the autostart entry is as it was, the
+   config is kept, and a badge that was running is running again (none is
+   started where none ran).
 3. `--version` from the bad release. It fails and says "checksum". The
    installed binary's bytes and mtime are unchanged, and the running badge
    still runs.
@@ -2789,6 +2808,70 @@ uninstall). On Windows and macOS the badge and the autostart entry are the
 user's real ones, so the test refuses to start while `pawprint autostart
 status` reports on, unless the `CI` environment variable is set (CI runners
 are clean machines).
+
+### 15.8 Updates from the app
+
+`pawprint update`, or the tray's **Check for updates**, finds a newer
+release and installs it. It is the one place PAWPRINT uses the network
+(principle 5), and only when the user chooses it: there is no background
+check, no schedule, and no setting that adds one.
+
+**No HTTP in the binary.** The executable embeds this platform's installer
+(`include_str!` of `installers/install.sh`, or `install.ps1` on Windows)
+and runs it with the system's own tools, so an update takes exactly the
+path the install one-liner takes (15.4–15.6) and adds no dependency:
+
+- **Check:** the installer with `--latest` prints the version behind
+  GitHub's `releases/latest` redirect. A newer `major.minor.patch` than
+  this build's is an update; the same or an older one (a build ahead of
+  the last release) is not; a tag that is not three numbers is an error.
+- **Install:** the installer with `--version <latest> --prefix <this
+  executable's directory> --no-autostart`, plus `--no-start` when no badge
+  is running. So it downloads, verifies the checksum, runs the new binary
+  once, and only then stops the badge, swaps the file, and starts the badge
+  again. Autostart is left as it was. A failure changes nothing and the
+  running badge keeps running. The output is the installer's own, up to
+  the `explain` text a fresh install prints.
+- **How it runs:** `sh -c <script> install.sh <flags>` on Unix. On Windows
+  the script goes to a temporary `.ps1` run by Windows PowerShell 5.1
+  (`-NoProfile -NonInteractive -ExecutionPolicy Bypass -File`), with
+  `CREATE_NO_WINDOW` and without an inherited `PSModulePath` (PowerShell
+  7's hides 5.1's modules). The installer's output goes through a
+  temporary file, not a pipe, because the badge it starts could hold a
+  pipe open (FW8). `PAWPRINT_DOWNLOAD_BASE` reaches the installer as usual,
+  which is how the tests point it at a local server.
+- **Where:** the directory of the running executable (symlinks followed on
+  Unix), so a `--prefix` install updates where it lives. A cargo build
+  (a `.cargo-lock` next to the executable) is refused: the release would
+  land in `target/`, and cargo would go on running it.
+- Everything it prints also goes to the log file, since the tray runs it
+  with no terminal.
+
+**In the badge.** The core never touches the network
+(`pawprint_core::update`): it emits `Effect::Update(Job)`, the shell starts
+`pawprint update [--check]` detached (as it starts the settings window),
+and that process tells this session's badge how it ended with the IPC
+`update` command (10.5). `pawprint update` typed in a terminal tells the
+badge the same way, so the two never disagree.
+
+| | Crate label | Tray item | Lasts |
+|---|---|---|---|
+| Check chosen | `CHECKING` | **Checking for updates…** | until the answer, at most 60 s |
+| This is the latest | `UP TO DATE` | **Check for updates** | 8 s |
+| A newer release | `NEW 1.3.0` | **Install update 1.3.0** | 8 s; the tray item stays until the badge restarts |
+| Install chosen | `UPDATING` | **Updating…** | until the badge is replaced, at most 10 min |
+| The new badge, started by the installer | `UPDATED` | **Check for updates** | 8 s |
+| A check or install failed | `FAILED` | as before | 8 s; the log says why |
+
+The label takes the hostname's place on the crate (also when `label =
+"none"`), set by the same fit-then-cut rule (4.4), so a notice never
+changes the badge's size or position; afterwards the hostname is back.
+Good news (up to date, a new release, updated) also plays the mascot's
+signature action at once (its first action that is not a motion template),
+unless animation is static. While a job runs, choosing the item again does
+nothing; a job that never answers counts as failed when its time is up.
+Nothing about updates is saved: a restarted badge knows of no update until
+asked again.
 
 ---
 
@@ -2864,6 +2947,7 @@ Xvfb removes its lock file.
 | Wayland | headless sway + `swaybar` | the badge sits below the bar's exclusive zone (F3), pixel-exact |
 | Wayland | headless sway | output mode change; scale 2 crisp (every opaque pixel exact); scale 1.5 sized 96 px and placed right (crispness at fractional scales is an owner check, F34) |
 | X11 | Xvfb, move mode | the dashed accent outline appears on the badge edge (a dash in the transparent corner, art through a gap) and goes when move mode ends |
+| X11, updates | the same, plus a local server whose latest release is `99.0.0` | **Check for updates** (a dbusmenu `Event`) makes the badge run `pawprint update --check`, and the menu then offers **Install update 99.0.0**; choosing that is refused for a cargo build before anything is downloaded: the log says why, the offer stands, and the same badge still runs ([15.8](#158-updates-from-the-app)) |
 | X11 | Xvfb + private `dbus-daemon` + a stand-in StatusNotifierWatcher (the test's own zbus object) | the item registers with `Id`, `Title`, `ToolTip`, and a 32 and 64 px `IconPixmap`; the dbusmenu layout has the shared menu with the right checks; **Size ▸ 128** (a dbusmenu `Event`) resizes the badge and appends `[hosts.owl] size = 128` after the untouched `config init` template; **Animation ▸ Static** is saved; `set`/`unset` reload the running badge; an unknown mascot is refused (exit 2) without writing; a user mascot added while the badge runs shows after `set mascot`; a hand edit is picked up at the next IPC request (mtime); `tray = false` removes the item and `unset tray` brings a new one; **Quit** exits; the saved choice survives the restart |
 | X11 | Xvfb | `pawprint preview owl`: a normal window (not override-redirect, no DOCK type, `WM_DELETE_WINDOW`), centered, the badge pixel-exact on the backdrop, the frame changes as actions play; Esc closes it, and so does a `WM_DELETE_WINDOW` message |
 | Wayland | headless sway | `pawprint preview owl`: an xdg toplevel (`app_id` `pawprint`) that sway floats (fixed size), focused, the badge pixel-exact on the backdrop; Esc closes it |
